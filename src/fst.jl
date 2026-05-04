@@ -278,7 +278,7 @@ function is_macrostr(t::JuliaSyntax.GreenNode)::Bool
 end
 
 function contains_macrostr(t::JuliaSyntax.GreenNode)::Bool
-    if kind(t) in KSet"StringMacroName CmdMacroName core_@cmd"
+    if kind(t) in KSet"StringMacroName CmdMacroName"
         return true
     elseif kind(t) === "quote" && haschildren(t)
         return contains_macrostr(t[1])
@@ -547,6 +547,21 @@ function _callinfo(x::JuliaSyntax.GreenNode)
         return 0, 0
     end
     k = kind(x)
+    if k === K"call" && JuliaSyntax.is_infix_op_call(x)
+        args = count(n -> !JuliaSyntax.is_whitespace(n), children(x))
+        return div(args - 1, 2), div(args + 1, 2)
+    elseif k === K"dotcall" && JuliaSyntax.is_infix_op_call(x)
+        args = count(n -> !JuliaSyntax.is_whitespace(n), children(x))
+        nops = div(args - 1, 3)
+        return nops, nops + 1
+    elseif k === K"op="
+        return 1, 2
+    elseif JuliaSyntax.is_operator(x) && haschildren(x)
+        args = count(n -> !JuliaSyntax.is_whitespace(n), children(x))
+        if args >= 3
+            return div(args - 1, 2), div(args + 1, 2)
+        end
+    end
     n_operators = 0
     n_args = 0
 
@@ -565,7 +580,7 @@ function _callinfo(x::JuliaSyntax.GreenNode)
 end
 
 function is_unary(x::JuliaSyntax.GreenNode)
-    if JuliaSyntax.is_unary_op(x)
+    if JuliaSyntax.is_unary_op(x) && !haschildren(x)
         return true
     end
     if kind(x) in KSet"call dotcall" || (JuliaSyntax.is_operator(x) && haschildren(x))
@@ -644,6 +659,13 @@ function is_function_or_macro_def(cst::JuliaSyntax.GreenNode)
     end
 
     return false
+end
+
+function is_short_function_def(cst::JuliaSyntax.GreenNode)
+    kind(cst) === K"function" && haschildren(cst) || return false
+    idx = findfirst(n -> !JuliaSyntax.is_whitespace(n), children(cst))
+    isnothing(idx) && return false
+    return kind(cst[idx]) !== K"function"
 end
 
 function is_function_like_lhs(node::JuliaSyntax.GreenNode)
@@ -812,6 +834,23 @@ function eq_to_in_normalization!(fst::FST, always_for_in::Bool, for_in_replaceme
         elseif op.val == "in" && op_kind(fst[end]) === K":"
             op.val = "="
             op.len = length(op.val)
+        end
+        if !isnothing(fst.metadata)
+            metadata = fst.metadata::Metadata
+            opkind = try
+                JuliaSyntax.Kind(op.val)
+            catch
+                metadata.op_kind
+            end
+            fst.metadata = Metadata(
+                opkind,
+                metadata.op_dotted,
+                metadata.is_standalone_shortcircuit,
+                metadata.is_short_form_function,
+                op.val == "=",
+                metadata.is_long_form_function,
+                metadata.has_multiline_argument,
+            )
         end
     elseif fst.typ === Block || fst.typ === Brackets || fst.typ === Filter
         past_if = false

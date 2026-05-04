@@ -872,9 +872,11 @@ function p_generator(
 
     childs = children(cst)
     has_for_kw = findfirst(n -> kind(n) === K"for", childs) !== nothing
+    from_for = has_for_kw || ctx.from_for
 
+    past_if = false
     for (i, a) in enumerate(childs)
-        n = pretty(style, a, s, newctx(ctx; from_for = has_for_kw), lineage)
+        n = pretty(style, a, s, newctx(ctx; from_for = from_for), lineage)
         if JuliaSyntax.is_keyword(a) && !haschildren(a)
             idx = findprev(n -> !JuliaSyntax.is_whitespace(n), childs, i - 1)
             if !isnothing(idx) && is_block(childs[idx])
@@ -895,10 +897,13 @@ function p_generator(
             add_node!(t, n, s; join_lines = true)
         end
 
-        if has_for_kw
+        if from_for && !past_if
             eq_to_in_normalization!(n, s.opts.always_for_in, s.opts.for_in_replacement)
         else
             false
+        end
+        if kind(a) === K"if" && JuliaSyntax.is_keyword(a) && !haschildren(a)
+            past_if = true
         end
     end
 
