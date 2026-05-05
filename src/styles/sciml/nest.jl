@@ -129,6 +129,13 @@ function n_macro!(
     n_functiondef!(ss, fst, s, lineage)
 end
 
+function _is_multiline_typed_ref(fst::FST)
+    fst.typ === RefN &&
+        length(fst.nodes::Vector) > 1 &&
+        fst[1].typ === Curly &&
+        any(n -> n.typ === NEWLINE, fst.nodes::Vector)
+end
+
 function _n_tuple!(
     ss::SciMLStyle,
     fst::FST,
@@ -298,7 +305,7 @@ function n_ref!(
         end
     end
 
-    if is_lhs_of_assignment
+    if is_lhs_of_assignment && fst.extra_margin > 0
         # Don't break the LHS of an assignment
         # Format children but keep them on the same line
         nodes = fst.nodes::Vector{FST}
@@ -320,6 +327,10 @@ function n_ref!(
         end
         s.line_offset = lo + length(fst)
         return nested
+    end
+
+    if _is_multiline_typed_ref(fst)
+        return n_ref!(YASStyle(getstyle(ss)), fst, s, lineage)
     end
 
     # Otherwise use the default behavior
