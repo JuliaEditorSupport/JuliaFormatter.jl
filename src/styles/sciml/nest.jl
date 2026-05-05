@@ -56,6 +56,14 @@ function _is_for_tuple_binding(
         s.line_offset + length(fst[1]) <= s.opts.margin
 end
 
+function _nearest_binary_is_assignment(lineage::Vector{Tuple{FNode,Union{Nothing,Metadata}}})
+    i = findlast(x -> x[1] === Binary, lineage)
+    i === nothing && return false
+
+    metadata = lineage[i][2]
+    return !isnothing(metadata) && metadata.is_assignment
+end
+
 function _align_tuple_comments!(fst::FST)
     for n in fst.nodes::Vector
         n.typ === NOTCODE && (n.indent = fst.indent)
@@ -94,26 +102,26 @@ function _align_pair_tuple_rhs!(fst::FST, s::State)
     desired_indent = if length(rhs.nodes::Vector) > 1 && rhs[2].typ === NEWLINE
         rhs.indent - 1
     else
-        fst.indent + node_align_length(fst[1]) + sum(length.(fst[2:4])) + 1
+        fst.indent + node_align_length(fst[1:(end-1)]) + 1
     end
     add_indent!(rhs, s, desired_indent - rhs.indent)
     _align_tuple_comments!(rhs)
 end
 
 function _unnest_short_binary_lines!(fst::FST, s::State)
-    f = (n::FST, _::State) -> begin
-        if n.typ === Binary && !contains_comment(n) && n.line_offset >= 0
-            nl_inds = findall(nn -> nn.typ === NEWLINE, n.nodes::Vector)
-            if length(nl_inds) > 0 &&
-               n.line_offset + n.extra_margin + node_align_length(n) <= s.opts.margin
-                nl_to_ws!(n, nl_inds)
-            end
+    is_leaf(fst) && return
+
+    if fst.typ === Binary && !contains_comment(fst) && fst.line_offset >= 0
+        nl_inds = findall(n -> n.typ === NEWLINE, fst.nodes::Vector)
+        if length(nl_inds) > 0 &&
+           fst.line_offset + fst.extra_margin + node_align_length(fst) <= s.opts.margin
+            nl_to_ws!(fst, nl_inds)
         end
-        return nothing
     end
-    line_offset = s.line_offset
-    walk(f, fst, s)
-    s.line_offset = line_offset
+
+    for n in fst.nodes::Vector
+        _unnest_short_binary_lines!(n, s)
+    end
 end
 
 function n_binaryopcall!(
@@ -400,35 +408,7 @@ function n_ref!(
     s::State,
     lineage::Vector{Tuple{FNode,Union{Nothing,Metadata}}},
 )
-    # Check if this RefN is the LHS of an assignment
-    # Look through the lineage to see if we have a Binary assignment parent
-    # and this RefN comes before any other Binary operators
-    is_lhs_of_assignment = false
-
-    if length(lineage) >= 2
-        # Check if we have a Binary assignment in the lineage
-        for i in length(lineage):-1:1
-            if lineage[i][1] === Binary &&
-               !isnothing(lineage[i][2]) &&
-               lineage[i][2].is_assignment
-                # Check if there are any other Binary nodes between us and the assignment
-                has_intermediate_binary = false
-                for j in (i+1):length(lineage)
-                    if lineage[j][1] === Binary
-                        has_intermediate_binary = true
-                        break
-                    end
-                end
-
-                if !has_intermediate_binary
-                    is_lhs_of_assignment = true
-                end
-                break
-            end
-        end
-    end
-
-    if is_lhs_of_assignment && fst.extra_margin > 0
+    if _nearest_binary_is_assignment(lineage) && fst.extra_margin > 0
         # Don't break the LHS of an assignment
         # Format children but keep them on the same line
         nodes = fst.nodes::Vector{FST}
