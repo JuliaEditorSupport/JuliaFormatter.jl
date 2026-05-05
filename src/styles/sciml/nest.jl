@@ -56,6 +56,67 @@ function _is_for_tuple_binding(
         s.line_offset + length(fst[1]) <= s.opts.margin
 end
 
+function _align_tuple_comments!(fst::FST)
+    for n in fst.nodes::Vector
+        n.typ === NOTCODE && (n.indent = fst.indent)
+    end
+end
+
+function _is_dict_call(fst::FST)
+    fst.typ === Call &&
+        length(fst.nodes::Vector) > 0 &&
+        fst[1].typ === IDENTIFIER &&
+        fst[1].val == "Dict"
+end
+
+function _is_nonempty_tuple_pair(fst::FST)
+    fst.typ === Binary &&
+        op_kind(fst) === K"=>" &&
+        fst[end].typ === TupleN &&
+        n_args(fst[end]) > 0
+end
+
+function _align_dict_tuple_pair_arrows!(fst::FST)
+    pair_inds = findall(_is_nonempty_tuple_pair, fst.nodes::Vector)
+    length(pair_inds) > 1 || return
+
+    align_len = maximum(node_align_length(fst[i][1]) for i in pair_inds)
+    for i in pair_inds
+        pair = fst[i]
+        ws = align_len - node_align_length(pair[1]) + 1
+        align_binaryopcall!(pair, ws)
+    end
+end
+
+function _align_pair_tuple_rhs!(fst::FST, s::State)
+    rhs = fst[end]
+    rhs.typ === TupleN || return
+
+    desired_indent = if length(rhs.nodes::Vector) > 1 && rhs[2].typ === NEWLINE
+        rhs.indent - 1
+    else
+        fst.indent + node_align_length(fst[1]) + sum(length.(fst[2:4])) + 1
+    end
+    add_indent!(rhs, s, desired_indent - rhs.indent)
+    _align_tuple_comments!(rhs)
+end
+
+function _unnest_short_binary_lines!(fst::FST, s::State)
+    f = (n::FST, _::State) -> begin
+        if n.typ === Binary && !contains_comment(n) && n.line_offset >= 0
+            nl_inds = findall(nn -> nn.typ === NEWLINE, n.nodes::Vector)
+            if length(nl_inds) > 0 &&
+               n.line_offset + n.extra_margin + node_align_length(n) <= s.opts.margin
+                nl_to_ws!(n, nl_inds)
+            end
+        end
+        return nothing
+    end
+    line_offset = s.line_offset
+    walk(f, fst, s)
+    s.line_offset = line_offset
+end
+
 function n_binaryopcall!(
     ss::SciMLStyle,
     fst::FST,
@@ -63,6 +124,37 @@ function n_binaryopcall!(
     lineage::Vector{Tuple{FNode,Union{Nothing,Metadata}}};
     indent::Int = -1,
 )
+    if op_kind(fst) === K"=>" &&
+       fst[end].typ === TupleN &&
+       fst[1].endline == fst[end].startline
+        style = getstyle(ss)
+        rhs_style = YASStyle(style)
+        nodes = fst.nodes::Vector
+        oplen = sum(length.(fst[2:end]))
+        nested = false
+        for (i, n) in enumerate(nodes)
+            if n.typ === NEWLINE
+                s.line_offset = fst.indent
+            elseif i == 1
+                n.extra_margin = oplen + fst.extra_margin
+                nested |= nest!(style, n, s, lineage)
+            elseif i == length(nodes)
+                n.extra_margin = fst.extra_margin
+                n.indent = s.line_offset
+                nested |= nest!(rhs_style, n, s, lineage)
+                _align_pair_tuple_rhs!(fst, s)
+                lo = s.line_offset
+                walk(unnest!(rhs_style; dedent = false), n, s)
+                s.line_offset = lo
+                _unnest_short_binary_lines!(n, s)
+                _align_tuple_comments!(n)
+            else
+                nested |= nest!(style, n, s, lineage)
+            end
+        end
+        return nested
+    end
+
     if _is_for_tuple_binding(fst, s, lineage)
         lhs = fst[1]
         nest_behavior = lhs.nest_behavior
@@ -173,8 +265,10 @@ function _n_tuple!(
     lineage::Vector{Tuple{FNode,Union{Nothing,Metadata}}},
 )
     style = getstyle(ss)
-    line_margin = s.line_offset + length(fst) + fst.extra_margin
     nodes = fst.nodes::Vector
+    _is_dict_call(fst) && _align_dict_tuple_pair_arrows!(fst)
+
+    line_margin = s.line_offset + length(fst) + fst.extra_margin
     has_closer = is_closer(fst[end])
     start_line_offset = s.line_offset
 
