@@ -688,6 +688,36 @@
             end
             """
             @test format_text(str, SciMLStyle(); yas_style_nesting = true) == fstr
+
+            str = """
+            function collect_close_items(points, min_distance)
+                foreach_neighbor(points, points, index;
+                                 backend=SerialBackend()) do item, neighbor,
+                                                             _, _
+                    if item != neighbor
+                        push!(result, item)
+                    end
+                end
+            end
+            """
+
+            fstr = """
+            function collect_close_items(points, min_distance)
+                foreach_neighbor(points, points, index;
+                                 backend=SerialBackend()) do item, neighbor,
+                                                             _, _
+                    if item != neighbor
+                        push!(result, item)
+                    end
+                end
+            end
+            """
+            @test format_text(
+                str,
+                SciMLStyle();
+                yas_style_nesting = true,
+                whitespace_in_kwargs = false,
+            ) == fstr
         end
     end
 

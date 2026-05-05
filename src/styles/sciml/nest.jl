@@ -136,6 +136,36 @@ function _is_multiline_typed_ref(fst::FST)
         any(n -> n.typ === NEWLINE, fst.nodes::Vector)
 end
 
+function _has_multiline_do_args(fst::FST)
+    length(fst.nodes::Vector) >= 5 &&
+        fst[4].typ === WHITESPACE &&
+        !is_leaf(fst[5]) &&
+        any(n -> n.typ === NEWLINE, fst[5].nodes::Vector)
+end
+
+function n_do!(
+    ss::SciMLStyle,
+    fst::FST,
+    s::State,
+    lineage::Vector{Tuple{FNode,Union{Nothing,Metadata}}},
+)
+    style = getstyle(ss)
+    extra_margin = sum(length.(fst[2:3]))
+    if fst[4].typ === WHITESPACE
+        extra_margin += length(fst[4])
+        if !_has_multiline_do_args(fst)
+            extra_margin += length(fst[5])
+        end
+    end
+    fst[1].extra_margin = fst.extra_margin + extra_margin
+
+    nested = false
+    nested |= nest!(style, fst[1], s, lineage)
+    nested |=
+        nest!(style, fst[2:end], s, fst.indent, lineage; extra_margin = fst.extra_margin)
+    return nested
+end
+
 function _n_tuple!(
     ss::SciMLStyle,
     fst::FST,
