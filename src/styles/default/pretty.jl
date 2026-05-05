@@ -47,6 +47,10 @@ function is_source_operator(s::State, cst::JuliaSyntax.GreenNode, offset::Int)
     !isnothing(source_operator_kind(s, cst, offset))
 end
 
+function is_source_unary_operator(k::JuliaSyntax.Kind)
+    JuliaSyntax.is_unary_op(JuliaSyntax.SyntaxHead(k, UInt16(0)))
+end
+
 function source_prefix_operator_index(cst::JuliaSyntax.GreenNode, s::State)
     kind(cst) in KSet"call dotcall" && haschildren(cst) || return nothing
     childs = children(cst)
@@ -66,7 +70,40 @@ function source_prefix_operator_index(cst::JuliaSyntax.GreenNode, s::State)
 end
 
 function is_source_prefix_op_call(cst::JuliaSyntax.GreenNode, s::State)
-    !isnothing(source_prefix_operator_index(cst, s))
+    op_idx = source_prefix_operator_index(cst, s)
+    isnothing(op_idx) && return false
+
+    childs = children(cst)
+    op_offset = s.offset + sum(span, childs[1:(op_idx-1)]; init = 0)
+    opkind = source_operator_kind(s, childs[op_idx], op_offset)
+    (isnothing(opkind) || !is_source_unary_operator(opkind)) && return false
+
+    call_idx = findfirst(n -> kind(n) in KSet"( { [", childs)
+    if !isnothing(call_idx)
+        args = 0
+        for c in childs[(call_idx+1):end]
+            kind(c) === K"parameters" && return false
+            kind(c) in KSet", ..." && return false
+            if !(
+                is_punc(c) ||
+                kind(c) == K";" ||
+                JuliaSyntax.is_whitespace(c) ||
+                kind(c) in KSet"` ``` \" \"\"\""
+            )
+                args += 1
+            end
+        end
+        return args == 1
+    end
+
+    args = findall(n -> !JuliaSyntax.is_whitespace(n), childs)
+    operands = 0
+    for idx in args
+        idx == op_idx && continue
+        kind(childs[idx]) === K"." && !haschildren(childs[idx]) && continue
+        operands += 1
+    end
+    return operands == 1
 end
 
 function source_op_kind(
@@ -237,6 +274,8 @@ function pretty(
         p_do_call(style, node, s, ctx, lineage)
     elseif is_source_prefix_op_call(node, s)
         p_unaryopcall(style, node, s, ctx, lineage)
+    elseif !isnothing(source_prefix_operator_index(node, s))
+        p_call(style, node, s, ctx, lineage)
     elseif is_binary(node)
         p_binaryopcall(style, node, s, ctx, lineage)
     elseif is_chain(node)
@@ -1856,7 +1895,7 @@ function p_kw(
             add_node!(t, pretty(style, c, s, ctx, lineage), s; join_lines = true)
             add_node!(t, Whitespace(1), s)
         else
-            source_prefix = is_source_prefix_op_call(c, s)
+            source_prefix = !isnothing(source_prefix_operator_index(c, s))
             n = pretty(style, c, s, ctx, lineage)
             if !s.opts.whitespace_in_kwargs &&
                (
@@ -3264,8 +3303,6 @@ function p_generator(
 
         if from_for && !past_if
             eq_to_in_normalization!(n, s.opts.always_for_in, s.opts.for_in_replacement)
-        else
-            false
         end
         if kind(a) === K"if" && JuliaSyntax.is_keyword(a) && !haschildren(a)
             past_if = true

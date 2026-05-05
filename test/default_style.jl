@@ -4559,6 +4559,9 @@ some_function(
         str_ = "a    *     %"
         str = "a * %"
         @test fmt(str_, 4, 100) == str
+
+        @test run_pretty("+(y)", 80)[1].typ === JuliaFormatter.Unary
+        @test run_pretty(">=(y)", 80)[1].typ === JuliaFormatter.Call
     end
 
     @testset "binary shortcircuit" begin

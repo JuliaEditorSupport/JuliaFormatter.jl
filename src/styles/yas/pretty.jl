@@ -899,8 +899,6 @@ function p_generator(
 
         if from_for && !past_if
             eq_to_in_normalization!(n, s.opts.always_for_in, s.opts.for_in_replacement)
-        else
-            false
         end
         if kind(a) === K"if" && JuliaSyntax.is_keyword(a) && !haschildren(a)
             past_if = true
