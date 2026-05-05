@@ -38,20 +38,6 @@
     @test startswith(strip(formatted), "du[i, j, 1]")
 
     str = raw"""
-    function update_cache!()
-        cache_table[key,
-                    slot] = source_table[key, slot] + step * delta_table[key, slot]
-    end
-    """
-    formatted_str = raw"""
-    function update_cache!()
-        cache_table[key, slot] = source_table[key, slot] +
-                                 step * delta_table[key, slot]
-    end
-    """
-    @test format_text(str, SciMLStyle(); margin = 80) == formatted_str
-
-    str = raw"""
        @noinline require_complete(m::Matching) = m.inv_match === nothing && throw(ArgumentError("Backwards matching not defined. `complete` the matching first."))
     """
     formatted_str = raw"""
@@ -636,6 +622,57 @@
             """
             @test format_text(str, SciMLStyle(); margin = 13) == fstr
         end
+
+        @testset "regression cases" begin
+            str = """
+            function update_cache!()
+                cache_table[key,
+                            slot] = source_table[key, slot] + step * delta_table[key, slot]
+            end
+            """
+
+            fstr = """
+            function update_cache!()
+                cache_table[key, slot] = source_table[key, slot] +
+                                         step * delta_table[key, slot]
+            end
+            """
+            @test format_text(str, SciMLStyle(); margin = 80) == fstr
+
+            str = """
+            path_lookup = [
+                "Hash table implementation notes" => joinpath("src",
+                                                              "hash_table.md"),
+            ]
+            """
+
+            fstr = """
+            path_lookup = [
+                "Hash table implementation notes" => joinpath("src",
+                                                              "hash_table.md"),
+            ]
+            """
+            @test format_text(str, SciMLStyle(); yas_style_nesting = true) == fstr
+
+            str = """
+            function copy_values!(destination::ThreadedArray, source::AbstractArray)
+                @threaded destination.scheduler for (dest_id, src_id) in zip(eachindex(destination),
+                                                            eachindex(source))
+                    @inbounds destination[dest_id] = source[src_id]
+                end
+            end
+            """
+
+            fstr = """
+            function copy_values!(destination::ThreadedArray, source::AbstractArray)
+                @threaded destination.scheduler for (dest_id, src_id) in zip(eachindex(destination),
+                                                                             eachindex(source))
+                    @inbounds destination[dest_id] = source[src_id]
+                end
+            end
+            """
+            @test format_text(str, SciMLStyle(); yas_style_nesting = true) == fstr
+        end
     end
 
     str = raw"""
@@ -1136,21 +1173,6 @@
         # Test 37: Pairs syntax
         str = "a => b"
         @test format_text(str, SciMLStyle()) == str
-
-        str = raw"""
-        file_index = [
-            "Data Structures" => [
-                "Hash table implementation notes" => joinpath("src",
-                                                              "hash_table.md"),
-            ],
-        ]
-        """
-        formatted = format_text(str, SciMLStyle(); yas_style_nesting = true)
-        @test contains(
-            formatted,
-            "\"Hash table implementation notes\" => joinpath(\"src\",",
-        )
-        @test !contains(formatted, "\"Hash table implementation notes\" =>\n")
         
         # Test 38: Quote expressions
         str = ":(x + y)"

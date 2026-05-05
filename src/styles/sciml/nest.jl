@@ -44,6 +44,39 @@ end
 #     nest!(style, fst[end], s, lineage)
 # end
 
+function _is_for_tuple_binding(
+    fst::FST,
+    s::State,
+    lineage::Vector{Tuple{FNode,Union{Nothing,Metadata}}},
+)
+    length(lineage) >= 2 &&
+        lineage[end-1][1] === CartesianIterator &&
+        op_kind(fst) in KSet"in ∈" &&
+        fst[1].typ === TupleN &&
+        s.line_offset + length(fst[1]) <= s.opts.margin
+end
+
+function n_binaryopcall!(
+    ss::SciMLStyle,
+    fst::FST,
+    s::State,
+    lineage::Vector{Tuple{FNode,Union{Nothing,Metadata}}};
+    indent::Int = -1,
+)
+    if _is_for_tuple_binding(fst, s, lineage)
+        lhs = fst[1]
+        nest_behavior = lhs.nest_behavior
+        lhs.nest_behavior = NeverNest
+        try
+            return n_binaryopcall!(DefaultStyle(getstyle(ss)), fst, s, lineage; indent)
+        finally
+            lhs.nest_behavior = nest_behavior
+        end
+    end
+
+    n_binaryopcall!(DefaultStyle(getstyle(ss)), fst, s, lineage; indent)
+end
+
 function n_functiondef!(
     ss::SciMLStyle,
     fst::FST,
