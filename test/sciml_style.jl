@@ -38,15 +38,15 @@
     @test startswith(strip(formatted), "du[i, j, 1]")
 
     str = raw"""
-    function update_entry!()
-        result_array[row,
-                     column] = previous_array[row, column] + step_size * increment_array[row, column]
+    function update_cache!()
+        cache_table[key,
+                    slot] = source_table[key, slot] + step * delta_table[key, slot]
     end
     """
     formatted_str = raw"""
-    function update_entry!()
-        result_array[row, column] = previous_array[row, column] +
-                                    step_size * increment_array[row, column]
+    function update_cache!()
+        cache_table[key, slot] = source_table[key, slot] +
+                                 step * delta_table[key, slot]
     end
     """
     @test format_text(str, SciMLStyle(); margin = 80) == formatted_str
@@ -1136,6 +1136,21 @@
         # Test 37: Pairs syntax
         str = "a => b"
         @test format_text(str, SciMLStyle()) == str
+
+        str = raw"""
+        file_index = [
+            "Data Structures" => [
+                "Hash table implementation notes" => joinpath("src",
+                                                              "hash_table.md"),
+            ],
+        ]
+        """
+        formatted = format_text(str, SciMLStyle(); yas_style_nesting = true)
+        @test contains(
+            formatted,
+            "\"Hash table implementation notes\" => joinpath(\"src\",",
+        )
+        @test !contains(formatted, "\"Hash table implementation notes\" =>\n")
         
         # Test 38: Quote expressions
         str = ":(x + y)"

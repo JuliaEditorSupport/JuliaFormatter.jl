@@ -951,6 +951,14 @@ function n_binaryopcall!(
         # Undo nest if possible
         if can_nest(fst) && !no_unnest(rhs) && !src_diff_line
             line_margin = s.line_offset
+            _, rhs_has_newline = length_to(rhs, (NEWLINE,))
+            if op_kind(fst) === K"=>" &&
+               rhs_has_newline &&
+               fst[1].indent > 0 &&
+               fst[1].line_offset <= fst[1].indent + 1 &&
+               fst[1].indent < line_offset
+                line_margin -= line_offset - fst[1].indent
+            end
 
             # replace IN with all of precedence level 6
             if (rhs.typ === Binary && !(op_kind(rhs) in KSet"in ::")) ||
@@ -978,7 +986,11 @@ function n_binaryopcall!(
                 fst[i1] = Whitespace(1)
                 if indent_nest || style isa YASStyle
                     fst[i2] = Whitespace(0)
-                    walk(unnest!(style; dedent = true), rhs, s)
+                    unnest_style =
+                        op_kind(fst) === K"=>" &&
+                        s.opts.yas_style_nesting &&
+                        !(style isa YASStyle) ? YASStyle(style) : style
+                    walk(unnest!(unnest_style; dedent = true), rhs, s)
                 end
             end
         end
