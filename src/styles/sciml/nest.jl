@@ -268,9 +268,18 @@ function n_ref!(
     if is_lhs_of_assignment
         # Don't break the LHS of an assignment
         # Format children but keep them on the same line
+        nodes = fst.nodes::Vector{FST}
+        for (i, n) in enumerate(nodes)
+            if n.typ === NEWLINE &&
+               (i == 1 || !is_comment(nodes[i-1])) &&
+               (i == length(nodes) || !is_comment(nodes[i+1]))
+                nodes[i] = Whitespace(n.len)
+            end
+        end
+
         lo = s.line_offset
         nested = false
-        for (i, n) in enumerate(fst.nodes)
+        for n in nodes
             nested |= nest!(ss, n, s, lineage)
             if n.typ !== NEWLINE  # Prevent any newlines
                 s.line_offset += length(n)

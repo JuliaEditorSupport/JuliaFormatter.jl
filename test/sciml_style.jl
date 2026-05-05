@@ -36,6 +36,21 @@
     formatted = format_text(str, SciMLStyle())
     @test !contains(formatted, "du[\n")
     @test startswith(strip(formatted), "du[i, j, 1]")
+
+    str = raw"""
+    function update_entry!()
+        result_array[row,
+                     column] = previous_array[row, column] + step_size * increment_array[row, column]
+    end
+    """
+    formatted_str = raw"""
+    function update_entry!()
+        result_array[row, column] = previous_array[row, column] +
+                                    step_size * increment_array[row, column]
+    end
+    """
+    @test format_text(str, SciMLStyle(); margin = 80) == formatted_str
+
     str = raw"""
        @noinline require_complete(m::Matching) = m.inv_match === nothing && throw(ArgumentError("Backwards matching not defined. `complete` the matching first."))
     """
