@@ -740,7 +740,7 @@
             fstr = """
             function build_search_cases(item_spacing)
                 algorithm_cases = Dict(
-                    "default search" => (),
+                    "default search"           => (),
                     "with static scheduler"    => (backend=StaticBackend(),),
                     "with damping source term" => (source_terms=DampingTerm(coefficient=1e-4),),
                     "with lookup density"      => (density_calculator=LookupDensity(),

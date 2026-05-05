@@ -69,15 +69,14 @@ function _is_dict_call(fst::FST)
         fst[1].val == "Dict"
 end
 
-function _is_nonempty_tuple_pair(fst::FST)
+function _is_tuple_pair(fst::FST)
     fst.typ === Binary &&
         op_kind(fst) === K"=>" &&
-        fst[end].typ === TupleN &&
-        n_args(fst[end]) > 0
+        fst[end].typ === TupleN
 end
 
 function _align_dict_tuple_pair_arrows!(fst::FST)
-    pair_inds = findall(_is_nonempty_tuple_pair, fst.nodes::Vector)
+    pair_inds = findall(_is_tuple_pair, fst.nodes::Vector)
     length(pair_inds) > 1 || return
 
     align_len = maximum(node_align_length(fst[i][1]) for i in pair_inds)
