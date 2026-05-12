@@ -418,7 +418,7 @@ function p_call(
         else
             0
         end
-        val = getsrcval(s.doc, s.offset:(s.offset+offset))
+        val = getsrcval(s.doc, (s.offset):(s.offset+offset))
         if val in s.opts.variable_call_indent
             return p_call(DefaultStyle(style), cst, s, ctx, lineage)
         end
