@@ -21,9 +21,11 @@ function newctx(s::PrettyContext; kwargs...)
     PrettyContext(values...)
 end
 
-function source_kind(s::State, cst::JuliaSyntax.GreenNode, offset::Int)
+function source_kind(s::State, cst::JuliaSyntax.GreenNode, offset::Integer)
     span(cst) == 0 && return nothing
-    val = getsrcval(s.doc, offset:(offset+span(cst)-1))
+    offset = Int(offset)
+    n = Int(span(cst))
+    val = getsrcval(s.doc, offset:(offset+n-1))
     try
         return JuliaSyntax.Kind(val)
     catch
@@ -31,7 +33,7 @@ function source_kind(s::State, cst::JuliaSyntax.GreenNode, offset::Int)
     end
 end
 
-function source_operator_kind(s::State, cst::JuliaSyntax.GreenNode, offset::Int)
+function source_operator_kind(s::State, cst::JuliaSyntax.GreenNode, offset::Integer)
     if JuliaSyntax.is_operator(cst) && !haschildren(cst)
         return kind(cst)
     elseif kind(cst) === K"Identifier" && !haschildren(cst)
@@ -43,7 +45,7 @@ function source_operator_kind(s::State, cst::JuliaSyntax.GreenNode, offset::Int)
     return nothing
 end
 
-function is_source_operator(s::State, cst::JuliaSyntax.GreenNode, offset::Int)
+function is_source_operator(s::State, cst::JuliaSyntax.GreenNode, offset::Integer)
     !isnothing(source_operator_kind(s, cst, offset))
 end
 
@@ -57,14 +59,15 @@ function source_prefix_operator_index(cst::JuliaSyntax.GreenNode, s::State)
     args = findall(n -> !JuliaSyntax.is_whitespace(n), childs)
     isempty(args) && return nothing
 
-    op_arg = if kind(cst) === K"dotcall" &&
-                length(args) >= 2 &&
-                kind(childs[args[1]]) === K"." &&
-                !haschildren(childs[args[1]])
-        args[2]
-    else
-        args[1]
-    end
+    op_arg =
+        if kind(cst) === K"dotcall" &&
+           length(args) >= 2 &&
+           kind(childs[args[1]]) === K"." &&
+           !haschildren(childs[args[1]])
+            args[2]
+        else
+            args[1]
+        end
     offset = s.offset + sum(span, childs[1:(op_arg-1)]; init = 0)
     return is_source_operator(s, childs[op_arg], offset) ? op_arg : nothing
 end
@@ -106,15 +109,11 @@ function is_source_prefix_op_call(cst::JuliaSyntax.GreenNode, s::State)
     return operands == 1
 end
 
-function source_op_kind(
-    s::State,
-    cst::JuliaSyntax.GreenNode,
-    op_indices::Vector{Int},
-)
+function source_op_kind(s::State, cst::JuliaSyntax.GreenNode, op_indices::Vector{Int})
     opkind = op_kind(cst)
     opkind !== K"None" && opkind !== K"Identifier" && return opkind
 
-    offset = s.offset
+    offset = Int(s.offset)
     childs = children(cst)
     for (i, c) in enumerate(childs)
         if i in op_indices
@@ -123,7 +122,7 @@ function source_op_kind(
                 return k
             end
         end
-        offset += span(c)
+        offset += Int(span(c))
     end
     return opkind
 end
@@ -139,8 +138,7 @@ function do_block_index(childs::Vector{JuliaSyntax.GreenNode{T}}) where {T}
 end
 
 function has_do_block_call(cst::JuliaSyntax.GreenNode)
-    kind(cst) in KSet"call dotcall" && haschildren(cst) ||
-        return false
+    kind(cst) in KSet"call dotcall" && haschildren(cst) || return false
     !isnothing(do_block_index(children(cst)))
 end
 
@@ -379,7 +377,7 @@ function p_identifier(
     lineage::Vector{Tuple{JuliaSyntax.Kind,Bool,Bool}},
 )
     loc = cursor_loc(s)
-    val = getsrcval(s.doc, s.offset:(s.offset+span(cst)-1))
+    val = getsrcval(s.doc, (s.offset):(s.offset+span(cst)-1))
     s.offset += span(cst)
     FST(IDENTIFIER, loc[2], loc[1], loc[1], val)
 end
@@ -392,7 +390,7 @@ function p_whitespace(
     lineage::Vector{Tuple{JuliaSyntax.Kind,Bool,Bool}},
 )
     loc = cursor_loc(s)
-    val = getsrcval(s.doc, s.offset:(s.offset+span(cst)-1))
+    val = getsrcval(s.doc, (s.offset):(s.offset+span(cst)-1))
     s.offset += span(cst)
     FST(NONE, loc[2], loc[1], loc[1], val)
 end
@@ -406,7 +404,7 @@ function p_comment(
 )
     loc = cursor_loc(s)
     same_line = on_same_line(s, s.offset, s.offset + span(cst) - 1)
-    val = getsrcval(s.doc, s.offset:(s.offset+span(cst)-1))
+    val = getsrcval(s.doc, (s.offset):(s.offset+span(cst)-1))
     if same_line && startswith(val, "#=") && endswith(val, "=#")
         s.offset += span(cst)
         return FST(HASHEQCOMMENT, loc[2], loc[1], loc[1], val)
@@ -435,7 +433,7 @@ function p_macroname(
     ::Vector{Tuple{JuliaSyntax.Kind,Bool,Bool}},
 )
     loc = cursor_loc(s)
-    val = getsrcval(s.doc, s.offset:(s.offset+span(cst)-1))
+    val = getsrcval(s.doc, (s.offset):(s.offset+span(cst)-1))
     s.offset += span(cst)
     FST(MACRONAME, loc[2], loc[1], loc[1], val)
 end
@@ -448,7 +446,7 @@ function p_operator(
     ::Vector{Tuple{JuliaSyntax.Kind,Bool,Bool}},
 )
     loc = cursor_loc(s)
-    val = getsrcval(s.doc, s.offset:(s.offset+span(cst)-1))
+    val = getsrcval(s.doc, (s.offset):(s.offset+span(cst)-1))
     s.offset += span(cst)
     t = FST(OPERATOR, loc[2], loc[1], loc[1], val)
     t.metadata = Metadata(kind(cst), JuliaSyntax.is_dotted(cst))
@@ -463,7 +461,7 @@ function p_keyword(
     ::Vector{Tuple{JuliaSyntax.Kind,Bool,Bool}},
 )
     loc = cursor_loc(s)
-    val = getsrcval(s.doc, s.offset:(s.offset+span(cst)-1))
+    val = getsrcval(s.doc, (s.offset):(s.offset+span(cst)-1))
     s.offset += span(cst)
     FST(KEYWORD, loc[2], loc[1], loc[1], val)
 end
@@ -476,7 +474,7 @@ function p_punctuation(
     ::Vector{Tuple{JuliaSyntax.Kind,Bool,Bool}},
 )
     loc = cursor_loc(s)
-    val = getsrcval(s.doc, s.offset:(s.offset+span(cst)-1))
+    val = getsrcval(s.doc, (s.offset):(s.offset+span(cst)-1))
     s.offset += span(cst)
     FST(PUNCTUATION, loc[2], loc[1], loc[1], val)
 end
@@ -605,7 +603,7 @@ function p_literal(
     lineage::Vector{Tuple{JuliaSyntax.Kind,Bool,Bool}},
 )
     loc = cursor_loc(s)
-    val = getsrcval(s.doc, s.offset:(s.offset+span(cst)-1))
+    val = getsrcval(s.doc, (s.offset):(s.offset+span(cst)-1))
 
     if !is_str_or_cmd(cst)
         if kind(cst) in KSet"Float Float32" && !startswith(val, r"[+-]?0x")
@@ -669,7 +667,7 @@ function p_stringh(
     end
     loc2 = cursor_loc(s, s.offset+span(cst)-1)
 
-    val = getsrcval(s.doc, s.offset:(s.offset+span(cst)-1))
+    val = getsrcval(s.doc, (s.offset):(s.offset+span(cst)-1))
     startline = loc[1]
     endline = loc2[1]
 
@@ -1731,7 +1729,12 @@ function p_do_call(
         return p_call(ds, cst, s, ctx, lineage)
     end
 
-    add_node!(t, p_call(ds, cst, s, ctx, lineage; child_limit = idx - 1), s; join_lines = true)
+    add_node!(
+        t,
+        p_call(ds, cst, s, ctx, lineage; child_limit = idx - 1),
+        s;
+        join_lines = true,
+    )
 
     do_node = childs[idx]
     push!(lineage, (kind(do_node), is_iterable(do_node), is_assignment(do_node)))
@@ -1897,12 +1900,11 @@ function p_kw(
         else
             source_prefix = !isnothing(source_prefix_operator_index(c, s))
             n = pretty(style, c, s, ctx, lineage)
-            if !s.opts.whitespace_in_kwargs &&
-               (
-                   (n.typ === IDENTIFIER && endswith(n.val, "!")) ||
-                   is_prefix_op_call(c) ||
-                   source_prefix
-               )
+            if !s.opts.whitespace_in_kwargs && (
+                (n.typ === IDENTIFIER && endswith(n.val, "!")) ||
+                is_prefix_op_call(c) ||
+                source_prefix
+            )
                 add_node!(
                     t,
                     FST(PUNCTUATION, -1, n.startline, n.startline, "("),
@@ -1941,8 +1943,11 @@ function p_binaryopcall(
     end
 
     childs = children(cst)
-    op_indices = kind(cst) === K"op=" ? update_operator_indices(childs) :
-                 extract_operator_indices(childs)
+    op_indices = if kind(cst) === K"op="
+        update_operator_indices(childs)
+    else
+        extract_operator_indices(childs)
+    end
     opkind = source_op_kind(s, cst, op_indices)
 
     nonest = ctx.nonest || opkind === K":"
@@ -2050,7 +2055,7 @@ function p_binaryopcall(
         if kind(cst) === K"op=" && !isempty(op_indices) && i == first(op_indices)
             loc = cursor_loc(s)
             op_span = sum(span, childs[first(op_indices):last(op_indices)]; init = 0)
-            val = getsrcval(s.doc, s.offset:(s.offset+op_span-1))
+            val = getsrcval(s.doc, (s.offset):(s.offset+op_span-1))
             s.offset += op_span
             n = FST(OPERATOR, loc[2], loc[1], loc[1], val)
             n.metadata = Metadata(K"op=", startswith(val, "."))
@@ -2089,7 +2094,8 @@ function p_binaryopcall(
         is_op = i in op_indices && is_source_operator(s, c, offset)
         if is_op && n.typ === IDENTIFIER
             n.typ = OPERATOR
-            n.metadata = Metadata(source_operator_kind(s, c, offset)::JuliaSyntax.Kind, is_dot)
+            n.metadata =
+                Metadata(source_operator_kind(s, c, offset)::JuliaSyntax.Kind, is_dot)
         end
         if is_dot && haschildren(c) && length(children(c)) == 2
             # [.]
