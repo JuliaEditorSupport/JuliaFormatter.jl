@@ -31,11 +31,15 @@ jobs:
         with:
           python-version: '3.x'
 
-      - name: Run pre-commit hook
-        working-directory: .github/workflows/pre-commit
-        run: pipx run pre-commit try-repo ../../../ --files main.jl --verbose
-
-      - name: Verify hook made changes
+      - name: Test pre-commit hook
         working-directory: .github/workflows/pre-commit
         run: |
-          git diff --exit-code main.jl && echo "::error::Hook did not modify main.jl" && exit 1 || echo "Hook correctly formatted main.jl"
+          # Run pre-commit hook, check that it fails.
+          # pre-commit try-repo will fail if the hook makes changes
+          pipx run pre-commit try-repo ../../../ --files main.jl --verbose && exit 1
+
+          # Check that the file was changed.
+          git diff --exit-code main.jl && exit 1
+
+          # Check that running the hook again succeeds.
+          pipx run pre-commit try-repo ../../../ --files main.jl --verbose
