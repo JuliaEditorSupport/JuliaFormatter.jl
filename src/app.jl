@@ -31,9 +31,9 @@ function scandir!(files, root)
         elseif (@tryx(isfile(jf), false) || @tryx(islink(jf), false))
             # Check for .jl, .md, .jmd, .qmd files
             if endswith(jf, ".jl") ||
-                    endswith(jf, ".md") ||
-                    endswith(jf, ".jmd") ||
-                    endswith(jf, ".qmd")
+               endswith(jf, ".md") ||
+               endswith(jf, ".jmd") ||
+               endswith(jf, ".qmd")
                 push!(files, jf)
             end
         end
@@ -45,10 +45,10 @@ function scandir!(files, root)
 end
 
 function panic(
-        msg::String,
-        err::Union{Exception, Nothing} = nothing,
-        bt::Union{Vector{Base.StackFrame}, Nothing} = nothing,
-    )
+    msg::String,
+    err::Union{Exception,Nothing} = nothing,
+    bt::Union{Vector{Base.StackFrame},Nothing} = nothing,
+)
     printstyled(stderr, "ERROR: "; color = :red, bold = true)
     print(stderr, msg)
     if err !== nothing
@@ -315,7 +315,7 @@ function main(argv::Vector{String})
     format_markdown = false
     config_priority = false
     style_name = "default"
-    format_options = Dict{Symbol, Any}()
+    format_options = Dict{Symbol,Any}()
     ignore_patterns = String[]
 
     paths = String[]
@@ -355,7 +355,7 @@ function main(argv::Vector{String})
             if i >= length(argv)
                 return panic("expected output file argument after `-o`")
             end
-            outputfile = argv[i + 1]
+            outputfile = argv[i+1]
             i += 2
         elseif startswith(x, "--output=")
             m = match(r"^--output=(.+)$", x)
@@ -562,21 +562,21 @@ function main(argv::Vector{String})
     nfiles_str = string(length(inputfiles))
     options_list = (
         ProcessFileArgs(
-                inputfile,
-                file_counter,
-                nfiles_str,
-                print_progress,
-                check,
-                inplace,
-                outputfile,
-                input_is_stdin,
-                stdin_filename,
-                config_dir,
-                format_options,
-                diff,
-                format_markdown,
-                config_priority,
-            ) for (file_counter, inputfile) in enumerate(inputfiles)
+            inputfile,
+            file_counter,
+            nfiles_str,
+            print_progress,
+            check,
+            inplace,
+            outputfile,
+            input_is_stdin,
+            stdin_filename,
+            config_dir,
+            format_options,
+            diff,
+            format_markdown,
+            config_priority,
+        ) for (file_counter, inputfile) in enumerate(inputfiles)
     )
 
     # Use multithreading for multiple files (only if multiple threads available)
@@ -629,7 +629,7 @@ struct ProcessFileArgs
     input_is_stdin::Bool
     stdin_filename::String
     config_dir::String
-    format_options::Dict{Symbol, Any}
+    format_options::Dict{Symbol,Any}
     diff::Bool
     format_markdown::Bool
     config_priority::Bool
@@ -739,8 +739,8 @@ function process_file(args::ProcessFileArgs)
         if args.outputfile == "" || args.outputfile == "-"
             Output(:stdout, "", stdout, false, false)
         elseif isfile(args.outputfile) &&
-                !args.input_is_stdin &&
-                samefile(args.outputfile, args.inputfile)
+               !args.input_is_stdin &&
+               samefile(args.outputfile, args.inputfile)
             if args.print_progress
                 @lock print_lock begin
                     buf = IOBuffer()
@@ -764,7 +764,7 @@ function process_file(args::ProcessFileArgs)
     effective_options = if args.inputfile != "-"
         # Find and load .JuliaFormatter.toml config
         config_nt = find_config_file(args.inputfile)
-        config_dict = Dict{Symbol, Any}(Symbol(k) => v for (k, v) in pairs(config_nt))
+        config_dict = Dict{Symbol,Any}(Symbol(k) => v for (k, v) in pairs(config_nt))
         # Merge: by default, command line options override config file
         # If --prioritize-config-file is set, config file options override command line
         if args.config_priority
@@ -781,7 +781,7 @@ function process_file(args::ProcessFileArgs)
             # Try to find config file recursively from the directory
             find_config_file(args.config_dir)
         end
-        config_dict = Dict{Symbol, Any}(Symbol(k) => v for (k, v) in pairs(config_nt))
+        config_dict = Dict{Symbol,Any}(Symbol(k) => v for (k, v) in pairs(config_nt))
         if args.config_priority
             merge(args.format_options, config_dict)
         else
@@ -795,9 +795,9 @@ function process_file(args::ProcessFileArgs)
     if args.inputfile != "-"
         ignore_patterns = get(effective_options, :ignore, String[])
         if any(
-                pattern -> occursin(Glob.FilenameMatch("*$pattern"), args.inputfile),
-                ignore_patterns,
-            )
+            pattern -> occursin(Glob.FilenameMatch("*$pattern"), args.inputfile),
+            ignore_patterns,
+        )
             # Skip ignored files
             if args.print_progress
                 @lock print_lock begin
