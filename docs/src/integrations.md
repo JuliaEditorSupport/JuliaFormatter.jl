@@ -18,12 +18,6 @@ repos:
 # ... other repos you may have
 ```
 
-Note that it requires the `jlfmt` Pkg app to be installed with
-
-```julia
-pkg> app add JuliaFormatter
-```
-
 You can find a list of releases [here](https://github.com/JuliaEditorSupport/JuliaFormatter.jl/releases).
 **Be sure to use the entire version string!** (You can double-check this by opening the
 release and looking at the part of the URL that follows `.../releases/tag/VERSION`.)

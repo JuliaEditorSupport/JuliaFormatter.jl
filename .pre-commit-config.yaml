@@ -3,16 +3,4 @@
 repos:
 - repo: local
   hooks:
-  - id: julia-formatter
-    name: "Julia Formatter"
-    entry: "jlfmt --inplace"
-    pass_filenames: true
-    always_run: false
-    types: [file]
-    files: \.(jl|[jq]?md)$
-    exclude: '^test/'
-    language: "system"
--   repo: meta
-    hooks:
-    -   id: check-hooks-apply
-    -   id: check-useless-excludes
+  - id: "julia-formatter"
