@@ -1,3 +1,4 @@
+# This workflow tests that the pre-commit hook works as expected.
 name: PreCommit
 on:
   push:
@@ -11,7 +12,7 @@ on:
 
 jobs:
   pre-commit:
-    name: Pre-commit hook
+    name: Test julia-formatter pre-commit hook
     runs-on: ubuntu-latest
 
     steps:
@@ -36,10 +37,10 @@ jobs:
         run: |
           # Run pre-commit hook, check that it fails.
           # pre-commit try-repo will fail if the hook makes changes
-          pipx run pre-commit try-repo ../../../ --files main.jl --verbose && exit 1
+          pipx run pre-commit try-repo ../../../ julia-formatter --files main.jl --verbose && exit 1
 
           # Check that the file was changed.
           git diff --exit-code main.jl && exit 1
 
           # Check that running the hook again succeeds.
-          pipx run pre-commit try-repo ../../../ --files main.jl --verbose
+          pipx run pre-commit try-repo ../../../ julia-formatter --files main.jl --verbose
