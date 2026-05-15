@@ -1266,7 +1266,7 @@ end
             begin
                 throw(ErrorException(\"""An error occured formatting \$filename. :-(
 
-                                     Please file an issue at https://github.com/domluna/JuliaFormatter.jl/issues
+                                     Please file an issue at https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues
                                      with a link to a gist containing the contents of the file. A gist
                                      can be created at https://gist.github.com/.\"""))
             end
@@ -1276,7 +1276,7 @@ end
         begin
            throw(ErrorException(\"""An error occured formatting \$filename. :-(
 
-                                Please file an issue at https://github.com/domluna/JuliaFormatter.jl/issues
+                                Please file an issue at https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues
                                 with a link to a gist containing the contents of the file. A gist
                                 can be created at https://gist.github.com/.\"""))
            end
@@ -2206,7 +2206,7 @@ end
         end"""
         @test fmt(str_, 4, 24) == str
 
-        # https://github.com/domluna/JuliaFormatter.jl/issues/9#issuecomment-481607068
+        # https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/9#issuecomment-481607068
         str = """
         this_is_a_long_variable_name = Dict{Symbol,Any}(
             :numberofpointattributes => NAttributes,
@@ -2345,7 +2345,7 @@ end
         @test fmt(str_, 4, 7) == str
         @test fmt(str_, 4, 1) == str
 
-        # https://github.com/domluna/JuliaFormatter.jl/issues/60
+        # https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/60
         str_ = """
         function write_subproblem_to_file(
                 node::Node, filename::String;
@@ -2547,7 +2547,7 @@ end
         s = run_nest(str, length(str) - 1)
         @test s.line_offset == 12
 
-        # https://github.com/domluna/JuliaFormatter.jl/issues/9#issuecomment-481607068
+        # https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/9#issuecomment-481607068
         str = """this_is_a_long_variable_name = Dict{Symbol,Any}(:numberofpointattributes => NAttributes,
                :numberofpointmtrs => NMTr, :numberofcorners => NSimplex, :firstnumber => Cint(1),
                :mesh_dim => Cint(3),)"""
@@ -2814,7 +2814,7 @@ end
         """) == "0.1 + 0.2\n"
     end
 
-    # https://github.com/domluna/JuliaFormatter.jl/issues/77
+    # https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/77
     @testset "issue 77" begin
         str_ = """
         [ a b Expr()
