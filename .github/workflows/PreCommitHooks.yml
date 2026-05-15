@@ -1,5 +1,5 @@
 # This workflow tests that the pre-commit hook works as expected.
-name: PreCommit
+name: PreCommitHooks
 on:
   push:
     tags:
@@ -12,7 +12,7 @@ on:
 
 jobs:
   pre-commit:
-    name: Test julia-formatter pre-commit hook
+    name: julia-formatter hook
     runs-on: ubuntu-latest
 
     steps:
