@@ -2408,8 +2408,7 @@ function p_call(
     cst::JuliaSyntax.GreenNode,
     s::State,
     ctx::PrettyContext,
-    lineage::Vector{Tuple{JuliaSyntax.Kind,Bool,Bool}},
-    ;
+    lineage::Vector{Tuple{JuliaSyntax.Kind,Bool,Bool}};
     child_limit::Union{Int,Nothing} = nothing,
 )
     style = getstyle(ds)
