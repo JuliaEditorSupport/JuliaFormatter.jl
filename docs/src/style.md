@@ -5,7 +5,7 @@ CurrentModule = JuliaFormatter
 # Style
 
 This is meant to give an impression of how the output of a formatted file looks like.
-Additional examples can be found in the [test files](https://github.com/domluna/JuliaFormatter.jl/tree/master/test/files).
+Additional examples can be found in the [test files](https://github.com/JuliaEditorSupport/JuliaFormatter.jl/tree/master/test/files).
 
 ## Initial `FST`
 
