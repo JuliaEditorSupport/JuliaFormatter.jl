@@ -2070,7 +2070,7 @@
         # NOTE: not sure since test makes sense anymore.
         # It is generally not a great idea to remove the semicolons here since
         # it can be potentially change the semantics or lead to code errors.
-        # https://github.com/domluna/JuliaFormatter.jl/issues/745
+        # https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/745
         @testset "matrices" begin
             str_ = """
             T[ a b Expr();
