@@ -80,9 +80,9 @@ display column.
 function source_display_line_offset(doc::Document, line::Int, line_offset::Int)
     line_offset <= 1 && return 1
 
-    code       = JuliaSyntax.sourcetext(doc.srcfile)
+    code = JuliaSyntax.sourcetext(doc.srcfile)
     line_start = doc.srcfile.line_starts[line]
-    offset     = line_start + line_offset - 1
+    offset = line_start + line_offset - 1
     prefix_end = prevind(code, offset)
 
     return textwidth(code[line_start:prefix_end]) + 1
@@ -190,7 +190,8 @@ function align_binaryopcalls!(doc::Document, fst::FST, op_inds::Vector{Int})
         binop, nlen, ws = if n.typ === Binary || n.typ === Kw
             nlen = node_align_length(n[1])
             start_offset = source_display_line_offset(doc, n.startline, n.line_offset)
-            op_offset = source_display_line_offset(doc, n[3].startline, n[3].line_offset)
+            op_offset =
+                source_display_line_offset(doc, n[3].startline, n[3].line_offset)
 
             n, nlen, op_offset - start_offset - nlen
         else
@@ -209,7 +210,8 @@ function align_binaryopcalls!(doc::Document, fst::FST, op_inds::Vector{Int})
                 else
                     binop = (sn.nodes::Vector{FST})[binop_ind]
                     nlen += node_align_length(binop[1])
-                    start_offset = source_display_line_offset(doc, n.startline, n.line_offset)
+                    start_offset =
+                        source_display_line_offset(doc, n.startline, n.line_offset)
 
                     op_offset = source_display_line_offset(
                         doc,
@@ -297,7 +299,8 @@ function align_struct!(doc::Document, fst::FST)
             end
 
             start_offset = source_display_line_offset(doc, n.startline, n.line_offset)
-            op_offset = source_display_line_offset(doc, n[ind].startline, n[ind].line_offset)
+            op_offset =
+                source_display_line_offset(doc, n[ind].startline, n[ind].line_offset)
             ws = op_offset - start_offset - nlen
 
             push!(g.nodes, n)
@@ -485,9 +488,10 @@ function align_matrix!(doc::Document, fst::FST)
                 n1 = r[i-1]
                 n2 = r[i+1]
 
-                diff = source_display_line_offset(doc, n2.startline, n2.line_offset) -
-                       source_display_line_offset(doc, n1.startline, n1.line_offset) -
-                       node_align_length(n1)
+                diff =
+                    source_display_line_offset(doc, n2.startline, n2.line_offset) -
+                    source_display_line_offset(doc, n1.startline, n1.line_offset) -
+                    node_align_length(n1)
 
                 # fix #694 and #713
                 if diff > 0
