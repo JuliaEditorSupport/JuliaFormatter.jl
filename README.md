@@ -34,7 +34,7 @@ julia> format_file("foo.jl")
 julia> format_text(str)
 ```
 
-Check out [the docs](https://domluna.github.io/JuliaFormatter.jl/stable/) for further description of the formatter and its options.
+Check out [the docs](https://juliaeditorsupport.github.io/JuliaFormatter.jl/stable/) for further description of the formatter and its options.
 
 ## Command Line Tool
 

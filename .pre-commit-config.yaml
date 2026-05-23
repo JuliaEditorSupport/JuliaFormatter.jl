@@ -10,7 +10,7 @@ repos:
     always_run: false
     types: [file]
     files: \.(jl|[jq]?md)$
-    exclude: '^test/'
+    exclude: '^(test/|\.github/)'
     language: "system"
 -   repo: meta
     hooks:
