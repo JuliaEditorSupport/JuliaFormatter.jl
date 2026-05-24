@@ -1,6 +1,6 @@
 # Custom Alignment
 
-> Solution for [issue 179](https://github.com/domluna/JuliaFormatter.jl/issues/179)
+> Solution for [issue 179](https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/179)
 
 Custom alignment is determined by a whitespace heuristic:
 

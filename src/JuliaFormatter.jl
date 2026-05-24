@@ -237,7 +237,7 @@ function format_text(node::JuliaSyntax.GreenNode, style::AbstractStyle, s::State
     end
 
     if needs_alignment(s.opts)
-        align_fst!(fst, s.opts)
+        align_fst!(fst, s.doc, s.opts)
     end
 
     nest!(style, fst, s)

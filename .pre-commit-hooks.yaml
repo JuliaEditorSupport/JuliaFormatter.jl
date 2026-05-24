@@ -1,6 +1,6 @@
 - id: julia-formatter
   name: "Julia Formatter"
-  entry: "jlfmt --inplace"
+  entry: "julia -e 'import JuliaFormatter: format; format(ARGS)'"
   pass_filenames: true
   always_run: false
   types: [file]

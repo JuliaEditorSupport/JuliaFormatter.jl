@@ -49,7 +49,7 @@ end
     BlueStyle()
 
 Formatting style based on [BlueStyle](https://github.com/invenia/BlueStyle)
-and [JuliaFormatter#283](https://github.com/domluna/JuliaFormatter.jl/issues/283).
+and [JuliaFormatter#283](https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/283).
 
 !!! note
     This style is still work-in-progress, and does not yet implement all of the

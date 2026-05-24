@@ -21,4 +21,7 @@ makedocs(;
     warnonly = true,
 )
 
-deploydocs(; repo = "github.com/domluna/JuliaFormatter.jl.git", push_preview = true)
+deploydocs(;
+    repo = "github.com/JuliaEditorSupport/JuliaFormatter.jl.git",
+    push_preview = true,
+)

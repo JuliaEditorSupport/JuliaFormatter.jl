@@ -1,7 +1,7 @@
 name = "JuliaFormatter"
 uuid = "98e50ef6-434e-11e9-1051-2b60c6c9e899"
-version = "3.0"
-authors = ["Dominique Luna <dluna132@gmail.com>"]
+version = "2.3.1"
+authors = ["Dominique Luna <dluna132@gmail.com> and contributors"]
 
 [deps]
 CommonMark = "a80b9123-70ca-4bc0-993e-6e3bcb318db6"
