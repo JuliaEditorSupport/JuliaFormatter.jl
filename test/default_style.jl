@@ -1431,6 +1431,29 @@
         end"""
         @test fmt(str_) == str
 
+        @testset "multiline string starting on line with display width != bytes" begin
+            # https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/974
+            s1a = raw"""
+            error_str = Δa -> "Change in activity must be within the valid range: \
+                                Δa ∈ [1, 2], but Δa = $Δa"
+            """
+            s1b = raw"""
+            error_str = Δa -> "Change in activity must be within the valid range: \
+                  Δa ∈ [1, 2], but Δa = $Δa"
+            """
+            s2a = raw"""
+            error_str(Δa) = "Change in activity must be within the valid range: \
+                                Δa ∈ [1, 2], but Δa = $Δa"
+            """
+            s2b = raw"""
+            error_str(Δa) = "Change in activity must be within the valid range: \
+              Δa ∈ [1, 2], but Δa = $Δa"
+            """
+            for s in (s1a, s1b, s2a, s2b)
+                @test format_text(s) == s
+            end
+        end
+
         str_ = """
         begin
         begin

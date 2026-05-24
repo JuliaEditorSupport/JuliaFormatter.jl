@@ -525,12 +525,25 @@ function p_stringh(
         return FST(LITERAL, loc[2], startline, startline, val)
     end
 
-    t = FST(StringN, loc[2] - 1)
+    # The indent for the StringN FST should be the width of the first line prior to the
+    # opening quote. The quote is the loc[2]-th byte of line loc[1].
+    opening_quote_col = source_display_line_offset(s.doc, loc[1], loc[2])
+    t = FST(StringN, opening_quote_col - 1)
     t.line_offset = loc[2]
 
     lines = split(val, "\n")
-    sidx = loc[2]
+    # Calculate the display column of the first non-whitespace character in the string
+    # literal.
+    sidx = opening_quote_col  # Display column of the opening quote.
     for l in lines[2:end]
+        # Note that `fc` is actually a byte index, not a display column. This works only
+        # insofar as all whitespace characters (as defined by isspace(c)) have the same
+        # display width and byte width (for example, for a regular space both are 1). This
+        # is not, in general, true: for example, for U+3000 IDEOGRAPHIC SPACE we have that
+        #    isspace('\u3000')     ==>  true
+        #    ncodeunits('\u3000')  ==>  3
+        #    textwidth('\u3000')   ==>  2
+        # However, this is pathological enough to not worry about.
         fc = findfirst(c -> !isspace(c), l)
         if !isnothing(fc)
             sidx = min(sidx, fc)
