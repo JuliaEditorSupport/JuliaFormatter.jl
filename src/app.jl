@@ -560,7 +560,7 @@ function main(argv::Vector{String})
     print_progress = verbose && !(input_is_stdin || output_is_stdout)
 
     nfiles_str = string(length(inputfiles))
-    options_list = (
+    options_list = [
         ProcessFileArgs(
             inputfile,
             file_counter,
@@ -577,7 +577,7 @@ function main(argv::Vector{String})
             format_markdown,
             config_priority,
         ) for (file_counter, inputfile) in enumerate(inputfiles)
-    )
+    ]
 
     # Use multithreading for multiple files (only if multiple threads available)
     # Single file or stdin or single thread: process sequentially

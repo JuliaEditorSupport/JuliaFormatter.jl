@@ -806,7 +806,7 @@ for i = 1:10 body end
 
 `always_for_in=nothing` disables this normalization behavior.
 
-- <https://github.com/domluna/JuliaFormatter.jl/issues/34>
+- <https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/34>
 """
 function eq_to_in_normalization!(fst::FST, always_for_in::Bool, for_in_replacement::String)
     if fst.typ === Binary

@@ -45,7 +45,7 @@ end
     YASStyle()
 
 Formatting style based on [YASGuide](https://github.com/jrevels/YASGuide)
-and [JuliaFormatter#198](https://github.com/domluna/JuliaFormatter.jl/issues/198).
+and [JuliaFormatter#198](https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/198).
 
 Configurable options with different defaults to [`DefaultStyle`](@ref) are:
 $(list_different_defaults(YASStyle()))
