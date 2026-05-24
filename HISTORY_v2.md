@@ -1,3 +1,7 @@
+# v2.3.2
+
+Added compatibility with CommonMark@1.
+
 # v2.3.1
 
 Fixed a bug which caused `jlfmt --threads=N` to fail for `N > 1`.
