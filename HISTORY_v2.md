@@ -1,3 +1,7 @@
+# v2.3.3
+
+Fixed a bug with alignment of multiline strings when the first line contains characters whose display width is not equal to the number of bytes.
+
 # v2.3.2
 
 Added compatibility with CommonMark@1.
