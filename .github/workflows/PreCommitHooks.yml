@@ -11,7 +11,7 @@ on:
       - 'master'
 
 jobs:
-  pre-commit:
+  pc-julia-formatter:
     name: julia-formatter hook
     runs-on: ubuntu-latest
 
@@ -44,3 +44,44 @@ jobs:
 
           # Check that running the hook again succeeds.
           pipx run pre-commit try-repo ../../../ julia-formatter --files main.jl --verbose
+
+
+  pc-jlfmt:
+    name: jlfmt hook
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - uses: julia-actions/setup-julia@v3
+        with:
+          version: '1'
+
+      - name: Install jlfmt app
+        # Need to explicitly add registry because of
+        # https://github.com/JuliaLang/Pkg.jl/issues/4360 which is not
+        # backported to 1.12 yet
+        run:
+          julia -e 'using Pkg; Pkg.Registry.add("General"); Pkg.Apps.add(; path=pwd())'
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.x'
+
+      - name: Test pre-commit hook
+        working-directory: .github/workflows/pre-commit
+        run: |
+          # Make sure jlfmt app can be found
+          export PATH="$HOME/.julia/bin:$PATH"
+
+          # Run pre-commit hook, check that it fails.
+          # pre-commit try-repo will fail if the hook makes changes
+          pipx run pre-commit try-repo ../../../ jlfmt --files main.jl --verbose && exit 1
+
+          # Check that the file was changed.
+          git diff --exit-code main.jl && exit 1
+
+          # Check that running the hook again succeeds.
+          pipx run pre-commit try-repo ../../../ jlfmt --files main.jl --verbose
