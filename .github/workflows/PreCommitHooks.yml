@@ -73,11 +73,42 @@ jobs:
       - name: Test pre-commit hook
         working-directory: .github/workflows/pre-commit
         run: |
-          # Make sure jlfmt app can be found
+          # At this point, jlfmt won't be on PATH since the GitHub runner
+          # doesn't automatically add Julia apps to PATH. This is intentional,
+          # since it lets us check that there is a nice error message if jlfmt
+          # is not on PATH.
+          output=$(pipx run pre-commit try-repo ../../../ jlfmt --files main.jl --verbose 2>&1 || true)
+          echo "$output" | grep -q "make sure that jlfmt is on your PATH" || { echo "Expected graceful error message when jlfmt was not found"; exit 1; }
+
+          # Now make sure jlfmt app can be found
+          OLDPATH=$PATH
           export PATH="$HOME/.julia/bin:$PATH"
 
           # Run pre-commit hook, check that it fails.
           # pre-commit try-repo will fail if the hook makes changes
+          pipx run pre-commit try-repo ../../../ jlfmt --files main.jl --verbose && exit 1
+
+          # Check that the file was changed.
+          git diff --exit-code main.jl && exit 1
+
+          # Check that running the hook again succeeds.
+          pipx run pre-commit try-repo ../../../ jlfmt --files main.jl --verbose
+
+          # Restore PATH for future steps
+          export PATH=$OLDPATH
+
+      - name: Test pre-commit hook with --jlfmt-path argument
+        working-directory: .github/workflows/pre-commit
+        run: |
+          # Reset the test file
+          git checkout main.jl
+
+          # Add --jlfmt-path arg to the existing jlfmt hook. pre-commit
+          # try-repo doesn't allow passing hook arguments via the command line,
+          # so we inject it directly into .pre-commit-hooks.yaml. A tad ugly.
+          sed -i '/^- id: jlfmt$/a\  args: ["--jlfmt-path=~/.julia/bin/jlfmt"]' ../../../.pre-commit-hooks.yaml
+
+          # Run pre-commit hook, check that it fails.
           pipx run pre-commit try-repo ../../../ jlfmt --files main.jl --verbose && exit 1
 
           # Check that the file was changed.

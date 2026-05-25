@@ -44,7 +44,7 @@ However, it is extremely unlikely that this hook will change in future releases,
 
 ### `jlfmt` hook (uses the `jlfmt` app)
 
-To use the `jlfmt` hook you must first make sure that the `jlfmt` app is installed on your system and is available on your `PATH`.
+To use the `jlfmt` hook you must first make sure that the `jlfmt` app is installed on your system.
 Instructions for installing the `jlfmt` app are given in the [CLI documentation](@ref cli).
 
 The version of `jlfmt` that you install here will be the version that is used to actually format your code.
@@ -60,7 +60,18 @@ repos:
   - id: "jlfmt"
 ```
 
-Just like above, the `rev` field controls the version of the _hook_ that is checked out, not the version of JuliaFormatter that is used to do the formatting: that is governed by the version of the `jlfmt` app that we installed earlier.
+If you prefer not to add `jlfmt` to your `PATH`, you can specify the path to the `jlfmt` executable in the `args` field of the hook, like so:
+
+```yaml
+repos:
+- repo: https://github.com/JuliaEditorSupport/JuliaFormatter.jl
+  rev: TODO TODO
+  hooks:
+  - id: "jlfmt"
+    args: ["--jlfmt-path=/path/to/jlfmt"]
+```
+
+Just like for the `julia-formatter` hook, the `rev` field controls the version of the _hook_ that is checked out, not the version of JuliaFormatter that is used to do the formatting: that is governed by the version of the `jlfmt` app that you installed.
 The `rev` field used here points to JuliaFormatter v2.4.0, but this hook is unlikely to change in future releases, so you do not need to worry about updating it to a newer version.
 
 !!! note

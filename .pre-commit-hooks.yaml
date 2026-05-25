@@ -10,10 +10,10 @@
 
 - id: jlfmt
   name: "JuliaFormatter (Pkg app)"
-  entry: "jlfmt --inplace"
+  entry: bin/jlfmt-hook.sh
   pass_filenames: true
   always_run: false
   types: [file]
   files: \.(jl|md|jmd|qmd)$
-  language: "system"
+  language: "script"
   description: "An opinionated code formatter for Julia, but now via a Pkg app. Plot twist - the opinion is your own."
