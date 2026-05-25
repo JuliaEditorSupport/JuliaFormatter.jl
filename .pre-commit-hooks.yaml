@@ -4,6 +4,16 @@
   pass_filenames: true
   always_run: false
   types: [file]
-  files: \.(jl|[jq]?md)$
+  files: \.(jl|md|jmd|qmd)$
   language: "system"
   description: "An opinionated code formatter for Julia. Plot twist - the opinion is your own."
+
+- id: jlfmt
+  name: "JuliaFormatter (Pkg app)"
+  entry: "jlfmt --inplace"
+  pass_filenames: true
+  always_run: false
+  types: [file]
+  files: \.(jl|md|jmd|qmd)$
+  language: "system"
+  description: "An opinionated code formatter for Julia, but now via a Pkg app. Plot twist - the opinion is your own."
