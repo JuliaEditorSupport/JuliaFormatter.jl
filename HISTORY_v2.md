@@ -7,6 +7,8 @@ To use this, you will need to first install `jlfmt` with
 ] app add JuliaFormatter
 ```
 
+Please see [the docs](https://juliaeditorsupport.github.io/JuliaFormatter.jl/stable/integrations/) for more information.
+
 # v2.3.2
 
 Added compatibility with CommonMark@1.
