@@ -1450,7 +1450,11 @@
               Δa ∈ [1, 2], but Δa = $Δa"
             """
             for s in (s1a, s1b, s2a, s2b)
-                @test format_text(s) == s
+                # Need to normalise line endings because \ at the end of a raw_str behaves
+                # weirdly on Windows causing CI to fail.
+                # https://github.com/JuliaLang/julia/issues/38908
+                s = replace(s, "\r\n" => "\n")
+                @test fmt(s) == s
             end
         end
 
