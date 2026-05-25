@@ -29,4 +29,4 @@ if ! command -v "$jlfmt" &>/dev/null; then
     exit 1
 fi
 
-exec "$jlfmt" --inplace "${args[@]}"
+exec "$jlfmt" --threads=auto -- --inplace "${args[@]}"

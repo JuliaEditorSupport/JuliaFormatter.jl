@@ -1,6 +1,6 @@
 - id: julia-formatter
   name: "Julia Formatter"
-  entry: "julia -e 'import JuliaFormatter: format; format(ARGS)'"
+  entry: "julia --threads=auto -e 'import JuliaFormatter: format; format(ARGS)'"
   pass_filenames: true
   always_run: false
   types: [file]

@@ -1,5 +1,7 @@
 # v2.4.0
 
+Added the `--threads=auto` option to the old `julia-formatter` pre-commit hook, which should speed up invocations of JuliaFormatter.
+
 Added a new pre-commit hook which uses the `jlfmt` executable.
 To use this, you will need to first install `jlfmt` with
 
