@@ -38,18 +38,9 @@ jobs:
       - name: Build docs
         working-directory: docs
         run: julia --color=yes --project=. -e 'include("make.jl")'
-
-      - name: Deploy docs to gh-pages branch
-        working-directory: docs
-        shell: julia --color=yes --project=. {0}
         env:
           GITHUB_TOKEN: ${{ github.token }}
-        # Must pass `root` when `deploydocs()` is run from outside make.jl file
-        # Also, `root` must be an absolute path (hence the call to `pwd()`)
-        run: |
-          using Documenter
-          deploydocs(; root=pwd(), repo="github.com/JuliaEditorSupport/JuliaFormatter.jl.git", push_preview=true)
-          
+
       - name: Post docs preview comment
         if: ${{ env.IS_PR_BUT_NOT_FORK == 'true' }}
         env:

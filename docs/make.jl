@@ -23,3 +23,8 @@ makedocs(;
         "API Reference" => "api.md",
     ],
 )
+
+deploydocs(;
+    repo = "github.com/JuliaEditorSupport/JuliaFormatter.jl.git",
+    push_preview = true,
+)
