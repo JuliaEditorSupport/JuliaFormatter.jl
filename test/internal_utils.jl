@@ -61,6 +61,19 @@
         @test !JuliaFormatter.is_short_function_def(node)
     end
 
+    @testset "assignment predicate" begin
+        # Use JuliaSyntax's syntactic-assignment category instead of rebuilding
+        # assignment membership from precedence ranges and child checks.
+        _, _, node = parsed_node("x = 1")
+        @test JuliaFormatter.is_assignment(node)
+
+        _, _, node = parsed_node("x += 1")
+        @test JuliaFormatter.is_assignment(node)
+
+        _, _, node = parsed_node("x in xs")
+        @test !JuliaFormatter.is_assignment(node)
+    end
+
     @testset "do-block and iteration utilities" begin
         # Calls with a do block are split so the call arguments and do body can be
         # formatted by their dedicated paths.
@@ -110,5 +123,18 @@
         @test JuliaFormatter.node_align_length(
             JuliaFormatter.FST(JuliaFormatter.IDENTIFIER, 1, 1, 1, "s\u0304_b"),
         ) == 3
+    end
+
+    @testset "module flags" begin
+        # JuliaSyntax v1 stores baremodule as a module node with a flag.
+        _, _, node = parsed_node("""
+        baremodule A
+        end
+        """)
+
+        @test JuliaSyntax.kind(node) === JuliaSyntax.Kind("module")
+        @test JuliaSyntax.has_flags(node, JuliaSyntax.BARE_MODULE_FLAG)
+        @test !JuliaFormatter.is_short_function_def(node)
+        @test JuliaFormatter.format_text("baremodule A\nend") == "baremodule A end"
     end
 end

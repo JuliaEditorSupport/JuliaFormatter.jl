@@ -629,10 +629,7 @@ function is_assignment(x::FST)
 end
 
 function is_assignment(t::JuliaSyntax.GreenNode)
-    if JuliaSyntax.is_prec_assignment(kind(t)) && haschildren(t)
-        return !any(c -> kind(c) in KSet"in ∈", children(t))
-    end
-    return false
+    return JuliaSyntax.is_syntactic_assignment(t) && haschildren(t)
 end
 is_assignment(::Nothing) = false
 
@@ -662,6 +659,7 @@ function is_function_or_macro_def(cst::JuliaSyntax.GreenNode)
 end
 
 is_short_function_def(cst::JuliaSyntax.GreenNode) =
+    kind(cst) === K"function" &&
     JuliaSyntax.has_flags(cst, JuliaSyntax.SHORT_FORM_FUNCTION_FLAG)
 
 function is_function_like_lhs(node::JuliaSyntax.GreenNode)

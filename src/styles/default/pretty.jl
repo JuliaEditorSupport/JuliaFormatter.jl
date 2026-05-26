@@ -314,6 +314,8 @@ function pretty(
         p_abstract(style, node, s, ctx, lineage)
     elseif k === K"primitive"
         p_primitive(style, node, s, ctx, lineage)
+    elseif k === K"module" && JuliaSyntax.has_flags(node, JuliaSyntax.BARE_MODULE_FLAG)
+        p_baremodule(style, node, s, ctx, lineage)
     elseif k === K"module"
         p_module(style, node, s, ctx, lineage)
     elseif k === K"baremodule"
