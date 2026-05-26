@@ -1,18 +1,24 @@
-# Command Line Interface
+# [Command Line Interface](@id cli)
 
 JuliaFormatter provides a command-line executable `jlfmt` for formatting Julia source code.
+This is a [Pkg app](https://pkgdocs.julialang.org/v1/apps/), and therefore requires Julia v1.12 or later.
 
 ## Installation
 
-Install using Julia's app manager:
+The app can be installed using Julia's app manager:
 
 ```julia
-pkg> app add JuliaFormatter
+# Install the latest available version
+import Pkg; Pkg.Apps.add("JuliaFormatter")
+
+# Or a specific version. Note that the version must be >= v2.2.0 since that is
+# when the `jlfmt` app was introduced.
+import Pkg; Pkg.Apps.add(; name = "JuliaFormatter", version = v"2.3.0")
 ```
 
-This makes the `jlfmt` command available in your `PATH`.
+This should create a new binary, called `jlfmt`, inside the Julia depot's `bin` directory (usually `~/.julia/bin`; but you can check with the `DEPOT_PATH` variable in Julia).
 
-Alternatively, invoke directly without installation:
+Alternatively, you can invoke the app directly without installation:
 
 ```bash
 julia -m JuliaFormatter [<options>] <path>...
