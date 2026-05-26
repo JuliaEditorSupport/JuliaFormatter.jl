@@ -113,28 +113,64 @@ function is_source_prefix_op_call(cst::JuliaSyntax.GreenNode, s::State)
     return operands == 1
 end
 
-function source_op_kind(s::State, cst::JuliaSyntax.GreenNode, op_indices::Vector{Int})
+function source_operator_indices(cst::JuliaSyntax.GreenNode)
+    haschildren(cst) || return Int[]
+
+    childs = children(cst)
+    args = findall(n -> !JuliaSyntax.is_whitespace(n), childs)
+    isempty(args) && return Int[]
+
+    if kind(cst) === K"op="
+        length(args) < 4 && return Int[]
+        return args[2:(end-1)]
+    elseif is_short_function_def(cst)
+        length(args) < 3 && return Int[]
+        return Int[args[2]]
+    elseif JuliaSyntax.is_prefix_op_call(cst)
+        if kind(cst) === K"dotcall" &&
+           length(args) >= 2 &&
+           kind(childs[args[1]]) === K"." &&
+           !haschildren(childs[args[1]])
+            return args[1:2]
+        else
+            return Int[args[1]]
+        end
+    elseif JuliaSyntax.is_infix_op_call(cst)
+        op_indices = Int[]
+        i = 2
+        while i < length(args)
+            push!(op_indices, args[i])
+            if kind(cst) === K"dotcall" &&
+               i < length(args) &&
+               kind(childs[args[i]]) === K"." &&
+               !haschildren(childs[args[i]])
+                push!(op_indices, args[i+1])
+                i += 1
+            end
+            i += 2
+        end
+        return op_indices
+    elseif JuliaSyntax.is_postfix_op_call(cst)
+        return Int[args[end]]
+    end
+
+    return Int[]
+end
+
+function source_op_kind(s::State, cst::JuliaSyntax.GreenNode)
     opkind = op_kind(cst)
     opkind !== K"None" && opkind !== K"Identifier" && return opkind
 
-    offset = Int(s.offset)
     childs = children(cst)
-    for (i, c) in enumerate(childs)
-        if i in op_indices
-            k = source_operator_kind(s, c, offset)
-            if !isnothing(k) && !(kind(cst) === K"dotcall" && k === K".")
-                return k
-            end
+    for i in source_operator_indices(cst)
+        c = childs[i]
+        offset = Int(s.offset) + sum(span, childs[1:(i-1)]; init = 0)
+        k = source_operator_kind(s, c, offset)
+        if !isnothing(k) && !(kind(cst) === K"dotcall" && k === K".")
+            return k
         end
-        offset += Int(span(c))
     end
     return opkind
-end
-
-function update_operator_indices(childs::Vector{JuliaSyntax.GreenNode{T}}) where {T}
-    args = findall(n -> !JuliaSyntax.is_whitespace(n), childs)
-    length(args) < 4 && return Int[]
-    return args[2:(end-1)]
 end
 
 function do_block_index(childs::Vector{JuliaSyntax.GreenNode{T}}) where {T}
@@ -1957,12 +1993,8 @@ function p_binaryopcall(
     end
 
     childs = children(cst)
-    op_indices = if kind(cst) === K"op="
-        update_operator_indices(childs)
-    else
-        extract_operator_indices(childs)
-    end
-    opkind = source_op_kind(s, cst, op_indices)
+    op_indices = source_operator_indices(cst)
+    opkind = source_op_kind(s, cst)
 
     nonest = ctx.nonest || opkind === K":"
 
@@ -2345,7 +2377,7 @@ function p_unaryopcall(
     if isnothing(op_idx)
         op_idx = first_idx
     end
-    opkind = isnothing(op_idx) ? op_kind(cst) : source_op_kind(s, cst, Int[op_idx])
+    opkind = isnothing(op_idx) ? op_kind(cst) : source_op_kind(s, cst)
     op_dotted = kind(cst) === K"dotcall"
 
     t.metadata = Metadata(opkind, op_dotted)

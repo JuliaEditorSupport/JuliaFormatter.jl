@@ -525,23 +525,6 @@ function is_gen(x::FST)
     x.typ in (Generator, Filter, Flatten)
 end
 
-function extract_operator_indices(childs::Vector{JuliaSyntax.GreenNode{T}}) where {T}
-    args = findall(n -> !JuliaSyntax.is_whitespace(n), childs)
-    op_indices = Int[]
-    i = 2
-    while i <= length(args)
-        push!(op_indices, args[i])
-        if i < length(args) &&
-           kind(childs[args[i]]) === K"." &&
-           !haschildren(childs[args[i]])
-            push!(op_indices, args[i+1])
-            i += 1
-        end
-        i += 2
-    end
-    return op_indices
-end
-
 function _callinfo(x::JuliaSyntax.GreenNode)
     if !haschildren(x)
         return 0, 0

@@ -12,17 +12,15 @@
         # JuliaSyntax v1 can represent source operators as Identifier leaves; recover
         # the actual operator kind from the original source text.
         _, state, node = parsed_node("a + b")
-        op_indices = JuliaFormatter.extract_operator_indices(JuliaSyntax.children(node))
+        op_indices = JuliaFormatter.source_operator_indices(node)
         op = JuliaSyntax.children(node)[only(op_indices)]
 
         @test JuliaFormatter.source_operator_kind(state, op, 3) === JuliaSyntax.Kind("+")
-        @test JuliaFormatter.source_op_kind(state, node, op_indices) ===
-              JuliaSyntax.Kind("+")
+        @test JuliaFormatter.source_op_kind(state, node) === JuliaSyntax.Kind("+")
 
         _, state, node = parsed_node("x .+ y")
-        op_indices = JuliaFormatter.extract_operator_indices(JuliaSyntax.children(node))
-        @test JuliaFormatter.source_op_kind(state, node, op_indices) ===
-              JuliaSyntax.Kind("+")
+        @test JuliaFormatter.source_operator_indices(node) == [3, 4]
+        @test JuliaFormatter.source_op_kind(state, node) === JuliaSyntax.Kind("+")
 
         # Prefix operator calls should be treated as unary only when the recovered
         # source operator is valid in unary position.
@@ -39,18 +37,15 @@
         # Short-form definitions parse as function nodes but need binary-op handling
         # so the equals sign keeps assignment-like spacing and metadata.
         _, state, node = parsed_node("f(x) = x")
-        op_indices = JuliaFormatter.extract_operator_indices(JuliaSyntax.children(node))
 
         @test JuliaFormatter.is_short_function_def(node)
-        @test JuliaFormatter.source_op_kind(state, node, op_indices) ===
-              JuliaSyntax.Kind("=")
+        @test JuliaFormatter.source_operator_indices(node) == [3]
+        @test JuliaFormatter.source_op_kind(state, node) === JuliaSyntax.Kind("=")
 
         # Compound assignments split the source operator across multiple child nodes.
         _, state, node = parsed_node("x += 1")
-        op_indices = JuliaFormatter.update_operator_indices(JuliaSyntax.children(node))
-        @test op_indices == [3, 4]
-        @test JuliaFormatter.source_op_kind(state, node, op_indices) ===
-              JuliaSyntax.Kind("op=")
+        @test JuliaFormatter.source_operator_indices(node) == [3, 4]
+        @test JuliaFormatter.source_op_kind(state, node) === JuliaSyntax.Kind("op=")
 
         # Long-form definitions must stay on the dedicated function-definition path.
         _, _, node = parsed_node("""
