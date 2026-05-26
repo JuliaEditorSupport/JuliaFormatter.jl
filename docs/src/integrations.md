@@ -28,6 +28,17 @@ repos:
 
 (If you have other pre-commit hooks, just add the `repo: ...` block to your pre-existing list of repos.)
 
+To pass additional arguments to the Julia invocation (e.g. if JuliaFormatter is installed in a specific project), you can use the `args` field, like so:
+
+```yaml
+repos:
+- repo: https://github.com/JuliaEditorSupport/JuliaFormatter.jl
+  rev: baf84dcde3e7d39a3339fecb51a5d853f8aa35af
+  hooks:
+  - id: "julia-formatter"
+    args: ["--project=/path/to/myproj"]
+```
+
 **Note that `rev` controls the version of the _hook_ that is checked out; it does not control which version of JuliaFormatter is actually used to format your code.**
 The version used to do the actual formatting is determined by the version of JuliaFormatter that is installed in your global Julia environment.
 This means that if you want to format your code with JuliaFormatter v1, you must make sure that you install v1 in your global Julia environment.
