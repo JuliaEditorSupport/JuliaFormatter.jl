@@ -137,8 +137,8 @@ function do_block_index(childs::Vector{JuliaSyntax.GreenNode{T}}) where {T}
 end
 
 function has_do_block_call(cst::JuliaSyntax.GreenNode)
-    kind(cst) in KSet"call dotcall" && haschildren(cst) || return false
-    !isnothing(do_block_index(children(cst)))
+    kind(cst) in KSet"call dotcall" && haschildren(cst) || return nothing
+    do_block_index(children(cst))
 end
 
 function call_args(childs::Vector{JuliaSyntax.GreenNode{T}}) where {T}
@@ -174,6 +174,7 @@ function pretty(
 )::FST
     k = kind(node)
     style = getstyle(ds)
+    do_block_idx = has_do_block_call(node)
     push!(lineage, (k, is_iterable(node), is_assignment(node)))
 
     ret = if k == K"Identifier" && !haschildren(node)
@@ -272,8 +273,8 @@ function pretty(
     elseif k === K"?" && haschildren(node)
         p_conditionalopcall(style, node, s, ctx, lineage)
     # Example: `map(xs) do x; x + 1; end` is a call node with a do child.
-    elseif has_do_block_call(node)
-        p_do_call(style, node, s, ctx, lineage)
+    elseif !isnothing(do_block_idx)
+        p_do_call(style, node, s, ctx, lineage, do_block_idx)
     # Example: `+(x)` parses as a prefix-op call.
     elseif JuliaSyntax.is_prefix_op_call(node)
         p_unaryopcall(style, node, s, ctx, lineage)
@@ -1721,22 +1722,24 @@ function p_do_call(
     s::State,
     ctx::PrettyContext,
     lineage::Vector{Tuple{JuliaSyntax.Kind,Bool,Bool}},
+    do_block_idx::Int,
 )
     t = FST(Do, nspaces(s))
     childs = children(cst)
-    idx = do_block_index(childs)
-    if isnothing(idx)
-        return p_call(ds, cst, s, ctx, lineage)
+    if !checkbounds(Bool, childs, do_block_idx) ||
+       kind(childs[do_block_idx]) !== K"do" ||
+       !haschildren(childs[do_block_idx])
+        error("p_do_call called without a do block")
     end
 
     add_node!(
         t,
-        p_call(ds, cst, s, ctx, lineage; child_limit = idx - 1),
+        p_call(ds, cst, s, ctx, lineage; child_limit = do_block_idx - 1),
         s;
         join_lines = true,
     )
 
-    do_node = childs[idx]
+    do_node = childs[do_block_idx]
     push!(lineage, (kind(do_node), is_iterable(do_node), is_assignment(do_node)))
     append_do_nodes!(t, ds, do_node, s, ctx, lineage)
     pop!(lineage)

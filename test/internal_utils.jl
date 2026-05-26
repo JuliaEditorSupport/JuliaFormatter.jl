@@ -81,7 +81,7 @@
         do_idx = JuliaFormatter.do_block_index(childs)
 
         @test do_idx == 5
-        @test JuliaFormatter.has_do_block_call(node)
+        @test JuliaFormatter.has_do_block_call(node) == do_idx
         @test length(JuliaFormatter.call_args(childs[1:(do_idx-1)])) == 1
 
         # Single-iterator loops can inspect the RHS iterable directly.
