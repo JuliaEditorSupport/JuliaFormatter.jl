@@ -27,6 +27,6 @@ end
 
 !!! note "Ignoring files"
     You can also ignore entire files and directories by supplying
-    [the `ignore` option](@ref ignore) in `.JuliaFormatter.toml`.
+    [the `ignore` option](@ref config-ignore) in `.JuliaFormatter.toml`.
 
 Note the formatter expects `#! format: on` and `#! format: off` to be on its own line and the whitespace to be an exact match.
