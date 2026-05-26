@@ -33,6 +33,10 @@ function source_kind(s::State, cst::JuliaSyntax.GreenNode, offset::Integer)
     end
 end
 
+# JuliaSyntax v1 can encode source operators as Identifier leaves in call
+# forms, e.g. `a + b`, `x .+ y`, `+(x)`, and `>=(x)`. The parent call flags
+# describe the shape, but the leaf itself is not `is_operator`, and the exact
+# operator kind is only recoverable from the source span.
 function source_operator_kind(s::State, cst::JuliaSyntax.GreenNode, offset::Integer)
     if JuliaSyntax.is_operator(cst) && !haschildren(cst)
         return kind(cst)
