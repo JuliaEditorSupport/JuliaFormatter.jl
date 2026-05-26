@@ -47,7 +47,7 @@ Instructions for installing the `jlfmt` app are given in the [CLI documentation]
 The version of `jlfmt` that you install here will be the version that is used to actually format your code.
 The `jlfmt` app was only introduced in v2.2.0, so versions before that are inaccessible: if you want to format your code with JuliaFormatter v1, you will not be able to use this hook.
 
-Once you have the `jlfmt` app installed and available on your `PATH`, you can add the following to your `.pre-commit-config.yaml`:
+Once you have the `jlfmt` app installed, you can add the following to your `.pre-commit-config.yaml`:
 
 ```yaml
 repos:
@@ -57,7 +57,7 @@ repos:
   - id: "jlfmt"
 ```
 
-If you prefer not to add `jlfmt` to your `PATH`, you can specify the path to the `jlfmt` executable in the `args` field of the hook, like so:
+The path to the `jlfmt` executable in the `args` field of the hook, like so (although you should not _need_ to do so—see below):
 
 ```yaml
 repos:
@@ -67,6 +67,14 @@ repos:
   - id: "jlfmt"
     args: ["--jlfmt-path=/path/to/jlfmt"]
 ```
+
+However, even without this argument, the pre-commit hook will attempt to locate `jlfmt` for you.
+It looks in the following places, in order:
+
+1. Using the executable specified via the `--jlfmt-path` argument, if provided.
+2. A `jlfmt` executable on your system `PATH`.
+3. `{dir}/bin/jlfmt` for each directory `{dir}` in the `JULIA_DEPOT_PATH` environment variable.
+4. `~/.julia/bin/jlfmt`, which is the default depot path if `JULIA_DEPOT_PATH` is not set.
 
 Just like for the `julia-formatter` hook, the `rev` field controls the version of the _hook_ that is checked out, not the version of JuliaFormatter that is used to do the formatting: that is governed by the version of the `jlfmt` app that you installed.
 The `rev` field used here points to JuliaFormatter v2.4.0, but this hook is unlikely to change in future releases, so you do not need to worry about updating it to a newer version.
