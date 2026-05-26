@@ -256,7 +256,7 @@ function pretty(
         p_tuple(style, node, s, ctx, lineage)
     # Example: `for x in xs, y in ys` uses an iteration node.
     elseif k === K"iteration"
-        p_cartesian_iterator(style, node, s, ctx, lineage)
+        p_iteration(style, node, s, ctx, lineage)
     elseif k === K"parens"
         p_invisbrackets(style, node, s, ctx, lineage)
     elseif k === K"curly"
@@ -277,9 +277,6 @@ function pretty(
     # Example: `+(x)` parses as a prefix-op call.
     elseif JuliaSyntax.is_prefix_op_call(node)
         p_unaryopcall(style, node, s, ctx, lineage)
-    # Example: `>=(x)` has a source operator callee but is not a unary op.
-    elseif !isnothing(source_prefix_operator_index(node, s))
-        p_call(style, node, s, ctx, lineage)
     elseif is_binary(node)
         p_binaryopcall(style, node, s, ctx, lineage)
     elseif is_chain(node)
@@ -1621,7 +1618,7 @@ function p_for(
     t
 end
 
-function p_cartesian_iterator(
+function p_iteration(
     ds::AbstractStyle,
     cst::JuliaSyntax.GreenNode,
     s::State,
