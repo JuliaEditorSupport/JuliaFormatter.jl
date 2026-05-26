@@ -53,10 +53,6 @@ function is_source_operator(s::State, cst::JuliaSyntax.GreenNode, offset::Intege
     !isnothing(source_operator_kind(s, cst, offset))
 end
 
-function is_source_unary_operator(k::JuliaSyntax.Kind)
-    JuliaSyntax.is_unary_op(JuliaSyntax.SyntaxHead(k, UInt16(0)))
-end
-
 function source_prefix_operator_index(cst::JuliaSyntax.GreenNode, s::State)
     kind(cst) in KSet"call dotcall" && haschildren(cst) || return nothing
     childs = children(cst)
@@ -74,43 +70,6 @@ function source_prefix_operator_index(cst::JuliaSyntax.GreenNode, s::State)
         end
     offset = s.offset + sum(span, childs[1:(op_arg-1)]; init = 0)
     return is_source_operator(s, childs[op_arg], offset) ? op_arg : nothing
-end
-
-function is_source_prefix_op_call(cst::JuliaSyntax.GreenNode, s::State)
-    op_idx = source_prefix_operator_index(cst, s)
-    isnothing(op_idx) && return false
-
-    childs = children(cst)
-    op_offset = s.offset + sum(span, childs[1:(op_idx-1)]; init = 0)
-    opkind = source_operator_kind(s, childs[op_idx], op_offset)
-    (isnothing(opkind) || !is_source_unary_operator(opkind)) && return false
-
-    call_idx = findfirst(n -> kind(n) in KSet"( { [", childs)
-    if !isnothing(call_idx)
-        args = 0
-        for c in childs[(call_idx+1):end]
-            kind(c) === K"parameters" && return false
-            kind(c) in KSet", ..." && return false
-            if !(
-                is_punc(c) ||
-                kind(c) == K";" ||
-                JuliaSyntax.is_whitespace(c) ||
-                kind(c) in KSet"` ``` \" \"\"\""
-            )
-                args += 1
-            end
-        end
-        return args == 1
-    end
-
-    args = findall(n -> !JuliaSyntax.is_whitespace(n), childs)
-    operands = 0
-    for idx in args
-        idx == op_idx && continue
-        kind(childs[idx]) === K"." && !haschildren(childs[idx]) && continue
-        operands += 1
-    end
-    return operands == 1
 end
 
 function source_operator_indices(cst::JuliaSyntax.GreenNode)
@@ -315,8 +274,8 @@ function pretty(
     # Example: `map(xs) do x; x + 1; end` is a call node with a do child.
     elseif has_do_block_call(node)
         p_do_call(style, node, s, ctx, lineage)
-    # Example: `+(x)` parses as a call but the callee is a source unary operator.
-    elseif is_source_prefix_op_call(node, s)
+    # Example: `+(x)` parses as a prefix-op call.
+    elseif JuliaSyntax.is_prefix_op_call(node)
         p_unaryopcall(style, node, s, ctx, lineage)
     # Example: `>=(x)` has a source operator callee but is not a unary op.
     elseif !isnothing(source_prefix_operator_index(node, s))

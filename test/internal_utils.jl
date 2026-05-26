@@ -26,11 +26,11 @@
         # source operator is valid in unary position.
         _, state, node = parsed_node("+(y)")
         @test JuliaFormatter.source_prefix_operator_index(node, state) == 1
-        @test JuliaFormatter.is_source_prefix_op_call(node, state)
+        @test JuliaSyntax.is_prefix_op_call(node)
 
         _, state, node = parsed_node(">=(y)")
         @test JuliaFormatter.source_prefix_operator_index(node, state) == 1
-        @test !JuliaFormatter.is_source_prefix_op_call(node, state)
+        @test !JuliaSyntax.is_prefix_op_call(node)
     end
 
     @testset "short-form function utilities" begin
