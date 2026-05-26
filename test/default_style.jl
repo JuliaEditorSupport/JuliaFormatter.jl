@@ -1433,6 +1433,9 @@
 
         @testset "multiline string starting on line with display width != bytes" begin
             # https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/974
+            #
+            # Anonymous function form. Test both the case where the second line begins
+            # after the starting quote of the first line, and the opposite.
             s1a = raw"""
             error_str = Δa -> "Change in activity must be within the valid range: \
                                 Δa ∈ [1, 2], but Δa = $Δa"
@@ -1441,6 +1444,7 @@
             error_str = Δa -> "Change in activity must be within the valid range: \
                   Δa ∈ [1, 2], but Δa = $Δa"
             """
+            # Explicit function definition
             s2a = raw"""
             error_str(Δa) = "Change in activity must be within the valid range: \
                                 Δa ∈ [1, 2], but Δa = $Δa"
@@ -1449,7 +1453,16 @@
             error_str(Δa) = "Change in activity must be within the valid range: \
               Δa ∈ [1, 2], but Δa = $Δa"
             """
-            for s in (s1a, s1b, s2a, s2b)
+            # Using triple quoted strings
+            s3a = raw"""
+            error_str(Δa) = \"""Change in activity must be within the valid range: \
+                                Δa ∈ [1, 2], but Δa = $Δa\"""
+            """
+            s3b = raw"""
+            error_str(Δa) = \"""Change in activity must be within the valid range: \
+              Δa ∈ [1, 2], but Δa = $Δa\"""
+            """
+            for s in (s1a, s1b, s2a, s2b, s3a, s3b)
                 # Need to normalise line endings because \ at the end of a raw_str behaves
                 # weirdly on Windows causing CI to fail.
                 # https://github.com/JuliaLang/julia/issues/38908
