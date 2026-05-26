@@ -1632,14 +1632,8 @@ function p_iteration(
     end
 
     childs = children(cst)
-    has_comma = iteration_has_comma(cst)
     for (i, c) in enumerate(childs)
         n = pretty(style, c, s, ctx, lineage)
-        if has_comma && kind(c) in KSet"in ∈" && is_iterable(iteration_rhs(c))
-            if n.typ === Binary && n[end].typ === Vect
-                n[end].nest_behavior = AlwaysNest
-            end
-        end
         if kind(c) === K","
             add_node!(t, n, s; join_lines = true)
             if needs_placeholder(childs, i + 1, K")")
