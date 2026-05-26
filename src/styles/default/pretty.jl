@@ -179,6 +179,8 @@ function pretty(
 
     ret = if k == K"Identifier" && !haschildren(node)
         p_identifier(style, node, s, ctx, lineage)
+    # Example: `try f() catch g() end` has a zero-width Placeholder
+    # where a catch binding would appear.
     elseif k === K"Placeholder"
         s.offset += span(node)
         FST(NONE, 0, 0, 0, "")
@@ -206,6 +208,7 @@ function pretty(
         p_begin(style, node, s, ctx, lineage)
     elseif k === K"block"
         p_block(style, node, s, ctx, lineage)
+    # Example: `f(x) = x` is a function node flagged as short-form.
     elseif is_short_function_def(node)
         p_binaryopcall(style, node, s, ctx, lineage)
     elseif k === K"function"
@@ -252,6 +255,7 @@ function pretty(
         p_bracescat(style, node, s, ctx, lineage)
     elseif k === K"tuple"
         p_tuple(style, node, s, ctx, lineage)
+    # Example: `for x in xs, y in ys` uses an iteration node.
     elseif k === K"iteration"
         p_cartesian_iterator(style, node, s, ctx, lineage)
     elseif k === K"parens"
@@ -268,10 +272,13 @@ function pretty(
         p_whereopcall(style, node, s, ctx, lineage)
     elseif k === K"?" && haschildren(node)
         p_conditionalopcall(style, node, s, ctx, lineage)
+    # Example: `map(xs) do x; x + 1; end` is a call node with a do child.
     elseif has_do_block_call(node)
         p_do_call(style, node, s, ctx, lineage)
+    # Example: `+(x)` parses as a call but the callee is a source unary operator.
     elseif is_source_prefix_op_call(node, s)
         p_unaryopcall(style, node, s, ctx, lineage)
+    # Example: `>=(x)` has a source operator callee but is not a unary op.
     elseif !isnothing(source_prefix_operator_index(node, s))
         p_call(style, node, s, ctx, lineage)
     elseif is_binary(node)
@@ -314,6 +321,7 @@ function pretty(
         p_abstract(style, node, s, ctx, lineage)
     elseif k === K"primitive"
         p_primitive(style, node, s, ctx, lineage)
+    # Example: `baremodule A end` is a module node with BARE_MODULE_FLAG.
     elseif k === K"module" && JuliaSyntax.has_flags(node, JuliaSyntax.BARE_MODULE_FLAG)
         p_baremodule(style, node, s, ctx, lineage)
     elseif k === K"module"
