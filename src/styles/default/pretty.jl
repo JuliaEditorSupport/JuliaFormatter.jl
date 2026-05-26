@@ -82,9 +82,15 @@ function source_operator_indices(cst::JuliaSyntax.GreenNode)
     if kind(cst) === K"op="
         length(args) < 4 && return Int[]
         return args[2:(end-1)]
+    elseif kind(cst) === K"comparison"
+        length(args) < 3 && return Int[]
+        return args[2:2:(end-1)]
     elseif is_short_function_def(cst)
         length(args) < 3 && return Int[]
         return Int[args[2]]
+    elseif JuliaSyntax.is_operator(cst)
+        length(args) < 3 && return Int[]
+        return args[2:(end-1)]
     elseif JuliaSyntax.is_prefix_op_call(cst)
         if kind(cst) === K"dotcall" &&
            length(args) >= 2 &&
@@ -1734,7 +1740,7 @@ function p_do_call(
 
     add_node!(
         t,
-        p_call(ds, cst, s, ctx, lineage; child_limit = do_block_idx - 1),
+        p_call(ds, cst, s, ctx, lineage; do_block_idx = do_block_idx),
         s;
         join_lines = true,
     )
@@ -1901,11 +1907,13 @@ function p_kw(
             add_node!(t, pretty(style, c, s, ctx, lineage), s; join_lines = true)
             add_node!(t, Whitespace(1), s)
         else
+            # Need to explicitly check source_prefix rather than relying on
+            # JuliaSyntax.is_prefix_op_call, as the latter doesn't identify e.g.
+            # `>=(x)` as operators.
             source_prefix = !isnothing(source_prefix_operator_index(c, s))
             n = pretty(style, c, s, ctx, lineage)
             if !s.opts.whitespace_in_kwargs && (
                 (n.typ === IDENTIFIER && endswith(n.val, "!")) ||
-                JuliaSyntax.is_prefix_op_call(c) ||
                 source_prefix
             )
                 add_node!(
@@ -2002,7 +2010,10 @@ function p_binaryopcall(
     end
 
     from_colon = ctx.from_colon
-    from_typedef = ctx.from_typedef || any(x -> x[1] === K"where", lineage)
+    from_typedef = ctx.from_typedef
+    parent_kind = length(lineage) > 1 ? lineage[end-1][1] : K"None"
+    preserve_assignment_spacing =
+        ctx.from_let || ctx.nospace || parent_kind in KSet"global local outer macrocall"
 
     nospace = ctx.nospace
     if opkind === K":"
@@ -2013,6 +2024,11 @@ function p_binaryopcall(
     elseif is_short_form_function && opkind === K"="
         nospace = false
         has_ws = true
+    elseif is_assignment(cst) && !preserve_assignment_spacing
+        nospace = false
+        has_ws = true
+    elseif kind(cst) === K"comparison"
+        nospace = false
     elseif opkind in KSet"in ∈ isa ."
         nospace = false
     elseif opkind in KSet"=> ->" || (opkind === K"|>" && !(ctx.from_ref || from_colon))
@@ -2408,7 +2424,7 @@ function p_call(
     s::State,
     ctx::PrettyContext,
     lineage::Vector{Tuple{JuliaSyntax.Kind,Bool,Bool}};
-    child_limit::Union{Int,Nothing} = nothing,
+    do_block_idx::Union{Int,Nothing} = nothing,
 )
     style = getstyle(ds)
     t = FST(Call, nspaces(s))
@@ -2417,13 +2433,13 @@ function p_call(
     end
 
     childs = children(cst)
-    if isnothing(child_limit)
-        idx = do_block_index(childs)
-        if !isnothing(idx)
-            childs = childs[1:(idx-1)]
+    if !isnothing(do_block_idx)
+        if !checkbounds(Bool, childs, do_block_idx) ||
+           kind(childs[do_block_idx]) !== K"do" ||
+           !haschildren(childs[do_block_idx])
+            error("p_call called with an invalid do block index")
         end
-    else
-        childs = childs[1:child_limit]
+        childs = childs[1:(do_block_idx - 1)]
     end
 
     args = call_args(childs)

@@ -804,17 +804,13 @@ function eq_to_in_normalization!(fst::FST, always_for_in::Bool, for_in_replaceme
         end
         if !isnothing(fst.metadata)
             metadata = fst.metadata::Metadata
-            opkind = try
-                JuliaSyntax.Kind(op.val)
-            catch
-                metadata.op_kind
-            end
+            opkind = JuliaSyntax.Kind(op.val)
             fst.metadata = Metadata(
                 opkind,
                 metadata.op_dotted,
                 metadata.is_standalone_shortcircuit,
                 metadata.is_short_form_function,
-                op.val == "=",
+                opkind === K"=",
                 metadata.is_long_form_function,
                 metadata.has_multiline_argument,
             )
