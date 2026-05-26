@@ -125,7 +125,11 @@ mutable struct FST
     startline::Int
     endline::Int
 
+    # TODO(penelopeysm): This field should be calculated based on display width. I'm not
+    # sure that this is consistently obeyed in the codebase, so it's more of an aspirational
+    # comment rather than a true invariant right now.
     indent::Int
+
     len::Int
     val::String
     nodes::Union{Tuple{},Vector{FST}}
