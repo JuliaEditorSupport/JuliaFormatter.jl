@@ -1,6 +1,6 @@
 name = "JuliaFormatter"
 uuid = "98e50ef6-434e-11e9-1051-2b60c6c9e899"
-version = "2.3.1"
+version = "2.3.2"
 authors = ["Dominique Luna <dluna132@gmail.com> and contributors"]
 
 [deps]
@@ -11,7 +11,7 @@ PrecompileTools = "aea7be01-6a6a-4083-8856-8a6e6704d82a"
 TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 
 [compat]
-CommonMark = "0.5, 0.6, 0.7, 0.8, 0.9, 0.10"
+CommonMark = "0.5, 0.6, 0.7, 0.8, 0.9, 0.10, 1"
 Glob = "1.3"
 JuliaSyntax = "1"
 PrecompileTools = "1"
