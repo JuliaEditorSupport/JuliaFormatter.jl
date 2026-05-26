@@ -259,7 +259,7 @@ is_comment(fst::FST) = fst.typ in (INLINECOMMENT, NOTCODE, HASHEQCOMMENT)
 
 is_identifier(x) = kind(x) === K"Identifier" && !haschildren(x)
 
-is_ws(x) = kind(x) in KSet"Whitespace NewlineWs"
+is_ws(x) = JuliaSyntax.is_whitespace(x)
 
 function is_multiline(fst::FST)
     fst.endline > fst.startline &&
@@ -505,16 +505,6 @@ function is_opcall(x::JuliaSyntax.GreenNode)
         return is_opcall(childs[idx])
     end
     return false
-end
-
-function is_prefix_op_call(x::JuliaSyntax.GreenNode)
-    is_opcall(x) || return false
-    haschildren(x) || return false
-
-    idx = findfirst(!JuliaSyntax.is_whitespace, children(x))
-    isnothing(idx) && return false
-
-    return JuliaSyntax.is_operator(x[idx])
 end
 
 function is_gen(x::JuliaSyntax.GreenNode)

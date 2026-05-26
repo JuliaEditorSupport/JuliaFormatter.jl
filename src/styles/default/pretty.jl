@@ -1911,7 +1911,7 @@ function p_kw(
             n = pretty(style, c, s, ctx, lineage)
             if !s.opts.whitespace_in_kwargs && (
                 (n.typ === IDENTIFIER && endswith(n.val, "!")) ||
-                is_prefix_op_call(c) ||
+                JuliaSyntax.is_prefix_op_call(c) ||
                 source_prefix
             )
                 add_node!(
