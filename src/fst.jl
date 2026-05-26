@@ -631,9 +631,10 @@ function is_function_or_macro_def(cst::JuliaSyntax.GreenNode)
     return false
 end
 
-is_short_function_def(cst::JuliaSyntax.GreenNode) =
+function is_short_function_def(cst::JuliaSyntax.GreenNode)
     kind(cst) === K"function" &&
-    JuliaSyntax.has_flags(cst, JuliaSyntax.SHORT_FORM_FUNCTION_FLAG)
+        JuliaSyntax.has_flags(cst, JuliaSyntax.SHORT_FORM_FUNCTION_FLAG)
+end
 
 function is_function_like_lhs(node::JuliaSyntax.GreenNode)
     k = kind(node)

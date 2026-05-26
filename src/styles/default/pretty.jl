@@ -185,8 +185,8 @@ function pretty(
 
     ret = if k == K"Identifier" && !haschildren(node)
         p_identifier(style, node, s, ctx, lineage)
-    # Example: `try f() catch g() end` has a zero-width Placeholder
-    # where a catch binding would appear.
+        # Example: `try f() catch g() end` has a zero-width Placeholder
+        # where a catch binding would appear.
     elseif k === K"Placeholder"
         s.offset += span(node)
         FST(NONE, 0, 0, 0, "")
@@ -214,7 +214,7 @@ function pretty(
         p_begin(style, node, s, ctx, lineage)
     elseif k === K"block"
         p_block(style, node, s, ctx, lineage)
-    # Example: `f(x) = x` is a function node flagged as short-form.
+        # Example: `f(x) = x` is a function node flagged as short-form.
     elseif is_short_function_def(node)
         p_binaryopcall(style, node, s, ctx, lineage)
     elseif k === K"function"
@@ -261,7 +261,7 @@ function pretty(
         p_bracescat(style, node, s, ctx, lineage)
     elseif k === K"tuple"
         p_tuple(style, node, s, ctx, lineage)
-    # Example: `for x in xs, y in ys` uses an iteration node.
+        # Example: `for x in xs, y in ys` uses an iteration node.
     elseif k === K"iteration"
         p_iteration(style, node, s, ctx, lineage)
     elseif k === K"parens"
@@ -278,10 +278,10 @@ function pretty(
         p_whereopcall(style, node, s, ctx, lineage)
     elseif k === K"?" && haschildren(node)
         p_conditionalopcall(style, node, s, ctx, lineage)
-    # Example: `map(xs) do x; x + 1; end` is a call node with a do child.
+        # Example: `map(xs) do x; x + 1; end` is a call node with a do child.
     elseif !isnothing(do_block_idx)
         p_do_call(style, node, s, ctx, lineage, do_block_idx)
-    # Example: `+(x)` parses as a prefix-op call.
+        # Example: `+(x)` parses as a prefix-op call.
     elseif JuliaSyntax.is_prefix_op_call(node)
         p_unaryopcall(style, node, s, ctx, lineage)
     elseif is_binary(node)
@@ -324,7 +324,7 @@ function pretty(
         p_abstract(style, node, s, ctx, lineage)
     elseif k === K"primitive"
         p_primitive(style, node, s, ctx, lineage)
-    # Example: `baremodule A end` is a module node with BARE_MODULE_FLAG.
+        # Example: `baremodule A end` is a module node with BARE_MODULE_FLAG.
     elseif k === K"module" && JuliaSyntax.has_flags(node, JuliaSyntax.BARE_MODULE_FLAG)
         p_baremodule(style, node, s, ctx, lineage)
     elseif k === K"module"
@@ -1912,10 +1912,8 @@ function p_kw(
             # `>=(x)` as operators.
             source_prefix = !isnothing(source_prefix_operator_index(c, s))
             n = pretty(style, c, s, ctx, lineage)
-            if !s.opts.whitespace_in_kwargs && (
-                (n.typ === IDENTIFIER && endswith(n.val, "!")) ||
-                source_prefix
-            )
+            if !s.opts.whitespace_in_kwargs &&
+               ((n.typ === IDENTIFIER && endswith(n.val, "!")) || source_prefix)
                 add_node!(
                     t,
                     FST(PUNCTUATION, -1, n.startline, n.startline, "("),
@@ -2439,7 +2437,7 @@ function p_call(
            !haschildren(childs[do_block_idx])
             error("p_call called with an invalid do block index")
         end
-        childs = childs[1:(do_block_idx - 1)]
+        childs = childs[1:(do_block_idx-1)]
     end
 
     args = call_args(childs)
