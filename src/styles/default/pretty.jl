@@ -21,6 +21,168 @@ function newctx(s::PrettyContext; kwargs...)
     PrettyContext(values...)
 end
 
+function source_kind(s::State, cst::JuliaSyntax.GreenNode, offset::Integer)
+    span(cst) == 0 && return nothing
+    offset = Int(offset)
+    n = Int(span(cst))
+    val = getsrcval(s.doc, offset:(offset+n-1))
+    try
+        return JuliaSyntax.Kind(val)
+    catch
+        return nothing
+    end
+end
+
+# JuliaSyntax v1 can encode source operators as Identifier leaves in call
+# forms, e.g. `a + b`, `x .+ y`, `+(x)`, and `>=(x)`. The parent call flags
+# describe the shape, but the leaf itself is not `is_operator`, and the exact
+# operator kind is only recoverable from the source span.
+function source_op_kind_from_offset(s::State, cst::JuliaSyntax.GreenNode, offset::Integer)
+    if JuliaSyntax.is_operator(cst) && !haschildren(cst)
+        return kind(cst)
+    elseif kind(cst) === K"Identifier" && !haschildren(cst)
+        k = source_kind(s, cst, offset)
+        if !isnothing(k) && JuliaSyntax.is_operator(k)
+            return k
+        end
+    end
+    return nothing
+end
+
+function is_source_operator(s::State, cst::JuliaSyntax.GreenNode, offset::Integer)
+    !isnothing(source_op_kind_from_offset(s, cst, offset))
+end
+
+function source_prefix_operator_index(cst::JuliaSyntax.GreenNode, s::State)
+    kind(cst) in KSet"call dotcall" && haschildren(cst) || return nothing
+    childs = children(cst)
+    args = findall(n -> !JuliaSyntax.is_whitespace(n), childs)
+    isempty(args) && return nothing
+
+    op_arg =
+        if kind(cst) === K"dotcall" &&
+           length(args) >= 2 &&
+           kind(childs[args[1]]) === K"." &&
+           !haschildren(childs[args[1]])
+            args[2]
+        else
+            args[1]
+        end
+    offset = s.offset + sum(span, childs[1:(op_arg-1)]; init = 0)
+    return is_source_operator(s, childs[op_arg], offset) ? op_arg : nothing
+end
+
+function source_operator_indices(cst::JuliaSyntax.GreenNode)
+    haschildren(cst) || return Int[]
+
+    childs = children(cst)
+    args = findall(n -> !JuliaSyntax.is_whitespace(n), childs)
+    nonws_args = length(args)
+    nonws_args == 0 &&
+        error("no non-whitespace children found for operator node; should not happen")
+
+    if kind(cst) === K"op="
+        # 4 args for `x += y`, 5 args for `x .+= y` (the dot is preserved as a
+        # flag in JuliaSyntax but the kind is the same).
+        (nonws_args == 4 || nonws_args == 5) ||
+            error("unexpected number of args for op= node", nonws_args, cst)
+        return args[2:(end-1)]
+    elseif kind(cst) === K"comparison"
+        # `x < y < z < ... < w` has `2n - 1` args where `n >= 2`.
+        (iseven(nonws_args) || nonws_args < 3) &&
+            error("unexpected number of args for comparison node", nonws_args, cst)
+        return args[2:2:(end-1)]
+    elseif is_short_function_def(cst)
+        nonws_args != 3 && error(
+            "unexpected number of args for short function definition node",
+            nonws_args,
+            cst,
+        )
+        return Int[args[2]]
+    elseif JuliaSyntax.is_operator(cst)
+        nonws_args != 3 &&
+            error("unexpected number of args for operator node", nonws_args, cst)
+        return args[2:(end-1)]
+    elseif JuliaSyntax.is_prefix_op_call(cst)
+        if kind(cst) === K"dotcall" &&
+           length(args) >= 2 &&
+           kind(childs[args[1]]) === K"." &&
+           !haschildren(childs[args[1]])
+            return args[1:2]
+        else
+            return Int[args[1]]
+        end
+    elseif JuliaSyntax.is_infix_op_call(cst)
+        op_indices = Int[]
+        i = 2
+        while i < length(args)
+            push!(op_indices, args[i])
+            if kind(cst) === K"dotcall" &&
+               i < length(args) &&
+               kind(childs[args[i]]) === K"." &&
+               !haschildren(childs[args[i]])
+                push!(op_indices, args[i+1])
+                i += 1
+            end
+            i += 2
+        end
+        return op_indices
+    elseif JuliaSyntax.is_postfix_op_call(cst)
+        return Int[args[end]]
+    end
+
+    return Int[]
+end
+
+function source_op_kind(s::State, cst::JuliaSyntax.GreenNode)
+    opkind = op_kind(cst)
+    opkind !== K"None" && opkind !== K"Identifier" && return opkind
+
+    childs = children(cst)
+    for i in source_operator_indices(cst)
+        c = childs[i]
+        offset = Int(s.offset) + sum(span, childs[1:(i-1)]; init = 0)
+        k = source_op_kind_from_offset(s, c, offset)
+        if !isnothing(k) && !(kind(cst) === K"dotcall" && k === K".")
+            return k
+        end
+    end
+    return opkind
+end
+
+function do_block_index(childs::Vector{JuliaSyntax.GreenNode{T}}) where {T}
+    findfirst(n -> kind(n) === K"do" && haschildren(n), childs)
+end
+
+function has_do_block_call(cst::JuliaSyntax.GreenNode)
+    kind(cst) in KSet"call dotcall" && haschildren(cst) || return nothing
+    do_block_index(children(cst))
+end
+
+function call_args(childs::Vector{JuliaSyntax.GreenNode{T}}) where {T}
+    idx = findfirst(n -> kind(n) in KSet"( { [", childs)
+    start = isnothing(idx) ? 1 : idx + 1
+    get_args(childs[start:end])
+end
+
+function last_code_child(cst::JuliaSyntax.GreenNode)
+    haschildren(cst) || return nothing
+    idx = findlast(n -> !JuliaSyntax.is_whitespace(n), children(cst))
+    isnothing(idx) ? nothing : children(cst)[idx]
+end
+
+function iteration_rhs(cst::JuliaSyntax.GreenNode)
+    rhs = last_code_child(cst)
+    if kind(cst) === K"iteration" && !isnothing(rhs) && haschildren(rhs)
+        rhs = last_code_child(rhs)
+    end
+    rhs
+end
+
+function iteration_has_comma(cst::JuliaSyntax.GreenNode)
+    haschildren(cst) && any(n -> kind(n) === K",", children(cst))
+end
+
 function pretty(
     ds::AbstractStyle,
     node::JuliaSyntax.GreenNode,
@@ -30,10 +192,16 @@ function pretty(
 )::FST
     k = kind(node)
     style = getstyle(ds)
+    do_block_idx = has_do_block_call(node)
     push!(lineage, (k, is_iterable(node), is_assignment(node)))
 
     ret = if k == K"Identifier" && !haschildren(node)
         p_identifier(style, node, s, ctx, lineage)
+        # Example: `try f() catch g() end` has a zero-width Placeholder
+        # where a catch binding would appear.
+    elseif k === K"Placeholder"
+        s.offset += span(node)
+        FST(NONE, 0, 0, 0, "")
     elseif JuliaSyntax.is_operator(node) && !haschildren(node)
         p_operator(style, node, s, ctx, lineage)
     elseif k == K"Comment"
@@ -58,9 +226,12 @@ function pretty(
         p_begin(style, node, s, ctx, lineage)
     elseif k === K"block"
         p_block(style, node, s, ctx, lineage)
+        # Example: `f(x) = x` is a function node flagged as short-form.
+    elseif is_short_function_def(node)
+        p_binaryopcall(style, node, s, ctx, lineage)
     elseif k === K"function"
         p_functiondef(style, node, s, ctx, lineage)
-    elseif k in KSet"MacroName StringMacroName CmdMacroName core_@cmd"
+    elseif k in KSet"MacroName StringMacroName CmdMacroName"
         p_macroname(style, node, s, ctx, lineage)
     elseif k === K"macro"
         p_macro(style, node, s, ctx, lineage)
@@ -102,8 +273,9 @@ function pretty(
         p_bracescat(style, node, s, ctx, lineage)
     elseif k === K"tuple"
         p_tuple(style, node, s, ctx, lineage)
-    elseif k === K"cartesian_iterator"
-        p_cartesian_iterator(style, node, s, ctx, lineage)
+        # Example: `for x in xs, y in ys` uses an iteration node.
+    elseif k === K"iteration"
+        p_iteration(style, node, s, ctx, lineage)
     elseif k === K"parens"
         p_invisbrackets(style, node, s, ctx, lineage)
     elseif k === K"curly"
@@ -118,6 +290,12 @@ function pretty(
         p_whereopcall(style, node, s, ctx, lineage)
     elseif k === K"?" && haschildren(node)
         p_conditionalopcall(style, node, s, ctx, lineage)
+        # Example: `map(xs) do x; x + 1; end` is a call node with a do child.
+    elseif !isnothing(do_block_idx)
+        p_do_call(style, node, s, ctx, lineage, do_block_idx)
+        # Example: `+(x)` parses as a prefix-op call.
+    elseif JuliaSyntax.is_prefix_op_call(node)
+        p_unaryopcall(style, node, s, ctx, lineage)
     elseif is_binary(node)
         p_binaryopcall(style, node, s, ctx, lineage)
     elseif is_chain(node)
@@ -158,6 +336,9 @@ function pretty(
         p_abstract(style, node, s, ctx, lineage)
     elseif k === K"primitive"
         p_primitive(style, node, s, ctx, lineage)
+        # Example: `baremodule A end` is a module node with BARE_MODULE_FLAG.
+    elseif k === K"module" && JuliaSyntax.has_flags(node, JuliaSyntax.BARE_MODULE_FLAG)
+        p_baremodule(style, node, s, ctx, lineage)
     elseif k === K"module"
         p_module(style, node, s, ctx, lineage)
     elseif k === K"baremodule"
@@ -221,7 +402,7 @@ function p_identifier(
     lineage::Vector{Tuple{JuliaSyntax.Kind,Bool,Bool}},
 )
     loc = cursor_loc(s)
-    val = getsrcval(s.doc, s.offset:(s.offset+span(cst)-1))
+    val = getsrcval(s.doc, (s.offset):(s.offset+span(cst)-1))
     s.offset += span(cst)
     FST(IDENTIFIER, loc[2], loc[1], loc[1], val)
 end
@@ -234,7 +415,7 @@ function p_whitespace(
     lineage::Vector{Tuple{JuliaSyntax.Kind,Bool,Bool}},
 )
     loc = cursor_loc(s)
-    val = getsrcval(s.doc, s.offset:(s.offset+span(cst)-1))
+    val = getsrcval(s.doc, (s.offset):(s.offset+span(cst)-1))
     s.offset += span(cst)
     FST(NONE, loc[2], loc[1], loc[1], val)
 end
@@ -248,7 +429,7 @@ function p_comment(
 )
     loc = cursor_loc(s)
     same_line = on_same_line(s, s.offset, s.offset + span(cst) - 1)
-    val = getsrcval(s.doc, s.offset:(s.offset+span(cst)-1))
+    val = getsrcval(s.doc, (s.offset):(s.offset+span(cst)-1))
     if same_line && startswith(val, "#=") && endswith(val, "=#")
         s.offset += span(cst)
         return FST(HASHEQCOMMENT, loc[2], loc[1], loc[1], val)
@@ -277,7 +458,7 @@ function p_macroname(
     ::Vector{Tuple{JuliaSyntax.Kind,Bool,Bool}},
 )
     loc = cursor_loc(s)
-    val = getsrcval(s.doc, s.offset:(s.offset+span(cst)-1))
+    val = getsrcval(s.doc, (s.offset):(s.offset+span(cst)-1))
     s.offset += span(cst)
     FST(MACRONAME, loc[2], loc[1], loc[1], val)
 end
@@ -290,7 +471,7 @@ function p_operator(
     ::Vector{Tuple{JuliaSyntax.Kind,Bool,Bool}},
 )
     loc = cursor_loc(s)
-    val = getsrcval(s.doc, s.offset:(s.offset+span(cst)-1))
+    val = getsrcval(s.doc, (s.offset):(s.offset+span(cst)-1))
     s.offset += span(cst)
     t = FST(OPERATOR, loc[2], loc[1], loc[1], val)
     t.metadata = Metadata(kind(cst), JuliaSyntax.is_dotted(cst))
@@ -305,7 +486,7 @@ function p_keyword(
     ::Vector{Tuple{JuliaSyntax.Kind,Bool,Bool}},
 )
     loc = cursor_loc(s)
-    val = getsrcval(s.doc, s.offset:(s.offset+span(cst)-1))
+    val = getsrcval(s.doc, (s.offset):(s.offset+span(cst)-1))
     s.offset += span(cst)
     FST(KEYWORD, loc[2], loc[1], loc[1], val)
 end
@@ -318,7 +499,7 @@ function p_punctuation(
     ::Vector{Tuple{JuliaSyntax.Kind,Bool,Bool}},
 )
     loc = cursor_loc(s)
-    val = getsrcval(s.doc, s.offset:(s.offset+span(cst)-1))
+    val = getsrcval(s.doc, (s.offset):(s.offset+span(cst)-1))
     s.offset += span(cst)
     FST(PUNCTUATION, loc[2], loc[1], loc[1], val)
 end
@@ -447,7 +628,7 @@ function p_literal(
     lineage::Vector{Tuple{JuliaSyntax.Kind,Bool,Bool}},
 )
     loc = cursor_loc(s)
-    val = getsrcval(s.doc, s.offset:(s.offset+span(cst)-1))
+    val = getsrcval(s.doc, (s.offset):(s.offset+span(cst)-1))
 
     if !is_str_or_cmd(cst)
         if kind(cst) in KSet"Float Float32" && !startswith(val, r"[+-]?0x")
@@ -511,7 +692,7 @@ function p_stringh(
     end
     loc2 = cursor_loc(s, s.offset+span(cst)-1)
 
-    val = getsrcval(s.doc, s.offset:(s.offset+span(cst)-1))
+    val = getsrcval(s.doc, (s.offset):(s.offset+span(cst)-1))
     startline = loc[1]
     endline = loc2[1]
 
@@ -1439,10 +1620,18 @@ function p_for(
             add_node!(t, pretty(style, c, s, ctx, lineage), s)
         else
             add_node!(t, Whitespace(1), s)
-            n = if kind(c) === K"cartesian_iterator"
-                s.indent += s.opts.indent
+            n = if kind(c) === K"iteration"
+                rhs_is_iterable = !iteration_has_comma(c) && is_iterable(iteration_rhs(c))
+                if !rhs_is_iterable
+                    s.indent += s.opts.indent
+                end
                 n = pretty(style, c, s, newctx(ctx; from_for = true), lineage)
-                s.indent -= s.opts.indent
+                if !rhs_is_iterable
+                    s.indent -= s.opts.indent
+                end
+                if rhs_is_iterable
+                    ends_in_iterable = true
+                end
                 n
             else
                 n = pretty(style, c, s, newctx(ctx; from_for = true), lineage)
@@ -1461,7 +1650,7 @@ function p_for(
     t
 end
 
-function p_cartesian_iterator(
+function p_iteration(
     ds::AbstractStyle,
     cst::JuliaSyntax.GreenNode,
     s::State,
@@ -1507,9 +1696,8 @@ function p_while(
     t
 end
 
-# Do
-# node [nodes] do [nodes] node node end
-function p_do(
+function append_do_nodes!(
+    t::FST,
     ds::AbstractStyle,
     cst::JuliaSyntax.GreenNode,
     s::State,
@@ -1517,7 +1705,6 @@ function p_do(
     lineage::Vector{Tuple{JuliaSyntax.Kind,Bool,Bool}},
 )
     style = getstyle(ds)
-    t = FST(Do, nspaces(s))
     if !haschildren(cst)
         return t
     end
@@ -1544,6 +1731,50 @@ function p_do(
             add_node!(t, pretty(style, c, s, ctx, lineage), s; join_lines = true)
         end
     end
+    t
+end
+
+# Do
+# node [nodes] do [nodes] node node end
+function p_do(
+    ds::AbstractStyle,
+    cst::JuliaSyntax.GreenNode,
+    s::State,
+    ctx::PrettyContext,
+    lineage::Vector{Tuple{JuliaSyntax.Kind,Bool,Bool}},
+)
+    t = FST(Do, nspaces(s))
+    append_do_nodes!(t, ds, cst, s, ctx, lineage)
+end
+
+function p_do_call(
+    ds::AbstractStyle,
+    cst::JuliaSyntax.GreenNode,
+    s::State,
+    ctx::PrettyContext,
+    lineage::Vector{Tuple{JuliaSyntax.Kind,Bool,Bool}},
+    do_block_idx::Int,
+)
+    t = FST(Do, nspaces(s))
+    childs = children(cst)
+    if !checkbounds(Bool, childs, do_block_idx) ||
+       kind(childs[do_block_idx]) !== K"do" ||
+       !haschildren(childs[do_block_idx])
+        error("p_do_call called without a do block")
+    end
+
+    add_node!(
+        t,
+        p_call(ds, cst, s, ctx, lineage; do_block_idx = do_block_idx),
+        s;
+        join_lines = true,
+    )
+
+    do_node = childs[do_block_idx]
+    push!(lineage, (kind(do_node), is_iterable(do_node), is_assignment(do_node)))
+    append_do_nodes!(t, ds, do_node, s, ctx, lineage)
+    pop!(lineage)
+
     t
 end
 
@@ -1596,7 +1827,7 @@ function p_try(
             )
         elseif !JuliaSyntax.is_whitespace(c)
             # "catch" vs "catch ..."
-            if !(kind(cst) === K"catch" && any(n -> kind(n) === K"false", childs))
+            if !(kind(cst) === K"catch" && any(n -> kind(n) === K"Placeholder", childs))
                 add_node!(t, Whitespace(1), s)
             end
             add_node!(t, pretty(style, c, s, ctx, lineage), s; join_lines = true)
@@ -1701,9 +1932,13 @@ function p_kw(
             add_node!(t, pretty(style, c, s, ctx, lineage), s; join_lines = true)
             add_node!(t, Whitespace(1), s)
         else
+            # Need to explicitly check source_prefix rather than relying on
+            # JuliaSyntax.is_prefix_op_call, as the latter doesn't identify e.g.
+            # `>=(x)` as operators.
+            source_prefix = !isnothing(source_prefix_operator_index(c, s))
             n = pretty(style, c, s, ctx, lineage)
             if !s.opts.whitespace_in_kwargs &&
-               ((n.typ === IDENTIFIER && endswith(n.val, "!")) || (is_prefix_op_call(c)))
+               ((n.typ === IDENTIFIER && endswith(n.val, "!")) || source_prefix)
                 add_node!(
                     t,
                     FST(PUNCTUATION, -1, n.startline, n.startline, "("),
@@ -1741,7 +1976,9 @@ function p_binaryopcall(
         return t
     end
 
-    opkind = op_kind(cst)
+    childs = children(cst)
+    op_indices = source_operator_indices(cst)
+    opkind = source_op_kind(s, cst)
 
     nonest = ctx.nonest || opkind === K":"
 
@@ -1750,6 +1987,12 @@ function p_binaryopcall(
         (t.nest_behavior = AlwaysNest)
     end
     nest = (is_binaryop_nestable(style, cst) && !nonest) || nrhs
+    if opkind === K"=>" && haschildren(cst)
+        rhs_idx = findlast(n -> !JuliaSyntax.is_whitespace(n), childs)
+        if !isnothing(rhs_idx) && is_str_or_cmd(childs[rhs_idx])
+            nest = false
+        end
+    end
 
     is_short_form_function = defines_function(cst) && !ctx.from_let
     op_dotted = kind(cst) === K"dotcall"
@@ -1775,13 +2018,12 @@ function p_binaryopcall(
         op_dotted,
         lazy_op && standalone_binary_circuit,
         is_short_form_function,
-        is_assignment(cst),
+        is_assignment(cst) || defines_function(cst),
         false,
         false,
     )
 
     has_ws = false
-    childs = children(cst)
 
     for (i, c) in enumerate(childs)
         if i > 1 && kind(c) in KSet"Whitespace NewlineWs"
@@ -1791,6 +2033,10 @@ function p_binaryopcall(
     end
 
     from_colon = ctx.from_colon
+    from_typedef = ctx.from_typedef
+    parent_kind = length(lineage) > 1 ? lineage[end-1][1] : K"None"
+    preserve_assignment_spacing =
+        ctx.from_let || ctx.nospace || parent_kind in KSet"global local outer macrocall"
 
     nospace = ctx.nospace
     if opkind === K":"
@@ -1798,9 +2044,20 @@ function p_binaryopcall(
         from_colon = true
     elseif opkind in KSet"::"
         nospace = true
+    elseif is_short_form_function && opkind === K"="
+        nospace = false
+        has_ws = true
+    elseif is_assignment(cst) && !preserve_assignment_spacing
+        nospace = false
+        has_ws = true
+    elseif kind(cst) === K"comparison"
+        nospace = false
     elseif opkind in KSet"in ∈ isa ."
         nospace = false
-    elseif ctx.from_typedef && opkind in KSet"<: >:"
+    elseif opkind in KSet"=> ->" || (opkind === K"|>" && !(ctx.from_ref || from_colon))
+        nospace = false
+        has_ws = true
+    elseif from_typedef && opkind in KSet"<: >:"
         if s.opts.whitespace_typedefs
             nospace = false
             has_ws = true
@@ -1830,9 +2087,32 @@ function p_binaryopcall(
 
     nlws_count = 0
     after_op = false
-    op_indices = extract_operator_indices(childs)
-
+    skip_until = 0
     for (i, c) in enumerate(childs)
+        i <= skip_until && continue
+        if kind(cst) === K"op=" && !isempty(op_indices) && i == first(op_indices)
+            loc = cursor_loc(s)
+            op_span = sum(span, childs[first(op_indices):last(op_indices)]; init = 0)
+            val = getsrcval(s.doc, (s.offset):(s.offset+op_span-1))
+            s.offset += op_span
+            n = FST(OPERATOR, loc[2], loc[1], loc[1], val)
+            n.metadata = Metadata(K"op=", startswith(val, "."))
+            if nws > 0 && i > 1
+                add_node!(t, Whitespace(nws), s)
+            end
+            add_node!(t, n, s; join_lines = true)
+            if nws > 0
+                if nest
+                    add_node!(t, Placeholder(nws), s)
+                else
+                    add_node!(t, Whitespace(nws), s)
+                end
+            end
+            after_op = true
+            skip_until = last(op_indices)
+            continue
+        end
+        offset = s.offset
         n = pretty(
             style,
             c,
@@ -1849,6 +2129,12 @@ function p_binaryopcall(
         )
 
         is_dot = kind(c) === K"."
+        is_op = i in op_indices && is_source_operator(s, c, offset)
+        if is_op && n.typ === IDENTIFIER
+            n.typ = OPERATOR
+            n.metadata =
+                Metadata(source_op_kind_from_offset(s, c, offset)::JuliaSyntax.Kind, is_dot)
+        end
         if is_dot && haschildren(c) && length(children(c)) == 2
             # [.]
             #   .
@@ -1870,7 +2156,7 @@ function p_binaryopcall(
             end
             after_op = true
             # elseif (kind(c) === opkind || kind(c) === K".") && !haschildren(c)
-        elseif JuliaSyntax.is_operator(c) && !haschildren(c) && i in op_indices
+        elseif is_op && !haschildren(c)
             # there are some weird cases where we can assign an operator a value so that
             # the arguments are operators as well.
             #
@@ -1948,7 +2234,11 @@ function p_binaryopcall(
         end
     end
 
-    if nest && (length(op_indices) == 1 || (length(op_indices) == 2 && has_dot))
+    if nest && (
+        kind(cst) === K"op=" ||
+        length(op_indices) == 1 ||
+        (length(op_indices) == 2 && has_dot)
+    )
         # for indent, will be converted to `indent` if needed
         insert!(t.nodes::Vector{FST}, length(t.nodes::Vector{FST}), Placeholder(0))
     end
@@ -2073,16 +2363,31 @@ function p_unaryopcall(
         return t
     end
 
-    opkind = op_kind(cst)
+    childs = children(cst)
+    first_idx = findfirst(n -> !JuliaSyntax.is_whitespace(n), childs)
+    op_idx = source_prefix_operator_index(cst, s)
+    if isnothing(op_idx)
+        op_idx = first_idx
+    end
+    opkind = isnothing(op_idx) ? op_kind(cst) : source_op_kind(s, cst)
     op_dotted = kind(cst) === K"dotcall"
 
     t.metadata = Metadata(opkind, op_dotted)
 
-    for (i, c) in enumerate(children(cst))
+    for (i, c) in enumerate(childs)
+        offset = s.offset
         if i > 1 && kind(c) in KSet"Whitespace"
             add_node!(t, Whitespace(1), s)
         end
-        add_node!(t, pretty(style, c, s, ctx, lineage), s; join_lines = true)
+        n = pretty(style, c, s, ctx, lineage)
+        if i == op_idx && n.typ === IDENTIFIER
+            k = source_op_kind_from_offset(s, c, offset)
+            if !isnothing(k)
+                n.typ = OPERATOR
+                n.metadata = Metadata(k, false)
+            end
+        end
+        add_node!(t, n, s; join_lines = true)
     end
     t
 end
@@ -2141,7 +2446,8 @@ function p_call(
     cst::JuliaSyntax.GreenNode,
     s::State,
     ctx::PrettyContext,
-    lineage::Vector{Tuple{JuliaSyntax.Kind,Bool,Bool}},
+    lineage::Vector{Tuple{JuliaSyntax.Kind,Bool,Bool}};
+    do_block_idx::Union{Int,Nothing} = nothing,
 )
     style = getstyle(ds)
     t = FST(Call, nspaces(s))
@@ -2149,14 +2455,23 @@ function p_call(
         return t
     end
 
-    args = get_args(cst)
+    childs = children(cst)
+    if !isnothing(do_block_idx)
+        if !checkbounds(Bool, childs, do_block_idx) ||
+           kind(childs[do_block_idx]) !== K"do" ||
+           !haschildren(childs[do_block_idx])
+            error("p_call called with an invalid do block index")
+        end
+        childs = childs[1:(do_block_idx-1)]
+    end
+
+    args = call_args(childs)
     nest =
         length(args) > 0 && !(
             length(args) == 1 &&
             (unnestable_node(args[1]) || s.opts.disallow_single_arg_nesting)
         )
 
-    childs = children(cst)
     for (i, a) in enumerate(childs)
         k = kind(a)
         n = if k == K"=" && haschildren(a)
@@ -3004,9 +3319,11 @@ function p_generator(
     childs = children(cst)
 
     has_for_kw = findfirst(n -> kind(n) === K"for", childs) !== nothing
+    from_for = has_for_kw || ctx.from_for
 
+    past_if = false
     for (i, a) in enumerate(childs)
-        n = pretty(style, a, s, newctx(ctx; from_for = has_for_kw), lineage)
+        n = pretty(style, a, s, newctx(ctx; from_for = from_for), lineage)
         if JuliaSyntax.is_keyword(a) && !haschildren(a)
             # for keyword can only be on the following line
             # if this expression is within an iterable expression
@@ -3027,10 +3344,11 @@ function p_generator(
             add_node!(t, n, s; join_lines = true)
         end
 
-        if has_for_kw
+        if from_for && !past_if
             eq_to_in_normalization!(n, s.opts.always_for_in, s.opts.for_in_replacement)
-        else
-            false
+        end
+        if kind(a) === K"if" && JuliaSyntax.is_keyword(a) && !haschildren(a)
+            past_if = true
         end
     end
     t

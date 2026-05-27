@@ -1,3 +1,7 @@
+# v2.5.0
+
+Added compatibility with JuliaSyntax@1.
+
 # v2.4.0
 
 Added the `--threads=auto` option to the old `julia-formatter` pre-commit hook, which should speed up invocations of JuliaFormatter.

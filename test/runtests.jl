@@ -65,6 +65,7 @@ function run_format(text::String; style = DefaultStyle(), opts = Options())
 end
 
 @testset "JuliaFormatter" begin
+    include("internal_utils.jl")
     include("default_style.jl")
     include("yas_style.jl")
     include("blue_style.jl")

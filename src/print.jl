@@ -4,7 +4,7 @@ function format_check(io::IOBuffer, fst::FST, s::State)
         return
     end
 
-    line_range = fst.startline:fst.endline
+    line_range = (fst.startline):(fst.endline)
     skip = s.doc.format_skips[1]
     nlines = numlines(s.doc)
 
@@ -19,7 +19,7 @@ function format_check(io::IOBuffer, fst::FST, s::State)
             write(io, JuliaSyntax.sourcetext(s.doc.srcfile)[first(r1):last(r2)])
         end
 
-        output = JuliaSyntax.sourcetext(s.doc.srcfile)[skip.startoffset:skip.endoffset]
+        output = JuliaSyntax.sourcetext(s.doc.srcfile)[(skip.startoffset):(skip.endoffset)]
         l1 = skip.endline + 1
         l2 = fst.endline
 
@@ -52,7 +52,7 @@ function format_check(io::IOBuffer, fst::FST, s::State)
         end
         s.on = false
     elseif !s.on && skip.endline in line_range
-        output = JuliaSyntax.sourcetext(s.doc.srcfile)[skip.startoffset:skip.endoffset]
+        output = JuliaSyntax.sourcetext(s.doc.srcfile)[(skip.startoffset):(skip.endoffset)]
         l1 = skip.endline + 1
         l2 = fst.endline
 
@@ -180,7 +180,7 @@ function print_notcode(io::IOBuffer, fst::FST, s::State)
     if !(s.on)
         return
     end
-    for l in fst.startline:fst.endline
+    for l in (fst.startline):(fst.endline)
         _, v = get(s.doc.comments, l, (0, "\n"))
         ws = fst.indent
 

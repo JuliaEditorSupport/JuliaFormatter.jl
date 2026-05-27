@@ -145,6 +145,9 @@ function pipe_to_function_call(fst::FST)
                arg2[end][end].typ === IDENTIFIER
             n = FST(PUNCTUATION, -1, arg2.endline, arg2.endline, ".")
             push!(nodes, n)
+        elseif dot && arg2.typ === Accessor && arg2[end].typ === IDENTIFIER
+            n = FST(PUNCTUATION, -1, arg2.endline, arg2.endline, ".")
+            push!(nodes, n)
         elseif dot && arg2.typ === Brackets
             idx = findfirst(n -> n.typ === Binary && op_kind(n) === K"->", arg2.nodes)
             if idx !== nothing
