@@ -46,7 +46,7 @@ function n_call!(
             # The indent is set here to handle the edge
             # case where the first argument of Call is
             # nestable.
-            # ref https://github.com/domluna/JuliaFormatter.jl/issues/387
+            # ref https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/387
             fst.indent = s.line_offset + 1
         end
 

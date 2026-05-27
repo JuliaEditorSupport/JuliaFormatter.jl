@@ -987,9 +987,13 @@ function n_binaryopcall!(
                 if indent_nest || style isa YASStyle
                     fst[i2] = Whitespace(0)
                     unnest_style =
-                        op_kind(fst) === K"=>" &&
-                        s.opts.yas_style_nesting &&
-                        !(style isa YASStyle) ? YASStyle(style) : style
+                        if op_kind(fst) === K"=>" &&
+                           s.opts.yas_style_nesting &&
+                           !(style isa YASStyle)
+                            YASStyle(style)
+                        else
+                            style
+                        end
                     walk(unnest!(unnest_style; dedent = true), rhs, s)
                 end
             end

@@ -308,7 +308,7 @@
 
     # Test `variable_call_indent` with an inline comment after the opening parenthesis
     # With `variable_call_indent = false`, the comment will be eaten,
-    # see https://github.com/domluna/JuliaFormatter.jl/issues/609
+    # see https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/609
     @test format_text(str, SciMLStyle()) == formatted_str1
     @test format_text(str, SciMLStyle(); variable_call_indent = ["Dict"]) == formatted_str2
 

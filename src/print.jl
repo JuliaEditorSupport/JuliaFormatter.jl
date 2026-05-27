@@ -227,7 +227,7 @@ function print_inlinecomment(io::IOBuffer, fst::FST, s::State)
     if ws > 0
         write(io, repeat(" ", ws))
     elseif startswith(v, "#=") && endswith(v, "=#")
-        # hack to overcome the bug noticed in https://github.com/domluna/JuliaFormatter.jl/issues/571#issuecomment-1114446297
+        # hack to overcome the bug noticed in https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/571#issuecomment-1114446297
         # until multiline comments aren't moved to the end of the line.
         write(io, " ")
     end

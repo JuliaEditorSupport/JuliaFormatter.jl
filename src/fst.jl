@@ -259,7 +259,7 @@ is_comment(fst::FST) = fst.typ in (INLINECOMMENT, NOTCODE, HASHEQCOMMENT)
 
 is_identifier(x) = kind(x) === K"Identifier" && !haschildren(x)
 
-is_ws(x) = kind(x) in KSet"Whitespace NewlineWs"
+is_ws(x) = JuliaSyntax.is_whitespace(x)
 
 function is_multiline(fst::FST)
     fst.endline > fst.startline &&
@@ -507,39 +507,12 @@ function is_opcall(x::JuliaSyntax.GreenNode)
     return false
 end
 
-function is_prefix_op_call(x::JuliaSyntax.GreenNode)
-    is_opcall(x) || return false
-    haschildren(x) || return false
-
-    idx = findfirst(!JuliaSyntax.is_whitespace, children(x))
-    isnothing(idx) && return false
-
-    return JuliaSyntax.is_operator(x[idx])
-end
-
 function is_gen(x::JuliaSyntax.GreenNode)
     kind(x) in KSet"generator filter"
 end
 
 function is_gen(x::FST)
     x.typ in (Generator, Filter, Flatten)
-end
-
-function extract_operator_indices(childs::Vector{JuliaSyntax.GreenNode{T}}) where {T}
-    args = findall(n -> !JuliaSyntax.is_whitespace(n), childs)
-    op_indices = Int[]
-    i = 2
-    while i <= length(args)
-        push!(op_indices, args[i])
-        if i < length(args) &&
-           kind(childs[args[i]]) === K"." &&
-           !haschildren(childs[args[i]])
-            push!(op_indices, args[i+1])
-            i += 1
-        end
-        i += 2
-    end
-    return op_indices
 end
 
 function _callinfo(x::JuliaSyntax.GreenNode)
@@ -629,10 +602,7 @@ function is_assignment(x::FST)
 end
 
 function is_assignment(t::JuliaSyntax.GreenNode)
-    if JuliaSyntax.is_prec_assignment(kind(t)) && haschildren(t)
-        return !any(c -> kind(c) in KSet"in ∈", children(t))
-    end
-    return false
+    return JuliaSyntax.is_syntactic_assignment(t) && haschildren(t)
 end
 is_assignment(::Nothing) = false
 
@@ -662,10 +632,8 @@ function is_function_or_macro_def(cst::JuliaSyntax.GreenNode)
 end
 
 function is_short_function_def(cst::JuliaSyntax.GreenNode)
-    kind(cst) === K"function" && haschildren(cst) || return false
-    idx = findfirst(n -> !JuliaSyntax.is_whitespace(n), children(cst))
-    isnothing(idx) && return false
-    return kind(cst[idx]) !== K"function"
+    kind(cst) === K"function" &&
+        JuliaSyntax.has_flags(cst, JuliaSyntax.SHORT_FORM_FUNCTION_FLAG)
 end
 
 function is_function_like_lhs(node::JuliaSyntax.GreenNode)
@@ -806,7 +774,7 @@ for i = 1:10 body end
 
 `always_for_in=nothing` disables this normalization behavior.
 
-- <https://github.com/domluna/JuliaFormatter.jl/issues/34>
+- <https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/34>
 """
 function eq_to_in_normalization!(fst::FST, always_for_in::Bool, for_in_replacement::String)
     if fst.typ === Binary
@@ -837,17 +805,13 @@ function eq_to_in_normalization!(fst::FST, always_for_in::Bool, for_in_replaceme
         end
         if !isnothing(fst.metadata)
             metadata = fst.metadata::Metadata
-            opkind = try
-                JuliaSyntax.Kind(op.val)
-            catch
-                metadata.op_kind
-            end
+            opkind = JuliaSyntax.Kind(op.val)
             fst.metadata = Metadata(
                 opkind,
                 metadata.op_dotted,
                 metadata.is_standalone_shortcircuit,
                 metadata.is_short_form_function,
-                op.val == "=",
+                opkind === K"=",
                 metadata.is_long_form_function,
                 metadata.has_multiline_argument,
             )

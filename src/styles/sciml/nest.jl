@@ -56,7 +56,9 @@ function _is_for_tuple_binding(
         s.line_offset + length(fst[1]) <= s.opts.margin
 end
 
-function _nearest_binary_is_assignment(lineage::Vector{Tuple{FNode,Union{Nothing,Metadata}}})
+function _nearest_binary_is_assignment(
+    lineage::Vector{Tuple{FNode,Union{Nothing,Metadata}}},
+)
     i = findlast(x -> x[1] === Binary, lineage)
     i === nothing && return false
 
@@ -78,9 +80,7 @@ function _is_dict_call(fst::FST)
 end
 
 function _is_tuple_pair(fst::FST)
-    fst.typ === Binary &&
-        op_kind(fst) === K"=>" &&
-        fst[end].typ === TupleN
+    fst.typ === Binary && op_kind(fst) === K"=>" && fst[end].typ === TupleN
 end
 
 function _align_dict_tuple_pair_arrows!(fst::FST)
