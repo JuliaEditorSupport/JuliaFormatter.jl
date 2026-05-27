@@ -762,6 +762,27 @@
                 only(filter(line -> contains(line, "viscosity_model"), formatted_lines))
             @test length(comment_line) - length(lstrip(comment_line)) ==
                   length(option_line) - length(lstrip(option_line))
+
+            str = "Dict(\"a\" => (x = 1,), \"longer key\" => (y = 2,))"
+            @test format_text(str, SciMLStyle()) == str
+
+            str = """
+            d = Dict(
+                "a moderately long key" => (
+                    x = some_long_function_name(alpha, beta),
+                ),
+            )
+            """
+            fstr = """
+            d = Dict(
+                "a moderately long key" => (
+                    x = some_long_function_name(alpha, beta),
+                ),
+            )
+            """
+            formatted = format_text(str, SciMLStyle(); margin = 50)
+            @test formatted == fstr
+            @test all(length(line) <= 50 for line in split(formatted, '\n'))
         end
     end
 

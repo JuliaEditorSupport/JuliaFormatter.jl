@@ -95,17 +95,66 @@ function _align_dict_tuple_pair_arrows!(fst::FST)
     end
 end
 
-function _align_pair_tuple_rhs!(fst::FST, s::State)
+function _tuple_rhs_line_fits(rhs::FST, indent::Int, s::State)
+    nodes = rhs.nodes::Vector
+    idx = findfirst(
+        n ->
+            !(n.typ in (PUNCTUATION, WHITESPACE, PLACEHOLDER, NEWLINE, TRAILINGCOMMA)) && !is_closer(n),
+        nodes,
+    )
+    isnothing(idx) && return true
+
+    width, _ = length_to(rhs, (NEWLINE, PLACEHOLDER); start = idx)
+    return indent + width + rhs.extra_margin <= s.opts.margin
+end
+
+function _align_pair_tuple_rhs!(
+    fst::FST,
+    s::State;
+    align_to_pair::Bool = true,
+    fallback_indent::Int = fst.indent + s.opts.indent,
+)
     rhs = fst[end]
     rhs.typ === TupleN || return
 
-    desired_indent = if length(rhs.nodes::Vector) > 1 && rhs[2].typ === NEWLINE
+    desired_indent = if !align_to_pair
+        fallback_indent
+    elseif length(rhs.nodes::Vector) > 1 && rhs[2].typ === NEWLINE
         rhs.indent - 1
     else
         fst.indent + node_align_length(fst[1:(end-1)]) + 1
     end
     add_indent!(rhs, s, desired_indent - rhs.indent)
     _align_tuple_comments!(rhs)
+end
+
+function _unnest_pair_tuple_body!(style::AbstractStyle, rhs::FST, s::State)
+    lo = s.line_offset
+    s.line_offset = rhs.indent
+    for n in rhs.nodes::Vector
+        n.typ === NEWLINE && (s.line_offset = rhs.indent; continue)
+        walk(unnest!(style; dedent = false), n, s)
+    end
+    s.line_offset = lo
+end
+
+function _preserve_pair_tuple_newlines!(fst::FST; closer_indent::Int = fst.indent)
+    rhs = fst[end]
+    nodes = rhs.nodes::Vector
+    length(nodes) > 2 || return
+
+    nodes[2].typ !== NEWLINE && (nodes[2] = Newline(; length = nodes[2].len))
+    if is_closer(nodes[end]) && nodes[end-1].typ !== NEWLINE
+        nodes[end-1] = Newline(; length = nodes[end-1].len)
+        nodes[end].indent = closer_indent
+    end
+end
+
+function _preserve_multiline_closer!(fst::FST)
+    nodes = fst.nodes::Vector
+    length(nodes) > 2 && is_closer(nodes[end]) || return
+
+    nodes[end-1].typ !== NEWLINE && (nodes[end-1] = Newline(; length = nodes[end-1].len))
 end
 
 function _unnest_short_binary_lines!(fst::FST, s::State)
@@ -138,6 +187,8 @@ function n_binaryopcall!(
         rhs_style = YASStyle(style)
         nodes = fst.nodes::Vector
         oplen = sum(length.(fst[2:end]))
+        line_offset = s.line_offset
+        fallback_indent = line_offset + s.opts.indent
         nested = false
         for (i, n) in enumerate(nodes)
             if n.typ === NEWLINE
@@ -147,13 +198,19 @@ function n_binaryopcall!(
                 nested |= nest!(style, n, s, lineage)
             elseif i == length(nodes)
                 n.extra_margin = fst.extra_margin
-                n.indent = s.line_offset
+                align_to_pair = _tuple_rhs_line_fits(n, s.line_offset, s)
+                n.indent = align_to_pair ? s.line_offset : fallback_indent
                 nested |= nest!(rhs_style, n, s, lineage)
-                _align_pair_tuple_rhs!(fst, s)
-                lo = s.line_offset
-                walk(unnest!(rhs_style; dedent = false), n, s)
-                s.line_offset = lo
-                _unnest_short_binary_lines!(n, s)
+                _align_pair_tuple_rhs!(fst, s; align_to_pair, fallback_indent)
+                if align_to_pair
+                    lo = s.line_offset
+                    walk(unnest!(rhs_style; dedent = false), n, s)
+                    s.line_offset = lo
+                    _unnest_short_binary_lines!(n, s)
+                else
+                    _unnest_pair_tuple_body!(rhs_style, n, s)
+                    _preserve_pair_tuple_newlines!(fst; closer_indent = line_offset)
+                end
                 _align_tuple_comments!(n)
             else
                 nested |= nest!(style, n, s, lineage)
@@ -273,7 +330,9 @@ function _n_tuple!(
 )
     style = getstyle(ss)
     nodes = fst.nodes::Vector
-    _is_dict_call(fst) && _align_dict_tuple_pair_arrows!(fst)
+    _is_dict_call(fst) &&
+        fst.startline != fst.endline &&
+        _align_dict_tuple_pair_arrows!(fst)
 
     line_margin = s.line_offset + length(fst) + fst.extra_margin
     has_closer = is_closer(fst[end])
@@ -395,6 +454,7 @@ function _n_tuple!(
 
     s.line_offset = start_line_offset
     walk(unnest!(style; dedent = false), fst, s)
+    _is_dict_call(fst) && fst.startline != fst.endline && _preserve_multiline_closer!(fst)
     s.line_offset = start_line_offset
     walk(increment_line_offset!, fst, s)
 
