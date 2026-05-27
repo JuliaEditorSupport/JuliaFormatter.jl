@@ -1,3 +1,20 @@
+# v2.4.0
+
+Added the `--threads=auto` option to the old `julia-formatter` pre-commit hook, which should speed up invocations of JuliaFormatter.
+
+Added a new pre-commit hook which uses the `jlfmt` executable.
+To use this, you will need to first install `jlfmt` with
+
+```julia
+] app add JuliaFormatter
+```
+
+Please see [the docs](https://juliaeditorsupport.github.io/JuliaFormatter.jl/stable/integrations/) for more information.
+
+# v2.3.3
+
+Fixed a bug with alignment of multiline strings when the first line contains characters whose display width is not equal to the number of bytes.
+
 # v2.3.2
 
 Added compatibility with CommonMark@1.
