@@ -7,7 +7,7 @@ end
 
 using PrecompileTools: @setup_workload, @compile_workload
 using JuliaSyntax
-using JuliaSyntax: haschildren, children, span, @K_str, kind, @KSet_str
+using JuliaSyntax: children, span, @K_str, kind, @KSet_str
 using TOML: parsefile
 using Glob
 import CommonMark: block_modifier
@@ -33,6 +33,8 @@ export format,
     BlueStyle,
     SciMLStyle,
     MinimalStyle
+
+haschildren(node::JuliaSyntax.GreenNode) = !JuliaSyntax.is_leaf(node)
 
 struct Configuration
     args::Dict{String,Any}

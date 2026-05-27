@@ -396,6 +396,14 @@
         str = "!(typ <: ArithmeticTypes)"
         @test fmt(str) == str
 
+        text = "a + b"
+        d = JuliaFormatter.Document(text)
+        s = JuliaFormatter.State(d, Options())
+        g = JuliaSyntax.parseall(JuliaSyntax.GreenNode, text)
+        op = JuliaSyntax.children(only(JuliaSyntax.children(g)))[3]
+        @test JuliaFormatter.source_op_kind_from_offset(s, op, UInt32(3)) ===
+              JuliaSyntax.Kind("+")
+
         @test fmt("1 // 2 + 3^4") == "1 // 2 + 3^4"
         @test fmt("1 // 2 + 3 ^ 4") == "1 // 2 + 3 ^ 4"
 
@@ -4599,6 +4607,9 @@ some_function(
         str_ = "a    *     %"
         str = "a * %"
         @test fmt(str_, 4, 100) == str
+
+        @test run_pretty("+(y)", 80)[1].typ === JuliaFormatter.Unary
+        @test run_pretty(">=(y)", 80)[1].typ === JuliaFormatter.Call
     end
 
     @testset "binary shortcircuit" begin
