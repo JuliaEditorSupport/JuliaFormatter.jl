@@ -76,7 +76,7 @@ dir
 and call `format("dir")`, `code.jl` and `sub_code2.jl` will be formatted according to the rules defined in
 `dir/.JuliaFormatter.toml`, while formatting `sub_code1.jl` will be configured by `dir/subdir1/.JuliaFormatter.toml`.
 
-## [Ignoring specific files and directories](@id ignore)
+## [Ignoring specific files and directories](@id config-ignore)
 
 If there is an entry in `.JuliaFormatter.toml` with
 ```toml
