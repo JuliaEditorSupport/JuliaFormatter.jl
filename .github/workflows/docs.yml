@@ -1,0 +1,57 @@
+name: Documentation
+
+on:
+  push:
+    branches:
+      - master
+    tags: '*'
+  pull_request:
+
+concurrency:
+  # Skip intermediate builds: always.
+  # Cancel intermediate builds: only if it is a pull request build.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    env:
+      IS_PR_BUT_NOT_FORK: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name }}
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # 6.0.2
+      - uses: julia-actions/setup-julia@fa02766e078afaaf09b14210362cee14137e6a32 # 3.0.2
+      - uses: julia-actions/cache@a45e8fa8be21c18a06b7177052533149e61e9b38 # 3.1.0
+
+      - name: Install docs dependencies
+        shell: julia --color=yes --project=docs {0}
+        run: |
+          using Pkg
+          Pkg.develop(; path=".")
+          Pkg.instantiate()
+
+      - name: Build docs
+        working-directory: docs
+        run: julia --color=yes --project=. -e 'include("make.jl")'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - name: Post docs preview comment
+        if: ${{ env.IS_PR_BUT_NOT_FORK == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO_NAME: ${{ github.event.repository.name }}
+        run: |
+          preview_url="https://juliaeditorsupport.github.io/JuliaFormatter.jl/previews/PR${PR_NUMBER}/"
+          body="<!-- docs-preview-tag -->
+          [Docs preview for PR #${PR_NUMBER}](${preview_url})"
+          existing=$(gh pr view "$PR_NUMBER" --json comments --jq '.comments[] | select(.body | contains("docs-preview-tag")) | .id' | head -1)
+          if [ -z "$existing" ]; then
+            gh pr comment "$PR_NUMBER" --body "$body"
+          fi

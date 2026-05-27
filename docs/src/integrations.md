@@ -21,7 +21,7 @@ To use the hook, you can add the following to your `.pre-commit-config.yaml`:
 ```yaml
 repos:
 - repo: https://github.com/JuliaEditorSupport/JuliaFormatter.jl
-  rev: baf84dcde3e7d39a3339fecb51a5d853f8aa35af
+  rev: 0935890389c9fbc45f4ee150064c0abe5340b6a9 # v2.4.0
   hooks:
   - id: "julia-formatter"
 ```
@@ -33,7 +33,7 @@ To pass additional arguments to the Julia invocation (e.g. if JuliaFormatter is 
 ```yaml
 repos:
 - repo: https://github.com/JuliaEditorSupport/JuliaFormatter.jl
-  rev: baf84dcde3e7d39a3339fecb51a5d853f8aa35af
+  rev: 0935890389c9fbc45f4ee150064c0abe5340b6a9 # v2.4.0
   hooks:
   - id: "julia-formatter"
     args: ["--project=/path/to/myproj"]
@@ -43,7 +43,7 @@ repos:
 The version used to do the actual formatting is determined by the version of JuliaFormatter that is installed in your global Julia environment.
 This means that if you want to format your code with JuliaFormatter v1, you must make sure that you install v1 in your global Julia environment.
 
-The `rev` field above is a commit hash that points to [v2.3.2 of JuliaFormatter.jl](https://github.com/JuliaEditorSupport/JuliaFormatter.jl/releases/tag/v2.3.2).
+The `rev` field above is a commit hash that points to [v2.4.0 of JuliaFormatter.jl](https://github.com/JuliaEditorSupport/JuliaFormatter.jl/releases/tag/v2.4.0).
 As of the time of writing, this is the latest release of JuliaFormatter.jl.
 However, it is extremely unlikely that this hook will change in future releases, so you do not need to worry about 'updating' it to a newer version.
 
@@ -63,12 +63,12 @@ Once you have the `jlfmt` app installed, you can add the following to your `.pre
 ```yaml
 repos:
 - repo: https://github.com/JuliaEditorSupport/JuliaFormatter.jl
-  rev: TODO TODO
+  rev: 0935890389c9fbc45f4ee150064c0abe5340b6a9 # v2.4.0
   hooks:
   - id: "jlfmt"
 ```
 
-The path to the `jlfmt` executable in the `args` field of the hook, like so (although you should not _need_ to do so—see below):
+The path to the `jlfmt` executable can be specified in the `args` field of the hook, like so (although you should not _need_ to do so—see below):
 
 ```yaml
 repos:
