@@ -37,7 +37,7 @@ end
 # forms, e.g. `a + b`, `x .+ y`, `+(x)`, and `>=(x)`. The parent call flags
 # describe the shape, but the leaf itself is not `is_operator`, and the exact
 # operator kind is only recoverable from the source span.
-function source_operator_kind(s::State, cst::JuliaSyntax.GreenNode, offset::Integer)
+function source_op_kind_from_offset(s::State, cst::JuliaSyntax.GreenNode, offset::Integer)
     if JuliaSyntax.is_operator(cst) && !haschildren(cst)
         return kind(cst)
     elseif kind(cst) === K"Identifier" && !haschildren(cst)
@@ -50,7 +50,7 @@ function source_operator_kind(s::State, cst::JuliaSyntax.GreenNode, offset::Inte
 end
 
 function is_source_operator(s::State, cst::JuliaSyntax.GreenNode, offset::Integer)
-    !isnothing(source_operator_kind(s, cst, offset))
+    !isnothing(source_op_kind_from_offset(s, cst, offset))
 end
 
 function source_prefix_operator_index(cst::JuliaSyntax.GreenNode, s::State)
@@ -77,19 +77,31 @@ function source_operator_indices(cst::JuliaSyntax.GreenNode)
 
     childs = children(cst)
     args = findall(n -> !JuliaSyntax.is_whitespace(n), childs)
-    isempty(args) && return Int[]
+    nonws_args = length(args)
+    nonws_args == 0 &&
+        error("no non-whitespace children found for operator node; should not happen")
 
     if kind(cst) === K"op="
-        length(args) < 4 && return Int[]
+        # 4 args for `x += y`, 5 args for `x .+= y` (the dot is preserved as a
+        # flag in JuliaSyntax but the kind is the same).
+        (nonws_args == 4 || nonws_args == 5) ||
+            error("unexpected number of args for op= node", nonws_args, cst)
         return args[2:(end-1)]
     elseif kind(cst) === K"comparison"
-        length(args) < 3 && return Int[]
+        # `x < y < z < ... < w` has `2n - 1` args where `n >= 2`.
+        (iseven(nonws_args) || nonws_args < 3) &&
+            error("unexpected number of args for comparison node", nonws_args, cst)
         return args[2:2:(end-1)]
     elseif is_short_function_def(cst)
-        length(args) < 3 && return Int[]
+        nonws_args != 3 && error(
+            "unexpected number of args for short function definition node",
+            nonws_args,
+            cst,
+        )
         return Int[args[2]]
     elseif JuliaSyntax.is_operator(cst)
-        length(args) < 3 && return Int[]
+        nonws_args != 3 &&
+            error("unexpected number of args for operator node", nonws_args, cst)
         return args[2:(end-1)]
     elseif JuliaSyntax.is_prefix_op_call(cst)
         if kind(cst) === K"dotcall" &&
@@ -130,7 +142,7 @@ function source_op_kind(s::State, cst::JuliaSyntax.GreenNode)
     for i in source_operator_indices(cst)
         c = childs[i]
         offset = Int(s.offset) + sum(span, childs[1:(i-1)]; init = 0)
-        k = source_operator_kind(s, c, offset)
+        k = source_op_kind_from_offset(s, c, offset)
         if !isnothing(k) && !(kind(cst) === K"dotcall" && k === K".")
             return k
         end
@@ -2108,7 +2120,7 @@ function p_binaryopcall(
         if is_op && n.typ === IDENTIFIER
             n.typ = OPERATOR
             n.metadata =
-                Metadata(source_operator_kind(s, c, offset)::JuliaSyntax.Kind, is_dot)
+                Metadata(source_op_kind_from_offset(s, c, offset)::JuliaSyntax.Kind, is_dot)
         end
         if is_dot && haschildren(c) && length(children(c)) == 2
             # [.]
@@ -2356,7 +2368,7 @@ function p_unaryopcall(
         end
         n = pretty(style, c, s, ctx, lineage)
         if i == op_idx && n.typ === IDENTIFIER
-            k = source_operator_kind(s, c, offset)
+            k = source_op_kind_from_offset(s, c, offset)
             if !isnothing(k)
                 n.typ = OPERATOR
                 n.metadata = Metadata(k, false)

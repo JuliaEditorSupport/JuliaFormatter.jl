@@ -15,12 +15,17 @@
         op_indices = JuliaFormatter.source_operator_indices(node)
         op = JuliaSyntax.children(node)[only(op_indices)]
 
-        @test JuliaFormatter.source_operator_kind(state, op, 3) === JuliaSyntax.Kind("+")
+        @test JuliaFormatter.source_op_kind_from_offset(state, op, 3) ===
+              JuliaSyntax.Kind("+")
         @test JuliaFormatter.source_op_kind(state, node) === JuliaSyntax.Kind("+")
 
         _, state, node = parsed_node("x .+ y")
         @test JuliaFormatter.source_operator_indices(node) == [3, 4]
         @test JuliaFormatter.source_op_kind(state, node) === JuliaSyntax.Kind("+")
+
+        _, state, node = parsed_node("x < y < z")
+        @test JuliaFormatter.source_operator_indices(node) == [3, 7]
+        @test JuliaFormatter.source_op_kind(state, node) === JuliaSyntax.Kind("<")
 
         # Prefix operator calls should be treated as unary only when the recovered
         # source operator is valid in unary position.
@@ -45,6 +50,10 @@
         # Compound assignments split the source operator across multiple child nodes.
         _, state, node = parsed_node("x += 1")
         @test JuliaFormatter.source_operator_indices(node) == [3, 4]
+        @test JuliaFormatter.source_op_kind(state, node) === JuliaSyntax.Kind("op=")
+
+        _, state, node = parsed_node("x .+= 1")
+        @test JuliaFormatter.source_operator_indices(node) == [3, 4, 5]
         @test JuliaFormatter.source_op_kind(state, node) === JuliaSyntax.Kind("op=")
 
         # Long-form definitions must stay on the dedicated function-definition path.

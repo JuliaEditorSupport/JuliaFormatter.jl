@@ -401,7 +401,7 @@
         s = JuliaFormatter.State(d, Options())
         g = JuliaSyntax.parseall(JuliaSyntax.GreenNode, text)
         op = JuliaSyntax.children(only(JuliaSyntax.children(g)))[3]
-        @test JuliaFormatter.source_operator_kind(s, op, UInt32(3)) ===
+        @test JuliaFormatter.source_op_kind_from_offset(s, op, UInt32(3)) ===
               JuliaSyntax.Kind("+")
 
         @test fmt("1 // 2 + 3^4") == "1 // 2 + 3^4"
