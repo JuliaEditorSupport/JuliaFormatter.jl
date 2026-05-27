@@ -396,6 +396,14 @@
         str = "!(typ <: ArithmeticTypes)"
         @test fmt(str) == str
 
+        text = "a + b"
+        d = JuliaFormatter.Document(text)
+        s = JuliaFormatter.State(d, Options())
+        g = JuliaSyntax.parseall(JuliaSyntax.GreenNode, text)
+        op = JuliaSyntax.children(only(JuliaSyntax.children(g)))[3]
+        @test JuliaFormatter.source_op_kind_from_offset(s, op, UInt32(3)) ===
+              JuliaSyntax.Kind("+")
+
         @test fmt("1 // 2 + 3^4") == "1 // 2 + 3^4"
         @test fmt("1 // 2 + 3 ^ 4") == "1 // 2 + 3 ^ 4"
 
@@ -1431,12 +1439,52 @@
         end"""
         @test fmt(str_) == str
 
+        @testset "multiline string starting on line with display width != bytes" begin
+            # https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/974
+            #
+            # Anonymous function form. Test both the case where the second line begins
+            # after the starting quote of the first line, and the opposite.
+            s1a = raw"""
+            error_str = Δa -> "Change in activity must be within the valid range: \
+                                Δa ∈ [1, 2], but Δa = $Δa"
+            """
+            s1b = raw"""
+            error_str = Δa -> "Change in activity must be within the valid range: \
+                  Δa ∈ [1, 2], but Δa = $Δa"
+            """
+            # Explicit function definition
+            s2a = raw"""
+            error_str(Δa) = "Change in activity must be within the valid range: \
+                                Δa ∈ [1, 2], but Δa = $Δa"
+            """
+            s2b = raw"""
+            error_str(Δa) = "Change in activity must be within the valid range: \
+              Δa ∈ [1, 2], but Δa = $Δa"
+            """
+            # Using triple quoted strings
+            s3a = raw"""
+            error_str(Δa) = \"""Change in activity must be within the valid range: \
+                                Δa ∈ [1, 2], but Δa = $Δa\"""
+            """
+            s3b = raw"""
+            error_str(Δa) = \"""Change in activity must be within the valid range: \
+              Δa ∈ [1, 2], but Δa = $Δa\"""
+            """
+            for s in (s1a, s1b, s2a, s2b, s3a, s3b)
+                # Need to normalise line endings because \ at the end of a raw_str behaves
+                # weirdly on Windows causing CI to fail.
+                # https://github.com/JuliaLang/julia/issues/38908
+                s = replace(s, "\r\n" => "\n")
+                @test fmt(s) == s
+            end
+        end
+
         str_ = """
         begin
         begin
            throw(ErrorException(\"""An error occured formatting \$filename. :-(
 
-                                Please file an issue at https://github.com/domluna/JuliaFormatter.jl/issues
+                                Please file an issue at https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues
                                 with a link to a gist containing the contents of the file. A gist
                                 can be created at https://gist.github.com/.\"""))
            end
@@ -1446,7 +1494,7 @@
             begin
                 throw(ErrorException(\"""An error occured formatting \$filename. :-(
 
-                                     Please file an issue at https://github.com/domluna/JuliaFormatter.jl/issues
+                                     Please file an issue at https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues
                                      with a link to a gist containing the contents of the file. A gist
                                      can be created at https://gist.github.com/.\"""))
             end
@@ -1460,7 +1508,7 @@
                     ErrorException(
                         \"""An error occured formatting $filename. :-(
 
-                        Please file an issue at https://github.com/domluna/JuliaFormatter.jl/issues
+                        Please file an issue at https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues
                         with a link to a gist containing the contents of the file. A gist
                         can be created at https://gist.github.com/.\""",
                     ),
@@ -2727,7 +2775,7 @@
         @test fmt(str_) == str_
         @test fmt(str_, 2, 1) == str
 
-        # https://github.com/domluna/JuliaFormatter.jl/issues/9#issuecomment-481607068
+        # https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/9#issuecomment-481607068
         str = """
         this_is_a_long_variable_name = Dict{Symbol,Any}(
             :numberofpointattributes => NAttributes,
@@ -2902,7 +2950,7 @@
             arg3"""
         @test fmt(str_, 4, 19) == str
 
-        # https://github.com/domluna/JuliaFormatter.jl/issues/60
+        # https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/60
         str_ = """
         function write_subproblem_to_file(
                 node::Node, filename::String;
@@ -2955,7 +3003,7 @@
         end"""
         @test fmt(str, 4, 1) == str
 
-        # https://github.com/domluna/JuliaFormatter.jl/issues/453
+        # https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/453
         str = """
         bar = Dict(
             :foo => \"""A triple quoted literal string
@@ -3126,7 +3174,7 @@
         _, s = run_nest(str, 73)
         @test s.line_offset == 9
 
-        # https://github.com/domluna/JuliaFormatter.jl/issues/9#issuecomment-481607068
+        # https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/9#issuecomment-481607068
         str = """this_is_a_long_variable_name = Dict{Symbol,Any}(:numberofpointattributes => NAttributes,
                :numberofpointmtrs => NMTr, :numberofcorners => NSimplex, :firstnumber => Cint(1),
                :mesh_dim => Cint(3),)"""
@@ -3497,7 +3545,7 @@
         """) == "0.1 + 0.2\n"
     end
 
-    # https://github.com/domluna/JuliaFormatter.jl/issues/77
+    # https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/77
     @testset "matrices" begin
         str_ = """
         [ a b expr()
@@ -4559,6 +4607,9 @@ some_function(
         str_ = "a    *     %"
         str = "a * %"
         @test fmt(str_, 4, 100) == str
+
+        @test run_pretty("+(y)", 80)[1].typ === JuliaFormatter.Unary
+        @test run_pretty(">=(y)", 80)[1].typ === JuliaFormatter.Call
     end
 
     @testset "binary shortcircuit" begin

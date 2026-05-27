@@ -41,20 +41,20 @@ Check out the docs for further description of the formatter and its options.
 
 ### `indent`
 
-> default: `4`
+Default: `4`
 
 The number of spaces used for an indentation.
 
 ### `margin`
 
-> default: `92`
+Default: `92`
 
 The maximum length of a line. Code exceeding this margin will
 be formatted across multiple lines.
 
 ### `always_for_in`
 
-> default: `false`
+Default: `false`
 
 If true, `=` is always replaced with `in` if part of a `for` loop condition.
 For example, `for i = 1:10` will be transformed to `for i in 1:10`. Set
@@ -62,14 +62,14 @@ this to `nothing` to leave the choice to the user.
 
 ### `whitespace_typedefs`
 
-> default: `false`
+Default: `false`
 
 If true, whitespace is added for type definitions. Make this `true`
 if you prefer `Union{A <: B, C}` to `Union{A<:B,C}`.
 
 ### `whitespace_ops_in_indices`
 
-> default: `false`
+Default: `false`
 
 If true, whitespace is added for binary operations in indices. Make this
 `true` if you prefer `arr[a + b]` to `arr[a+b]`. Additionally, if there's
@@ -79,7 +79,7 @@ Example: `arr[(i1 + i2):(i3 + i4)]` instead of `arr[i1+i2:i3+i4]`.
 
 ### `remove_extra_newlines`
 
-> default: `false`
+Default: `false`
 
 If true, superfluous newlines will be removed. For example:
 
@@ -125,7 +125,7 @@ prior to the initial or after the final piece of code.
 
 ### `import_to_using`
 
-> default: `false`
+Default: `false`
 
 If true, `import` expressions are rewritten to `using` expressions
 in the following cases:
@@ -162,13 +162,13 @@ If `import` is used in the following context it is NOT rewritten. This may chang
 
 ### `pipe_to_function_call`
 
-> default: `false`
+Default: `false`
 
 If true, `x |> f` is rewritten to `f(x)`.
 
 ### `short_to_long_function_def`
 
-> default: `false`
+Default: `false`
 
 Transforms a *short* function definition
 
@@ -186,14 +186,14 @@ end
 ```
 
 ### `force_long_function_def`
-> default: `false`
+Default: `false`
 
 If `true` tweaks the behavior of `short_to_long_function_def` to force the transformation no matter
 how short the function definition is.
 
 ### `long_to_short_function_def`
 
-> default: `false`
+Default: `false`
 
 Transforms a *long* function definition
 
@@ -211,7 +211,7 @@ f(arg1, arg2) = body
 
 ### `always_use_return`
 
-> default: `false`
+Default: `false`
 
 If true, `return` will be prepended to the last expression where
 applicable in function definitions, macro definitions, and do blocks.
@@ -236,7 +236,7 @@ end
 
 ### `whitespace_in_kwargs`
 
-> default: `true`
+Default: `true`
 
 If true, `=` in keyword arguments will be surrounded by whitespace.
 
@@ -257,7 +257,7 @@ operation. This would change the semantics of the code and is therefore disallow
 
 ### `annotate_untyped_fields_with_any`
 
-> default: `true`
+Default: `true`
 
 Annotates fields in a type definitions with `::Any` if no type annotation is provided:
 
@@ -277,7 +277,7 @@ end
 
 ### `format_docstrings`
 
-> default: `false`
+Default: `false`
 
 Format code docstrings with the same options used for the code source.
 
@@ -285,13 +285,13 @@ Markdown is formatted with [`CommonMark`](https://github.com/MichaelHatherly/Com
 
 ### `align_*`
 
-> default: `false`
+Default: `false`
 
 See `Custom Alignment` documentation.
 
 ### `conditional_to_if`
 
-> default: `false`
+Default: `false`
 
 If the conditional `E ? A : B` exceeds the maximum margin converts it into the equivalent `if` block:
 
@@ -305,14 +305,14 @@ end
 
 ### `normalize_line_endings`
 
-> default: `"auto"`
+Default: `"auto"`
 
 One of `"unix"` (normalize all `\r\n` to `\n`), `"windows"` (normalize all `\n` to `\r\n`), `"auto"` (automatically
 choose based on which line ending is more common in the file).
 
 ### `trailing_comma`
 
-> default: `true`
+Default: `true`
 
 One of `true`, `false`, or `nothing`.
 
@@ -340,13 +340,13 @@ funccall(
 
 ### `trailing_zero`
 
-> default: `true`
+Default: `true`
 
 Add a trailing zero, if needed.
 
 ### `join_lines_based_on_source`
 
-> default: `false`
+Default: `false`
 
 When `true` lines are joined as they appear in the original source file.
 
@@ -401,7 +401,7 @@ end
 
 ### `indent_submodule`
 
-> default: `false`
+Default: `false`
 
 When set to `true`, submodule(s) appearing in the same file will be indented.
 
@@ -441,7 +441,7 @@ end
 
 ### `separate_kwargs_with_semicolon`
 
-> default: `false`
+Default: `false`
 
 When set to `true`, keyword arguments in a function call will be separated with a semicolon.
 
@@ -455,7 +455,7 @@ f(a; b=1)
 
 ### `surround_whereop_typeparameters`
 
-> default: `true`
+Default: `true`
 
 Surrounds type parameters with curly brackets when set to `true` if the brackets are not
 already present.
@@ -578,20 +578,20 @@ function_call("String argument")
 
 ### `overwrite`
 
-> default: `true`
+Default: `true`
 
 If `true` the file will be reformatted in place, overwriting the existing file;
 if it is `false`, the formatted version of foo.jl will not be written anywhere.
 
 ### `verbose`
 
-> default: `false`
+Default: `false`
 
 If `true` details related to formatting the file will be printed to `stdout`.
 
 ### `format_markdown`
 
-> default: `false`
+Default: `false`
 
 If `true`, Markdown files are also formatted. Julia code blocks will be formatted in
 addition to the Markdown being normalized.

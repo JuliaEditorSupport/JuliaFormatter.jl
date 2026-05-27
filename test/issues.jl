@@ -1953,4 +1953,15 @@
         sf = "using Foo: (..)"
         @test fmt(s, 4, 100) == sf
     end
+
+    @testset "921" begin
+        # These are floating point literals with hexadecimal significands. E.g. 0x1p1 is the
+        # float with with 0x1 as the significant and 1 as the exponent.
+        s = "0x1p1"
+        @test fmt(s) == s
+        s = "+0x1p1"
+        @test fmt(s) == s
+        s = "-0x1p1"
+        @test fmt(s) == s
+    end
 end

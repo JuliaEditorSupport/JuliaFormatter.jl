@@ -5,7 +5,7 @@ CurrentModule = JuliaFormatter
 # Style
 
 This is meant to give an impression of how the output of a formatted file looks like.
-Additional examples can be found in the [test files](https://github.com/domluna/JuliaFormatter.jl/tree/master/test/files).
+Additional examples can be found in the [test files](https://github.com/JuliaEditorSupport/JuliaFormatter.jl/tree/master/test/files).
 
 ## Initial `FST`
 
@@ -212,8 +212,6 @@ foo() = body
 foo() =
     body
 ```
-
-Lazy `&&` and `||` operations are nested according to [`is_standalone_shortcircuit`](@ref) rules.
 
 All arguments of a function call (applies to any opening/closing punctuation type) are nested
 if the expression exceeds the margin. The arguments are indented one level.

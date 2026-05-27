@@ -153,20 +153,30 @@ function _n_tuple!(
 
     # Check if we should apply conservative nesting rules
     should_nest = line_margin > s.opts.margin || must_nest(fst) || src_diff_line
-    
+
     # For certain types, be more conservative about nesting
     if should_nest && !must_nest(fst) && !src_diff_line
         total_length = line_margin
-        if (fst.typ === Call && length(placeholder_inds) <= 5 && total_length <= s.opts.margin + 20)
+        if (
+            fst.typ === Call &&
+            length(placeholder_inds) <= 5 &&
+            total_length <= s.opts.margin + 20
+        )
             should_nest = false
-        elseif (fst.typ === Binary || fst.typ === Chain) && length(placeholder_inds) <= 6 && total_length <= s.opts.margin + 20
+        elseif (fst.typ === Binary || fst.typ === Chain) &&
+               length(placeholder_inds) <= 6 &&
+               total_length <= s.opts.margin + 20
             should_nest = false
-        elseif (fst.typ === RefN && length(placeholder_inds) <= 4 && total_length <= s.opts.margin + 30)
+        elseif (
+            fst.typ === RefN &&
+            length(placeholder_inds) <= 4 &&
+            total_length <= s.opts.margin + 30
+        )
             # Keep array indexing together when reasonable (e.g., du[i, j, 1])
             should_nest = false
         end
     end
-    
+
     if idx !== nothing && should_nest
         for (i, n) in enumerate(nodes)
             if n.typ === NEWLINE
@@ -231,11 +241,13 @@ function n_ref!(
     # Look through the lineage to see if we have a Binary assignment parent
     # and this RefN comes before any other Binary operators
     is_lhs_of_assignment = false
-    
+
     if length(lineage) >= 2
         # Check if we have a Binary assignment in the lineage
         for i in length(lineage):-1:1
-            if lineage[i][1] === Binary && !isnothing(lineage[i][2]) && lineage[i][2].is_assignment
+            if lineage[i][1] === Binary &&
+               !isnothing(lineage[i][2]) &&
+               lineage[i][2].is_assignment
                 # Check if there are any other Binary nodes between us and the assignment
                 has_intermediate_binary = false
                 for j in (i+1):length(lineage)
@@ -244,7 +256,7 @@ function n_ref!(
                         break
                     end
                 end
-                
+
                 if !has_intermediate_binary
                     is_lhs_of_assignment = true
                 end
@@ -252,7 +264,7 @@ function n_ref!(
             end
         end
     end
-    
+
     if is_lhs_of_assignment
         # Don't break the LHS of an assignment
         # Format children but keep them on the same line
@@ -267,7 +279,7 @@ function n_ref!(
         s.line_offset = lo + length(fst)
         return nested
     end
-    
+
     # Otherwise use the default behavior
     if s.opts.yas_style_nesting
         return n_ref!(YASStyle(getstyle(ss)), fst, s, lineage)

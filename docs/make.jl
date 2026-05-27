@@ -1,8 +1,11 @@
+using Pkg: Pkg
+Pkg.develop(; path = dirname(@__DIR__))
+
 using Documenter, JuliaFormatter
 
 makedocs(;
     sitename = "JuliaFormatter",
-    format = Documenter.HTML(; prettyurls = get(ENV, "CI", nothing) == "true"),
+    format = Documenter.HTML(),
     modules = [JuliaFormatter],
     pages = [
         "Introduction" => "index.md",
@@ -15,9 +18,13 @@ makedocs(;
         "Blue Style" => "blue_style.md",
         "SciML Style" => "sciml_style.md",
         "Configuration File" => "config.md",
+        "Command Line Interface" => "cli.md",
+        "Integrations" => "integrations.md",
         "API Reference" => "api.md",
     ],
-    warnonly = true,
 )
 
-deploydocs(; repo = "github.com/domluna/JuliaFormatter.jl.git", push_preview = true)
+deploydocs(;
+    repo = "github.com/JuliaEditorSupport/JuliaFormatter.jl.git",
+    push_preview = true,
+)

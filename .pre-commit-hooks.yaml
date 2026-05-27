@@ -1,9 +1,19 @@
 - id: julia-formatter
   name: "Julia Formatter"
-  entry: "julia -e 'import JuliaFormatter: format; format(ARGS)'"
+  entry: "julia --threads=auto -e 'import JuliaFormatter: format; format(ARGS)'"
   pass_filenames: true
   always_run: false
   types: [file]
-  files: \.(jl|[jq]?md)$
+  files: \.(jl|md|jmd|qmd)$
   language: "system"
   description: "An opinionated code formatter for Julia. Plot twist - the opinion is your own."
+
+- id: jlfmt
+  name: "JuliaFormatter (Pkg app)"
+  entry: bin/jlfmt-hook.sh
+  pass_filenames: true
+  always_run: false
+  types: [file]
+  files: \.(jl|md|jmd|qmd)$
+  language: "script"
+  description: "An opinionated code formatter for Julia, but now via a Pkg app. Plot twist - the opinion is your own."

@@ -1,7 +1,7 @@
 name = "JuliaFormatter"
 uuid = "98e50ef6-434e-11e9-1051-2b60c6c9e899"
-authors = ["Dominique Luna <dluna132@gmail.com>"]
-version = "2.1.6"
+version = "2.5.0"
+authors = ["Dominique Luna <dluna132@gmail.com> and contributors"]
 
 [deps]
 CommonMark = "a80b9123-70ca-4bc0-993e-6e3bcb318db6"
@@ -11,12 +11,15 @@ PrecompileTools = "aea7be01-6a6a-4083-8856-8a6e6704d82a"
 TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 
 [compat]
-CommonMark = "0.5, 0.6, 0.7, 0.8, 0.9"
+CommonMark = "0.5, 0.6, 0.7, 0.8, 0.9, 0.10, 1"
 Glob = "1.3"
-JuliaSyntax = "^0.4.10"
+JuliaSyntax = "1"
 PrecompileTools = "1"
 TOML = "1"
+Test = "1"
 julia = "1.10"
+
+[apps.jlfmt]
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"

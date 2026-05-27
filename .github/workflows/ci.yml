@@ -1,4 +1,5 @@
 name: CI
+
 on:
   push:
     tags:
@@ -8,52 +9,54 @@ on:
   pull_request:
     branches:
       - 'master'
+  workflow_dispatch:
+
 jobs:
   test:
     name: Julia ${{ matrix.version }} - ${{ matrix.os }} - ${{ matrix.arch }}
     runs-on: ${{ matrix.os }}
+    # The default timeout for each job is 6 hours, we set it to 2 hours instead
+    # Long enough to tell us something's wrong, short enough to catch it early
+    timeout-minutes: 120
+
     strategy:
+      fail-fast: false
       matrix:
         version:
           - '1.10'
           - '1.11'
-          # - 'nightly'
-        arch: [x64, x86]
-        os: [ubuntu-latest, windows-latest, macos-13]
-        exclude:
-          - os: macos-13
-            arch: x86
-          - os: macos-13
-            version: '1.4'
+          - '1.12'
+        os:
+          - ubuntu-latest
+          - windows-latest
+          - macos-15-intel # Intel (x64) runner
+        arch:
+          - x64
         include:
+          # Keep Windows x86 coverage if needed
+          - os: windows-latest
+            version: '1.10'
+            arch: x86
+          # macOS ARM64 (Apple Silicon)
           - os: macos-latest
             version: '1'
             arch: aarch64
+
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           persist-credentials: false
-      - uses: julia-actions/setup-julia@v2
+
+      - uses: julia-actions/setup-julia@v3
         with:
           show-versioninfo: true
           version: ${{ matrix.version }}
           arch: ${{ matrix.arch }}
+
+      - uses: julia-actions/cache@v3
+        with:
+          delete-old-caches: false # avoids extra permissions
+
       - uses: julia-actions/julia-buildpkg@v1
-        with:
-          ignore-no-cache: true
+
       - uses: julia-actions/julia-runtest@latest
-  docs:
-    name: Documentation
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-      - uses: julia-actions/setup-julia@v2
-        with:
-          show-versioninfo: true
-          version: '1'
-      - uses: julia-actions/julia-docdeploy@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          DOCUMENTER_KEY: ${{ secrets.DOCUMENTER_KEY }}

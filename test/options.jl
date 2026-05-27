@@ -1212,6 +1212,13 @@
         @test fmt(str, 4, 1; align_assignment = true) == str
 
         str = """
+        eclipse  = true
+        s̄_b      = SVector{3,T}(0, 0, 0)
+        css_axes = :css_axes_eclipse
+        """
+        @test fmt(str; align_assignment = true) == str
+
+        str = """
         vcat(X::T...) where {T}         = T[X[i] for i = 1:length(X)]
         vcat(X::T...) where {T<:Number} = T[X[i] for i = 1:length(X)]
         hcat(X::T...) where {T}         = T[X[j] for i = 1:1, j = 1:length(X)]
@@ -2063,7 +2070,7 @@
         # NOTE: not sure since test makes sense anymore.
         # It is generally not a great idea to remove the semicolons here since
         # it can be potentially change the semantics or lead to code errors.
-        # https://github.com/domluna/JuliaFormatter.jl/issues/745
+        # https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/745
         @testset "matrices" begin
             str_ = """
             T[ a b Expr();

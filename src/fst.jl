@@ -125,7 +125,11 @@ mutable struct FST
     startline::Int
     endline::Int
 
+    # TODO(penelopeysm): This field should be calculated based on display width. I'm not
+    # sure that this is consistently obeyed in the codebase, so it's more of an aspirational
+    # comment rather than a true invariant right now.
     indent::Int
+
     len::Int
     val::String
     nodes::Union{Tuple{},Vector{FST}}
@@ -259,7 +263,7 @@ is_comment(fst::FST) = fst.typ in (INLINECOMMENT, NOTCODE, HASHEQCOMMENT)
 
 is_identifier(x) = kind(x) === K"Identifier" && !haschildren(x)
 
-is_ws(x) = kind(x) in KSet"Whitespace NewlineWs"
+is_ws(x) = JuliaSyntax.is_whitespace(x)
 
 function is_multiline(fst::FST)
     fst.endline > fst.startline &&
@@ -278,7 +282,7 @@ function is_macrostr(t::JuliaSyntax.GreenNode)::Bool
 end
 
 function contains_macrostr(t::JuliaSyntax.GreenNode)::Bool
-    if kind(t) in KSet"StringMacroName CmdMacroName core_@cmd"
+    if kind(t) in KSet"StringMacroName CmdMacroName"
         return true
     elseif kind(t) === "quote" && haschildren(t)
         return contains_macrostr(t[1])
@@ -390,7 +394,7 @@ function is_prev_newline(fst::FST)
 end
 
 """
-    `length_to(x::FST, ntyps; start::Int = 1)`
+    length_to(x::FST, ntyps; start::Int = 1)
 
 Returns the length to any node type in `ntyps` based off the `start` index.
 """
@@ -507,16 +511,6 @@ function is_opcall(x::JuliaSyntax.GreenNode)
     return false
 end
 
-function is_prefix_op_call(x::JuliaSyntax.GreenNode)
-    is_opcall(x) || return false
-    haschildren(x) || return false
-
-    idx = findfirst(!JuliaSyntax.is_whitespace, children(x))
-    isnothing(idx) && return false
-
-    return JuliaSyntax.is_operator(x[idx])
-end
-
 function is_gen(x::JuliaSyntax.GreenNode)
     kind(x) in KSet"generator filter"
 end
@@ -525,28 +519,26 @@ function is_gen(x::FST)
     x.typ in (Generator, Filter, Flatten)
 end
 
-function extract_operator_indices(childs::Vector{JuliaSyntax.GreenNode{T}}) where {T}
-    args = findall(n -> !JuliaSyntax.is_whitespace(n), childs)
-    op_indices = Int[]
-    i = 2
-    while i <= length(args)
-        push!(op_indices, args[i])
-        if i < length(args) &&
-           kind(childs[args[i]]) === K"." &&
-           !haschildren(childs[args[i]])
-            push!(op_indices, args[i+1])
-            i += 1
-        end
-        i += 2
-    end
-    return op_indices
-end
-
 function _callinfo(x::JuliaSyntax.GreenNode)
     if !haschildren(x)
         return 0, 0
     end
     k = kind(x)
+    if k === K"call" && JuliaSyntax.is_infix_op_call(x)
+        args = count(n -> !JuliaSyntax.is_whitespace(n), children(x))
+        return div(args - 1, 2), div(args + 1, 2)
+    elseif k === K"dotcall" && JuliaSyntax.is_infix_op_call(x)
+        args = count(n -> !JuliaSyntax.is_whitespace(n), children(x))
+        nops = div(args - 1, 3)
+        return nops, nops + 1
+    elseif k === K"op="
+        return 1, 2
+    elseif JuliaSyntax.is_operator(x) && haschildren(x)
+        args = count(n -> !JuliaSyntax.is_whitespace(n), children(x))
+        if args >= 3
+            return div(args - 1, 2), div(args + 1, 2)
+        end
+    end
     n_operators = 0
     n_args = 0
 
@@ -565,7 +557,7 @@ function _callinfo(x::JuliaSyntax.GreenNode)
 end
 
 function is_unary(x::JuliaSyntax.GreenNode)
-    if JuliaSyntax.is_unary_op(x)
+    if JuliaSyntax.is_unary_op(x) && !haschildren(x)
         return true
     end
     if kind(x) in KSet"call dotcall" || (JuliaSyntax.is_operator(x) && haschildren(x))
@@ -614,10 +606,7 @@ function is_assignment(x::FST)
 end
 
 function is_assignment(t::JuliaSyntax.GreenNode)
-    if JuliaSyntax.is_prec_assignment(kind(t)) && haschildren(t)
-        return !any(c -> kind(c) in KSet"in ∈", children(t))
-    end
-    return false
+    return JuliaSyntax.is_syntactic_assignment(t) && haschildren(t)
 end
 is_assignment(::Nothing) = false
 
@@ -646,6 +635,11 @@ function is_function_or_macro_def(cst::JuliaSyntax.GreenNode)
     return false
 end
 
+function is_short_function_def(cst::JuliaSyntax.GreenNode)
+    kind(cst) === K"function" &&
+        JuliaSyntax.has_flags(cst, JuliaSyntax.SHORT_FORM_FUNCTION_FLAG)
+end
+
 function is_function_like_lhs(node::JuliaSyntax.GreenNode)
     k = kind(node)
     if k in KSet"call dotcall"
@@ -671,7 +665,9 @@ function remove_empty_notcode(fst::FST)
 end
 
 """
-`cst` is assumed to be a single child node. Returnss true if the node is of the syntactic form `{...}, [...], or (...)`.
+    unnestable_node(cst::JuliaSyntax.GreenNode)
+
+`cst` is assumed to be a single child node. Returns true if the node is of the syntactic form `{...}, [...], or (...)`.
 """
 function unnestable_node(cst::JuliaSyntax.GreenNode)
     kind(cst) in KSet"tuple vect braces bracescat comprehension parens"
@@ -782,7 +778,7 @@ for i = 1:10 body end
 
 `always_for_in=nothing` disables this normalization behavior.
 
-- https://github.com/domluna/JuliaFormatter.jl/issues/34
+- <https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/34>
 """
 function eq_to_in_normalization!(fst::FST, always_for_in::Bool, for_in_replacement::String)
     if fst.typ === Binary
@@ -810,6 +806,19 @@ function eq_to_in_normalization!(fst::FST, always_for_in::Bool, for_in_replaceme
         elseif op.val == "in" && op_kind(fst[end]) === K":"
             op.val = "="
             op.len = length(op.val)
+        end
+        if !isnothing(fst.metadata)
+            metadata = fst.metadata::Metadata
+            opkind = JuliaSyntax.Kind(op.val)
+            fst.metadata = Metadata(
+                opkind,
+                metadata.op_dotted,
+                metadata.is_standalone_shortcircuit,
+                metadata.is_short_form_function,
+                opkind === K"=",
+                metadata.is_long_form_function,
+                metadata.has_multiline_argument,
+            )
         end
     elseif fst.typ === Block || fst.typ === Brackets || fst.typ === Filter
         past_if = false
@@ -892,13 +901,13 @@ end
 Appends `n` to `t`.
 
 - `join_lines` if `false` a NEWLINE node will be added and `n` will appear
-on the next line, otherwise it will appear on the same line as the previous
-node (when printing).
+  on the next line, otherwise it will appear on the same line as the previous
+  node (when printing).
 - `max_padding` >= 0 indicates margin of `t` should be based on whether the margin
-of `n` + `max_padding` is greater than the current margin of `t`. Otherwise the margin
-`n` will be added to `t`.
-- `override_join_lines_based_on_source` is only used when `join_lines_based_on_source` option is `true`. In which
-`n` is added to `t` as if `join_lines_based_on_source` was false.
+  of `n` + `max_padding` is greater than the current margin of `t`. Otherwise the margin
+  `n` will be added to `t`.
+- `override_join_lines_based_on_source` is only used when `join_lines_based_on_source` option is `true`.
+  In which `n` is added to `t` as if `join_lines_based_on_source` was false.
 """
 function add_node!(
     t::FST,

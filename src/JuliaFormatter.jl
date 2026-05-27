@@ -7,7 +7,7 @@ end
 
 using PrecompileTools: @setup_workload, @compile_workload
 using JuliaSyntax
-using JuliaSyntax: haschildren, children, span, @K_str, kind, @KSet_str
+using JuliaSyntax: children, span, @K_str, kind, @KSet_str
 using TOML: parsefile
 using Glob
 import CommonMark: block_modifier
@@ -33,6 +33,8 @@ export format,
     BlueStyle,
     SciMLStyle,
     MinimalStyle
+
+haschildren(node::JuliaSyntax.GreenNode) = !JuliaSyntax.is_leaf(node)
 
 struct Configuration
     args::Dict{String,Any}
@@ -166,7 +168,7 @@ normalize_line_ending(s::AbstractString, replacer = WINDOWS_TO_UNIX) = replace(s
 Formats a Julia source passed in as a string, returning the formatted
 code as another string.
 
-See https://domluna.github.io/JuliaFormatter.jl/dev/#Formatting-Options for details on available options.
+See [Formatting Options](@ref "Formatting-Options") for details on available options.
 """
 function format_text(text::AbstractString; style::AbstractStyle = DefaultStyle(), kwargs...)
     return format_text(text, style; kwargs...)
@@ -237,7 +239,7 @@ function format_text(node::JuliaSyntax.GreenNode, style::AbstractStyle, s::State
     end
 
     if needs_alignment(s.opts)
-        align_fst!(fst, s.opts)
+        align_fst!(fst, s.doc, s.opts)
     end
 
     nest!(style, fst, s)
@@ -338,7 +340,7 @@ const CONFIG_FILE_NAME = ".JuliaFormatter.toml"
 
 Formats the contents of `filename` assuming it's a `.jl`, `.md`, `.jmd` or `.qmd` file.
 
-See https://domluna.github.io/JuliaFormatter.jl/dev/#File-Options for details on available options.
+See [File Options](@ref "File-Options") for details on available options.
 
 ## Output
 
@@ -378,7 +380,7 @@ See [`format_file`](@ref) and [`format_text`](@ref) for a description of the opt
 This function will look for `.JuliaFormatter.toml` in the location of the file being
 formatted, and searching *up* the file tree until a config file is (or isn't) found.
 When found, the configurations in the file will overwrite the given `options`.
-See [Configuration File](@ref) for more details.
+See [Configuration File](@ref config) for more details.
 
 ### Output
 
@@ -458,7 +460,7 @@ end
 """
     format(path, style::AbstractStyle; options...)::Bool
 """
-function format(path, style::AbstractStyle; options...)
+function format(path::AbstractString, style::AbstractStyle; options...)
     formatted = format(path; style = style, options...)
     formatted
 end
@@ -466,7 +468,16 @@ end
 """
     format(mod::Module, args...; options...)
 """
-function format(mod::Module, args...; options...)
+format(mod::Module; options...) = _format_module(mod; options...)
+function format(mod::Module, style::AbstractStyle; options...)
+    _format_module(mod, style; options...)
+end
+function format(mod::Module, config::Configuration; options...)
+    _format_module(mod, config; options...)
+end
+
+# This separate is needed to remove ambiguity in `format` without code duplication
+function _format_module(mod::Module, args...; options...)
     path = pkgdir(mod)
     if path === nothing
         throw(ArgumentError("couldn't find a directory of module `$mod`"))
@@ -493,20 +504,18 @@ function parse_config(tomlfile)
         end
     end
     if (style = get(config_dict, "style", nothing)) !== nothing
-        @assert (
-            style == "default" ||
-            style == "yas" ||
-            style == "blue" ||
-            style == "sciml" ||
-            style == "minimal"
-        ) "currently $(CONFIG_FILE_NAME) accepts only \"default\" or \"yas\", \"blue\", \"sciml\", or \"minimal\" for the style configuration"
-        config_dict["style"] = if (style == "yas" && @isdefined(YASStyle))
+        if style ∉ ("default", "yas", "blue", "sciml", "minimal")
+            error(
+                "currently $(CONFIG_FILE_NAME) accepts only \"default\" or \"yas\", \"blue\", \"sciml\", or \"minimal\" for the style configuration",
+            )
+        end
+        config_dict["style"] = if style == "yas"
             YASStyle()
-        elseif (style == "blue" && @isdefined(BlueStyle))
+        elseif style == "blue"
             BlueStyle()
-        elseif (style == "sciml" && @isdefined(SciMLStyle))
+        elseif style == "sciml"
             SciMLStyle()
-        elseif (style == "minimal" && @isdefined(MinimalStyle))
+        elseif style == "minimal"
             MinimalStyle()
         else
             DefaultStyle()
@@ -532,7 +541,9 @@ function isignored(path, options)
     return any(x -> occursin(Glob.FilenameMatch("*$x"), path), ignore)
 end
 
-@setup_workload begin
+include("app.jl")
+
+@setup_workload let
     dir = joinpath(@__DIR__, "..")
     sandbox_dir = joinpath(tempdir(), join(rand('a':'z', 24)))
     mkdir(sandbox_dir)
@@ -567,7 +578,14 @@ end
         for style in [DefaultStyle(), BlueStyle(), SciMLStyle(), YASStyle(), MinimalStyle()]
             format_text(str, style)
         end
+
+        redirect_stdout(devnull) do
+            redirect_stderr(devnull) do
+                main(String["--help"])
+                main(String["--check", "--verbose", sandbox_dir])
+            end
+        end
     end
 end
 
-end
+end # module JuliaFormatter

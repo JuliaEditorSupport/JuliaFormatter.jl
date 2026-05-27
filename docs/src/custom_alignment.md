@@ -1,6 +1,6 @@
 # Custom Alignment
 
-> Solution for [issue 179](https://github.com/domluna/JuliaFormatter.jl/issues/179)
+> Solution for [issue 179](https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/179)
 
 Custom alignment is determined by a whitespace heuristic:
 
@@ -65,7 +65,8 @@ In order for alignment to occur the option must be set to `true`. Available opti
 - `align_pair_arrow`
 - `align_matrix`
 
-> **Caveat: Since nesting is disabled when alignment occurs be careful when adding comments to the RHS expression. This will be fixed in a future release**
+!!! warning "Caveat"
+    Since nesting is disabled when alignment occurs be careful when adding comments to the RHS expression. This will be fixed in a future release
 
 For example:
 
@@ -211,7 +212,7 @@ pages = [
 
 Whitespace surrounding matrix elements in the original source file is maintained. Differs from other alignment options since it does not try to "detect" alignment and then adjust other elements.
 
-```julia
+```julia-repl
 # Elements left-aligned in original source
 julia> s = """
        a = [

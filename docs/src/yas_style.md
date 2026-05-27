@@ -38,20 +38,20 @@ on alignment and line break behaviors.
 
  1. Arguments are aligned to just after the start of the *opener* `[, {, (, etc`.
 
-```julia
-function_call(arg1,
-              arg2)
-```
+    ```julia
+    function_call(arg1,
+                  arg2)
+    ```
 
  2. As you can see from the above the *closer* sticks to the final argument.
 
  3. Nesting (line breaks) only occur when the margin of the next argument exceeds
     the maximim limit.
 
-```julia
-function_call(arg1, arg2,
-              arg3)
-```
+    ```julia
+    function_call(arg1, arg2,
+                  arg3)
+    ```
 
 `arg3` exceeded the margin limit and so it was placed on the following line.
 
