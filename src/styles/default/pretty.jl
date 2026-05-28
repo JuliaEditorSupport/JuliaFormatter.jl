@@ -1819,7 +1819,7 @@ function p_try(
                 add_node!(t, n, s; max_padding = 0)
                 t.len = max(len, length(n))
             end
-        elseif kind(c) in KSet"end"
+        elseif kind(c) === K"end"
             s.indent -= s.opts.indent
             add_node!(t, pretty(style, c, s, ctx, lineage), s)
         elseif kind(c) === K"block"
@@ -2012,7 +2012,7 @@ function p_binaryopcall(
             if tt in KSet"parens macrocall return if elseif else" || is_assign
                 standalone_binary_circuit = false
                 break
-            elseif tt in KSet"block"
+            elseif tt === K"block"
                 break
             end
         end
@@ -2189,10 +2189,15 @@ function p_binaryopcall(
         elseif JuliaSyntax.is_whitespace(c)
             add_node!(t, n, s; join_lines = true)
         else
-            if opkind === K":" &&
-               # !s.whitespace_ops_in_indices &&
+            if (opkind === K":" &&
                is_opcall(c) &&
-               kind(c) !== K"parens"
+               !(kind(c) in KSet"parens .")
+            )
+                # Add parentheses around expressions on either side of a range. We manually
+                # exclude field access to avoid parenthesising e.g. [1:a.b] -> [1:(a.b)].
+                # TODO(penelopeysm): Add a config option for this parenthesisation (false
+                # should preserve the original parens, true should add parens if there are
+                # none).
                 add_node!(
                     t,
                     FST(PUNCTUATION, -1, n.startline, n.startline, "("),
@@ -2378,7 +2383,7 @@ function p_unaryopcall(
 
     for (i, c) in enumerate(childs)
         offset = s.offset
-        if i > 1 && kind(c) in KSet"Whitespace"
+        if i > 1 && kind(c) === K"Whitespace"
             add_node!(t, Whitespace(1), s)
         end
         n = pretty(style, c, s, ctx, lineage)

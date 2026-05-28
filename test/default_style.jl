@@ -408,6 +408,7 @@
         @test fmt("a: b") == "a:b"
         @test fmt("a :b") == "a:b"
         @test fmt("a +1 :b -1") == "(a+1):(b-1)"
+        @test fmt("a.b:c.d") == "a.b:c.d" # shouldn't add parens
 
         @test fmt("a::b:: c") == "a::b::c"
         @test fmt("a :: b::c") == "a::b::c"
@@ -2512,6 +2513,7 @@
 
         @test fmt("ref[a: (b + c)]") == "ref[a:(b+c)]"
         @test fmt("ref[a in b]") == "ref[a in b]"
+        @test fmt("ref[a:b.c]") == "ref[a:b.c]" # shouldn't add parens
     end
 
     @testset "nesting" begin
