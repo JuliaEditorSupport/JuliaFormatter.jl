@@ -1,5 +1,10 @@
 @kwdef struct PrettyContext
+    # If true, ensure that no whitespace is added around binary operators.
+    # In general, this can be inferred from the source. However, this is
+    # overridden specifically for macro keyword arguments in SciML style.
+    # See https://github.com/SciML/SciMLStyle/tree/3f6fa61c6cc6fcf1c23177fab187d0c85197acfc#macros
     nospace::Bool = false
+
     nonest::Bool = false
     standalone_binary_circuit::Bool = true
     from_typedef::Bool = false
@@ -1814,7 +1819,7 @@ function p_try(
                 add_node!(t, n, s; max_padding = 0)
                 t.len = max(len, length(n))
             end
-        elseif kind(c) in KSet"end"
+        elseif kind(c) === K"end"
             s.indent -= s.opts.indent
             add_node!(t, pretty(style, c, s, ctx, lineage), s)
         elseif kind(c) === K"block"
@@ -2007,7 +2012,7 @@ function p_binaryopcall(
             if tt in KSet"parens macrocall return if elseif else" || is_assign
                 standalone_binary_circuit = false
                 break
-            elseif tt in KSet"block"
+            elseif tt === K"block"
                 break
             end
         end
@@ -2034,29 +2039,20 @@ function p_binaryopcall(
 
     from_colon = ctx.from_colon
     from_typedef = ctx.from_typedef
-    parent_kind = length(lineage) > 1 ? lineage[end-1][1] : K"None"
-    preserve_assignment_spacing =
-        ctx.from_let || ctx.nospace || parent_kind in KSet"global local outer macrocall"
 
     nospace = ctx.nospace
     if opkind === K":"
         nospace = true
         from_colon = true
-    elseif opkind in KSet"::"
+    elseif opkind === K"::"
         nospace = true
     elseif is_short_form_function && opkind === K"="
-        nospace = false
-        has_ws = true
-    elseif is_assignment(cst) && !preserve_assignment_spacing
         nospace = false
         has_ws = true
     elseif kind(cst) === K"comparison"
         nospace = false
     elseif opkind in KSet"in ∈ isa ."
         nospace = false
-    elseif opkind in KSet"=> ->" || (opkind === K"|>" && !(ctx.from_ref || from_colon))
-        nospace = false
-        has_ws = true
     elseif from_typedef && opkind in KSet"<: >:"
         if s.opts.whitespace_typedefs
             nospace = false
@@ -2187,10 +2183,12 @@ function p_binaryopcall(
         elseif JuliaSyntax.is_whitespace(c)
             add_node!(t, n, s; join_lines = true)
         else
-            if opkind === K":" &&
-               # !s.whitespace_ops_in_indices &&
-               is_opcall(c) &&
-               kind(c) !== K"parens"
+            if (opkind === K":" && is_opcall(c) && !(kind(c) in KSet"parens ."))
+                # Add parentheses around expressions on either side of a range. We manually
+                # exclude field access to avoid parenthesising e.g. [1:a.b] -> [1:(a.b)].
+                # TODO(penelopeysm): Add a config option for this parenthesisation (false
+                # should preserve the original parens, true should add parens if there are
+                # none).
                 add_node!(
                     t,
                     FST(PUNCTUATION, -1, n.startline, n.startline, "("),
@@ -2376,7 +2374,7 @@ function p_unaryopcall(
 
     for (i, c) in enumerate(childs)
         offset = s.offset
-        if i > 1 && kind(c) in KSet"Whitespace"
+        if i > 1 && kind(c) === K"Whitespace"
             add_node!(t, Whitespace(1), s)
         end
         n = pretty(style, c, s, ctx, lineage)
