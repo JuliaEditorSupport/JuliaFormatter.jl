@@ -2039,9 +2039,6 @@ function p_binaryopcall(
 
     from_colon = ctx.from_colon
     from_typedef = ctx.from_typedef
-    parent_kind = length(lineage) > 1 ? lineage[end-1][1] : K"None"
-    preserve_assignment_spacing =
-        ctx.from_let || ctx.nospace || parent_kind in KSet"global local outer macrocall"
 
     nospace = ctx.nospace
     if opkind === K":"
@@ -2050,9 +2047,6 @@ function p_binaryopcall(
     elseif opkind === K"::"
         nospace = true
     elseif is_short_form_function && opkind === K"="
-        nospace = false
-        has_ws = true
-    elseif is_assignment(cst) && !preserve_assignment_spacing
         nospace = false
         has_ws = true
     elseif kind(cst) === K"comparison"

@@ -367,22 +367,39 @@
             # lightly, because many of these are parsed as infix _function calls_ rather
             # than infix _operators_ per se -- IMO we need clearer nomenclature.) There are
             # probably more that we need to test...
-            for op in ("+", "*", "/", "-", "^", "%", "<", ">", "<=", ">=", "=>", "->", "-->", "<--", "~", "<:", ">:")
-                # see below also for <: and >:
-                @test fmt("a$(op)b") == "a$(op)b"
-                @test fmt("a $(op)b") == "a $(op) b"
-                @test fmt("a$(op) b") == "a $(op) b"
-                @test fmt("a $(op) b") == "a $(op) b"
-                @test fmt("a  $(op)  b") == "a $(op) b"
+            for op in ("+", "*", "/", "-", "^", "%", "<", ">", "<=", ">=", "=>", "->", "-->", "<--", "~", "<:", ">:", "=", "==", "+=", "-=", "&&", "||")
+                # see typedef section below also for <: and >:
+                for (a, b) in (("a", "b"), ("[a", "b]"), ("(a", "b)"))
+                    @test fmt("$a$(op)$b") == "$a$(op)$b"
+                    @test fmt("$a$(op) $b") == "$a $(op) $b"
+                    @test fmt("$a $(op) $b") == "$a $(op) $b"
+                    @test fmt("$a  $(op)  $b") == "$a $(op) $b"
+
+                    # Some of these are unary operators, so [a <op>b] means a 1x2 matrix
+                    # with `a` and `<op>b` as elements, rather than a length-1 vector with
+                    # `a<op>b` as its element. We skip those tests.
+                    if !(op in ("+", "-", "~") && a == "[a")
+                        @test fmt("$a $(op)$b") == "$a $(op) $b"
+                    end
+                end
             end
             # For these ops there should never be whitespace
             for op in (":", "::")
-                target = "a$(op)b"
-                @test fmt("a$(op)b") == target
-                @test fmt("a $(op)b") == target
-                @test fmt("a$(op) b") == target
-                @test fmt("a $(op) b") == target
-                @test fmt("a  $(op)  b") == target
+                for (a, b) in (("a", "b"), ("[a", "b]"), ("(a", "b)"))
+                    target = "$a$(op)$b"
+                    @test fmt("$a$(op)$b") == target
+                    @test fmt("$a$(op) $b") == target
+                    @test fmt("$a $(op) $b") == target
+                    @test fmt("$a  $(op)  $b") == target
+
+                    # Just like above, `[a :b]` means a 1x2 matrix wtih with `a` and `:b`
+                    # (i.e. a symbol) as elements, rather than a length-1 vector with `a:b`
+                    # as its element. We skip those tests.
+                    if !(op == ":" && a == "[a")
+                        @test fmt("$a $(op)$b") == target
+                    end
+
+                end
             end
             # Supertypes / subtypes have special behaviour within typedefs
             for op in ("<:", ">:")
