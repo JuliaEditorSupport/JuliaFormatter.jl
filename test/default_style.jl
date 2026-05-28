@@ -360,6 +360,41 @@
     end
 
     @testset "binary ops" begin
+
+        @testset "whitespace addition" begin
+            # For these 'operators' whitespace should only be added if there is already some
+            # whitespace around the operator. (Note that the word 'operator' is used here
+            # lightly, because many of these are parsed as infix _function calls_ rather
+            # than infix _operators_ per se -- IMO we need clearer nomenclature.) There are
+            # probably more that we need to test...
+            for op in ("+", "*", "/", "-", "^", "%", "<", ">", "<=", ">=", "=>", "->", "-->", "<--", "~", "<:", ">:")
+                # see below also for <: and >:
+                @test fmt("a$(op)b") == "a$(op)b"
+                @test fmt("a $(op)b") == "a $(op) b"
+                @test fmt("a$(op) b") == "a $(op) b"
+                @test fmt("a $(op) b") == "a $(op) b"
+                @test fmt("a  $(op)  b") == "a $(op) b"
+            end
+            # For these ops there should never be whitespace
+            for op in (":", "::")
+                target = "a$(op)b"
+                @test fmt("a$(op)b") == target
+                @test fmt("a $(op)b") == target
+                @test fmt("a$(op) b") == target
+                @test fmt("a $(op) b") == target
+                @test fmt("a  $(op)  b") == target
+            end
+            # Supertypes / subtypes have special behaviour within typedefs
+            for op in ("<:", ">:")
+                target = "function f() where {a$(op)b} end"
+                @test fmt("function f() where {a$(op)b} end") == target
+                @test fmt("function f() where {a $(op)b} end") == target
+                @test fmt("function f() where {a$(op) b} end") == target
+                @test fmt("function f() where {a $(op) b} end") == target
+                @test fmt("function f() where {a  $(op)  b} end") == target
+            end
+        end
+
         @test fmt("a+b*c") == "a+b*c"
         @test fmt("a +b *c") == "a + b * c"
         @test fmt("a + b      *c") == "a + b * c"

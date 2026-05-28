@@ -1,5 +1,10 @@
 @kwdef struct PrettyContext
+    # If true, ensure that no whitespace is added around binary operators.
+    # In general, this can be inferred from the source. However, this is
+    # overridden specifically for macro keyword arguments in SciML style.
+    # See https://github.com/SciML/SciMLStyle/tree/3f6fa61c6cc6fcf1c23177fab187d0c85197acfc#macros
     nospace::Bool = false
+
     nonest::Bool = false
     standalone_binary_circuit::Bool = true
     from_typedef::Bool = false
@@ -2042,7 +2047,7 @@ function p_binaryopcall(
     if opkind === K":"
         nospace = true
         from_colon = true
-    elseif opkind in KSet"::"
+    elseif opkind === K"::"
         nospace = true
     elseif is_short_form_function && opkind === K"="
         nospace = false
@@ -2054,9 +2059,6 @@ function p_binaryopcall(
         nospace = false
     elseif opkind in KSet"in ∈ isa ."
         nospace = false
-    elseif opkind in KSet"=> ->" || (opkind === K"|>" && !(ctx.from_ref || from_colon))
-        nospace = false
-        has_ws = true
     elseif from_typedef && opkind in KSet"<: >:"
         if s.opts.whitespace_typedefs
             nospace = false
