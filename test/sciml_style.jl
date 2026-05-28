@@ -621,6 +621,23 @@
             """
             @test format_text(str, SciMLStyle(); margin = 13) == fstr
         end
+
+        @testset "regression cases" begin
+            str = """
+            function update_cache!()
+                cache_table[key,
+                            slot] = source_table[key, slot] + step * delta_table[key, slot]
+            end
+            """
+
+            fstr = """
+            function update_cache!()
+                cache_table[key, slot] = source_table[key, slot] +
+                                         step * delta_table[key, slot]
+            end
+            """
+            @test format_text(str, SciMLStyle(); margin = 80) == fstr
+        end
     end
 
     str = raw"""
