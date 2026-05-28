@@ -621,6 +621,70 @@
             """
             @test format_text(str, SciMLStyle(); margin = 13) == fstr
         end
+
+        @testset "dict tuple pair regression" begin
+            str = """
+            function build_search_cases(item_spacing)
+                algorithm_cases = Dict(
+                    "default search" => (),
+                    "with static scheduler" => (backend=StaticBackend(),),
+                    "with damping source term" => (source_terms=DampingTerm(coefficient=1e-4),),
+                    "with lookup density" => (density_calculator=LookupDensity(),
+                                                 clip_negative_pressure=true),
+                    "with weighted viscosity" => (
+                                                     # from 0.02*10.0*1.2*0.05/8
+                                                     viscosity_model=WeightedViscosity(nu=0.0015),),
+                    "with spline kernel" => (smoothing_length=1.1 *
+                                                              item_spacing,
+                                                smoothing_kernel=SplineKernel{2}())
+                )
+            end
+            """
+
+            fstr = """
+            function build_search_cases(item_spacing)
+                algorithm_cases = Dict(
+                    "default search"           => (),
+                    "with static scheduler"    => (backend=StaticBackend(),),
+                    "with damping source term" => (source_terms=DampingTerm(coefficient=1e-4),),
+                    "with lookup density"      => (density_calculator=LookupDensity(),
+                                                   clip_negative_pressure=true),
+                    "with weighted viscosity"  => (
+                                                     # from 0.02*10.0*1.2*0.05/8
+                                                     viscosity_model=WeightedViscosity(nu=0.0015),),
+                    "with spline kernel"       => (smoothing_length=1.1 * item_spacing,
+                                                   smoothing_kernel=SplineKernel{2}())
+                )
+            end
+            """
+            formatted = format_text(str, SciMLStyle(); whitespace_in_kwargs = false)
+            @test formatted == fstr
+
+            formatted_lines = split(formatted, '\n')
+            comment_line = only(filter(line -> contains(line, "# from"), formatted_lines))
+            option_line =
+                only(filter(line -> contains(line, "viscosity_model"), formatted_lines))
+            @test length(comment_line) - length(lstrip(comment_line)) ==
+                  length(option_line) - length(lstrip(option_line))
+
+            str = """
+            d = Dict(
+                "a moderately long key" => (
+                    x = some_long_function_name(alpha, beta),
+                ),
+            )
+            """
+            fstr = """
+            d = Dict(
+                "a moderately long key" => (
+                    x = some_long_function_name(alpha, beta),
+                ),
+            )
+            """
+            formatted = format_text(str, SciMLStyle(); margin = 50)
+            @test formatted == fstr
+            @test all(length(line) <= 50 for line in split(formatted, '\n'))
+        end
     end
 
     str = raw"""
