@@ -1852,32 +1852,68 @@ function p_if(
         return t
     end
 
+    preserve_single_line =
+        s.opts.preserve_single_line_if &&
+        on_same_line(s, s.offset, s.offset + span(cst) - 1)
+
+    is_first = true
+
     for c in children(cst)
         if kind(c) in KSet"if elseif else"
             if !haschildren(c)
-                add_node!(t, pretty(style, c, s, ctx, lineage), s; max_padding = 0)
+                if preserve_single_line && !is_first
+                    add_node!(t, Whitespace(1), s)
+                end
+                add_node!(
+                    t,
+                    pretty(style, c, s, ctx, lineage),
+                    s;
+                    max_padding = if preserve_single_line
+                        -1
+                    else
+                        0
+                    end,
+                    join_lines = preserve_single_line && !is_first,
+                )
             else
                 len = length(t)
                 n = pretty(style, c, s, ctx, lineage)
-                add_node!(t, n, s)
+                if preserve_single_line && !is_first
+                    add_node!(t, Whitespace(1), s)
+                end
+                add_node!(t, n, s; join_lines = preserve_single_line && !is_first)
                 t.len = max(len, length(n))
             end
+            is_first = false
         elseif kind(c) === K"end"
-            add_node!(t, pretty(style, c, s, ctx, lineage), s)
-        elseif kind(c) === K"block"
-            s.indent += s.opts.indent
-            block_ctx = if s.opts.preserve_single_line_if
-                ctx
-            else
-                newctx(ctx; ignore_single_line = true)
+            if preserve_single_line
+                add_node!(t, Whitespace(1), s)
             end
             add_node!(
                 t,
-                pretty(style, c, s, block_ctx, lineage),
+                pretty(style, c, s, ctx, lineage),
                 s;
-                max_padding = s.opts.indent,
+                join_lines = preserve_single_line,
             )
-            s.indent -= s.opts.indent
+        elseif kind(c) === K"block"
+            if preserve_single_line
+                add_node!(t, Whitespace(1), s)
+                add_node!(
+                    t,
+                    pretty(style, c, s, ctx, lineage),
+                    s;
+                    join_lines = true,
+                )
+            else
+                s.indent += s.opts.indent
+                add_node!(
+                    t,
+                    pretty(style, c, s, newctx(ctx; ignore_single_line = true), lineage),
+                    s;
+                    max_padding = s.opts.indent,
+                )
+                s.indent -= s.opts.indent
+            end
         elseif !JuliaSyntax.is_whitespace(c)
             add_node!(t, Whitespace(1), s)
             add_node!(t, pretty(style, c, s, ctx, lineage), s; join_lines = true)
