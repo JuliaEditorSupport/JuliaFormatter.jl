@@ -106,6 +106,13 @@ function n_macro!(
     n_functiondef!(ss, fst, s, lineage)
 end
 
+function _is_multiline_typed_ref(fst::FST)
+    fst.typ === RefN &&
+        length(fst.nodes::Vector) > 1 &&
+        fst[1].typ === Curly &&
+        any(n -> n.typ === NEWLINE, fst.nodes::Vector)
+end
+
 function _n_tuple!(
     ss::SciMLStyle,
     fst::FST,
@@ -269,6 +276,10 @@ function n_ref!(
         end
         s.line_offset = lo + length(fst)
         return nested
+    end
+
+    if _is_multiline_typed_ref(fst)
+        return n_ref!(YASStyle(getstyle(ss)), fst, s, lineage)
     end
 
     # Otherwise use the default behavior

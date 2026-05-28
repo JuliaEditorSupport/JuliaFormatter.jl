@@ -637,6 +637,22 @@
             end
             """
             @test format_text(str, SciMLStyle(); margin = 80) == fstr
+
+            str = """
+            metadata = Pair{String, Any}["Start vertex" => first(graph.vertices),
+                                         "Final vertex" => last(graph.vertices),
+                                         "search algorithm" => traversal.algorithm |> typeof |> nameof,
+                                         "directed" => graph.is_directed]
+            """
+
+            fstr = """
+            metadata = Pair{String, Any}["Start vertex" => first(graph.vertices),
+                                         "Final vertex" => last(graph.vertices),
+                                         "search algorithm" => traversal.algorithm |> typeof |> nameof,
+                                         "directed" => graph.is_directed]
+            """
+            @test format_text(str, SciMLStyle()) == fstr
+            @test format_text(str, SciMLStyle(); yas_style_nesting = true) == fstr
         end
     end
 
