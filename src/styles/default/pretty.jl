@@ -2183,10 +2183,7 @@ function p_binaryopcall(
         elseif JuliaSyntax.is_whitespace(c)
             add_node!(t, n, s; join_lines = true)
         else
-            if (opkind === K":" &&
-               is_opcall(c) &&
-               !(kind(c) in KSet"parens .")
-            )
+            if (opkind === K":" && is_opcall(c) && !(kind(c) in KSet"parens ."))
                 # Add parentheses around expressions on either side of a range. We manually
                 # exclude field access to avoid parenthesising e.g. [1:a.b] -> [1:(a.b)].
                 # TODO(penelopeysm): Add a config option for this parenthesisation (false
