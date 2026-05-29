@@ -543,6 +543,8 @@ end
 
 include("app.jl")
 
+include("internal/utils.jl")
+
 @setup_workload let
     dir = joinpath(@__DIR__, "..")
     sandbox_dir = joinpath(tempdir(), join(rand('a':'z', 24)))
