@@ -1,3 +1,15 @@
+# v2.5.1
+
+Fix some formatting regressions introduced in v2.5.0.
+In particular, this version:
+
+- no longer aggressively adds spaces around `x=>y` and `x->y` (unless spaces are already present).
+  This matches the behaviour of other operators e.g. `x+y`.
+- no longer adds spaces around assignments in square brackets, for example `a[b=1]` is now left unchanged, rather than being changed to `a[b = 1]`.
+- no longer adds parentheses around field access in ranges, for example `[1:a.b]` is now left unchanged, rather than being changed to `[1:(a.b)]`.
+
+Some of these may be configurable in the future.
+
 # v2.5.0
 
 Added compatibility with JuliaSyntax@1.
