@@ -621,6 +621,27 @@
             """
             @test format_text(str, SciMLStyle(); margin = 13) == fstr
         end
+
+        @testset "for tuple binding regression" begin
+            str = """
+            function copy_values!(destination::ThreadedArray, source::AbstractArray)
+                @threaded destination.scheduler for (dest_id, src_id) in zip(eachindex(destination),
+                                                            eachindex(source))
+                    @inbounds destination[dest_id] = source[src_id]
+                end
+            end
+            """
+
+            fstr = """
+            function copy_values!(destination::ThreadedArray, source::AbstractArray)
+                @threaded destination.scheduler for (dest_id, src_id) in zip(eachindex(destination),
+                                                                             eachindex(source))
+                    @inbounds destination[dest_id] = source[src_id]
+                end
+            end
+            """
+            @test format_text(str, SciMLStyle(); yas_style_nesting = true) == fstr
+        end
     end
 
     str = raw"""
