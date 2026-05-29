@@ -360,6 +360,58 @@
     end
 
     @testset "binary ops" begin
+
+        @testset "whitespace addition" begin
+            # For these 'operators' whitespace should only be added if there is already some
+            # whitespace around the operator. (Note that the word 'operator' is used here
+            # lightly, because many of these are parsed as infix _function calls_ rather
+            # than infix _operators_ per se -- IMO we need clearer nomenclature.) There are
+            # probably more that we need to test...
+            for op in ("+", "*", "/", "-", "^", "%", "<", ">", "<=", ">=", "=>", "->", "-->", "<--", "~", "<:", ">:", "=", "==", "+=", "-=", "&&", "||")
+                # see typedef section below also for <: and >:
+                for (a, b) in (("a", "b"), ("[a", "b]"), ("(a", "b)"))
+                    @test fmt("$a$(op)$b") == "$a$(op)$b"
+                    @test fmt("$a$(op) $b") == "$a $(op) $b"
+                    @test fmt("$a $(op) $b") == "$a $(op) $b"
+                    @test fmt("$a  $(op)  $b") == "$a $(op) $b"
+
+                    # Some of these are unary operators, so [a <op>b] means a 1x2 matrix
+                    # with `a` and `<op>b` as elements, rather than a length-1 vector with
+                    # `a<op>b` as its element. We skip those tests.
+                    if !(op in ("+", "-", "~") && a == "[a")
+                        @test fmt("$a $(op)$b") == "$a $(op) $b"
+                    end
+                end
+            end
+            # For these ops there should never be whitespace
+            for op in (":", "::")
+                for (a, b) in (("a", "b"), ("[a", "b]"), ("(a", "b)"))
+                    target = "$a$(op)$b"
+                    @test fmt("$a$(op)$b") == target
+                    @test fmt("$a$(op) $b") == target
+                    @test fmt("$a $(op) $b") == target
+                    @test fmt("$a  $(op)  $b") == target
+
+                    # Just like above, `[a :b]` means a 1x2 matrix wtih with `a` and `:b`
+                    # (i.e. a symbol) as elements, rather than a length-1 vector with `a:b`
+                    # as its element. We skip those tests.
+                    if !(op == ":" && a == "[a")
+                        @test fmt("$a $(op)$b") == target
+                    end
+
+                end
+            end
+            # Supertypes / subtypes have special behaviour within typedefs
+            for op in ("<:", ">:")
+                target = "function f() where {a$(op)b} end"
+                @test fmt("function f() where {a$(op)b} end") == target
+                @test fmt("function f() where {a $(op)b} end") == target
+                @test fmt("function f() where {a$(op) b} end") == target
+                @test fmt("function f() where {a $(op) b} end") == target
+                @test fmt("function f() where {a  $(op)  b} end") == target
+            end
+        end
+
         @test fmt("a+b*c") == "a+b*c"
         @test fmt("a +b *c") == "a + b * c"
         @test fmt("a + b      *c") == "a + b * c"
@@ -373,6 +425,7 @@
         @test fmt("a: b") == "a:b"
         @test fmt("a :b") == "a:b"
         @test fmt("a +1 :b -1") == "(a+1):(b-1)"
+        @test fmt("a.b:c.d") == "a.b:c.d" # shouldn't add parens
 
         @test fmt("a::b:: c") == "a::b::c"
         @test fmt("a :: b::c") == "a::b::c"
@@ -2477,6 +2530,7 @@
 
         @test fmt("ref[a: (b + c)]") == "ref[a:(b+c)]"
         @test fmt("ref[a in b]") == "ref[a in b]"
+        @test fmt("ref[a:b.c]") == "ref[a:b.c]" # shouldn't add parens
     end
 
     @testset "nesting" begin
