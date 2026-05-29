@@ -44,6 +44,16 @@ end
 #     nest!(style, fst[end], s, lineage)
 # end
 
+function _nearest_binary_is_assignment(
+    lineage::Vector{Tuple{FNode,Union{Nothing,Metadata}}},
+)
+    i = findlast(x -> x[1] === Binary, lineage)
+    i === nothing && return false
+
+    metadata = lineage[i][2]
+    return !isnothing(metadata) && metadata.is_assignment
+end
+
 function n_functiondef!(
     ss::SciMLStyle,
     fst::FST,
@@ -94,6 +104,13 @@ function n_macro!(
     lineage::Vector{Tuple{FNode,Union{Nothing,Metadata}}},
 )
     n_functiondef!(ss, fst, s, lineage)
+end
+
+function _is_multiline_typed_ref(fst::FST)
+    fst.typ === RefN &&
+        length(fst.nodes::Vector) > 1 &&
+        fst[1].typ === Curly &&
+        any(n -> n.typ === NEWLINE, fst.nodes::Vector)
 end
 
 function _n_tuple!(
@@ -237,40 +254,21 @@ function n_ref!(
     s::State,
     lineage::Vector{Tuple{FNode,Union{Nothing,Metadata}}},
 )
-    # Check if this RefN is the LHS of an assignment
-    # Look through the lineage to see if we have a Binary assignment parent
-    # and this RefN comes before any other Binary operators
-    is_lhs_of_assignment = false
-
-    if length(lineage) >= 2
-        # Check if we have a Binary assignment in the lineage
-        for i in length(lineage):-1:1
-            if lineage[i][1] === Binary &&
-               !isnothing(lineage[i][2]) &&
-               lineage[i][2].is_assignment
-                # Check if there are any other Binary nodes between us and the assignment
-                has_intermediate_binary = false
-                for j in (i+1):length(lineage)
-                    if lineage[j][1] === Binary
-                        has_intermediate_binary = true
-                        break
-                    end
-                end
-
-                if !has_intermediate_binary
-                    is_lhs_of_assignment = true
-                end
-                break
-            end
-        end
-    end
-
-    if is_lhs_of_assignment
+    if _nearest_binary_is_assignment(lineage) && fst.extra_margin > 0
         # Don't break the LHS of an assignment
         # Format children but keep them on the same line
+        nodes = fst.nodes::Vector{FST}
+        for (i, n) in enumerate(nodes)
+            if n.typ === NEWLINE &&
+               (i == 1 || !is_comment(nodes[i-1])) &&
+               (i == length(nodes) || !is_comment(nodes[i+1]))
+                nodes[i] = Whitespace(n.len)
+            end
+        end
+
         lo = s.line_offset
         nested = false
-        for (i, n) in enumerate(fst.nodes)
+        for n in nodes
             nested |= nest!(ss, n, s, lineage)
             if n.typ !== NEWLINE  # Prevent any newlines
                 s.line_offset += length(n)
@@ -278,6 +276,10 @@ function n_ref!(
         end
         s.line_offset = lo + length(fst)
         return nested
+    end
+
+    if _is_multiline_typed_ref(fst)
+        return n_ref!(YASStyle(getstyle(ss)), fst, s, lineage)
     end
 
     # Otherwise use the default behavior

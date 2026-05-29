@@ -621,6 +621,39 @@
             """
             @test format_text(str, SciMLStyle(); margin = 13) == fstr
         end
+
+        @testset "regression cases" begin
+            str = """
+            function update_cache!()
+                cache_table[key,
+                            slot] = source_table[key, slot] + step * delta_table[key, slot]
+            end
+            """
+
+            fstr = """
+            function update_cache!()
+                cache_table[key, slot] = source_table[key, slot] +
+                                         step * delta_table[key, slot]
+            end
+            """
+            @test format_text(str, SciMLStyle(); margin = 80) == fstr
+
+            str = """
+            metadata = Pair{String, Any}["Start vertex" => first(graph.vertices),
+                                         "Final vertex" => last(graph.vertices),
+                                         "search algorithm" => traversal.algorithm |> typeof |> nameof,
+                                         "directed" => graph.is_directed]
+            """
+
+            fstr = """
+            metadata = Pair{String, Any}["Start vertex" => first(graph.vertices),
+                                         "Final vertex" => last(graph.vertices),
+                                         "search algorithm" => traversal.algorithm |> typeof |> nameof,
+                                         "directed" => graph.is_directed]
+            """
+            @test format_text(str, SciMLStyle()) == fstr
+            @test format_text(str, SciMLStyle(); yas_style_nesting = true) == fstr
+        end
     end
 
     str = raw"""
