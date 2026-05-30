@@ -25,19 +25,6 @@ for f in [
     end
 end
 
-function _is_lhs_of_assignment(
-    s::State,
-    lineage::Vector{Tuple{FNode,Union{Nothing,Metadata}}},
-)
-    # If it's not a lhs of a binary, it can't be a lhs of an assignment
-    s.is_lhs_of_binary || return false
-    # Check lineage to see what the binary operator was (if any)
-    i = findlast(x -> x[1] === Binary, lineage)
-    i === nothing && return false
-    metadata = lineage[i][2]
-    return !isnothing(metadata) && metadata.is_assignment
-end
-
 function n_functiondef!(
     ss::SciMLStyle,
     fst::FST,
