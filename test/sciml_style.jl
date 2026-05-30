@@ -1178,7 +1178,7 @@
             # Penalize both very short lines and lines over margin
             efficiency_scores = map(lengths) do len
                 if len > 92
-                    0.6 * (92 / len)  # Penalty for exceeding margin
+                    0.5 * (92 / len)  # Penalty for exceeding margin
                 elseif len < 20
                     len / 40  # Penalty for very short lines
                 else

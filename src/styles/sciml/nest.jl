@@ -25,12 +25,15 @@ for f in [
     end
 end
 
-function _nearest_binary_is_assignment(
+function _is_lhs_of_assignment(
+    s::State,
     lineage::Vector{Tuple{FNode,Union{Nothing,Metadata}}},
 )
+    # If it's not a lhs of a binary, it can't be a lhs of an assignment
+    s.is_lhs_of_binary || return false
+    # Check lineage to see what the binary operator was (if any)
     i = findlast(x -> x[1] === Binary, lineage)
     i === nothing && return false
-
     metadata = lineage[i][2]
     return !isnothing(metadata) && metadata.is_assignment
 end
@@ -94,17 +97,8 @@ function _n_tuple!(
     lineage::Vector{Tuple{FNode,Union{Nothing,Metadata}}},
 )
     style = getstyle(ss)
-    
-    # TODO(penelopeysm): In principle, this should only check whether we are on the LHS of
-    # an assignment. However, this function checks whether we are an argument to an
-    # assignment. For example, if we have:
-    #
-    #     a[x] = b[y]
-    #
-    # then this would trigger for both operands, even though we probably only want to
-    # trigger it for `a[x]`. In practice, this doesn't seem to be a problem, so doesn't need
-    # to be fixed immediately.
-    line_margin = if _nearest_binary_is_assignment(lineage)
+
+    line_margin = if _is_lhs_of_assignment(s, lineage)
         # If on the LHS of an assignment, don't take the ` = RHS` into account when
         # considering whether to nest, as that would lead to overly eager nesting of the
         # LHS.
@@ -163,12 +157,6 @@ function _n_tuple!(
 
     # Check if we should apply conservative nesting rules
     should_nest = line_margin > s.opts.margin || must_nest(fst) || src_diff_line
-
-    println("---------")
-    @info _nearest_binary_is_assignment(lineage)
-    @info first(fst.nodes).val
-    @info line_margin s.opts.margin must_nest(fst) src_diff_line should_nest
-    println("---------")
 
     # For certain types, be more conservative about nesting
     if should_nest && !must_nest(fst) && !src_diff_line
@@ -253,13 +241,10 @@ function n_ref!(
     s::State,
     lineage::Vector{Tuple{FNode,Union{Nothing,Metadata}}},
 )
-    # If the ref is the lhs of an assignment, try to avoid breaking it across lines.
-    # We do this by first removing newlines from the FST before passing it on to
-    # the default nesting logic.
-    #
-    # TODO(penelopeysm): This function is named correctly, but it detects the wrong thing!
-    # It detects whether we are part of an argument to an assignment.
-    if _nearest_binary_is_assignment(lineage)
+    # If the ref is the lhs of an assignment, try to avoid breaking it across lines. We do
+    # this by first removing newlines from the FST before passing it on to the default
+    # nesting logic.
+    if _is_lhs_of_assignment(s, lineage)
         # Remove newlines, but not if they are adjacent to comments, as that would affect
         # semantics (for newlines after comments) or readability (for newlines before
         # comments).
