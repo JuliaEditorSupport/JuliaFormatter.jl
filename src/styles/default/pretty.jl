@@ -73,12 +73,10 @@ function is_source_operator(s::State, cst::JuliaSyntax.GreenNode, offset::Intege
 end
 
 function source_unary_operator_index(is_prefix::Bool, cst::JuliaSyntax.GreenNode, s::State)
-    if (!JuliaSyntax.is_operator(cst)
-        && !(kind(cst) in KSet"call dotcall" && haschildren(cst))
-    )
-        # Can't even be a unary operator call.
+    if !haschildren(cst) || !(JuliaSyntax.is_operator(cst) || kind(cst) in KSet"call dotcall")
         return nothing
     end
+
     childs = children(cst)
     args = findall(n -> !JuliaSyntax.is_whitespace(n), childs)
     isempty(args) && return nothing
