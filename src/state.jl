@@ -8,8 +8,14 @@ mutable struct State
     # it's source text
     on::Bool
     opts::Options
+
+    # TODO(penelopeysm): This is a hack, required to make
+    # https://github.com/JuliaEditorSupport/JuliaFormatter.jl/pull/997 work correctly.
+    # Long-term, it really shouldn't live here, but that will have to wait for a larger
+    # refactoring of state/lineage etc.
+    is_lhs_of_binary::Bool
 end
-State(doc, opts) = State(doc, 0, 1, 0, true, opts)
+State(doc, opts) = State(doc, 0, 1, 0, true, opts, false)
 
 nspaces(s::State) = s.indent
 hascomment(d::Document, line::Integer) = haskey(d.comments, line)

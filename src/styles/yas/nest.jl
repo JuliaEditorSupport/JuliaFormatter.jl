@@ -388,6 +388,8 @@ function n_binaryopcall!(
         return n_binaryopcall!(DefaultStyle(style), fst, s, lineage; indent = indent)
     end
 
+    # Only nest the last child (which is the rhs). That means that we don't need to care
+    # about setting `s.is_lhs_of_binary`, since it's never relevant.
     walk(increment_line_offset!, nodes[1:(end-1)], s, fst.indent)
     nest!(style, fst[end], s, lineage)
 end
