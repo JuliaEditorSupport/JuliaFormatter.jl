@@ -97,15 +97,7 @@ function _n_tuple!(
     lineage::Vector{Tuple{FNode,Union{Nothing,Metadata}}},
 )
     style = getstyle(ss)
-
-    line_margin = if _is_lhs_of_assignment(s, lineage)
-        # If on the LHS of an assignment, don't take the ` = RHS` into account when
-        # considering whether to nest, as that would lead to overly eager nesting of the
-        # LHS.
-        s.line_offset + length(fst)
-    else
-        s.line_offset + length(fst) + fst.extra_margin
-    end
+    line_margin = s.line_offset + length(fst) + fst.extra_margin
 
     nodes = fst.nodes::Vector
     has_closer = is_closer(fst[end])
