@@ -28,7 +28,7 @@
         @test JuliaFormatter.source_op_kind(state, node) === JuliaSyntax.Kind("<")
     end
 
-    @testset "source_unary_operator_index $text" for text in (
+    @testset "source_unary_operator_index prefix $text" for text in (
         "+(y)",
         "-(y)",
         ">=(y)",
@@ -38,6 +38,17 @@
     )
         _, state, node = parsed_node(text)
         @test JuliaFormatter.source_unary_operator_index(true, node, state) == 1
+    end
+
+    @testset "source_unary_operator_index postfix $text" for text in (
+        "y...",
+        "y'",
+        "x'ᵀ",
+        "(y)...",
+        "[1, 2]'"
+    )
+        _, state, node = parsed_node(text)
+        @test JuliaFormatter.source_unary_operator_index(false, node, state) == length(JuliaSyntax.children(node))
     end
 
     @testset "short-form function utilities" begin

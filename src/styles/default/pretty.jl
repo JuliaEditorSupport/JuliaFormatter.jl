@@ -34,7 +34,20 @@ function source_kind(s::State, cst::JuliaSyntax.GreenNode, offset::Integer)
     try
         return JuliaSyntax.Kind(val)
     catch
-        return nothing
+        # There are some operators for which JuliaSyntax does not actually have a dedicated
+        # kind. For example, `a'ᵀ` is a postfix operator `'ᵀ`, and
+        # JuliaSyntax.is_postfix_op_call will correctly return true. Specifically, the '
+        # postfix operator can be followed by any Unicode modifier:
+        # https://github.com/JuliaLang/julia/pull/37247
+        #
+        # However, the operator is stored as Identifier and calling Kind("'ᵀ") throws an
+        # error. We catch such instances here. Thankfully, Base gives us a function
+        # (albeit unexported) to detect these.
+        return if kind(cst) === K"Identifier" && Base.ispostfixoperator(val)
+            K"Identifier"
+        else
+            nothing
+        end
     end
 end
 
@@ -43,15 +56,16 @@ end
 # describe the shape, but the leaf itself is not `is_operator`, and the exact
 # operator kind is only recoverable from the source span.
 function source_op_kind_from_offset(s::State, cst::JuliaSyntax.GreenNode, offset::Integer)
-    if JuliaSyntax.is_operator(cst) && !haschildren(cst)
-        return kind(cst)
+    return if JuliaSyntax.is_operator(cst) && !haschildren(cst)
+        # Already have the right kind stored in the GreenNode
+        kind(cst)
     elseif kind(cst) === K"Identifier" && !haschildren(cst)
-        k = source_kind(s, cst, offset)
-        if !isnothing(k) && JuliaSyntax.is_operator(k)
-            return k
-        end
+        # The operator was reduced to an Identifier (this happens in JuliaSyntax v1).
+        # Attempt to recover the original kind.
+        source_kind(s, cst, offset)
+    else
+        nothing
     end
-    return nothing
 end
 
 function is_source_operator(s::State, cst::JuliaSyntax.GreenNode, offset::Integer)
@@ -59,7 +73,12 @@ function is_source_operator(s::State, cst::JuliaSyntax.GreenNode, offset::Intege
 end
 
 function source_unary_operator_index(is_prefix::Bool, cst::JuliaSyntax.GreenNode, s::State)
-    kind(cst) in KSet"call dotcall" && haschildren(cst) || return nothing
+    if (!JuliaSyntax.is_operator(cst)
+        && !(kind(cst) in KSet"call dotcall" && haschildren(cst))
+    )
+        # Can't even be a unary operator call.
+        return nothing
+    end
     childs = children(cst)
     args = findall(n -> !JuliaSyntax.is_whitespace(n), childs)
     isempty(args) && return nothing

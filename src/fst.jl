@@ -574,7 +574,7 @@ function unary_info(x::JuliaSyntax.GreenNode)
         # `+x`
         true
     elseif JuliaSyntax.is_postfix_op_call(x)
-        # `x'` or `x'ᵀ'
+        # `x'` or `x'ᵀ`
         false
     elseif JuliaSyntax.is_operator(x) && haschildren(x)
         # `<:x` or `x...`
