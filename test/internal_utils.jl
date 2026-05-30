@@ -26,16 +26,19 @@
         _, state, node = parsed_node("x < y < z")
         @test JuliaFormatter.source_operator_indices(node) == [3, 7]
         @test JuliaFormatter.source_op_kind(state, node) === JuliaSyntax.Kind("<")
+    end
 
-        # Prefix operator calls should be treated as unary only when the recovered
-        # source operator is valid in unary position.
-        _, state, node = parsed_node("+(y)")
-        @test JuliaFormatter.source_prefix_operator_index(node, state) == 1
-        @test JuliaSyntax.is_prefix_op_call(node)
-
-        _, state, node = parsed_node(">=(y)")
-        @test JuliaFormatter.source_prefix_operator_index(node, state) == 1
-        @test !JuliaSyntax.is_prefix_op_call(node)
+    @testset "source_unary_operator_index" for text in (
+        "+(y)",
+        "-(y)",
+        ">=(y)",
+        "+y",
+        "-y",
+        ">=y",
+    )
+        _, state, node = parsed_node(text)
+        @test JuliaSyntax.is_prefix_op_call(node) # Sanity check
+        @test JuliaFormatter.source_unary_operator_index(true, node, state) == 1
     end
 
     @testset "short-form function utilities" begin
