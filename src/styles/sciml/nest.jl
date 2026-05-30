@@ -25,25 +25,6 @@ for f in [
     end
 end
 
-# function n_binaryopcall!(ss::SciMLStyle, fst::FST, s::State, lineage::Vector{Tuple{FNode,Union{Nothing,Metadata}}}; indent::Int = -1)
-#     style = getstyle(ss)
-#     line_margin = s.line_offset + length(fst) + fst.extra_margin
-#     if line_margin > s.opts.margin && !isnothing(fst.metadata) && fst.metadata.is_short_form_function
-#         transformed = short_to_long_function_def!(fst, s)
-#         transformed && nest!(style, fst, s, lineage)
-#         return
-#     end
-#
-#     if findfirst(n -> n.typ === PLACEHOLDER, fst.nodes) !== nothing
-#         n_binaryopcall!(DefaultStyle(style), fst, s, lineage; indent = indent)
-#         return
-#     end
-#
-#     start_line_offset = s.line_offset
-#     walk(increment_line_offset!, (fst.nodes::Vector)[1:end-1], s, fst.indent)
-#     nest!(style, fst[end], s, lineage)
-# end
-
 function _nearest_binary_is_assignment(
     lineage::Vector{Tuple{FNode,Union{Nothing,Metadata}}},
 )
@@ -182,6 +163,12 @@ function _n_tuple!(
 
     # Check if we should apply conservative nesting rules
     should_nest = line_margin > s.opts.margin || must_nest(fst) || src_diff_line
+
+    println("---------")
+    @info _nearest_binary_is_assignment(lineage)
+    @info first(fst.nodes).val
+    @info line_margin s.opts.margin must_nest(fst) src_diff_line should_nest
+    println("---------")
 
     # For certain types, be more conservative about nesting
     if should_nest && !must_nest(fst) && !src_diff_line
