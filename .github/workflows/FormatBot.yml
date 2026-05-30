@@ -143,6 +143,8 @@ jobs:
                   subprocess.run(["find", target_dir, "-name", name, "-delete"])
 
               # Commit clean state so we can branch from it
+              git("config", "user.name", "FormatBot")
+              git("config", "user.email", "noreply@github.com")
               git("checkout", "-b", branch_clean)
               git("add", "-A")
               git("commit", "--allow-empty", "-m", branch_clean)
@@ -232,7 +234,6 @@ jobs:
               sys.exit(1)
 
       - name: Add completion reaction
-        if: always()
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
