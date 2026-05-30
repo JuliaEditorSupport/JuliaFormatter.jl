@@ -212,7 +212,7 @@ jobs:
 
               # --- Compute diff ---
               diff_result = subprocess.run(
-                  ["git", "-C", target_dir, "diff", branch_base, branch_pr],
+                  ["git", "-C", target_dir, "diff", "--diff-algorithm=histogram", branch_base, branch_pr],
                   capture_output=True,
                   text=True,
               )
