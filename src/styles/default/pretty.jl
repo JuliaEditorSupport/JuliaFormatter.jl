@@ -1944,10 +1944,16 @@ function p_kw(
             add_node!(t, pretty(style, c, s, ctx, lineage), s; join_lines = true)
             add_node!(t, Whitespace(1), s)
         else
-            is_prefix_unaryop = unary_info(c) === true
+            # Check if the value of the kwarg begins with an operator, or if the name ends
+            # with an exclamation mark. If so, then we should parenthesise it to avoid
+            # ambiguity.
+            #
+            # TODO(penelopeysm): These checks could definitely be done better, by
+            # specifically targeting the LHS and the RHS of the (=) node.
+            begins_with_op = !isnothing(source_unary_operator_index(true, c, s))
             n = pretty(style, c, s, ctx, lineage)
             if !s.opts.whitespace_in_kwargs &&
-               ((n.typ === IDENTIFIER && endswith(n.val, "!")) || is_prefix_unaryop)
+               ((n.typ === IDENTIFIER && endswith(n.val, "!")) || begins_with_op)
                 add_node!(
                     t,
                     FST(PUNCTUATION, -1, n.startline, n.startline, "("),
