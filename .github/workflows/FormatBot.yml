@@ -151,11 +151,22 @@ jobs:
 
               # --- Write Julia format script ---
               # style is a positional arg; extract it from opts if present
-              style = ""
+              style_shortcuts = {
+                  "default": "DefaultStyle()",
+                  "yas": "YASStyle()",
+                  "blue": "BlueStyle()",
+                  "sciml": "SciMLStyle()",
+                  "minimal": "MinimalStyle()",
+              }
+              style = None
               kwargs = []
               for token in opts:
                   if token.startswith("style="):
-                      style = token.split("=", 1)[1]
+                      val = token.split("=", 1)[1]
+                      if val not in style_shortcuts:
+                          post_comment(f"{header}\n**Error:** Unknown style `{val}`. Valid: {', '.join(style_shortcuts)}.")
+                          sys.exit(1)
+                      style = style_shortcuts[val]
                   else:
                       kwargs.append(token)
 
