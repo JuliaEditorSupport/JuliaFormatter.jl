@@ -130,6 +130,8 @@ mutable struct FST
     # comment rather than a true invariant right now.
     indent::Int
 
+    # TODO(penelopeysm) This uses length(op.val) which is character count
+    # It should really use textwidth.
     len::Int
     val::String
     nodes::Union{Tuple{},Vector{FST}}

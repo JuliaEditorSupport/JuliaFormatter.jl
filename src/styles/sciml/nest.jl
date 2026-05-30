@@ -113,7 +113,25 @@ function _n_tuple!(
     lineage::Vector{Tuple{FNode,Union{Nothing,Metadata}}},
 )
     style = getstyle(ss)
-    line_margin = s.line_offset + length(fst) + fst.extra_margin
+    
+    # TODO(penelopeysm): In principle, this should only check whether we are on the LHS of
+    # an assignment. However, this function checks whether we are an argument to an
+    # assignment. For example, if we have:
+    #
+    #     a[x] = b[y]
+    #
+    # then this would trigger for both operands, even though we probably only want to
+    # trigger it for `a[x]`. In practice, this doesn't seem to be a problem, so doesn't need
+    # to be fixed immediately.
+    line_margin = if _nearest_binary_is_assignment(lineage)
+        # If on the LHS of an assignment, don't take the ` = RHS` into account when
+        # considering whether to nest, as that would lead to overly eager nesting of the
+        # LHS.
+        s.line_offset + length(fst)
+    else
+        s.line_offset + length(fst) + fst.extra_margin
+    end
+
     nodes = fst.nodes::Vector
     has_closer = is_closer(fst[end])
     start_line_offset = s.line_offset
@@ -127,9 +145,10 @@ function _n_tuple!(
 
     # "foo(a, b, c)" is true if "foo" and "c" are on different lines
     src_diff_line = if s.opts.join_lines_based_on_source
-        last_arg_idx = findlast(is_iterable_arg, nodes)
-        last_arg = last_arg_idx === nothing ? fst[end] : fst[last_arg_idx]
-        fst[1].endline != last_arg.startline
+        # Directly check the FST for the presence of newlines. This will take into account
+        # cases where we try to un-nest existing newlines by mutating the FST, e.g. inside
+        # `n_ref!` for SciMLStyle.
+        any(n -> n.typ === NEWLINE, nodes)
     else
         false
     end
@@ -247,28 +266,25 @@ function n_ref!(
     s::State,
     lineage::Vector{Tuple{FNode,Union{Nothing,Metadata}}},
 )
-    if _nearest_binary_is_assignment(lineage) && fst.extra_margin > 0
-        # Don't break the LHS of an assignment
-        # Format children but keep them on the same line
+    # If the ref is the lhs of an assignment, try to avoid breaking it across lines.
+    # We do this by first removing newlines from the FST before passing it on to
+    # the default nesting logic.
+    #
+    # TODO(penelopeysm): This function is named correctly, but it detects the wrong thing!
+    # It detects whether we are part of an argument to an assignment.
+    if _nearest_binary_is_assignment(lineage)
+        # Remove newlines, but not if they are adjacent to comments, as that would affect
+        # semantics (for newlines after comments) or readability (for newlines before
+        # comments).
         nodes = fst.nodes::Vector{FST}
-        for (i, n) in enumerate(nodes)
-            if n.typ === NEWLINE &&
-               (i == 1 || !is_comment(nodes[i-1])) &&
-               (i == length(nodes) || !is_comment(nodes[i+1]))
-                nodes[i] = Whitespace(n.len)
-            end
+        function is_removable_newline(i::Int, n::FST)
+            return (n.typ === NEWLINE &&
+                (i > 1 && !is_comment(nodes[i-1])) &&
+                (i < length(nodes) && !is_comment(nodes[i+1]))
+            )
         end
-
-        lo = s.line_offset
-        nested = false
-        for n in nodes
-            nested |= nest!(ss, n, s, lineage)
-            if n.typ !== NEWLINE  # Prevent any newlines
-                s.line_offset += length(n)
-            end
-        end
-        s.line_offset = lo + length(fst)
-        return nested
+        new_nodes = [n for (i, n) in enumerate(nodes) if !is_removable_newline(i, n)]
+        fst.nodes = new_nodes
     end
 
     # Otherwise use the default behavior
