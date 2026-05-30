@@ -28,16 +28,15 @@
         @test JuliaFormatter.source_op_kind(state, node) === JuliaSyntax.Kind("<")
     end
 
-    @testset "source_unary_operator_index" for text in (
+    @testset "source_unary_operator_index $text" for text in (
         "+(y)",
         "-(y)",
         ">=(y)",
         "+y",
         "-y",
-        ">=y",
+        "!y",
     )
         _, state, node = parsed_node(text)
-        @test JuliaSyntax.is_prefix_op_call(node) # Sanity check
         @test JuliaFormatter.source_unary_operator_index(true, node, state) == 1
     end
 

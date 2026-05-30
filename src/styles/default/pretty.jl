@@ -65,10 +65,12 @@ function source_unary_operator_index(is_prefix::Bool, cst::JuliaSyntax.GreenNode
     isempty(args) && return nothing
 
     op_arg = if is_prefix
-        if (kind(cst) === K"dotcall" &&
-           length(args) >= 2 &&
-           kind(childs[args[1]]) === K"." &&
-           !haschildren(childs[args[1]]))
+        if (
+            kind(cst) === K"dotcall" &&
+            length(args) >= 2 &&
+            kind(childs[args[1]]) === K"." &&
+            !haschildren(childs[args[1]])
+        )
             # e.g. `.+x`
             args[2]
         else
