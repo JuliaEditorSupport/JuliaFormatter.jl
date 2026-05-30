@@ -943,7 +943,7 @@ function n_binaryopcall!(
 
         # extra margin for " op"
         fst[1].extra_margin = length(fst[2]) + length(fst[3])
-        nest!(style, fst[1], s, lineage)
+        nest!(style, fst[1], s, lineage) # lhs
         for n in fst[2:i1]
             nest!(style, n, s, lineage)
         end
@@ -988,16 +988,18 @@ function n_binaryopcall!(
         return nested
     end
 
-    # length of op and surrounding whitespace
-    oplen = sum(length.(fst[2:end]))
+    # length of operator, surrounding whitespace, and right operand
+    op_and_rhs_len = sum(length.(fst[2:end]))
 
     for (i, n) in enumerate(nodes)
         if n.typ === NEWLINE
             s.line_offset = fst.indent
         elseif i == 1
-            n.extra_margin = oplen + fst.extra_margin
+            # lhs
+            n.extra_margin = op_and_rhs_len + fst.extra_margin
             nested |= nest!(style, n, s, lineage)
         elseif i == length(nodes)
+            # rhs
             n.extra_margin = fst.extra_margin
             nested |= nest!(style, n, s, lineage)
         else

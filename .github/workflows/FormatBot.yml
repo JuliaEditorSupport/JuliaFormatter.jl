@@ -115,7 +115,7 @@ jobs:
           header_lines = [
               "### FormatBot Results",
               "",
-              "| | |",
+              "| Description | Value |",
               "|---|---|",
               f"| **FormatBot workflow run** | [workflow run]({run_url}) |",
               f"| **Target repo** | `{repo_display}` |",
@@ -132,12 +132,11 @@ jobs:
 
           try:
               # --- Clone target repo ---
-              subprocess.run(
-                  ["git", "clone", f"https://github.com/{repo}.git", target_dir],
-                  check=True,
-              )
+              clone_cmd = ["git", "clone", "--depth", "1"]
               if rev:
-                  git("checkout", rev)
+                  clone_cmd += ["--branch", rev]
+              clone_cmd += [f"https://github.com/{repo}.git", target_dir]
+              subprocess.run(clone_cmd, check=True)
 
               # Delete JuliaFormatter config files
               for name in [".JuliaFormatter.toml", "JuliaFormatter.toml"]:
@@ -213,7 +212,7 @@ jobs:
 
               # --- Compute diff ---
               diff_result = subprocess.run(
-                  ["git", "-C", target_dir, "diff", branch_base, branch_pr],
+                  ["git", "-C", target_dir, "diff", "--diff-algorithm=histogram", branch_base, branch_pr],
                   capture_output=True,
                   text=True,
               )

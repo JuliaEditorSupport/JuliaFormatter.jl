@@ -1,6 +1,10 @@
+# v2.5.2
+
+Fixed a bug where, under SciML style, indentations of bracketed expressions on the RHS of assignments were being removed for anything on the second line onwards (#935, #1006).
+
 # v2.5.1
 
-Fix some formatting regressions introduced in v2.5.0.
+Fix some formatting regressions introduced in v2.5.0 (#1002, #996).
 In particular, this version:
 
 - no longer aggressively adds spaces around `x=>y` and `x->y` (unless spaces are already present).
