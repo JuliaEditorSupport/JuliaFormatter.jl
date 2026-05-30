@@ -26,46 +26,120 @@ function newctx(s::PrettyContext; kwargs...)
     PrettyContext(values...)
 end
 
-function source_kind(s::State, cst::JuliaSyntax.GreenNode, offset::Integer)
-    span(cst) == 0 && return nothing
-    offset = Int(offset)
-    n = Int(span(cst))
-    val = getsrcval(s.doc, offset:(offset+n-1))
-    try
-        return JuliaSyntax.Kind(val)
-    catch
-        # There are some operators for which JuliaSyntax does not actually have a dedicated
-        # kind. For example, `a'ᵀ` is a postfix operator `'ᵀ`, and
-        # JuliaSyntax.is_postfix_op_call will correctly return true. Specifically, the '
-        # postfix operator can be followed by any Unicode modifier:
-        # https://github.com/JuliaLang/julia/pull/37247
-        #
-        # However, the operator is stored as Identifier and calling Kind("'ᵀ") throws an
-        # error. We catch such instances here. Thankfully, Base gives us a function
-        # (albeit unexported) to detect these.
-        return if kind(cst) === K"Identifier" && Base.ispostfixoperator(val)
-            K"Identifier"
-        else
-            nothing
-        end
-    end
-end
+"""
+    source_op_kind_from_offset(s, cst, offset)::Union{Nothing,JuliaSyntax.Kind}
 
-# JuliaSyntax v1 can encode source operators as Identifier leaves in call
-# forms, e.g. `a + b`, `x .+ y`, `+(x)`, and `>=(x)`. The parent call flags
-# describe the shape, but the leaf itself is not `is_operator`, and the exact
-# operator kind is only recoverable from the source span.
+Return the operator kind of `cst`, using the source text at `offset` if necessary to help
+determine this. If `cst` is not an operator, returns `nothing`.
+
+Note that this function may still return a K"Identifier"! This is because Julia allows some
+weird postfix operators. See the comments in the function for more info.
+
+The check against the source is needed because JuliaSyntax v1 can encode source operators as
+Identifier leaves in call forms. For example:
+
+```julia
+julia> JuliaSyntax.parseall(JuliaSyntax.GreenNode, "+y")
+     1:2      │[toplevel]
+     1:2      │  [call]
+     1:1      │    Identifier           ✔
+     2:2      │    Identifier           ✔
+```
+
+See https://github.com/JuliaLang/JuliaSyntax.jl/issues/548 for more information.
+"""
 function source_op_kind_from_offset(s::State, cst::JuliaSyntax.GreenNode, offset::Integer)
     return if JuliaSyntax.is_operator(cst) && !haschildren(cst)
         # Already have the right kind stored in the GreenNode
         kind(cst)
     elseif kind(cst) === K"Identifier" && !haschildren(cst)
         # The operator was reduced to an Identifier (this happens in JuliaSyntax v1).
-        # Attempt to recover the original kind.
-        source_kind(s, cst, offset)
+        # Attempt to recover the original kind from the source.
+        span(cst) == 0 && return nothing
+        source_text = getsrcval(s.doc, offset:(offset+span(cst)-1))
+        try
+            # Parse the source text and check whether it's a valid operator.
+            k = JuliaSyntax.Kind(source_text)
+            return if JuliaSyntax.is_operator(k)
+                # This is the happy path. It's hit for things like e.g. "+x".
+                k
+            else
+                # There are a lot of Identifiers which can be parsed as kinds, but aren't
+                # operators. For example, the `string` in `string(x)` will be converted to
+                # K"string" here, which is totally not what we want. Hence we return
+                # nothing.
+                nothing
+            end
+        catch
+            # There are some operators for which JuliaSyntax does not actually have a
+            # dedicated kind. For example, `a'ᵀ` is a postfix operator `'ᵀ`, and
+            # JuliaSyntax.is_postfix_op_call will correctly return true. Specifically, the '
+            # postfix operator can be followed by any Unicode modifier:
+            # https://github.com/JuliaLang/julia/pull/37247
+            #
+            # However, the operator is stored as Identifier and calling Kind("'ᵀ") throws an
+            # error. We catch such instances here. Thankfully, Base gives us a function
+            # (albeit unexported) to detect these. If this function returns K"Identifier",
+            # then we know that it's one of these odd postfix operators.
+            return if kind(cst) === K"Identifier" && Base.ispostfixoperator(source_text)
+                K"Identifier"
+            else
+                nothing
+            end
+        end
     else
+        # Can't be an operator at all
         nothing
     end
+end
+
+"""
+    first_nonws_leaf_and_offset(
+        node::JuliaSyntax.GreenNode,
+    )::Union{Nothing,Tuple{JuliaSyntax.GreenNode,Int}
+
+Return the first non-whitespace leaf node in `node` plus its offset from the beginning of
+`node`, or `nothing` if there are no non-whitespace leaves.
+"""
+function first_nonws_leaf_and_offset(
+    node::JuliaSyntax.GreenNode,
+    # Callers should not set _acc, this is only used in this function to recurse
+    _acc::Int=0
+)::Union{Nothing,Tuple{JuliaSyntax.GreenNode,Int}}
+    if JuliaSyntax.is_leaf(node)
+        return JuliaSyntax.is_whitespace(node) ? nothing : (node, _acc)
+    end
+    # Recursively search children
+    for c in children(node)
+        result = first_nonws_leaf_and_offset(c, _acc)
+        if result !== nothing
+            return result
+        end
+        _acc += span(c)
+    end
+    return nothing
+end
+
+"""
+   source_begins_with_op(s, cst, offset) 
+
+Check whether the first token of `cst` is an operator. Used in `p_kw`: if the value on the
+rhs of `kwarg=value` begins with an operator, then we parenthesise `value` to avoid
+ambiguity.
+
+Note that the behaviour of this differs from `unary_info(cst)`: for example,
+`unary_info(cst)` does not pick up  expressions such as `>=(1)`, which is interpreted as a
+function call, not an application of a unary operator. However, these are exactly the sort
+of things that we want to parenthesise in `p_kw` -- hence this function.
+"""
+function source_begins_with_op(s::State, cst::JuliaSyntax.GreenNode, offset::Integer)
+    # Get the first leaf of `cst` that isn't whitespace.
+    result = first_nonws_leaf_and_offset(cst)
+    result === nothing && return false
+    # Check if it's an operator.
+    leaf, extra_offset = result
+    opkind = source_op_kind_from_offset(s, leaf, offset + extra_offset)
+    return opkind !== nothing && JuliaSyntax.is_operator(opkind)
 end
 
 function is_source_operator(s::State, cst::JuliaSyntax.GreenNode, offset::Integer)
@@ -1965,11 +2039,12 @@ function p_kw(
         else
             # Check if the value of the kwarg begins with an operator, or if the name ends
             # with an exclamation mark. If so, then we should parenthesise it to avoid
-            # ambiguity.
+            # ambiguity. (Note that unary_info(c) === true indicates that c is a prefix
+            # operator call.)
             #
             # TODO(penelopeysm): These checks could definitely be done better, by
             # specifically targeting the LHS and the RHS of the (=) node.
-            begins_with_op = !isnothing(source_unary_operator_index(true, c, s))
+            begins_with_op = unary_info(c) === true
             n = pretty(style, c, s, ctx, lineage)
             if !s.opts.whitespace_in_kwargs &&
                ((n.typ === IDENTIFIER && endswith(n.val, "!")) || begins_with_op)
