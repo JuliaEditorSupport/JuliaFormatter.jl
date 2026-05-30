@@ -142,3 +142,34 @@
         @test JuliaFormatter.format_text("baremodule A\nend") == "baremodule A end"
     end
 end
+
+@testset "predicates on GreenNodes" begin
+    @testset "unary_info" begin
+        # [1] to index into the actual node we care about
+        p(x) = JuliaSyntax.parseall(JuliaSyntax.GreenNode, strip(x))[1]
+        # Prefix operator
+        @test JuliaFormatter.unary_info(p("+(x)")) === true
+        @test JuliaFormatter.unary_info(p("+x")) === true
+        @test JuliaFormatter.unary_info(p("+x")) === true
+        @test JuliaFormatter.unary_info(p("+[1,2]")) === true
+        @test JuliaFormatter.unary_info(p("<:x")) === true
+        @test JuliaFormatter.unary_info(p("-x")) === true
+        @test JuliaFormatter.unary_info(p("-[1,2]")) === true
+        # Postfix operators
+        @test JuliaFormatter.unary_info(p("x'")) === false
+        @test JuliaFormatter.unary_info(p("x'ᵀ")) === false
+        @test JuliaFormatter.unary_info(p("x'...")) === false
+        @test JuliaFormatter.unary_info(p("[1,2]'")) === false
+        @test JuliaFormatter.unary_info(p("x...")) === false
+        @test JuliaFormatter.unary_info(p("[1,2]...")) === false
+        # Things that aren't unaries at all
+        @test JuliaFormatter.unary_info(p("+")) === nothing
+        @test JuliaFormatter.unary_info(p("<:")) === nothing
+        @test JuliaFormatter.unary_info(p("x + y")) === nothing
+        @test JuliaFormatter.unary_info(p("f(x)")) === nothing
+        @test JuliaFormatter.unary_info(p("x")) === nothing
+        @test JuliaFormatter.unary_info(p("[1, 2]")) === nothing
+        @test JuliaFormatter.unary_info(p("x.y")) === nothing
+        @test JuliaFormatter.unary_info(p("+(x, y)")) === nothing
+    end
+end

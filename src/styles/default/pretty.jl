@@ -58,7 +58,7 @@ function is_source_operator(s::State, cst::JuliaSyntax.GreenNode, offset::Intege
     !isnothing(source_op_kind_from_offset(s, cst, offset))
 end
 
-function source_prefix_operator_index(cst::JuliaSyntax.GreenNode, s::State)
+function source_unary_operator_index(is_prefix::Bool, cst::JuliaSyntax.GreenNode, s::State)
     kind(cst) in KSet"call dotcall" && haschildren(cst) || return nothing
     childs = children(cst)
     args = findall(n -> !JuliaSyntax.is_whitespace(n), childs)
@@ -202,6 +202,8 @@ function pretty(
     do_block_idx = has_do_block_call(node)
     push!(lineage, (k, is_iterable(node), is_assignment(node)))
 
+    _unaryinfo = unary_info(node)
+
     ret = if k == K"Identifier" && !haschildren(node)
         p_identifier(style, node, s, ctx, lineage)
         # Example: `try f() catch g() end` has a zero-width Placeholder
@@ -300,17 +302,14 @@ function pretty(
         # Example: `map(xs) do x; x + 1; end` is a call node with a do child.
     elseif !isnothing(do_block_idx)
         p_do_call(style, node, s, ctx, lineage, do_block_idx)
-        # Example: `+(x)` parses as a prefix-op call.
-    elseif JuliaSyntax.is_prefix_op_call(node)
-        p_unaryopcall(style, node, s, ctx, lineage)
-    elseif JuliaSyntax.is_postfix_op_call(node)
-        p_unaryopcall(style, node, s, ctx, lineage)
+    elseif _unaryinfo !== nothing
+        # _unaryinfo === nothing means that it's not unary; true/false indicates whether
+        # it's a prefix/postfix.
+        p_unaryopcall(style, node, s, ctx, lineage, _unaryinfo)
     elseif is_binary(node)
         p_binaryopcall(style, node, s, ctx, lineage)
     elseif is_chain(node)
         p_chainopcall(style, node, s, ctx, lineage)
-    elseif is_unary(node)
-        p_unaryopcall(style, node, s, ctx, lineage)
     elseif is_func_call(node)
         p_call(style, node, s, ctx, lineage)
     elseif k === K"comparison"
@@ -1941,13 +1940,10 @@ function p_kw(
             add_node!(t, pretty(style, c, s, ctx, lineage), s; join_lines = true)
             add_node!(t, Whitespace(1), s)
         else
-            # Need to explicitly check source_prefix rather than relying on
-            # JuliaSyntax.is_prefix_op_call, as the latter doesn't identify e.g.
-            # `>=(x)` as operators.
-            source_prefix = !isnothing(source_prefix_operator_index(c, s))
+            is_prefix_unaryop = unary_info(c) === true
             n = pretty(style, c, s, ctx, lineage)
             if !s.opts.whitespace_in_kwargs &&
-               ((n.typ === IDENTIFIER && endswith(n.val, "!")) || source_prefix)
+               ((n.typ === IDENTIFIER && endswith(n.val, "!")) || is_prefix_unaryop)
                 add_node!(
                     t,
                     FST(PUNCTUATION, -1, n.startline, n.startline, "("),
@@ -2358,6 +2354,7 @@ function p_unaryopcall(
     s::State,
     ctx::PrettyContext,
     lineage::Vector{Tuple{JuliaSyntax.Kind,Bool,Bool}},
+    is_prefix::Bool,
 )
     style = getstyle(ds)
     t = FST(Unary, nspaces(s))
@@ -2367,7 +2364,7 @@ function p_unaryopcall(
 
     childs = children(cst)
     first_idx = findfirst(n -> !JuliaSyntax.is_whitespace(n), childs)
-    op_idx = source_prefix_operator_index(cst, s)
+    op_idx = source_unary_operator_index(is_prefix, cst, s)
     if isnothing(op_idx)
         op_idx = first_idx
     end
