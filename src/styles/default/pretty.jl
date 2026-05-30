@@ -64,7 +64,7 @@ function source_unary_operator_index(is_prefix::Bool, cst::JuliaSyntax.GreenNode
     args = findall(n -> !JuliaSyntax.is_whitespace(n), childs)
     isempty(args) && return nothing
 
-    op_arg =
+    op_arg = if is_prefix
         if (kind(cst) === K"dotcall" &&
            length(args) >= 2 &&
            kind(childs[args[1]]) === K"." &&
@@ -75,6 +75,10 @@ function source_unary_operator_index(is_prefix::Bool, cst::JuliaSyntax.GreenNode
             # e.g. `+x`
             args[1]
         end
+    else
+        # postfix operator
+        args[end]
+    end
     offset = s.offset + sum(span, childs[1:(op_arg-1)]; init = 0)
     return is_source_operator(s, childs[op_arg], offset) ? op_arg : nothing
 end
