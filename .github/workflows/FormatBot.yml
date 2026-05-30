@@ -108,6 +108,7 @@ jobs:
               subprocess.run(
                   ["gh", "pr", "comment", pr_number, "--body-file", str(comment_path)],
                   check=True,
+                  cwd="formatter-base",
               )
 
           repo_display = f"{repo}@{rev}" if rev else repo
@@ -235,13 +236,19 @@ jobs:
 
           except subprocess.CalledProcessError as e:
               cmd = " ".join(str(c) for c in e.cmd)
-              post_comment(
-                  f"{header}\n**Error:** `{cmd}` failed with exit code {e.returncode}. "
-                  f"See [workflow run]({run_url})."
-              )
+              try:
+                  post_comment(
+                      f"{header}\n**Error:** `{cmd}` failed with exit code {e.returncode}. "
+                      f"See [workflow run]({run_url})."
+                  )
+              except Exception:
+                  pass
               sys.exit(1)
           except Exception as e:
-              post_comment(f"{header}\n**Error:** {e}. See [workflow run]({run_url}).")
+              try:
+                  post_comment(f"{header}\n**Error:** {e}. See [workflow run]({run_url}).")
+              except Exception:
+                  pass
               sys.exit(1)
 
       - name: Add completion reaction
