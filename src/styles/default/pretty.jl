@@ -65,12 +65,14 @@ function source_prefix_operator_index(cst::JuliaSyntax.GreenNode, s::State)
     isempty(args) && return nothing
 
     op_arg =
-        if kind(cst) === K"dotcall" &&
+        if (kind(cst) === K"dotcall" &&
            length(args) >= 2 &&
            kind(childs[args[1]]) === K"." &&
-           !haschildren(childs[args[1]])
+           !haschildren(childs[args[1]]))
+            # e.g. `.+x`
             args[2]
         else
+            # e.g. `+x`
             args[1]
         end
     offset = s.offset + sum(span, childs[1:(op_arg-1)]; init = 0)
@@ -300,6 +302,8 @@ function pretty(
         p_do_call(style, node, s, ctx, lineage, do_block_idx)
         # Example: `+(x)` parses as a prefix-op call.
     elseif JuliaSyntax.is_prefix_op_call(node)
+        p_unaryopcall(style, node, s, ctx, lineage)
+    elseif JuliaSyntax.is_postfix_op_call(node)
         p_unaryopcall(style, node, s, ctx, lineage)
     elseif is_binary(node)
         p_binaryopcall(style, node, s, ctx, lineage)

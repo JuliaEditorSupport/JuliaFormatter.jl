@@ -560,8 +560,11 @@ end
 
 function is_unary(x::JuliaSyntax.GreenNode)
     if JuliaSyntax.is_unary_op(x) && !haschildren(x)
+        # Note that this only returns true for a bare operator, such as
+        # `<:` or `.+`
         return true
     end
+    # This catches the actual unary operators applied to an argument
     if kind(x) in KSet"call dotcall" || (JuliaSyntax.is_operator(x) && haschildren(x))
         nops, nargs = _callinfo(x)
         return nops == 1 && nargs == 1
