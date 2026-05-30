@@ -250,7 +250,8 @@ function n_ref!(
         # comments).
         nodes = fst.nodes::Vector{FST}
         function is_removable_newline(i::Int, n::FST)
-            return (n.typ === NEWLINE &&
+            return (
+                n.typ === NEWLINE &&
                 (i > 1 && !is_comment(nodes[i-1])) &&
                 (i < length(nodes) && !is_comment(nodes[i+1]))
             )
