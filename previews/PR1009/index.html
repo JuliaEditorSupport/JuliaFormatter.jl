@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Introduction · JuliaFormatter</title><meta name="title" content="Introduction · JuliaFormatter"/><meta property="og:title" content="Introduction · JuliaFormatter"/><meta property="twitter:title" content="Introduction · JuliaFormatter"/><meta name="description" content="Documentation for JuliaFormatter."/><meta property="og:description" content="Documentation for JuliaFormatter."/><meta property="twitter:description" content="Documentation for JuliaFormatter."/><script data-outdated-warner src="assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="assets/documenter.js"></script><script src="search_index.js"></script><script src="siteinfo.js"></script><script src="../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href>JuliaFormatter</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li class="is-active"><a class="tocitem" href>Introduction</a><ul class="internal"><li><a class="tocitem" href="#Installation"><span>Installation</span></a></li><li><a class="tocitem" href="#Quick-Start"><span>Quick Start</span></a></li><li><a class="tocitem" href="#Formatting-Options"><span>Formatting Options</span></a></li><li><a class="tocitem" href="#File-Options"><span>File Options</span></a></li><li><a class="tocitem" href="#Special-Format-Comments"><span>Special Format Comments</span></a></li><li><a class="tocitem" href="#Editor-Plugins"><span>Editor Plugins</span></a></li></ul></li><li><a class="tocitem" href="how_it_works/">How It Works</a></li><li><a class="tocitem" href="style/">Code Style</a></li><li><a class="tocitem" href="skipping_formatting/">Skipping Formatting</a></li><li><a class="tocitem" href="transforms/">Syntax Transforms</a></li><li><a class="tocitem" href="custom_alignment/">Custom Alignment</a></li><li><a class="tocitem" href="yas_style/">YAS Style</a></li><li><a class="tocitem" href="blue_style/">Blue Style</a></li><li><a class="tocitem" href="sciml_style/">SciML Style</a></li><li><a class="tocitem" href="config/">Configuration File</a></li><li><a class="tocitem" href="cli/">Command Line Interface</a></li><li><a class="tocitem" href="integrations/">Integrations</a></li><li><a class="tocitem" href="api/">API Reference</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Introduction</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Introduction</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/JuliaEditorSupport/JuliaFormatter.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/JuliaEditorSupport/JuliaFormatter.jl/blob/master/docs/src/index.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="JuliaFormatter.jl"><a class="docs-heading-anchor" href="#JuliaFormatter.jl">JuliaFormatter.jl</a><a id="JuliaFormatter.jl-1"></a><a class="docs-heading-anchor-permalink" href="#JuliaFormatter.jl" title="Permalink"></a></h1><p>Width-sensitive formatter for Julia code. Inspired by gofmt, refmt, black, and prettier. Built with <a href="https://github.com/julia-vscode/CSTParser.jl"><code>CSTParser.jl</code></a>.</p><ul><li>Sane defaults out of the box with options to customize.</li><li>Supports <a href="https://github.com/jrevels/YASGuide">YAS</a>, <a href="https://github.com/invenia/BlueStyle">Blue</a> and <a href="https://github.com/SciML/SciMLStyle">SciML</a> style guides.</li><li><code>.JuliaFormatter.toml</code> configuration file to store options.</li></ul><p><img src="https://user-images.githubusercontent.com/1813121/72941091-0b146300-3d68-11ea-9c95-75ec979caf6e.gif" alt/></p><h2 id="Installation"><a class="docs-heading-anchor" href="#Installation">Installation</a><a id="Installation-1"></a><a class="docs-heading-anchor-permalink" href="#Installation" title="Permalink"></a></h2><pre><code class="language-julia hljs">]add JuliaFormatter</code></pre><h2 id="Quick-Start"><a class="docs-heading-anchor" href="#Quick-Start">Quick Start</a><a id="Quick-Start-1"></a><a class="docs-heading-anchor-permalink" href="#Quick-Start" title="Permalink"></a></h2><pre><code class="language-julia hljs">julia&gt; using JuliaFormatter
+
+# Recursively formats all Julia files in the current directory
+julia&gt; format(&quot;.&quot;)
+
+# Formats an individual file
+julia&gt; format_file(&quot;foo.jl&quot;)
+
+# Formats a string (contents of a Julia file)
+julia&gt; format_text(str)</code></pre><p>Check out the docs for further description of the formatter and its options.</p><p><a href="https://github.com/julia-actions/julia-format">Use With GitHub Actions</a></p><h2 id="Formatting-Options"><a class="docs-heading-anchor" href="#Formatting-Options">Formatting Options</a><a id="Formatting-Options-1"></a><a class="docs-heading-anchor-permalink" href="#Formatting-Options" title="Permalink"></a></h2><h3 id="indent"><a class="docs-heading-anchor" href="#indent"><code>indent</code></a><a id="indent-1"></a><a class="docs-heading-anchor-permalink" href="#indent" title="Permalink"></a></h3><p>Default: <code>4</code></p><p>The number of spaces used for an indentation.</p><h3 id="margin"><a class="docs-heading-anchor" href="#margin"><code>margin</code></a><a id="margin-1"></a><a class="docs-heading-anchor-permalink" href="#margin" title="Permalink"></a></h3><p>Default: <code>92</code></p><p>The maximum length of a line. Code exceeding this margin will be formatted across multiple lines.</p><h3 id="always_for_in"><a class="docs-heading-anchor" href="#always_for_in"><code>always_for_in</code></a><a id="always_for_in-1"></a><a class="docs-heading-anchor-permalink" href="#always_for_in" title="Permalink"></a></h3><p>Default: <code>false</code></p><p>If true, <code>=</code> is always replaced with <code>in</code> if part of a <code>for</code> loop condition. For example, <code>for i = 1:10</code> will be transformed to <code>for i in 1:10</code>. Set this to <code>nothing</code> to leave the choice to the user.</p><h3 id="whitespace_typedefs"><a class="docs-heading-anchor" href="#whitespace_typedefs"><code>whitespace_typedefs</code></a><a id="whitespace_typedefs-1"></a><a class="docs-heading-anchor-permalink" href="#whitespace_typedefs" title="Permalink"></a></h3><p>Default: <code>false</code></p><p>If true, whitespace is added for type definitions. Make this <code>true</code> if you prefer <code>Union{A &lt;: B, C}</code> to <code>Union{A&lt;:B,C}</code>.</p><h3 id="whitespace_ops_in_indices"><a class="docs-heading-anchor" href="#whitespace_ops_in_indices"><code>whitespace_ops_in_indices</code></a><a id="whitespace_ops_in_indices-1"></a><a class="docs-heading-anchor-permalink" href="#whitespace_ops_in_indices" title="Permalink"></a></h3><p>Default: <code>false</code></p><p>If true, whitespace is added for binary operations in indices. Make this <code>true</code> if you prefer <code>arr[a + b]</code> to <code>arr[a+b]</code>. Additionally, if there&#39;s a colon <code>:</code> involved, parenthesis will be added to the LHS and RHS.</p><p>Example: <code>arr[(i1 + i2):(i3 + i4)]</code> instead of <code>arr[i1+i2:i3+i4]</code>.</p><h3 id="remove_extra_newlines"><a class="docs-heading-anchor" href="#remove_extra_newlines"><code>remove_extra_newlines</code></a><a id="remove_extra_newlines-1"></a><a class="docs-heading-anchor-permalink" href="#remove_extra_newlines" title="Permalink"></a></h3><p>Default: <code>false</code></p><p>If true, superfluous newlines will be removed. For example:</p><pre><code class="language-julia hljs">module M
+
+
+
+a = 1
+
+function foo()
+
+
+    return nothing
+
+end
+
+
+b = 2
+
+
+end</code></pre><p>is rewritten as</p><pre><code class="language-julia hljs">module M
+
+a = 1
+
+function foo()
+    return nothing
+end
+
+b = 2
+
+end</code></pre><p>Modules are the only type of code block allowed to keep a single newline prior to the initial or after the final piece of code.</p><h3 id="import_to_using"><a class="docs-heading-anchor" href="#import_to_using"><code>import_to_using</code></a><a id="import_to_using-1"></a><a class="docs-heading-anchor-permalink" href="#import_to_using" title="Permalink"></a></h3><p>Default: <code>false</code></p><p>If true, <code>import</code> expressions are rewritten to <code>using</code> expressions in the following cases:</p><pre><code class="language-julia hljs">import A
+
+import A, B, C</code></pre><p>is rewritten to:</p><pre><code class="language-julia hljs">using A: A
+
+using A: A
+using B: B
+using C: C</code></pre><p>Exceptions:</p><p>If <code>as</code> is found in the import expression. <code>using</code> CANNOT be used in this context. The following example will NOT BE rewritten.</p><pre><code class="language-julia hljs">import Base.Threads as th</code></pre><p>If <code>import</code> is used in the following context it is NOT rewritten. This may change in a future patch.</p><pre><code class="language-julia hljs">@everywhere import A, B</code></pre><h3 id="pipe_to_function_call"><a class="docs-heading-anchor" href="#pipe_to_function_call"><code>pipe_to_function_call</code></a><a id="pipe_to_function_call-1"></a><a class="docs-heading-anchor-permalink" href="#pipe_to_function_call" title="Permalink"></a></h3><p>Default: <code>false</code></p><p>If true, <code>x |&gt; f</code> is rewritten to <code>f(x)</code>.</p><h3 id="short_to_long_function_def"><a class="docs-heading-anchor" href="#short_to_long_function_def"><code>short_to_long_function_def</code></a><a id="short_to_long_function_def-1"></a><a class="docs-heading-anchor-permalink" href="#short_to_long_function_def" title="Permalink"></a></h3><p>Default: <code>false</code></p><p>Transforms a <em>short</em> function definition</p><pre><code class="language-julia hljs">f(arg1, arg2) = body</code></pre><p>to a <em>long</em> function definition if the short function definition exceeds the maximum margin. Or if <code>force_long_function_def</code> is set to <code>true</code>.</p><pre><code class="language-julia hljs">function f(arg2, arg2)
+    body
+end</code></pre><h3 id="force_long_function_def"><a class="docs-heading-anchor" href="#force_long_function_def"><code>force_long_function_def</code></a><a id="force_long_function_def-1"></a><a class="docs-heading-anchor-permalink" href="#force_long_function_def" title="Permalink"></a></h3><p>Default: <code>false</code></p><p>If <code>true</code> tweaks the behavior of <code>short_to_long_function_def</code> to force the transformation no matter how short the function definition is.</p><h3 id="long_to_short_function_def"><a class="docs-heading-anchor" href="#long_to_short_function_def"><code>long_to_short_function_def</code></a><a id="long_to_short_function_def-1"></a><a class="docs-heading-anchor-permalink" href="#long_to_short_function_def" title="Permalink"></a></h3><p>Default: <code>false</code></p><p>Transforms a <em>long</em> function definition</p><pre><code class="language-julia hljs">function f(arg2, arg2)
+    body
+end</code></pre><p>to a <em>short</em> function definition if the short function definition does not exceed the maximum margin.</p><pre><code class="language-julia hljs">f(arg1, arg2) = body</code></pre><h3 id="always_use_return"><a class="docs-heading-anchor" href="#always_use_return"><code>always_use_return</code></a><a id="always_use_return-1"></a><a class="docs-heading-anchor-permalink" href="#always_use_return" title="Permalink"></a></h3><p>Default: <code>false</code></p><p>If true, <code>return</code> will be prepended to the last expression where applicable in function definitions, macro definitions, and do blocks.</p><p>Example:</p><pre><code class="language-julia hljs">function foo()
+    expr1
+    expr2
+end</code></pre><p>to</p><pre><code class="language-julia hljs">function foo()
+    expr1
+    return expr2
+end</code></pre><h3 id="whitespace_in_kwargs"><a class="docs-heading-anchor" href="#whitespace_in_kwargs"><code>whitespace_in_kwargs</code></a><a id="whitespace_in_kwargs-1"></a><a class="docs-heading-anchor-permalink" href="#whitespace_in_kwargs" title="Permalink"></a></h3><p>Default: <code>true</code></p><p>If true, <code>=</code> in keyword arguments will be surrounded by whitespace.</p><pre><code class="language-julia hljs">f(; a=4)</code></pre><p>to</p><pre><code class="language-julia hljs">f(; a = 4)</code></pre><p>An exception to this is if the LHS ends with &quot;!&quot; then even if <code>whitespace_in_kwargs</code> is false, <code>=</code> will still be surrounded by whitespace. The logic behind this intervention being on the following parse the <code>!</code> will be treated as part of <code>=</code>, as in a &quot;not equal&quot; binary operation. This would change the semantics of the code and is therefore disallowed.</p><h3 id="annotate_untyped_fields_with_any"><a class="docs-heading-anchor" href="#annotate_untyped_fields_with_any"><code>annotate_untyped_fields_with_any</code></a><a id="annotate_untyped_fields_with_any-1"></a><a class="docs-heading-anchor-permalink" href="#annotate_untyped_fields_with_any" title="Permalink"></a></h3><p>Default: <code>true</code></p><p>Annotates fields in a type definitions with <code>::Any</code> if no type annotation is provided:</p><pre><code class="language-julia hljs">struct A
+    arg1
+end</code></pre><p>to</p><pre><code class="language-julia hljs">struct A
+    arg1::Any
+end</code></pre><h3 id="format_docstrings"><a class="docs-heading-anchor" href="#format_docstrings"><code>format_docstrings</code></a><a id="format_docstrings-1"></a><a class="docs-heading-anchor-permalink" href="#format_docstrings" title="Permalink"></a></h3><p>Default: <code>false</code></p><p>Format code docstrings with the same options used for the code source.</p><p>Markdown is formatted with <a href="https://github.com/MichaelHatherly/CommonMark.jl"><code>CommonMark</code></a> alongside Julia code.</p><h3 id="align_*"><a class="docs-heading-anchor" href="#align_*"><code>align_*</code></a><a id="align_*-1"></a><a class="docs-heading-anchor-permalink" href="#align_*" title="Permalink"></a></h3><p>Default: <code>false</code></p><p>See <code>Custom Alignment</code> documentation.</p><h3 id="conditional_to_if"><a class="docs-heading-anchor" href="#conditional_to_if"><code>conditional_to_if</code></a><a id="conditional_to_if-1"></a><a class="docs-heading-anchor-permalink" href="#conditional_to_if" title="Permalink"></a></h3><p>Default: <code>false</code></p><p>If the conditional <code>E ? A : B</code> exceeds the maximum margin converts it into the equivalent <code>if</code> block:</p><pre><code class="language-julia hljs">if E
+    A
+else
+    B
+end</code></pre><h3 id="normalize_line_endings"><a class="docs-heading-anchor" href="#normalize_line_endings"><code>normalize_line_endings</code></a><a id="normalize_line_endings-1"></a><a class="docs-heading-anchor-permalink" href="#normalize_line_endings" title="Permalink"></a></h3><p>Default: <code>&quot;auto&quot;</code></p><p>One of <code>&quot;unix&quot;</code> (normalize all <code>\r\n</code> to <code>\n</code>), <code>&quot;windows&quot;</code> (normalize all <code>\n</code> to <code>\r\n</code>), <code>&quot;auto&quot;</code> (automatically choose based on which line ending is more common in the file).</p><h3 id="trailing_comma"><a class="docs-heading-anchor" href="#trailing_comma"><code>trailing_comma</code></a><a id="trailing_comma-1"></a><a class="docs-heading-anchor-permalink" href="#trailing_comma" title="Permalink"></a></h3><p>Default: <code>true</code></p><p>One of <code>true</code>, <code>false</code>, or <code>nothing</code>.</p><p>Trailing commas are added after the final argument when nesting occurs and the closing punctuation appears on the next line.</p><p>For example when the following is nested (assuming <code>DefaultStyle</code>):</p><pre><code class="language-julia hljs">funccall(arg1, arg2, arg3)</code></pre><p>it turns into:</p><pre><code class="language-julia hljs">funccall(
+    arg1,
+    arg2,
+    arg3, # trailing comma added after `arg3` (final argument) !!!
+)</code></pre><ul><li>When set to <code>true</code>, the trailing comma is always added during nesting.</li><li>When set to <code>false</code>, the trailing comma is always removed during nesting.</li><li>When set to <code>nothing</code>, the trailing comma appears as it does in the original source.</li></ul><h3 id="trailing_zero"><a class="docs-heading-anchor" href="#trailing_zero"><code>trailing_zero</code></a><a id="trailing_zero-1"></a><a class="docs-heading-anchor-permalink" href="#trailing_zero" title="Permalink"></a></h3><p>Default: <code>true</code></p><p>Add a trailing zero, if needed.</p><h3 id="join_lines_based_on_source"><a class="docs-heading-anchor" href="#join_lines_based_on_source"><code>join_lines_based_on_source</code></a><a id="join_lines_based_on_source-1"></a><a class="docs-heading-anchor-permalink" href="#join_lines_based_on_source" title="Permalink"></a></h3><p>Default: <code>false</code></p><p>When <code>true</code> lines are joined as they appear in the original source file.</p><pre><code class="language-julia hljs">function foo(arg1,
+                       arg2, arg3
+                       )
+       body
+end</code></pre><p>When <code>false</code> and the maximum margin is &gt; than the length of <code>&quot;function foo(arg1, arg2, arg3)&quot;</code> this is formatted to</p><pre><code class="language-julia hljs">function foo(arg1, arg2, arg3)
+    body
+end</code></pre><p>When <code>true</code>, <code>arg1</code> and <code>arg2, arg3</code> will remain on separate lines even if they can fit on the same line since it&#39;s within maximum margin. The indentation is dependent on the style.</p><pre><code class="language-julia hljs">function foo(arg1,
+    arg2, arg3,
+)
+end</code></pre><p>There are exceptions to this:</p><pre><code class="language-julia hljs">if a body1 elseif b body2 else body3 end</code></pre><p>will be formatted to the following, even if this option is set to <code>true</code>:</p><pre><code class="language-julia hljs">if a
+    body1
+elseif b
+    body2
+else
+    body3
+end</code></pre><div class="admonition is-warning" id="Warning-9c216e9ffe062c21"><header class="admonition-header">Warning<a class="admonition-anchor" href="#Warning-9c216e9ffe062c21" title="Permalink"></a></header><div class="admonition-body"><p>The maximum margin still applies even when this option is set to <code>true</code>.</p></div></div><h3 id="indent_submodule"><a class="docs-heading-anchor" href="#indent_submodule"><code>indent_submodule</code></a><a id="indent_submodule-1"></a><a class="docs-heading-anchor-permalink" href="#indent_submodule" title="Permalink"></a></h3><p>Default: <code>false</code></p><p>When set to <code>true</code>, submodule(s) appearing in the same file will be indented.</p><pre><code class="language-julia hljs">module A
+a = 1
+
+module B
+b = 2
+module C
+c = 3
+end
+end
+
+d = 4
+
+end</code></pre><p>will be formatted to:</p><pre><code class="language-julia hljs">module A
+a = 1
+
+module B
+    b = 2
+    module C
+        c = 3
+    end
+end
+
+d = 4
+
+end</code></pre><h3 id="separate_kwargs_with_semicolon"><a class="docs-heading-anchor" href="#separate_kwargs_with_semicolon"><code>separate_kwargs_with_semicolon</code></a><a id="separate_kwargs_with_semicolon-1"></a><a class="docs-heading-anchor-permalink" href="#separate_kwargs_with_semicolon" title="Permalink"></a></h3><p>Default: <code>false</code></p><p>When set to <code>true</code>, keyword arguments in a function call will be separated with a semicolon.</p><pre><code class="language-julia hljs">f(a, b=1)
+
+-&gt;
+
+f(a; b=1)</code></pre><h3 id="surround_whereop_typeparameters"><a class="docs-heading-anchor" href="#surround_whereop_typeparameters"><code>surround_whereop_typeparameters</code></a><a id="surround_whereop_typeparameters-1"></a><a class="docs-heading-anchor-permalink" href="#surround_whereop_typeparameters" title="Permalink"></a></h3><p>Default: <code>true</code></p><p>Surrounds type parameters with curly brackets when set to <code>true</code> if the brackets are not already present.</p><pre><code class="language-julia hljs">function func(...) where TPARAM
+end
+
+-&gt;
+
+function func(...) where {TPARAM}
+end</code></pre><h3 id="for_in_replacement"><a class="docs-heading-anchor" href="#for_in_replacement"><code>for_in_replacement</code></a><a id="for_in_replacement-1"></a><a class="docs-heading-anchor-permalink" href="#for_in_replacement" title="Permalink"></a></h3><p>Can be used when <code>always_for_in</code> is <code>true</code> to replace the default <code>in</code> with <code>∈</code> (<code>\\in</code>), or <code>=</code> instead. The replacement options are <code>(&quot;in&quot;, &quot;=&quot;, &quot;∈&quot;)</code>.</p><pre><code class="language-julia hljs">for a = 1:10
+end
+
+# formatted with always_for_in = true, for_in_replacement = &quot;∈&quot;
+for a ∈ 1:10
+end</code></pre><h3 id="variable_call_indent-and-and-yas_style_nesting"><a class="docs-heading-anchor" href="#variable_call_indent-and-and-yas_style_nesting"><code>variable_call_indent</code> &amp;&amp; <code>yas_style_nesting</code></a><a id="variable_call_indent-and-and-yas_style_nesting-1"></a><a class="docs-heading-anchor-permalink" href="#variable_call_indent-and-and-yas_style_nesting" title="Permalink"></a></h3><p>The <code>SciMLStyle</code> supports the additional options <code>variable_call_indent</code> and <code>yas_style_nesting</code>.</p><p>The option <code>variable_call_indent</code> is set to <code>[]</code> by default. It allows calls without aligning to the opening parenthesis:</p><pre><code class="language-julia hljs"># Allowed with and without `Dict in variable_call_indent`
+Dict{Int, Int}(1 =&gt; 2,
+    3 =&gt; 4)
+
+# Allowed when `Dict in variable_call_indent`, but
+# will be changed to the first example when `Dict ∉ variable_call_indent`.
+Dict{Int, Int}(
+    1 =&gt; 2,
+    3 =&gt; 4)</code></pre><p>The option <code>yas_style_nesting</code> is set to <code>false</code> by default. Setting it to <code>true</code> makes the <code>SciMLStyle</code> use the <code>YASStyle</code> nesting rules:</p><pre><code class="language-julia hljs"># With `yas_style_nesting = false`
+function my_large_function(argument1, argument2,
+    argument3, argument4,
+    argument5, x, y, z)
+    foo(x) + goo(y)
+end
+
+# With `yas_style_nesting = true`
+function my_large_function(argument1, argument2,
+                           argument3, argument4,
+                           argument5, x, y, z)
+    foo(x) + goo(y)
+end</code></pre><h3 id="short_circuit_to_if"><a class="docs-heading-anchor" href="#short_circuit_to_if"><code>short_circuit_to_if</code></a><a id="short_circuit_to_if-1"></a><a class="docs-heading-anchor-permalink" href="#short_circuit_to_if" title="Permalink"></a></h3><p>You can convert short circuit expressions to the equivalent if expression.</p><pre><code class="language-julia hljs">function foo(a, b)
+    a || return &quot;bar&quot;
+
+    &quot;hello&quot;
+
+    b &amp;&amp; return &quot;ooo&quot;
+end
+
+BECOMES
+
+function foo(a, b)
+    if !(a)
+        return &quot;bar&quot;
+    end
+
+    &quot;hello&quot;
+
+    if b
+        return &quot;ooo&quot;
+    else
+        false
+    end
+end</code></pre><h3 id="disallow_single_arg_nesting"><a class="docs-heading-anchor" href="#disallow_single_arg_nesting"><code>disallow_single_arg_nesting</code></a><a id="disallow_single_arg_nesting-1"></a><a class="docs-heading-anchor-permalink" href="#disallow_single_arg_nesting" title="Permalink"></a></h3><p>Prevents the nesting of a single argument <code>arg</code> in parenthesis, brackets, and curly braces.</p><pre><code class="language-julia hljs"># Without `disallow_single_arg_nesting`:
+function_call(
+    &quot;String argument&quot;
+)
+[array_item(
+    10
+)]
+{key =&gt; value(
+    &quot;String value&quot;
+)}
+
+# With `disallow_single_arg_nesting` enabled:
+function_call(&quot;String argument&quot;)
+[array_item(10)]
+{key =&gt; value(&quot;String value&quot;)}</code></pre><h2 id="File-Options"><a class="docs-heading-anchor" href="#File-Options">File Options</a><a id="File-Options-1"></a><a class="docs-heading-anchor-permalink" href="#File-Options" title="Permalink"></a></h2><h3 id="overwrite"><a class="docs-heading-anchor" href="#overwrite"><code>overwrite</code></a><a id="overwrite-1"></a><a class="docs-heading-anchor-permalink" href="#overwrite" title="Permalink"></a></h3><p>Default: <code>true</code></p><p>If <code>true</code> the file will be reformatted in place, overwriting the existing file; if it is <code>false</code>, the formatted version of foo.jl will not be written anywhere.</p><h3 id="verbose"><a class="docs-heading-anchor" href="#verbose"><code>verbose</code></a><a id="verbose-1"></a><a class="docs-heading-anchor-permalink" href="#verbose" title="Permalink"></a></h3><p>Default: <code>false</code></p><p>If <code>true</code> details related to formatting the file will be printed to <code>stdout</code>.</p><h3 id="format_markdown"><a class="docs-heading-anchor" href="#format_markdown"><code>format_markdown</code></a><a id="format_markdown-1"></a><a class="docs-heading-anchor-permalink" href="#format_markdown" title="Permalink"></a></h3><p>Default: <code>false</code></p><p>If <code>true</code>, Markdown files are also formatted. Julia code blocks will be formatted in addition to the Markdown being normalized.</p><h3 id="ignore"><a class="docs-heading-anchor" href="#ignore"><code>ignore</code></a><a id="ignore-1"></a><a class="docs-heading-anchor-permalink" href="#ignore" title="Permalink"></a></h3><p>An array of paths to files and directories (with possible Glob wildcards) which will not be formatted.</p><h2 id="Special-Format-Comments"><a class="docs-heading-anchor" href="#Special-Format-Comments">Special Format Comments</a><a id="Special-Format-Comments-1"></a><a class="docs-heading-anchor-permalink" href="#Special-Format-Comments" title="Permalink"></a></h2><h3 id="Turn-off/on-formatting"><a class="docs-heading-anchor" href="#Turn-off/on-formatting">Turn off/on formatting</a><a id="Turn-off/on-formatting-1"></a><a class="docs-heading-anchor-permalink" href="#Turn-off/on-formatting" title="Permalink"></a></h3><p>You can skip sections of code by using the <code>#! format: off</code> and <code>#! format: on</code> comments.</p><pre><code class="language-julia hljs">
+# this should be formatted
+a = f(aaa, bbb, ccc)
+
+# this should not be formatted
+#! format: off
+a = f(aaa,
+    bbb,ccc)
+
+c = 102000
+
+d = @foo 10 20
+
+e = &quot;what the foocho&quot;
+#! format: on
+
+# this should be formatted
+a = f(aaa, bbb, ccc)
+
+# ok</code></pre><p>If you wish to not format an entire file just add <code>#! format: off</code> to the top of the file.</p><h3 id="Stopping-a-block-of-code-from-indenting"><a class="docs-heading-anchor" href="#Stopping-a-block-of-code-from-indenting">Stopping a block of code from indenting</a><a id="Stopping-a-block-of-code-from-indenting-1"></a><a class="docs-heading-anchor-permalink" href="#Stopping-a-block-of-code-from-indenting" title="Permalink"></a></h3><p>Sometimes you may wish for a block of code to not be indented. You can achieve this with <code>#! format: noindent</code>.</p><pre><code class="language-julia hljs">begin
+@muladd begin
+    #! format: noindent
+    a = 10
+    b = 20
+    begin
+       # another indent
+        z = 33
+    end
+
+    a * b
+end
+        end</code></pre><p>is formatted to</p><pre><code class="language-julia hljs">begin
+    @muladd begin
+    #! format: noindent
+    a = 10
+    b = 20
+    begin
+        # another indent
+        z = 33
+    end
+
+    a * b
+    end
+end</code></pre><p>Notice the contents of <code>@muladd begin</code> is not indented.</p><p><code>#! format: noindent</code> can also be nested.</p><h2 id="Editor-Plugins"><a class="docs-heading-anchor" href="#Editor-Plugins">Editor Plugins</a><a id="Editor-Plugins-1"></a><a class="docs-heading-anchor-permalink" href="#Editor-Plugins" title="Permalink"></a></h2><p>For integration with other editors:</p><ul><li><a href="https://github.com/singularitti/vscode-julia-formatter/">VSCode</a></li><li><a href="https://codeberg.org/FelipeLema/julia-formatter.el">Emacs</a></li><li><a href="https://github.com/kdheepak/JuliaFormatter.vim">Vim</a></li><li><a href="https://github.com/JunoLab/Atom.jl">Atom (deprecated)</a></li></ul></article><nav class="docs-footer"><a class="docs-footer-nextpage" href="how_it_works/">How It Works »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.17.0 on <span class="colophon-date" title="Saturday 30 May 2026 15:20">Saturday 30 May 2026</span>. Using Julia version 1.12.6.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
