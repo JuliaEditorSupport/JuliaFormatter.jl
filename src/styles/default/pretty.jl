@@ -104,7 +104,7 @@ Return the first non-whitespace leaf node in `node` plus its offset from the beg
 function first_nonws_leaf_and_offset(
     node::JuliaSyntax.GreenNode,
     # Callers should not set _acc, this is only used in this function to recurse
-    _acc::Int=0
+    _acc::Int = 0,
 )::Union{Nothing,Tuple{JuliaSyntax.GreenNode,Int}}
     if JuliaSyntax.is_leaf(node)
         return JuliaSyntax.is_whitespace(node) ? nothing : (node, _acc)
@@ -147,7 +147,8 @@ function is_source_operator(s::State, cst::JuliaSyntax.GreenNode, offset::Intege
 end
 
 function source_unary_operator_index(is_prefix::Bool, cst::JuliaSyntax.GreenNode, s::State)
-    if !haschildren(cst) || !(JuliaSyntax.is_operator(cst) || kind(cst) in KSet"call dotcall")
+    if !haschildren(cst) ||
+       !(JuliaSyntax.is_operator(cst) || kind(cst) in KSet"call dotcall")
         return nothing
     end
 
