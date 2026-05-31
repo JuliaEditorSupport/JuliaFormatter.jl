@@ -10,10 +10,10 @@ makedocs(;
     pages = [
         "Introduction" => "index.md",
         "How It Works" => "how_it_works.md",
-        "Code Style" => "style.md",
         "Skipping Formatting" => "skipping_formatting.md",
         "Syntax Transforms" => "transforms.md",
         "Custom Alignment" => "custom_alignment.md",
+        "Default Style" => "default_style.md",
         "YAS Style" => "yas_style.md",
         "Blue Style" => "blue_style.md",
         "SciML Style" => "sciml_style.md",
