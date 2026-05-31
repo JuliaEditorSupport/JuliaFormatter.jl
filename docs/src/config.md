@@ -1,49 +1,26 @@
-```@meta
-CurrentModule = JuliaFormatter
-```
-
 # [Configuration File](@id config)
 
-From v0.4.3, JuliaFormatter offers [`.prettierrc` style](https://prettier.io/docs/en/configuration.html)
-configuration file support.
-This means you can specify formatting options shown in [`format_text`](@ref) in `.JuliaFormatter.toml` file and share that with others.
+Since v0.4.3, JuliaFormatter offers [`.prettierrc`-style](https://prettier.io/docs/en/configuration.html) configuration file support.
 
-When [`format`](@ref) is called, it will look for `.JuliaFormatter.toml` in the location of the file being formatted,
-and searching _up_ the file tree until a config file is (or isn't) found.
-When found, the configurations in the file will overwrite the given options.
+When JuliaFormatter is called, it will look for `.JuliaFormatter.toml` in the location of the file being formatted, and searching _up_ the file tree until a config file is (or isn't) found.
+If found, the configurations in the file will override any options passed to JuliaFormatter's functions.
 
-## Basic Configuration
+## Specifying options
 
-In `.JuliaFormatter.toml`, you can specify any of the formatting options shown in [`format_text`](@ref) in TOML, e.g. if you have
-
-> somedir/.JuliaFormatter.toml
+In `.JuliaFormatter.toml`, you can specify any of the [formatting options](@ref formatting-options) in TOML.
+For example, if `somedir/.JuliaFormatter.toml` contains
 
 ```toml
 indent = 2
 margin = 100
 ```
 
-then files under `somedir` will be formatted with 2 spaces indentation and the maximum line length 100.
+then files under `somedir` will be formatted with 2 spaces of indentation and a maximum line length of 100.
 
-## Non Default Style
+Configuration files also admit some extra options that are not formatting-related, such as `ignore`.
+See [File Options](@ref file-options) for more details.
 
-If you would use another style, such as `YASStyle` you can write this in your configuration like so:
-
-```toml
-style = "yas"
-```
-
-Styles choices are:
-
-- `"default"` (default choice if nothing is specified)
-- `"yas"`
-- `"blue"`
-- `"sciml"`
-- `"minimal"`
-
-
-
-## Search Rule
+## Search path
 
 `.JuliaFormatter.toml` will be searched _up_ from the directory of the file being formatted.
 So if you have:
@@ -56,11 +33,13 @@ dir
    └─ sub_code.jl
 ```
 
-then `format("subdir/sub_code.jl")` will be automatically configured by the `dir/.JuliaFormatter.toml`, as well as
-`format("dir")` will format both `dir/code.jl` and `dir/subdir/sub_code.jl` according to the same configuration.
+then:
 
-What will happen when we have multiple `.JuliaFormatter.toml` files ? In that case, the _deepest_ configuration has the
-precedence. For example, if you have
+- `format("subdir/sub_code.jl")` will take its configuration from `dir/.JuliaFormatter.toml`; and
+- `format("dir")` will format both `dir/code.jl` and `dir/subdir/sub_code.jl` according to the same configuration.
+
+If there are multiple `.JuliaFormatter.toml` files, the _deepest_ configuration takes precedence.
+For example, if you have
 
 ```
 dir
@@ -73,15 +52,7 @@ dir
    └─ sub_code2.jl
 ```
 
-and call `format("dir")`, `code.jl` and `sub_code2.jl` will be formatted according to the rules defined in
-`dir/.JuliaFormatter.toml`, while formatting `sub_code1.jl` will be configured by `dir/subdir1/.JuliaFormatter.toml`.
+and call `format("dir")`, then
 
-## [Ignoring specific files and directories](@id config-ignore)
-
-If there is an entry in `.JuliaFormatter.toml` with
-```toml
-ignore = ["file.jl", "directory", "file_*.jl"]
-```
-then all of these files will be reported as already formatted: `./file.jl`,
-`./directory/something.jl` `./other_directory/file.jl`, `file_1.jl`,
-`.other_directory/file_name.jl`.
+- `code.jl` and `sub_code2.jl` will be formatted according to the rules defined in `dir/.JuliaFormatter.toml`, whereas
+- `sub_code1.jl` will be formatted according to `dir/subdir1/.JuliaFormatter.toml`.

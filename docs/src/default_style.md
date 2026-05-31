@@ -284,7 +284,7 @@ var = foo(
 )
 ```
 
-## Unnesting
+### Unnesting
 
 In certain cases it is desirable to _unnest_ parts of a `FST` to avoid excessive whitespace.
 For example, the following
@@ -312,4 +312,132 @@ var = funccall(
     arg2,
     arg3,
 )
+```
+
+## Syntax transformations
+
+### `for in` vs. `for =`
+
+By default if the RHS is a range, e.g. `1:10`, then `for ... in ...` is converted to `for ... = ...`.
+Otherwise `for ... = ...` is converted to `for ... in ...`.
+See [this issue](https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/34) for the rationale and further explanation.
+
+This behaviour can be controlled using the [`always_for_in` option](@ref options-always-for-in).
+Setting `always_for_in=true` will always convert `=` to `in` even if the RHS is a range.
+`always_for_in=nothing` will leave the choice of `in` vs `=` up to the user.
+
+### Trailing Commas
+
+If the node is _iterable_, for example a function call or list and is nested, a trailing comma is added to the last argument.
+The trailing comma is removed if unnested:
+
+```julia
+func(a, b, c)
+```
+
+becomes
+
+```julia
+func(
+    a,
+    b,
+    c,
+)
+```
+
+See [this issue](https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/44) for more details.
+
+### Trailing Semicolons
+
+If a matrix node is nested, the semicolons are removed.
+
+```julia
+A = [1 0; 0 1]
+
+->
+
+A = [
+    1 0
+    0 1
+]
+```
+
+See [this issue](https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/77) for more details.
+
+### Leading and trailing 0s for float literals
+
+If a float literal is missing a trailing or leading 0, it is added:
+
+```julia
+a = 1.
+b = .1
+```
+
+becomes
+
+```julia
+a = 1.0
+b = 0.1
+```
+
+For `Float32` literals, if there is no decimal point, `.0` is added:
+
+```julia
+a = 1f0
+
+->
+
+a = 1.0f0
+```
+
+See [this issue](https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/66) for more details.
+
+### Surround `where` arguments with curly brackets
+
+If the arguments of a `where` call are not surrounded by curly brackets, they are added:
+
+```julia
+foo(x::T) where T = ...
+```
+
+becomes
+
+```julia
+foo(x::T) where {T} = ...
+```
+
+This can be controlled with the [`surround_whereop_typeparameters` option](@ref options-surround-whereop-typeparameters).
+
+See [this issue](https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/53) for more details.
+
+### Annotate unannotated type fields with `Any`
+
+In structs, if a field is unannotated, it is annotated with `Any`:
+
+```julia
+struct Foo
+    field
+end
+```
+
+becomes
+
+```julia
+struct Foo
+    field::Any
+end
+```
+
+This can be controlled with the [`annotate_untyped_fields_with_any` option](@ref options-annotate-untyped-fields-with-any).
+
+### Move `@` in macro calls to the final identifier
+
+```julia
+@Module.macro
+```
+
+becomes
+
+```julia
+Module.@macro
 ```

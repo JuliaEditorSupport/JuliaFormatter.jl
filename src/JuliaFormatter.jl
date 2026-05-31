@@ -168,7 +168,7 @@ normalize_line_ending(s::AbstractString, replacer = WINDOWS_TO_UNIX) = replace(s
 Formats a Julia source passed in as a string, returning the formatted
 code as another string.
 
-See [Formatting Options](@ref "Formatting-Options") for details on available options.
+See [Formatting Options](@ref formatting-options) for details on available options.
 """
 function format_text(text::AbstractString; style::AbstractStyle = DefaultStyle(), kwargs...)
     return format_text(text, style; kwargs...)
@@ -340,7 +340,7 @@ const CONFIG_FILE_NAME = ".JuliaFormatter.toml"
 
 Formats the contents of `filename` assuming it's a `.jl`, `.md`, `.jmd` or `.qmd` file.
 
-See [File Options](@ref "File-Options") for details on available options.
+See [File Options](@ref file-options) for details on available options.
 
 ## Output
 
