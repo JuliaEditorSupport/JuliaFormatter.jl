@@ -227,7 +227,11 @@ end
         @test !check("x")
         @test !check("[1, 2]")
         @test !check("x'")
+        @test !check("x'ᵀ")
+        @test !check("a ? b : c")
+        # Manual exclusions (see source_begins_with_op_needing_parens comments)
         @test !check(":x")
+        @test !check("isa(x, T)")
     end
 end
 

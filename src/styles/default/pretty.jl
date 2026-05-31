@@ -140,12 +140,18 @@ function source_begins_with_op_needing_parens(
     # Get the first leaf of `cst` that isn't whitespace.
     result = first_nonws_leaf_and_offset(cst)
     result === nothing && return false
-    # Check if it's an operator.
+    # Check if it's an operator and specifically one that we care about putting
+    # parentheses around.
     leaf, extra_offset = result
     opkind = source_op_kind_from_offset(s, leaf, offset + extra_offset)
-    # Ignore `K":"` as that indicates the beginning of a symbol, which we don't care
-    # about parenthesising.
-    return opkind !== nothing && JuliaSyntax.is_operator(opkind) && opkind !== K":"
+    return (opkind !== nothing
+        && JuliaSyntax.is_operator(opkind)
+        # is_word_operator filters out things like `isa`.
+        && !JuliaSyntax.is_word_operator(opkind)
+        # Ignore `K":"` as that indicates the beginning of a symbol, which we don't care
+        # about parenthesising.
+        && opkind !== K":"
+    )
 end
 
 function is_source_operator(s::State, cst::JuliaSyntax.GreenNode, offset::Integer)
