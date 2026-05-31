@@ -118,7 +118,7 @@ jobs:
               "| Description | Value |",
               "|---|---|",
               f"| **FormatBot workflow run** | [workflow run]({run_url}) |",
-              f"| **Target repo** | `{repo_display}` |",
+              f"| **Target repo** | [`{repo_display}`](https://github.com/{repo}{f'/tree/{rev}' if rev else ''}) |",
               f"| **JuliaFormatter base** | [`{base_sha[:7]}`]({repo_url}/commit/{base_sha}) |",
               f"| **JuliaFormatter PR** | [`{head_sha[:7]}`]({repo_url}/commit/{head_sha}) |",
           ]
