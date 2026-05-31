@@ -121,7 +121,7 @@ function first_nonws_leaf_and_offset(
 end
 
 """
-   source_begins_with_op(s, cst, offset) 
+   source_begins_with_op_needing_parens(s, cst, offset) 
 
 Check whether the first token of `cst` is an operator. Used in `p_kw`: if the value on the
 rhs of `kwarg=value` begins with an operator, then we parenthesise `value` to avoid
@@ -132,13 +132,19 @@ Note that the behaviour of this differs from `unary_info(cst)`: for example,
 function call, not an application of a unary operator. However, these are exactly the sort
 of things that we want to parenthesise in `p_kw` -- hence this function.
 """
-function source_begins_with_op(s::State, cst::JuliaSyntax.GreenNode, offset::Integer)
+function source_begins_with_op_needing_parens(
+    s::State,
+    cst::JuliaSyntax.GreenNode,
+    offset::Integer,
+)
     # Get the first leaf of `cst` that isn't whitespace.
     result = first_nonws_leaf_and_offset(cst)
     result === nothing && return false
     # Check if it's an operator.
     leaf, extra_offset = result
     opkind = source_op_kind_from_offset(s, leaf, offset + extra_offset)
+    # Ignore `K":"` as that indicates the beginning of a symbol, which we don't care
+    # about parenthesising.
     return opkind !== nothing && JuliaSyntax.is_operator(opkind) && opkind !== K":"
 end
 
@@ -2052,7 +2058,7 @@ function p_kw(
             lhs_ends_with_bang =
                 !is_rhs_of_equal && kind(c) === K"Identifier" && endswith(n.val, "!")
             rhs_begins_with_op =
-                is_rhs_of_equal && source_begins_with_op(s, c, child_offset)
+                is_rhs_of_equal && source_begins_with_op_needing_parens(s, c, child_offset)
             parenthesise =
                 (lhs_ends_with_bang || rhs_begins_with_op) && !s.opts.whitespace_in_kwargs
 
