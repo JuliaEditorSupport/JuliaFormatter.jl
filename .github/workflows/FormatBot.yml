@@ -96,6 +96,13 @@ jobs:
 
           opts = parts[2:]
           target_dir = "target"
+          subdir = None
+          use_config = False
+          for token in opts:
+              if token.startswith("subdir="):
+                  subdir = token.split("=", 1)[1]
+              elif token.startswith("use_config="):
+                  use_config = token.split("=", 1)[1].lower() == "true"
           uid = uuid.uuid4().hex[:8]
           branch_clean = f"formatbot-clean-{uid}"
           branch_base = f"formatbot-base-{uid}"
@@ -138,9 +145,16 @@ jobs:
               clone_cmd += [f"https://github.com/{repo}.git", target_dir]
               subprocess.run(clone_cmd, check=True)
 
-              # Delete JuliaFormatter config files
-              for name in [".JuliaFormatter.toml", "JuliaFormatter.toml"]:
-                  subprocess.run(["find", target_dir, "-name", name, "-delete"])
+              # Delete JuliaFormatter config files (unless use_config is set)
+              if not use_config:
+                  for name in [".JuliaFormatter.toml", "JuliaFormatter.toml"]:
+                      subprocess.run(["find", target_dir, "-name", name, "-delete"])
+
+              # Resolve format path
+              format_path = os.path.join(target_dir, subdir) if subdir else target_dir
+              if subdir and not os.path.isdir(format_path):
+                  post_comment(f"{header}\n**Error:** Directory `{subdir}` not found in target repo.")
+                  sys.exit(1)
 
               # Commit clean state so we can branch from it
               git("config", "user.name", "FormatBot")
@@ -167,6 +181,8 @@ jobs:
                           post_comment(f"{header}\n**Error:** Unknown style `{val}`. Valid: {', '.join(style_shortcuts)}.")
                           sys.exit(1)
                       style = style_shortcuts[val]
+                  elif token.startswith("subdir=") or token.startswith("use_config="):
+                      pass
                   else:
                       kwargs.append(token)
 
@@ -178,13 +194,17 @@ jobs:
               fmt_call = f"format({', '.join(all_args)})"
 
               Path("format.jl").write_text(
-                  f"using Pkg\nPkg.instantiate()\nusing JuliaFormatter\n{fmt_call}\n"
+                  "using Pkg\nPkg.instantiate()\nusing JuliaFormatter\ntry\n"
+                  f"    {fmt_call}\n"
+                  "catch e\n"
+                  '    @error "Formatting failed" exception=(e, catch_backtrace())\n'
+                  "    exit(1)\nend\n"
               )
 
               # --- Format with base, commit to branch ---
               git("checkout", "-b", branch_base)
               base_result = subprocess.run(
-                  ["julia", "--project=formatter-base", "format.jl", target_dir],
+                  ["julia", "--project=formatter-base", "format.jl", format_path],
               )
               if base_result.returncode != 0:
                   post_comment(
@@ -199,7 +219,7 @@ jobs:
               git("checkout", branch_clean)
               git("checkout", "-b", branch_pr)
               pr_result = subprocess.run(
-                  ["julia", "--project=formatter-pr", "format.jl", target_dir],
+                  ["julia", "--project=formatter-pr", "format.jl", format_path],
               )
               if pr_result.returncode != 0:
                   post_comment(
@@ -230,7 +250,7 @@ jobs:
                       warning = ""
                   post_comment(
                       f"{header}{warning}\n<details>\n<summary>Diff ({diff_bytes} bytes)</summary>"
-                      f"\n\n```diff\n{diff_display}\n```\n\n</details>"
+                      f"\n\n```````diff\n{diff_display}\n```````\n\n</details>"
                   )
 
           except subprocess.CalledProcessError as e:
