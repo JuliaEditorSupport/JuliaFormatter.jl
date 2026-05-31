@@ -104,7 +104,7 @@ Return the first non-whitespace leaf node in `node` plus its offset from the beg
 function first_nonws_leaf_and_offset(
     node::JuliaSyntax.GreenNode,
     # Callers should not set _acc, this is only used in this function to recurse
-    _acc::Int = 0,
+    _acc::Integer = 0,
 )::Union{Nothing,Tuple{JuliaSyntax.GreenNode,Int}}
     if JuliaSyntax.is_leaf(node)
         return JuliaSyntax.is_whitespace(node) ? nothing : (node, _acc)
@@ -149,6 +149,7 @@ function source_begins_with_op_needing_parens(
 end
 
 function is_source_operator(s::State, cst::JuliaSyntax.GreenNode, offset::Integer)
+    # TODO(penelopeysm): do we need to check JuliaSyntax.is_operator as well?
     !isnothing(source_op_kind_from_offset(s, cst, offset))
 end
 
