@@ -147,6 +147,14 @@
         @test format_text(str, SciMLStyle()) == sciml_result
     end
 
+    @testset "postfix operator" begin
+        # https://github.com/JuliaEditorSupport/JuliaFormatter.jl/pull/1011
+        str1 = "@view (Q_temp' * _vstar_perp)[1:nus]"
+        @test format_text(str1, SciMLStyle()) == str1
+        str2 = "(Q' * 2)[]"
+        @test format_text(str2, SciMLStyle()) == str2
+    end
+
     str = raw"""
     Dict{Int, Int}(1 => 2,
         3 => 4)
