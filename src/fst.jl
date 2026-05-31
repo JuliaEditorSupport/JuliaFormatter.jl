@@ -496,7 +496,7 @@ function is_typedef(fst::FST)
 end
 
 function is_opcall(x::JuliaSyntax.GreenNode)
-    if is_binary(x) || kind(x) == K"comparison" || is_chain(x) || is_unary(x)
+    if is_binary(x) || kind(x) == K"comparison" || is_chain(x) || unary_info(x) !== nothing
         return true
     end
     if kind(x) === K"parens" && haschildren(x)
@@ -558,15 +558,43 @@ function _callinfo(x::JuliaSyntax.GreenNode)
     return n_operators, n_args
 end
 
-function is_unary(x::JuliaSyntax.GreenNode)
-    if JuliaSyntax.is_unary_op(x) && !haschildren(x)
-        return true
+"""
+    unary_info(x::JuliaSyntax.GreenNode)::Union{Bool,Nothing}
+
+Returns:
+
+- `true` if `x` is a prefix unary operator application, such as `+x` or `<:x`
+
+- `false` if `x` is a postfix unary operator application, such as `x'` or `x...`;
+
+- `nothing` if `x` is not an application of a unary operator.
+"""
+function unary_info(x::JuliaSyntax.GreenNode)
+    return if JuliaSyntax.is_prefix_op_call(x)
+        # `+x`
+        true
+    elseif JuliaSyntax.is_postfix_op_call(x)
+        # `x'` or `x'ᵀ`
+        false
+    elseif JuliaSyntax.is_operator(x) && haschildren(x)
+        # `<:x` or `x...`
+        childs_no_whitespace = filter(c -> !JuliaSyntax.is_whitespace(c), children(x))
+        if length(childs_no_whitespace) != 2
+            # Not unary at all
+            nothing
+        elseif JuliaSyntax.is_operator(childs_no_whitespace[1])
+            # `<:x`
+            true
+        elseif JuliaSyntax.is_operator(childs_no_whitespace[end])
+            # `x...`
+            false
+        else
+            error("unreachable: unary operation node with no child operator")
+        end
+    else
+        # Not unary at all
+        nothing
     end
-    if kind(x) in KSet"call dotcall" || (JuliaSyntax.is_operator(x) && haschildren(x))
-        nops, nargs = _callinfo(x)
-        return nops == 1 && nargs == 1
-    end
-    return false
 end
 
 function is_binary(x)
@@ -703,7 +731,7 @@ function get_op(cst::JuliaSyntax.GreenNode)::Union{JuliaSyntax.GreenNode,Nothing
         is_binary(cst) ||
         kind(cst) in KSet"comparison dotcall call" ||
         is_chain(cst) ||
-        is_unary(cst)
+        unary_info(cst) !== nothing
     ) && haschildren(cst)
         for c in children(cst)
             if kind(cst) === K"dotcall" && kind(c) === K"."

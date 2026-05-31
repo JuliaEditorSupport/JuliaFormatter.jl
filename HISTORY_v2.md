@@ -1,3 +1,9 @@
+# v2.5.3
+
+Fixed a bug where postfix operators (e.g. transpose) were not being recognised as unary operators, causing formatting to output unparseable code in some circumstances (#1011).
+
+Improved consistency when parenthesising the value of a keyword argument with `whitespace_in_kwargs=false`, e.g., `(; x=-pi/2)` is now formatted as `(; x=(-pi/2))` (#1011).
+
 # v2.5.2
 
 Fixed a bug where, under SciML style, indentations of bracketed expressions on the RHS of assignments were being removed for anything on the second line onwards (#935, #1006).
