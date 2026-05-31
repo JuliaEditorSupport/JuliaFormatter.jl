@@ -209,23 +209,25 @@ end
         end
     end
 
-    @testset "source_begins_with_op" begin
+    @testset "source_begins_with_op_needing_parens" begin
         function check(code)
             node = JS.parseall(JS.GreenNode, code)[1]
             opts = JF.Options()
             s = JF.State(JF.Document(code), opts)
-            return JF.source_begins_with_op(s, node, s.offset)
+            return JF.source_begins_with_op_needing_parens(s, node, s.offset)
         end
         # Operators
         @test check("+x")
         @test check("-x")
         @test check("!x")
         @test check(">=(x)")
-        # Non-operators
+        # Non-operators / already parenthesised
+        @test !check("(+x)")
         @test !check("string(x)")
         @test !check("x")
         @test !check("[1, 2]")
         @test !check("x'")
+        @test !check(":x")
     end
 end
 
