@@ -139,7 +139,7 @@ function source_begins_with_op(s::State, cst::JuliaSyntax.GreenNode, offset::Int
     # Check if it's an operator.
     leaf, extra_offset = result
     opkind = source_op_kind_from_offset(s, leaf, offset + extra_offset)
-    return opkind !== nothing && JuliaSyntax.is_operator(opkind)
+    return opkind !== nothing && JuliaSyntax.is_operator(opkind) && opkind !== K":"
 end
 
 function is_source_operator(s::State, cst::JuliaSyntax.GreenNode, offset::Integer)
