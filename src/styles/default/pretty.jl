@@ -144,13 +144,16 @@ function source_begins_with_op_needing_parens(
     # parentheses around.
     leaf, extra_offset = result
     opkind = source_op_kind_from_offset(s, leaf, offset + extra_offset)
-    return (opkind !== nothing
-        && JuliaSyntax.is_operator(opkind)
+    return (
+        opkind !== nothing &&
+        JuliaSyntax.is_operator(opkind)
         # is_word_operator filters out things like `isa`.
-        && !JuliaSyntax.is_word_operator(opkind)
+        &&
+        !JuliaSyntax.is_word_operator(opkind)
         # Ignore `K":"` as that indicates the beginning of a symbol, which we don't care
         # about parenthesising.
-        && opkind !== K":"
+        &&
+        opkind !== K":"
     )
 end
 
