@@ -796,7 +796,7 @@ function p_stringh(
     if !haschildren(cst)
         return FST(StringN, loc[2] - 1)
     end
-    loc2 = cursor_loc(s, s.offset+span(cst)-1)
+    loc2 = cursor_loc(s, s.offset + span(cst) - 1)
 
     val = getsrcval(s.doc, (s.offset):(s.offset+span(cst)-1))
     startline = loc[1]
@@ -1030,7 +1030,7 @@ function p_block(
         elseif single_line
             if kind(a) in KSet", ;"
                 add_node!(t, n, s; join_lines = true)
-                if needs_placeholder(childs, i+1, K")")
+                if needs_placeholder(childs, i + 1, K")")
                     add_node!(t, Placeholder(1), s)
                 end
             else
@@ -2032,39 +2032,43 @@ function p_kw(
 
     push!(lineage, (kind(cst), false, true))
 
+    # We need to process the LHS and RHS slightly differently in the loop below.
+    is_rhs_of_equal = false
+
     for c in children(cst)
-        if kind(c) === K"=" && s.opts.whitespace_in_kwargs
-            add_node!(t, Whitespace(1), s)
+        if kind(c) === K"="
+            s.opts.whitespace_in_kwargs && add_node!(t, Whitespace(1), s)
             add_node!(t, pretty(style, c, s, ctx, lineage), s; join_lines = true)
-            add_node!(t, Whitespace(1), s)
+            s.opts.whitespace_in_kwargs && add_node!(t, Whitespace(1), s)
+            # Now that we've seen the equal, we know that what comes after it must
+            # be the RHS.
+            is_rhs_of_equal = true
         else
+            child_offset = s.offset
+            n = pretty(style, c, s, ctx, lineage)
             # Check if the value of the kwarg begins with an operator, or if the name ends
             # with an exclamation mark. If so, then we should parenthesise it to avoid
-            # ambiguity. (Note that unary_info(c) === true indicates that c is a prefix
-            # operator call.)
-            #
-            # TODO(penelopeysm): These checks could definitely be done better, by
-            # specifically targeting the LHS and the RHS of the (=) node.
-            begins_with_op = unary_info(c) === true
-            n = pretty(style, c, s, ctx, lineage)
-            if !s.opts.whitespace_in_kwargs &&
-               ((n.typ === IDENTIFIER && endswith(n.val, "!")) || begins_with_op)
-                add_node!(
-                    t,
-                    FST(PUNCTUATION, -1, n.startline, n.startline, "("),
-                    s;
-                    join_lines = true,
-                )
-                add_node!(t, n, s; join_lines = true)
-                add_node!(
-                    t,
-                    FST(PUNCTUATION, -1, n.startline, n.startline, ")"),
-                    s;
-                    join_lines = true,
-                )
-            else
-                add_node!(t, n, s; join_lines = true)
-            end
+            # ambiguity.
+            lhs_ends_with_bang =
+                !is_rhs_of_equal && kind(c) === K"Identifier" && endswith(n.val, "!")
+            rhs_begins_with_op =
+                is_rhs_of_equal && source_begins_with_op(s, c, child_offset)
+            parenthesise =
+                (lhs_ends_with_bang || rhs_begins_with_op) && !s.opts.whitespace_in_kwargs
+
+            parenthesise && add_node!(
+                t,
+                FST(PUNCTUATION, -1, n.startline, n.startline, "("),
+                s;
+                join_lines = true,
+            )
+            add_node!(t, n, s; join_lines = true)
+            parenthesise && add_node!(
+                t,
+                FST(PUNCTUATION, -1, n.startline, n.startline, ")"),
+                s;
+                join_lines = true,
+            )
         end
     end
 
