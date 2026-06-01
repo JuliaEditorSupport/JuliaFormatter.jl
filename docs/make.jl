@@ -31,6 +31,7 @@ makedocs(;
         ],
         "How It Works" => "how_it_works.md",
         "API Reference" => "api.md",
+        "Project Status" => "status.md",
     ],
 )
 
