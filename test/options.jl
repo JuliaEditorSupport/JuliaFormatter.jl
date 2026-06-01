@@ -272,12 +272,70 @@
     end
 
     @testset "rewrite x |> f to f(x)" begin
-        @test fmt("x |> f"; pipe_to_function_call = true) == "f(x)"
+        for dot in ("", ".")
+            # Basic cases
+            @test fmt("x $dot|> f"; pipe_to_function_call = true) == "f$dot(x)"
+            @test fmt("x $dot|> f()"; pipe_to_function_call = true) == "f()$dot(x)"
+            @test fmt("x $dot|> f(a)"; pipe_to_function_call = true) == "f(a)$dot(x)"
+            @test fmt("x $dot|> M.f"; pipe_to_function_call = true) == "M.f$dot(x)"
+            # Check that callable is parenthesised if necessary
+            @test fmt("x $dot|> y -> y + 1"; pipe_to_function_call = true) == "(y -> y + 1)$dot(x)"
+            @test fmt("x $dot|> f ∘ g"; pipe_to_function_call = true) == "(f ∘ g)$dot(x)"
+        end
 
+        # Operators
+        @test fmt("x |> !"; pipe_to_function_call = true) == "!(x)"
+        @test fmt("x .|> !"; pipe_to_function_call = true) == ".!(x)"
+
+        # Removal of extra argument parentheses
+        @test fmt("(x) |> f"; pipe_to_function_call = true) == "f(x)"
+        @test fmt("(x) .|> f"; pipe_to_function_call = true) == "f.(x)"
+        @test fmt("(a for a in x) |> f()"; pipe_to_function_call = true) == "f()(a for a in x)"
+        # make sure that genuine tuples don't get de-parenthesised
+        @test fmt("(x, y) |> f()"; pipe_to_function_call = true) == "f()((x, y))"
+        @test fmt("(x,) |> f()"; pipe_to_function_call = true) == "f()((x,))"
+        @test fmt("(; x) |> f()"; pipe_to_function_call = true) == "f()((; x))"
+
+        # Chained pipes
         str_ = "var = func1(arg1) |> func2 |> func3 |> func4 |> func5"
         str = "var = func5(func4(func3(func2(func1(arg1)))))"
         @test fmt(str_; pipe_to_function_call = true) == str
         @test fmt(str_; pipe_to_function_call = true, margin = 1) == fmt(str)
+        @test fmt("x .|> f .|> g"; pipe_to_function_call = true) == "g.(f.(x))"
+        @test fmt("(x |> f) |> g"; pipe_to_function_call = true) == "g(f(x))"
+        @test fmt("x |> f .|> g"; pipe_to_function_call = true) == "g.(f(x))"
+        @test fmt("x .|> f |> g"; pipe_to_function_call = true) == "g(f.(x))"
+        @test fmt("x |> y -> y |> f"; pipe_to_function_call = true) == "(y -> f(y))(x)"
+
+        # Complex LHS
+        @test fmt("f(a, b) |> g"; pipe_to_function_call = true) == "g(f(a, b))"
+        @test fmt("a + b |> f"; pipe_to_function_call = true) == "f(a + b)"
+        @test fmt("[1...] |> f"; pipe_to_function_call = true) == "f([1...])"
+        @test fmt("1:10 |> collect"; pipe_to_function_call = true) == "collect(1:10)"
+
+        # Nesting with narrow margin
+        for dot in ("", ".")
+            f = "some_long_function_name"
+            x = "very_long_variable_name"
+            str_ = "$x $(dot)|> $f"
+            str = "$f$(dot)($x)"
+            @test fmt(str_; pipe_to_function_call = true, margin = 1) == fmt(str; margin = 1)
+        end
+
+        # Do block
+        for dot in ("", ".")
+            str_ = """
+            x $dot|> f(a) do a
+                g(a)
+            end
+            """
+            str = """
+            (f(a) do a
+                g(a)
+            end)$dot(x)
+            """
+            @test fmt(str_; pipe_to_function_call = true) == str
+        end
     end
 
     @testset "function shortdef to longdef" begin

@@ -918,11 +918,7 @@ function p_macrocall(
     end
 
     args = get_args(cst)
-    nest =
-        length(args) > 0 && !(
-            length(args) == 1 &&
-            (unnestable_node(args[1]) || s.opts.disallow_single_arg_nesting)
-        )
+    nest = should_nest_call_args(args, s.opts.disallow_single_arg_nesting)
     childs = children(cst)
 
     has_closer = is_closer(childs[end])
@@ -2095,6 +2091,12 @@ function p_kw(
     t
 end
 
+"""
+    p_pipe_to_call
+
+Take a CST of the form `x |> y`, but return a FST with the equivalent function call `y(x)`
+instead.
+"""
 function p_pipe_to_call(
     style::AbstractStyle,
     # cst here must be a binary op call with |> as the operator (possibly dotted).
@@ -2121,7 +2123,8 @@ function p_pipe_to_call(
 
     call_node = FST(Call, nspaces(s))
     childs = children(cst)
-    # Identify the LHS and RHS of the operator
+
+    # Identify the operator LHS (callee) and RHS (caller).
     lhs_idx = findfirst(n -> !JuliaSyntax.is_whitespace(n), childs)
     rhs_idx = findlast(n -> !JuliaSyntax.is_whitespace(n), childs)
     if isnothing(lhs_idx) || isnothing(rhs_idx) || lhs_idx >= rhs_idx
@@ -2130,50 +2133,87 @@ function p_pipe_to_call(
         )
     end
 
+    # Convert each node to an FST, storing references to the LHS and RHS nodes for later.
     lhs, rhs = nothing, nothing
     for (i, c) in enumerate(childs)
         if i == lhs_idx
-            lhs = pretty(style, c, s, ctx, lineage)
+            if kind(c) === K"parens" && haschildren(c)
+                # If the lhs is a parenthesised expression, we can strip the parentheses.
+                # For example
+                #     (x) |> f
+                # can just become f(x) rather than f((x)).
+                for pc in children(c)
+                    if kind(pc) in KSet"( )" || JuliaSyntax.is_whitespace(pc)
+                        s.offset += span(pc)
+                    else
+                        lhs = pretty(style, pc, s, ctx, lineage)
+                    end
+                end
+            else
+                lhs = pretty(style, c, s, ctx, lineage)
+            end
         elseif i == rhs_idx
             rhs = pretty(style, c, s, ctx, lineage)
         else
-            # Advance s.offset past everything else without emitting
             s.offset += span(c)
         end
     end
 
+    # Handle the caller.
+    #
     # Some things need to be wrapped in parens. We behave conservatively here and only opt
-    # out of wrapping for the following callables:
+    # out of wrapping for the following callers:
+    #
     #   - a plain identifier               arg |> f     -> f(arg)
     #   - a field access                   arg |> obj.f -> obj.f(arg)
     #   - something already parenthesised  arg |> (f)   -> (f)(arg)
     #   - a function call                  arg |> f()   -> f()(arg)
+    #
+    # There are two edge cases (of course there are).
+    #
+    # 1. For the function call case, we need to parenthesise a function call with a
+    #    do-block:
+    #
+    #     arg |> f() do           (f() do
+    #         g()          --->        g()
+    #     end                     end)(arg)
+    #
+    # 2. For the identifier case, if it's a dotted operator, we need to store a flag,
+    #    `is_dotted_operator`. This is because
+    #
+    #        arg .|> ! 
+    #
+    #    should become `.!(arg)` rather than `!.(arg)` which is a parse error.
+    #    (Alternatively, (!).(arg) would work too, but looks uglier.)
     rhs_cst = childs[rhs_idx]
-    function_needs_parens = if kind(rhs_cst) in KSet"Identifier . parens"
+    is_dotted_operator = if kind(cst) === K"dotcall" && kind(rhs_cst) === K"Identifier"
+        try
+            k = JuliaSyntax.Kind(rhs.val)
+            JuliaSyntax.is_operator(k) && !JuliaSyntax.is_word_operator(k)
+        catch
+            false
+        end
+    else
+        false
+    end
+    caller_needs_parens = if kind(rhs_cst) in KSet"Identifier . parens"
         false
     elseif kind(rhs_cst) === K"call" && haschildren(rhs_cst)
         # In JuliaSyntax, infix operators are also parsed as `call`, so we need to really
         # check that it is a function call with parentheses.
-        any(n -> kind(n) === K"(", children(rhs_cst))
+        has_parens = any(n -> kind(n) === K"(", children(rhs_cst))
+        has_do = any(n -> kind(n) === K"do", children(rhs_cst))
+        if has_parens
+            has_do
+        else
+            true # infix operator
+        end
     else
         true
     end
-    function_needs_parens && add_node!(
-        call_node,
-        FST(PUNCTUATION, -1, rhs.startline, rhs.startline, "("),
-        s;
-        join_lines = true,
-    )
-    add_node!(call_node, rhs, s; join_lines = true)
-    function_needs_parens && add_node!(
-        call_node,
-        FST(PUNCTUATION, -1, rhs.startline, rhs.startline, ")"),
-        s;
-        join_lines = true,
-    )
 
-    # Add a dot if needed
-    if kind(cst) === K"dotcall"
+    # Add a dot *before* the function if needed.
+    if kind(cst) === K"dotcall" && is_dotted_operator
         add_node!(
             call_node,
             FST(PUNCTUATION, -1, rhs.startline, rhs.startline, "."),
@@ -2182,15 +2222,48 @@ function p_pipe_to_call(
         )
     end
 
-    argument_needs_params = true
-    argument_needs_params && add_node!(
+    # Add the function, parenthesising if needed.
+    caller_needs_parens && add_node!(
         call_node,
         FST(PUNCTUATION, -1, rhs.startline, rhs.startline, "("),
         s;
         join_lines = true,
     )
+    add_node!(call_node, rhs, s; join_lines = true)
+    caller_needs_parens && add_node!(
+        call_node,
+        FST(PUNCTUATION, -1, rhs.startline, rhs.startline, ")"),
+        s;
+        join_lines = true,
+    )
+
+    # Add a dot *after* the function if needed.
+    if kind(cst) === K"dotcall" && !is_dotted_operator
+        add_node!(
+            call_node,
+            FST(PUNCTUATION, -1, rhs.startline, rhs.startline, "."),
+            s;
+            join_lines = true,
+        )
+    end
+
+    # Handle the callee.
+    nest = should_nest_call_args([cst[lhs_idx]], s.opts.disallow_single_arg_nesting)
+    add_node!(
+        call_node,
+        FST(PUNCTUATION, -1, rhs.startline, rhs.startline, "("),
+        s;
+        join_lines = true,
+    )
+    if nest
+        add_node!(call_node, Placeholder(0), s)
+    end
     add_node!(call_node, lhs, s; join_lines = true)
-    argument_needs_params && add_node!(
+    if nest
+        add_node!(call_node, TrailingComma(), s)
+        add_node!(call_node, Placeholder(0), s)
+    end
+    add_node!(
         call_node,
         FST(PUNCTUATION, -1, rhs.startline, rhs.startline, ")"),
         s;
@@ -2218,7 +2291,8 @@ function p_binaryopcall(
     opkind = source_op_kind(s, cst)
 
     # Intercept piped function calls and construct a normal function call FST instead. NOTE:
-    # If overloading `p_binaryopcall` for a custom style you will have to overload this!
+    # If overloading `p_binaryopcall` for a custom style you will have to make sure to
+    # include this logic!
     if opkind === K"|>" && s.opts.pipe_to_function_call
         return p_pipe_to_call(ds, cst, s, ctx, lineage)
     end
@@ -2496,11 +2570,7 @@ function p_whereopcall(
     end
 
     args = get_args(cst)
-    nest =
-        length(args) > 0 && !(
-            length(args) == 1 &&
-            (unnestable_node(args[1]) || s.opts.disallow_single_arg_nesting)
-        )
+    nest = should_nest_call_args(args, s.opts.disallow_single_arg_nesting)
 
     childs = children(cst)
     where_idx = findfirst(c -> kind(c) === K"where" && !haschildren(c), childs)
@@ -2643,11 +2713,7 @@ function p_curly(
     end
 
     args = get_args(cst)
-    nest =
-        length(args) > 0 && !(
-            length(args) == 1 &&
-            (unnestable_node(args[1]) || s.opts.disallow_single_arg_nesting)
-        )
+    nest = should_nest_call_args(args, s.opts.disallow_single_arg_nesting)
 
     nws = s.opts.whitespace_typedefs ? 1 : 0
 
@@ -2703,11 +2769,7 @@ function p_call(
     end
 
     args = call_args(childs)
-    nest =
-        length(args) > 0 && !(
-            length(args) == 1 &&
-            (unnestable_node(args[1]) || s.opts.disallow_single_arg_nesting)
-        )
+    nest = should_nest_call_args(args, s.opts.disallow_single_arg_nesting)
 
     for (i, a) in enumerate(childs)
         k = kind(a)
@@ -2822,11 +2884,7 @@ function p_tupleblock(
     end
 
     args = get_args(cst)
-    nest =
-        length(args) > 0 && !(
-            length(args) == 1 &&
-            (unnestable_node(args[1]) || s.opts.disallow_single_arg_nesting)
-        )
+    nest = should_nest_call_args(args, s.opts.disallow_single_arg_nesting)
 
     childs = children(cst)
     for (i, a) in enumerate(childs)
@@ -2871,11 +2929,7 @@ function p_tuple(
     end
 
     args = get_args(cst)
-    nest =
-        length(args) > 0 && !(
-            length(args) == 1 &&
-            (unnestable_node(args[1]) || s.opts.disallow_single_arg_nesting)
-        )
+    nest = should_nest_call_args(args, s.opts.disallow_single_arg_nesting)
 
     childs = children(cst)
     for (i, a) in enumerate(childs)
@@ -2889,8 +2943,6 @@ function p_tuple(
             add_node!(t, n, s; join_lines = true)
             if nest
                 add_node!(t, Placeholder(0), s)
-            else
-                false
             end
         elseif kind(a) === K")"
             # An odd case but this could occur if there are no keyword arguments.
@@ -2930,11 +2982,7 @@ function p_braces(
     end
 
     args = get_args(cst)
-    nest =
-        length(args) > 0 && !(
-            length(args) == 1 &&
-            (unnestable_node(args[1]) || s.opts.disallow_single_arg_nesting)
-        )
+    nest = should_nest_call_args(args, s.opts.disallow_single_arg_nesting)
 
     nws = ctx.from_typedef && !s.opts.whitespace_typedefs ? 0 : 1
 
@@ -2946,8 +2994,6 @@ function p_braces(
             add_node!(t, n, s; join_lines = true)
             if nest
                 add_node!(t, Placeholder(0), s)
-            else
-                false
             end
         elseif kind(a) === K"}"
             if nest
@@ -2981,11 +3027,7 @@ function p_bracescat(
     end
 
     args = get_args(cst)
-    nest =
-        length(args) > 0 && !(
-            length(args) == 1 &&
-            (unnestable_node(args[1]) || s.opts.disallow_single_arg_nesting)
-        )
+    nest = should_nest_call_args(args, s.opts.disallow_single_arg_nesting)
 
     nws = ctx.from_typedef && !s.opts.whitespace_typedefs ? 0 : 1
     childs = children(cst)
@@ -3031,11 +3073,7 @@ function p_vect(
     end
 
     args = get_args(cst)
-    nest =
-        length(args) > 0 && !(
-            length(args) == 1 &&
-            (unnestable_node(args[1]) || s.opts.disallow_single_arg_nesting)
-        )
+    nest = should_nest_call_args(args, s.opts.disallow_single_arg_nesting)
 
     childs = children(cst)
     for (i, a) in enumerate(childs)
@@ -3292,11 +3330,7 @@ function p_ref(
     end
 
     args = get_args(cst)
-    nest =
-        length(args) > 1 && !(
-            length(args) == 1 &&
-            (unnestable_node(args[1]) || s.opts.disallow_single_arg_nesting)
-        )
+    nest = length(args) > 1
 
     childs = children(cst)
     for (i, a) in enumerate(childs)
@@ -3342,11 +3376,7 @@ function p_vcat(
     end
 
     args = get_args(cst)
-    nest =
-        length(args) > 0 && !(
-            length(args) == 1 &&
-            (unnestable_node(args[1]) || s.opts.disallow_single_arg_nesting)
-        )
+    nest = should_nest_call_args(args, s.opts.disallow_single_arg_nesting)
     childs = children(cst)
     idx = findfirst(n -> kind(n) === K"[", childs)::Int
     first_arg_idx = findnext(n -> !JuliaSyntax.is_whitespace(n), childs, idx + 1)
