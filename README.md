@@ -9,6 +9,7 @@ Inspired by gofmt, refmt, and black.
 > [!NOTE]
 > Recent versions of JuliaFormatter (v2+) still have some rough edges.
   If you require absolute stability, please consider pinning the version of JuliaFormatter, and possibly downgrading to v1.
+  See also the [Project Status](https://juliaeditorsupport.github.io/JuliaFormatter.jl/stable/status) section of the docs for more details.
 
 ## Installation
 
