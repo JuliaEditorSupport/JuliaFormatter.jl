@@ -102,7 +102,6 @@
 
 struct Metadata
     op_kind::JuliaSyntax.Kind
-    op_dotted::Bool
     is_standalone_shortcircuit::Bool
     is_short_form_function::Bool
     is_assignment::Bool
@@ -110,8 +109,8 @@ struct Metadata
     has_multiline_argument::Bool
 end
 
-function Metadata(k::JuliaSyntax.Kind, dotted::Bool)
-    return Metadata(k, dotted, false, false, false, true, false)
+function Metadata(k::JuliaSyntax.Kind)
+    return Metadata(k, false, false, false, true, false)
 end
 
 """
@@ -860,7 +859,6 @@ function eq_to_in_normalization!(fst::FST, always_for_in::Bool, for_in_replaceme
             opkind = JuliaSyntax.Kind(op.val)
             fst.metadata = Metadata(
                 opkind,
-                metadata.op_dotted,
                 metadata.is_standalone_shortcircuit,
                 metadata.is_short_form_function,
                 opkind === K"=",
@@ -1165,12 +1163,11 @@ function add_node!(
     elseif is_multiline(n) ||
            (!isnothing(t.metadata) && (t.metadata::Metadata).has_multiline_argument)
         if isnothing(t.metadata)
-            t.metadata = Metadata(K"None", false, false, false, false, true, true)
+            t.metadata = Metadata(K"None", false, false, false, true, true)
         else
             metadata = t.metadata::Metadata
             t.metadata = Metadata(
                 metadata.op_kind,
-                metadata.op_dotted,
                 metadata.is_standalone_shortcircuit,
                 metadata.is_short_form_function,
                 metadata.is_assignment,

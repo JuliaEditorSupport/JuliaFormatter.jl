@@ -598,7 +598,7 @@ function p_operator(
     val = getsrcval(s.doc, (s.offset):(s.offset+span(cst)-1))
     s.offset += span(cst)
     t = FST(OPERATOR, loc[2], loc[1], loc[1], val)
-    t.metadata = Metadata(kind(cst), JuliaSyntax.is_dotted(cst))
+    t.metadata = Metadata(kind(cst))
     return t
 end
 
@@ -1219,7 +1219,7 @@ function p_functiondef(
             add_node!(t, pretty(style, c, s, ctx, lineage), s; join_lines = true)
         end
     end
-    t.metadata = Metadata(kind(cst), false, false, false, false, true, false)
+    t.metadata = Metadata(kind(cst), false, false, false, true, false)
     t
 end
 
@@ -2312,7 +2312,6 @@ function p_binaryopcall(
     end
 
     is_short_form_function = defines_function(cst) && !ctx.from_let
-    op_dotted = kind(cst) === K"dotcall"
     standalone_binary_circuit = ctx.standalone_binary_circuit
     can_separate_kwargs = ctx.can_separate_kwargs && !is_function_or_macro_def(cst)
 
@@ -2332,7 +2331,6 @@ function p_binaryopcall(
 
     t.metadata = Metadata(
         opkind,
-        op_dotted,
         lazy_op && standalone_binary_circuit,
         is_short_form_function,
         is_assignment(cst) || defines_function(cst),
@@ -2404,7 +2402,7 @@ function p_binaryopcall(
             val = getsrcval(s.doc, (s.offset):(s.offset+op_span-1))
             s.offset += op_span
             n = FST(OPERATOR, loc[2], loc[1], loc[1], val)
-            n.metadata = Metadata(K"op=", startswith(val, "."))
+            n.metadata = Metadata(K"op=")
             if nws > 0 && i > 1
                 add_node!(t, Whitespace(nws), s)
             end
@@ -2441,7 +2439,7 @@ function p_binaryopcall(
         if is_op && n.typ === IDENTIFIER
             n.typ = OPERATOR
             n.metadata =
-                Metadata(source_op_kind_from_offset(s, c, offset)::JuliaSyntax.Kind, is_dot)
+                Metadata(source_op_kind_from_offset(s, c, offset)::JuliaSyntax.Kind)
         end
         if is_dot && haschildren(c) && length(children(c)) == 2
             # [.]
@@ -2677,9 +2675,8 @@ function p_unaryopcall(
         op_idx = first_idx
     end
     opkind = isnothing(op_idx) ? op_kind(cst) : source_op_kind(s, cst)
-    op_dotted = kind(cst) === K"dotcall"
 
-    t.metadata = Metadata(opkind, op_dotted)
+    t.metadata = Metadata(opkind)
 
     for (i, c) in enumerate(childs)
         offset = s.offset
@@ -2691,7 +2688,7 @@ function p_unaryopcall(
             k = source_op_kind_from_offset(s, c, offset)
             if !isnothing(k)
                 n.typ = OPERATOR
-                n.metadata = Metadata(k, false)
+                n.metadata = Metadata(k)
             end
         end
         add_node!(t, n, s; join_lines = true)
