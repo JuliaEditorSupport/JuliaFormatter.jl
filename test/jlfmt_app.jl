@@ -68,8 +68,8 @@ else
             function check_ignore_results()
                 @test readchomp("fmt.jl") == formatted
                 @test readchomp("sub/also_fmt.jl") == formatted
-                @test read("skip_me.jl", String) == text
-                @test read("sub/skip_me_too.jl", String) == text
+                @test readchomp("skip_me.jl") == text
+                @test readchomp("sub/skip_me_too.jl") == text
             end
 
             @testset "via --ignore flag" begin
