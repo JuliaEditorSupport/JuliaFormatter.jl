@@ -13,7 +13,6 @@ jlfmt_cmd(julia_flags::Cmd = ``) =
 function with_sandbox(f)
     mktempdir(; prefix = "jlfmt_test_$(uuid4())_") do dir
         cd(dir) do
-            @info "Running test in sandbox directory: $dir"
             f(dir)
         end
     end
@@ -92,6 +91,90 @@ else
                     )
                     run(`$(jlfmt_cmd()) --inplace .`)
                     check_ignore_results()
+                end
+            end
+        end
+
+        @testset "--check" begin
+            with_sandbox() do _
+                fname = "a.jl"
+                unformatted = "f( x,y )=x+y"
+
+                # Format first, then --check should pass
+                write(fname, unformatted)
+                run(`$(jlfmt_cmd()) --inplace $fname`)
+                @test success(`$(jlfmt_cmd()) --check $fname`)
+
+                # --check should fail on unformatted file
+                write(fname, unformatted)
+                @test !success(`$(jlfmt_cmd()) --check $fname`)
+                # --check should not modify the file
+                @test readchomp(fname) == unformatted
+            end
+        end
+
+        @testset "--inplace" begin
+            with_sandbox() do _
+                fname = "a.jl"
+                unformatted = "f( x,y )=x+y"
+                formatted = format_text(unformatted)
+
+                write(fname, unformatted)
+                run(`$(jlfmt_cmd()) --inplace $fname`)
+                @test readchomp(fname) == formatted
+
+                # Running again on already-formatted file is a no-op
+                run(`$(jlfmt_cmd()) --inplace $fname`)
+                @test readchomp(fname) == formatted
+            end
+        end
+
+        @testset "stdout mode" begin
+            with_sandbox() do _
+                fname = "a.jl"
+                unformatted = "f( x,y )=x+y"
+                formatted = format_text(unformatted)
+
+                write(fname, unformatted)
+                output = readchomp(`$(jlfmt_cmd()) $fname`)
+                @test output == formatted
+                # File should be unchanged
+                @test readchomp(fname) == unformatted
+            end
+        end
+
+        @testset "--prioritize-config-file" begin
+            @testset "style" begin
+                with_sandbox() do _
+                    fname = "a.jl"
+                    text = "(; a = 1)"
+                    write(fname, text)
+                    write(CONFIG_FILE_NAME, "style = \"blue\"")
+
+                    # By default, CLI --style overrides config
+                    run(`$(jlfmt_cmd()) --inplace --style=default $fname`)
+                    @test readchomp(fname) == text
+
+                    # With --prioritize-config-file, config wins over CLI
+                    run(`$(jlfmt_cmd()) --inplace --prioritize-config-file --style=default $fname`)
+                    @test readchomp(fname) == format_text(text, BlueStyle())
+                end
+            end
+
+            @testset "options" begin
+                with_sandbox() do _
+                    fname = "a.jl"
+                    text = "f(a = 1)"
+                    write(fname, text)
+                    write(CONFIG_FILE_NAME, "whitespace_in_kwargs = false")
+
+                    # By default, CLI flag overrides config
+                    run(`$(jlfmt_cmd()) --inplace --whitespace_in_kwargs $fname`)
+                    @test readchomp(fname) == text
+
+                    # With --prioritize-config-file, config wins over CLI
+                    run(`$(jlfmt_cmd()) --inplace --prioritize-config-file --whitespace_in_kwargs $fname`)
+                    @test readchomp(fname) == format_text(text; whitespace_in_kwargs = false)
                 end
             end
         end

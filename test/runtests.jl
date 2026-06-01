@@ -3,6 +3,8 @@ using JuliaFormatter: DefaultStyle, YASStyle, Options, options, CONFIG_FILE_NAME
 using Test
 using JuliaSyntax
 
+# Make sure to develop the local version of the package. Otherwise the jlfmt app tests can
+# end up using a stale version.
 using Pkg: Pkg
 Pkg.develop(; path = dirname(@__DIR__))
 
