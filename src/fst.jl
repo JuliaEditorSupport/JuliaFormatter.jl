@@ -599,6 +599,14 @@ end
 
 function is_binary(x)
     if !JuliaSyntax.is_infix_op_call(x) && !(JuliaSyntax.is_operator(x) && haschildren(x))
+        # "Genuine" operators are caught by is_infix_op_call.
+        #
+        # The second predicate catches things like:
+        #   - assignments `x = y`
+        #   - field access `x.y`
+        #   - logic operators `x && y` or `x || y`
+        #   - membership `x in y`
+        #   - anonymous functions `x -> y`
         return false
     end
     nops, nargs = _callinfo(x)

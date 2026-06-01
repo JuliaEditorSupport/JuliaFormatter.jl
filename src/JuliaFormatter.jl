@@ -228,10 +228,6 @@ function format_text(node::JuliaSyntax.GreenNode, style::AbstractStyle, s::State
         add_node!(fst, InlineComment(fst.endline), s)
     end
 
-    if s.opts.pipe_to_function_call
-        pipe_to_function_call_pass!(fst)
-    end
-
     flatten_fst!(fst)
 
     if s.opts.short_circuit_to_if

@@ -429,6 +429,8 @@ function pretty(
     elseif k === K"comparison"
         p_comparison(style, node, s, ctx, lineage)
     elseif JuliaSyntax.is_operator(node) && haschildren(node)
+        # TODO(penelopeysm) What does this catch that is_binary didn't? Should run test
+        # suite with a print statement here to find out
         p_binaryopcall(style, node, s, ctx, lineage)
     elseif k in KSet"dotcall call"
         p_binaryopcall(style, node, s, ctx, lineage)
@@ -2093,6 +2095,111 @@ function p_kw(
     t
 end
 
+function p_pipe_to_call(
+    style::AbstractStyle,
+    # cst here must be a binary op call with |> as the operator (possibly dotted).
+    cst::JuliaSyntax.GreenNode,
+    s::State,
+    ctx::PrettyContext,
+    lineage::Vector{Tuple{JuliaSyntax.Kind,Bool,Bool}},
+)
+    # WARNING: This transformation can lead to semantic changes. See e.g.
+    # - https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/439
+    # - https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/647
+    # 
+    # This should really be removed in a future version of JuliaFormatter.
+    @warn (
+        "JuliaFormatter transformed one or more expressions with the form `x |> f` into" *
+        " the equivalent function call `f(x)`.\n\nNote that that this can lead to" *
+        " semantic changes if `|>` has been overloaded or otherwise has a custom meaning!" *
+        "\n\nYou can disable this behaviour by setting the `pipe_to_function_call` option" *
+        " to `false`. Note that this option is `true` by default for Blue and YAS styles," *
+        " meaning that you must explicitly opt out. Alternatively, you can use" *
+        " `#! format: off` and `#! format: on` to disable formatting for specific" *
+        " sections of code that use `|>`."
+    ) maxlog=1
+
+    call_node = FST(Call, nspaces(s))
+    childs = children(cst)
+    # Identify the LHS and RHS of the operator
+    lhs_idx = findfirst(n -> !JuliaSyntax.is_whitespace(n), childs)
+    rhs_idx = findlast(n -> !JuliaSyntax.is_whitespace(n), childs)
+    if isnothing(lhs_idx) || isnothing(rhs_idx) || lhs_idx >= rhs_idx
+        error(
+            "pipe operator with lhs_idx=$(lhs_idx) and rhs_idx=$(rhs_idx): should not happen",
+        )
+    end
+
+    lhs, rhs = nothing, nothing
+    for (i, c) in enumerate(childs)
+        if i == lhs_idx
+            lhs = pretty(style, c, s, ctx, lineage)
+        elseif i == rhs_idx
+            rhs = pretty(style, c, s, ctx, lineage)
+        else
+            # Advance s.offset past everything else without emitting
+            s.offset += span(c)
+        end
+    end
+
+    # Some things need to be wrapped in parens. We behave conservatively here and only opt
+    # out of wrapping for the following callables:
+    #   - a plain identifier               arg |> f     -> f(arg)
+    #   - a field access                   arg |> obj.f -> obj.f(arg)
+    #   - something already parenthesised  arg |> (f)   -> (f)(arg)
+    #   - a function call                  arg |> f()   -> f()(arg)
+    rhs_cst = childs[rhs_idx]
+    function_needs_parens = if kind(rhs_cst) in KSet"Identifier . parens"
+        false
+    elseif kind(rhs_cst) === K"call" && haschildren(rhs_cst)
+        # In JuliaSyntax, infix operators are also parsed as `call`, so we need to really
+        # check that it is a function call with parentheses.
+        any(n -> kind(n) === K"(", children(rhs_cst))
+    else
+        true
+    end
+    function_needs_parens && add_node!(
+        call_node,
+        FST(PUNCTUATION, -1, rhs.startline, rhs.startline, "("),
+        s;
+        join_lines = true,
+    )
+    add_node!(call_node, rhs, s; join_lines = true)
+    function_needs_parens && add_node!(
+        call_node,
+        FST(PUNCTUATION, -1, rhs.startline, rhs.startline, ")"),
+        s;
+        join_lines = true,
+    )
+
+    # Add a dot if needed
+    if kind(cst) === K"dotcall"
+        add_node!(
+            call_node,
+            FST(PUNCTUATION, -1, rhs.startline, rhs.startline, "."),
+            s;
+            join_lines = true,
+        )
+    end
+
+    argument_needs_params = true
+    argument_needs_params && add_node!(
+        call_node,
+        FST(PUNCTUATION, -1, rhs.startline, rhs.startline, "("),
+        s;
+        join_lines = true,
+    )
+    add_node!(call_node, lhs, s; join_lines = true)
+    argument_needs_params && add_node!(
+        call_node,
+        FST(PUNCTUATION, -1, rhs.startline, rhs.startline, ")"),
+        s;
+        join_lines = true,
+    )
+
+    return call_node
+end
+
 function p_binaryopcall(
     ds::AbstractStyle,
     cst::JuliaSyntax.GreenNode,
@@ -2109,6 +2216,12 @@ function p_binaryopcall(
     childs = children(cst)
     op_indices = source_operator_indices(cst)
     opkind = source_op_kind(s, cst)
+
+    # Intercept piped function calls and construct a normal function call FST instead. NOTE:
+    # If overloading `p_binaryopcall` for a custom style you will have to overload this!
+    if opkind === K"|>" && s.opts.pipe_to_function_call
+        return p_pipe_to_call(ds, cst, s, ctx, lineage)
+    end
 
     nonest = ctx.nonest || opkind === K":"
 
