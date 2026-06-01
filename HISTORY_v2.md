@@ -1,6 +1,6 @@
 # v2.5.4
 
-Fixed a bug where `jlfmt` would not use the style set in a `.JuliaFormatter.toml` configuration file (unless `--prioritize-config-file` was specified) (#951)
+Fixed a bug where `jlfmt` would not use the style set in a `.JuliaFormatter.toml` configuration file (unless `--prioritize-config-file` was specified) (#951, #1021).
 
 # v2.5.3
 
