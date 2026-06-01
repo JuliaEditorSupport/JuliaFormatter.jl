@@ -25,6 +25,7 @@ makedocs(;
         "Command-Line Interface" => "cli.md",
         "Integrations" => [
             "Editors" => "editors.md",
+            "GitHub Actions" => "github_actions.md",
             "pre-commit" => "precommit.md",
             "PackageCompiler" => "packagecompiler.md",
         ],
