@@ -8,19 +8,30 @@ makedocs(;
     format = Documenter.HTML(),
     modules = [JuliaFormatter],
     pages = [
-        "Introduction" => "index.md",
-        "How It Works" => "how_it_works.md",
-        "Code Style" => "style.md",
+        "Overview" => "index.md",
+        "Options" => [
+            "Formatting Options" => "formatting_options.md",
+            "Custom Alignment" => "custom_alignment.md",
+        ],
+        "Styles" => [
+            "Default Style" => "default_style.md",
+            "YAS Style" => "yas_style.md",
+            "Blue Style" => "blue_style.md",
+            "SciML Style" => "sciml_style.md",
+        ],
         "Skipping Formatting" => "skipping_formatting.md",
-        "Syntax Transforms" => "transforms.md",
-        "Custom Alignment" => "custom_alignment.md",
-        "YAS Style" => "yas_style.md",
-        "Blue Style" => "blue_style.md",
-        "SciML Style" => "sciml_style.md",
-        "Configuration File" => "config.md",
-        "Command Line Interface" => "cli.md",
-        "Integrations" => "integrations.md",
+        "Configuration File" =>
+            [".JuliaFormatter.toml" => "config.md", "File Options" => "file_options.md"],
+        "Command-Line Interface" => "cli.md",
+        "Integrations" => [
+            "Editors" => "editors.md",
+            "GitHub Actions" => "github_actions.md",
+            "pre-commit" => "precommit.md",
+            "PackageCompiler" => "packagecompiler.md",
+        ],
+        "How It Works" => "how_it_works.md",
         "API Reference" => "api.md",
+        "Project Status" => "status.md",
     ],
 )
 

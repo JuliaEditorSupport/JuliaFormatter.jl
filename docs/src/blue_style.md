@@ -1,4 +1,4 @@
-# Blue Style
+# [Blue Style](@id blue-style)
 
 ```@docs
 BlueStyle

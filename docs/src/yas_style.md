@@ -1,4 +1,4 @@
-# YAS Style
+# [YAS Style](@id yas-style)
 
 ```@docs
 YASStyle
