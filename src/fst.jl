@@ -712,12 +712,10 @@ function has_delimiters(cst::JuliaSyntax.GreenNode)
 end
 
 function should_nest_call_args(args, disallow_single_arg_nesting::Bool)
-    return length(args) > 0 && !(
-        length(args) == 1 &&
-        # If the argument has delimiters, it can itself be nested, so we
-        # don't need to nest the call expression.
-        (has_delimiters(args[1]) || disallow_single_arg_nesting)
-    )
+    return length(args) > 0 && !(length(args) == 1 &&
+             # If the argument has delimiters, it can itself be nested, so we
+             # don't need to nest the call expression.
+             (has_delimiters(args[1]) || disallow_single_arg_nesting))
 end
 
 function is_binaryop_nestable(::AbstractStyle, cst::JuliaSyntax.GreenNode)
