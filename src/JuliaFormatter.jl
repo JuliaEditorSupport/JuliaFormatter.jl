@@ -538,7 +538,10 @@ end
 
 function isignored(path, options)
     ignore = get(options, "ignore", String[])
-    return any(x -> occursin(Glob.FilenameMatch("*$x"), path), ignore)
+    # Glob.jl only matches paths that have '/' as the pathsep, so we need to normalise to
+    # that before matching, otherwise ignore patterns won't work on Windows
+    path_posix = replace(path, Base.Filesystem.path_separator => "/")
+    return any(x -> occursin(Glob.FilenameMatch("*$x"), path_posix), ignore)
 end
 
 include("app.jl")

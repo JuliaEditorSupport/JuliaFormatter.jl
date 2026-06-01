@@ -797,8 +797,11 @@ function process_file(args::ProcessFileArgs)
     # Check if file should be ignored (based on .JuliaFormatter.toml ignore patterns)
     if args.inputfile != "-"
         ignore_patterns = get(effective_options, :ignore, String[])
+        # Glob.jl only matches paths that have '/' as the pathsep, so we need to normalise
+        # to that before matching, otherwise ignore patterns won't work on Windows
+        inputfile_posix = replace(args.inputfile, Base.Filesystem.path_separator => "/")
         if any(
-            pattern -> occursin(Glob.FilenameMatch("*$pattern"), args.inputfile),
+            pattern -> occursin(Glob.FilenameMatch("*$pattern"), inputfile_posix),
             ignore_patterns,
         )
             # Skip ignored files
