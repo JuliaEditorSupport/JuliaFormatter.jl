@@ -11,15 +11,18 @@ Built with [`JuliaSyntax.jl`](https://github.com/JuliaLang/JuliaSyntax.jl).
 
 - Can be used as [a command-line app](@ref cli).
 
-![](https://user-images.githubusercontent.com/1813121/72941091-0b146300-3d68-11ea-9c95-75ec979caf6e.gif)
+## Quickstart
 
-## Installation
+Traditionally, JuliaFormatter is invoked from the Julia REPL (as is custom for most Julia tools).
+(However, you may well find that [the command-line `jlfmt` app](@ref cli) is more convenient!)
+
+To use JuliaFormatter from the REPL, install with:
 
 ```julia
 ]add JuliaFormatter
 ```
 
-## Quick Start
+Then you can do:
 
 ```julia
 julia> using JuliaFormatter
@@ -30,6 +33,6 @@ julia> format(".")
 # Formats an individual file
 julia> format_file("foo.jl")
 
-# Formats a string (contents of a Julia file)
+# Formats a string
 julia> format_text(str)
 ```

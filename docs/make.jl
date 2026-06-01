@@ -23,8 +23,11 @@ makedocs(;
         "Configuration File" =>
             [".JuliaFormatter.toml" => "config.md", "File Options" => "file_options.md"],
         "Command-Line Interface" => "cli.md",
-        "Integrations" =>
-            ["pre-commit" => "precommit.md", "PackageCompiler" => "packagecompiler.md"],
+        "Integrations" => [
+            "Editors" => "editors.md",
+            "pre-commit" => "precommit.md",
+            "PackageCompiler" => "packagecompiler.md",
+        ],
         "How It Works" => "how_it_works.md",
         "API Reference" => "api.md",
     ],
