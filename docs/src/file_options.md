@@ -41,7 +41,7 @@ Julia code blocks will be formatted, in addition to the Markdown being normalize
 
 ## [`ignore`](@id options-ignore)
 
-An array of paths to files and directories (with possible Glob wildcards) which will not be formatted.
+An array of paths to files and directories (with possible glob wildcards, as implemented by [Glob.jl])(https://github.com/vtjnash/Glob.jl)) which will not be formatted.
 
 For example, if `.JuliaFormatter.toml` contains
 
@@ -57,3 +57,5 @@ then JuliaFormatter will skip over all of these files:
 - `file_1.jl`
 - `other_directory/file_name.jl`
 
+!!! note "Path separators"
+    Glob.jl uses `/` as its path separator (`\` is an escape sequence), so even if you are on Windows, you should specify your ignore patterns with `/`.

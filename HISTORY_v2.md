@@ -1,3 +1,9 @@
+# v2.5.4
+
+Fixed a bug where `jlfmt` would not use the style set in a `.JuliaFormatter.toml` configuration file (unless `--prioritize-config-file` was specified) (#951, #1021).
+
+Fixed a bug where JuliaFormatter (both the library and app) would not correctly ignore files in subdirectories due to path separator differences (#898, #1021).
+
 # v2.5.3
 
 Fixed a bug where postfix operators (e.g. transpose) were not being recognised as unary operators, causing formatting to output unparseable code in some circumstances (#1011).

@@ -314,7 +314,7 @@ function main(argv::Vector{String})
     multiple_inputs = false
     format_markdown = false
     config_priority = false
-    style_name = "default"
+    style_name = nothing
     format_options = Dict{Symbol,Any}()
     ignore_patterns = String[]
 
@@ -536,18 +536,21 @@ function main(argv::Vector{String})
         end
     end
 
-    format_options[:style] = if style_name == "default"
-        DefaultStyle()
-    elseif style_name == "yas"
-        YASStyle()
-    elseif style_name == "blue"
-        BlueStyle()
-    elseif style_name == "sciml"
-        SciMLStyle()
-    elseif style_name == "minimal"
-        MinimalStyle()
-    else
-        return panic("unknown style: \"$style_name\"")
+    # Set the style if it was specified as a CLI arg
+    if style_name !== nothing
+        format_options[:style] = if style_name == "default"
+            DefaultStyle()
+        elseif style_name == "yas"
+            YASStyle()
+        elseif style_name == "blue"
+            BlueStyle()
+        elseif style_name == "sciml"
+            SciMLStyle()
+        elseif style_name == "minimal"
+            MinimalStyle()
+        else
+            return panic("unknown style: \"$style_name\"")
+        end
     end
 
     # Add ignore patterns from command line
@@ -629,7 +632,7 @@ struct ProcessFileArgs
     input_is_stdin::Bool
     stdin_filename::String
     config_dir::String
-    format_options::Dict{Symbol,Any}
+    format_options::Dict{Symbol,Any} # options passed as CLI args
     diff::Bool
     format_markdown::Bool
     config_priority::Bool
@@ -794,8 +797,11 @@ function process_file(args::ProcessFileArgs)
     # Check if file should be ignored (based on .JuliaFormatter.toml ignore patterns)
     if args.inputfile != "-"
         ignore_patterns = get(effective_options, :ignore, String[])
+        # Glob.jl only matches paths that have '/' as the pathsep, so we need to normalise
+        # to that before matching, otherwise ignore patterns won't work on Windows
+        inputfile_posix = replace(args.inputfile, Base.Filesystem.path_separator => "/")
         if any(
-            pattern -> occursin(Glob.FilenameMatch("*$pattern"), args.inputfile),
+            pattern -> occursin(Glob.FilenameMatch("*$pattern"), inputfile_posix),
             ignore_patterns,
         )
             # Skip ignored files
