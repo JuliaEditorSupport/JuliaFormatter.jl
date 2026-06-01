@@ -1,73 +1,119 @@
-@testset "Test jlfmt app" begin
-    if VERSION < v"1.12"
-        @info "Skipping jlfmt app tests for pre-v1.12 Julia."
-        return
-    end
+module JlfmtAppTests
 
-    @testset "Test app with threads" begin
-        mktempdir(; prefix = "jlfmt_threads_") do sandbox_dir
-            write(
-                joinpath(sandbox_dir, "spacing_and_call.jl"),
-                """
-                f( x,y )=x+y
-                z=f( 1,2 )
-                """,
-            )
+using Test: @test, @testset
+using JuliaFormatter
+using UUIDs: uuid4
 
-            write(
-                joinpath(sandbox_dir, "control_flow_and_collection.jl"),
-                """
-                function g(xs)
-                ys=[ x*2 for x in xs if x>0 ]
-                return ys
-                end
-                """,
-            )
+const PROJECT_DIR = dirname(abspath(Base.active_project()))
+const CONFIG_FILE_NAME = ".JuliaFormatter.toml"
 
-            write(
-                joinpath(sandbox_dir, "struct_and_keywords.jl"),
-                """
-                struct Foo
-                x::Int
-                y::String
-                end
+jlfmt_cmd(julia_flags::Cmd = ``) =
+    `$(Base.julia_cmd()) $julia_flags --project=$PROJECT_DIR -m JuliaFormatter`
 
-                h(;a=1,b=2)=a+b
-                """,
-            )
-
-            project = dirname(Base.active_project())
-
-            check_before_cmd = `$(Base.julia_cmd()) --threads=3 --project=$project -m JuliaFormatter --check $sandbox_dir`
-            @test !success(check_before_cmd)
-
-            format_cmd = `$(Base.julia_cmd()) --threads=3 --project=$project -m JuliaFormatter --inplace $sandbox_dir`
-            @test success(format_cmd)
-
-            check_after_cmd = `$(Base.julia_cmd()) --threads=3 --project=$project -m JuliaFormatter --check $sandbox_dir`
-            @test success(check_after_cmd)
+function with_sandbox(f)
+    mktempdir(; prefix = "jlfmt_test_$(uuid4())_") do dir
+        cd(dir) do
+            @info "Running test in sandbox directory: $dir"
+            f(dir)
         end
     end
+end
 
-    @testset "style is picked up from config correctly" begin
-        # https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/951
-        mktempdir(; prefix = "jlfmt_style_") do sandbox_dir
-            cd(sandbox_dir) do
-                text = "(; a = 1)"
+@static if VERSION < v"1.12"
+    @info "Skipping jlfmt app tests for pre-v1.12 Julia."
+else
+    @testset "Test jlfmt app" begin
+        @testset "--threads" begin
+            with_sandbox() do _
+                write("spacing_and_call.jl", "f( x,y )=x+y\nz=f( 1,2 )\n")
+                write(
+                    "control_flow_and_collection.jl",
+                    "function g(xs)\nys=[ x*2 for x in xs if x>0 ]\nreturn ys\nend\n",
+                )
+                write(
+                    "struct_and_keywords.jl",
+                    "struct Foo\nx::Int\ny::String\nend\n\nh(;a=1,b=2)=a+b\n",
+                )
+
+                threaded_cmd = jlfmt_cmd(`--threads=3`)
+                @test !success(`$threaded_cmd --check .`)
+                @test success(`$threaded_cmd --inplace .`)
+                @test success(`$threaded_cmd --check .`)
+            end
+        end
+
+        @testset "DefaultStyle is used if not configured" begin
+            with_sandbox() do _
+                text = "(; a=1)"
                 write("a.jl", text)
+                run(`$(jlfmt_cmd()) --inplace a.jl`)
+                @test readchomp("a.jl") == format_text(text, DefaultStyle())
+                # Sanity check that the text is actually being formatted
+                @test text != format_text(text, DefaultStyle())
+            end
+        end
 
-                # Blue style will remove whitespace around kwarg.
-                write(".JuliaFormatter.toml", "style = \"blue\"")
-                run(`$(Base.julia_cmd()) --project=$(Base.active_project()) -m JuliaFormatter --inplace .`)
-                @test readchomp("a.jl") == format_text(text, BlueStyle())
-                # Sanity check to make sure our test is actually testing something
+        @testset "ignore" begin
+            text = "a+ b"
+            formatted = format_text(text)
+            @assert text != formatted
+
+            function write_ignore_test_files()
+                write("fmt.jl", text)
+                write("skip_me.jl", text)
+                mkdir("sub")
+                write("sub/also_fmt.jl", text)
+                write("sub/skip_me_too.jl", text)
+            end
+
+            function check_ignore_results()
+                @test readchomp("fmt.jl") == formatted
+                @test readchomp("sub/also_fmt.jl") == formatted
+                @test read("skip_me.jl", String) == text
+                @test read("sub/skip_me_too.jl", String) == text
+            end
+
+            @testset "via --ignore flag" begin
+                with_sandbox() do _
+                    write_ignore_test_files()
+                    run(
+                        `$(jlfmt_cmd()) --inplace --ignore=skip_me.jl --ignore=sub/skip_me_too.jl .`,
+                    )
+                    check_ignore_results()
+                end
+            end
+
+            @testset "via .JuliaFormatter.toml" begin
+                with_sandbox() do _
+                    write_ignore_test_files()
+                    write(
+                        CONFIG_FILE_NAME,
+                        """ignore = ["skip_me.jl", "sub/skip_me_too.jl"]\n""",
+                    )
+                    run(`$(jlfmt_cmd()) --inplace .`)
+                    check_ignore_results()
+                end
+            end
+        end
+
+        @testset "style is picked up from config correctly" begin
+            # https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/951
+            with_sandbox() do _
+                fname = "a.jl"
+                text = "(; a = 1)"
+                write(fname, text)
+
+                write(CONFIG_FILE_NAME, "style = \"blue\"")
+                run(`$(jlfmt_cmd()) --inplace .`)
+                @test readchomp(fname) == format_text(text, BlueStyle())
                 @test text != format_text(text, BlueStyle())
 
-                # Default style will add the whitespace back
                 write(".JuliaFormatter.toml", "style = \"default\"")
-                run(`$(Base.julia_cmd()) --project=$(Base.active_project()) -m JuliaFormatter --inplace .`)
-                @test readchomp("a.jl") == text
+                run(`$(jlfmt_cmd()) --inplace .`)
+                @test readchomp(fname) == text
             end
         end
     end
 end
+
+end # module

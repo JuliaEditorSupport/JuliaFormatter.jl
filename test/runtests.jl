@@ -3,6 +3,9 @@ using JuliaFormatter: DefaultStyle, YASStyle, Options, options, CONFIG_FILE_NAME
 using Test
 using JuliaSyntax
 
+using Pkg: Pkg
+Pkg.develop(; path = dirname(@__DIR__))
+
 function fmt1(s; i = 4, m = 80, kwargs...)
     JuliaFormatter.format_text(s; kwargs..., indent = i, margin = m)
 end
