@@ -2,7 +2,7 @@
 
 Fixed a bug where `jlfmt` would not use the style set in a `.JuliaFormatter.toml` configuration file (unless `--prioritize-config-file` was specified) (#951, #1021).
 
-Fixed a bug where JuliaFormatter (both the library and app) would not correctly ignore files in subdirectories due to path separator differences (#898, #1021).
+Fixed a bug where JuliaFormatter (both the library and app) would not correctly ignore files in subdirectories on Windows due to path separator differences (#898, #1021).
 
 # v2.5.3
 
