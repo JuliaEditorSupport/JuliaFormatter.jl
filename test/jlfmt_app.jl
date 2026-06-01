@@ -48,4 +48,24 @@
             @test success(check_after_cmd)
         end
     end
+
+    @testset "style is picked up from config correctly" begin
+        # https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/951
+        mktempdir(; prefix = "jlfmt_style_") do sandbox_dir
+            cd(sandbox_dir) do
+                text = "(; a = 1)"
+                write("a.jl", text)
+
+                # Blue style will remove whitespace around kwarg.
+                write(".JuliaFormatter.toml", "style = \"blue\"")
+                run(`$(Base.julia_cmd()) --project=$(Base.active_project()) -m JuliaFormatter --inplace .`)
+                @test readchomp("a.jl") == format_text(text, BlueStyle())
+
+                # Default style will add the whitespace back
+                write(".JuliaFormatter.toml", "style = \"default\"")
+                run(`$(Base.julia_cmd()) --project=$(Base.active_project()) -m JuliaFormatter --inplace .`)
+                @test readchomp("a.jl") == text
+            end
+        end
+    end
 end
