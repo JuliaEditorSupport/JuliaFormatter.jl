@@ -13,7 +13,7 @@ Built with [`JuliaSyntax.jl`](https://github.com/JuliaLang/JuliaSyntax.jl).
 
 ## Quickstart
 
-Traditionally, JuliaFormatter is invoked from the Julia REPL (as is custom for most Julia tools).
+Traditionally, JuliaFormatter is invoked from the Julia REPL.
 (However, you may well find that [the command-line `jlfmt` app](@ref cli) is more convenient!)
 
 To use JuliaFormatter from the REPL, install with:
