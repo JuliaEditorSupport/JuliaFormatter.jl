@@ -18,19 +18,13 @@ Instructions for setting up LanguageServer.jl for your editor of choice can be f
 
 ### VSCode
 
-If you use [the Julia VSCode extension](https://marketplace.visualstudio.com/items?itemName=julialang.language-julia) this is already backed by JuliaFormatter (via LanguageServer.jl).
+If you use [the Julia VSCode extension](https://marketplace.visualstudio.com/items?itemName=julialang.language-julia) this is already backed by LanguageServer.jl and hence JuliaFormatter.
 [`.JuliaFormatter.toml`](@ref config) files in your project will be detected automatically.
 See [the extension's docs](https://www.julia-vscode.org/docs/stable/userguide/formatter/) for more information.
 
 !!! note "JuliaFormatter version"
     As described above, the version of JuliaFormatter used is dictated by the extension.
     See e.g. [this issue](https://github.com/julia-vscode/julia-vscode/issues/4010#issue-3888453945) for an example of how to work around this by installing a custom formatter in VSCode.
-
-### Vim / Neovim
-
-It is recommended to use a LSP client plugin for Vim, or Neovim's native LSP, to integrate with LanguageServer.jl and thus JuliaFormatter.
-
-Instructions for this can be found [on the LanguageServer.jl docs](https://github.com/julia-vscode/LanguageServer.jl/wiki/Vim-and-Neovim).
 
 ## JETLS.jl
 
