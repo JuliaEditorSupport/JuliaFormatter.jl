@@ -60,6 +60,8 @@
                 write(".JuliaFormatter.toml", "style = \"blue\"")
                 run(`$(Base.julia_cmd()) --project=$(Base.active_project()) -m JuliaFormatter --inplace .`)
                 @test readchomp("a.jl") == format_text(text, BlueStyle())
+                # Sanity check to make sure our test is actually testing something
+                @test text != format_text(text, BlueStyle())
 
                 # Default style will add the whitespace back
                 write(".JuliaFormatter.toml", "style = \"default\"")
