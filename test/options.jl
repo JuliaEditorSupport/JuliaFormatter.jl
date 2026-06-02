@@ -336,6 +336,34 @@
             """
             @test fmt(str_; pipe_to_function_call = true) == str
         end
+
+        # Make sure that nesting decisions are made correctly the first time
+        # see https://github.com/JuliaEditorSupport/JuliaFormatter.jl/pull/1023
+        # Formatting the string below used to not be idempotent.
+        str_ = """
+        function f()
+            ps_mods = map(
+                layer_mods -> (
+                    layer_mods === nothing ? () :
+                        map(l -> initialparameters(rng, l), layer_mods) |> Tuple
+                ),
+                mods
+            ) |> Tuple
+        end"""
+        str = """
+        function f()
+            ps_mods = Tuple(
+                map(
+                    layer_mods -> (
+                        layer_mods === nothing ? () :
+                        Tuple(map(l -> initialparameters(rng, l), layer_mods))
+                    ),
+                    mods,
+                ),
+            )
+        end"""
+        @test fmt(str_; pipe_to_function_call = true) == str
+        @test fmt(str; pipe_to_function_call = true) == str
     end
 
     @testset "function shortdef to longdef" begin
