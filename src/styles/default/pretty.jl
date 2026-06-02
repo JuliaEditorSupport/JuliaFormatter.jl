@@ -2310,7 +2310,7 @@ function p_binaryopcall(
         #    over the _caller_ rather than the callee. There's no equivalent way to express
         #    this in function call form, so we shouldn't try to transform it. See
         #    https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/647.
-        inside_macro_or_quote = any(t -> t[1] in K"macrocall quote", lineage)
+        inside_macro_or_quote = any(t -> t[1] in KSet"macrocall quote", lineage)
         rhs_cst = childs[findlast(n -> !JuliaSyntax.is_whitespace(n), childs)]
         dotted_tuple = kind(cst) === K"dotcall" && kind(rhs_cst) === K"tuple"
         if !inside_macro_or_quote && !dotted_tuple
