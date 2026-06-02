@@ -1506,7 +1506,7 @@
             )
                 f
             end"""
-            @test fmt(str_; margin=20) == str
+            @test fmt(str_, 4, 20) == str
         end
 
     end
