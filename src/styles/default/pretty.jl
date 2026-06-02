@@ -2094,8 +2094,11 @@ end
 """
     p_pipe_to_call
 
-Take a CST of the form `x |> y`, but return a FST with the equivalent function call `y(x)`
-instead.
+Take a CST of the form `x |> y` or `x .|> y`, but return a FST with the equivalent function
+call `y(x)` or `y.(x)` instead.
+
+Note that this function is only called for certain pipe-applications. See the call site in
+`p_binaryopcall` for details.
 """
 function p_pipe_to_call(
     style::AbstractStyle,
@@ -2295,7 +2298,21 @@ function p_binaryopcall(
     # If overloading `p_binaryopcall` for a custom style you will have to make sure to
     # include this logic!
     if opkind === K"|>" && s.opts.pipe_to_function_call
-        return p_pipe_to_call(ds, cst, s, ctx, lineage)
+        # We purposely exclude two cases:
+        # 
+        # 1. `x |> f` inside a macro. It's too dangerous to change that inside a macro as
+        #    the macro may well be handling `|>` in a custom way.
+        #
+        # 2. `x .|> (f1, f2)`. This is a very weird Julia quirk where you can broadcast
+        #    over the _caller_ rather than the callee. There's no equivalent way to express
+        #    this in function call form, so we shouldn't try to transform it. See
+        #    https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/647.
+        inside_macro = any(t -> t[1] === K"macrocall", lineage)
+        rhs_cst = childs[findlast(n -> !JuliaSyntax.is_whitespace(n), childs)]
+        dotted_tuple = kind(cst) === K"dotcall" && kind(rhs_cst) === K"tuple"
+        if !inside_macro && !dotted_tuple
+            return p_pipe_to_call(ds, cst, s, ctx, lineage)
+        end
     end
 
     nonest = ctx.nonest || opkind === K":"

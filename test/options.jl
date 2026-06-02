@@ -338,33 +338,48 @@
             @test fmt(str_; pipe_to_function_call = true) == str
         end
 
-        # Make sure that nesting decisions are made correctly the first time
-        # see https://github.com/JuliaEditorSupport/JuliaFormatter.jl/pull/1023
-        # Formatting the string below used to not be idempotent.
-        str_ = """
-        function f()
-            ps_mods = map(
-                layer_mods -> (
-                    layer_mods === nothing ? () :
-                        map(l -> initialparameters(rng, l), layer_mods) |> Tuple
-                ),
-                mods
-            ) |> Tuple
-        end"""
-        str = """
-        function f()
-            ps_mods = Tuple(
-                map(
+        @testset "nesting & idempotence" begin
+            # Make sure that nesting decisions are made correctly the first time
+            # see https://github.com/JuliaEditorSupport/JuliaFormatter.jl/pull/1023
+            # Formatting the string below used to not be idempotent.
+            str_ = """
+            function f()
+                ps_mods = map(
                     layer_mods -> (
                         layer_mods === nothing ? () :
-                        Tuple(map(l -> initialparameters(rng, l), layer_mods))
+                            map(l -> initialparameters(rng, l), layer_mods) |> Tuple
                     ),
-                    mods,
-                ),
-            )
-        end"""
-        @test fmt(str_; pipe_to_function_call = true) == str
-        @test fmt(str; pipe_to_function_call = true) == str
+                    mods
+                ) |> Tuple
+            end"""
+            str = """
+            function f()
+                ps_mods = Tuple(
+                    map(
+                        layer_mods -> (
+                            layer_mods === nothing ? () :
+                            Tuple(map(l -> initialparameters(rng, l), layer_mods))
+                        ),
+                        mods,
+                    ),
+                )
+            end"""
+            @test fmt(str_; pipe_to_function_call = true) == str
+            @test fmt(str; pipe_to_function_call = true) == str
+        end
+
+        @testset "cases where transformation should not happen" begin
+            # inside macro
+            smacro = "@macro x |> f"
+            @test fmt(smacro; pipe_to_function_call = true) == smacro
+            smacro2 = "@macro function f()\n    x |> g\nend"
+            @test fmt(smacro2; pipe_to_function_call = true) == smacro2
+
+            # dotted tuple of functions
+            # https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/647
+            sdotcall = "x .|> (f, g)"
+            @test fmt(sdotcall; pipe_to_function_call = true) == sdotcall
+        end
     end
 
     @testset "function shortdef to longdef" begin
