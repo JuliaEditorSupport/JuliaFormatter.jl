@@ -2771,4 +2771,75 @@
         """
         @test fmt(s1, 2, 1; disallow_single_arg_nesting = true) == s2
     end
+
+    @testset "preserve single line if" begin
+        # Basic single-line if is preserved
+        str = "if x > 0 return 1 end"
+        @test fmt(str; preserve_single_line_if = true) == str
+
+        # Single-line if is expanded when option is false (default)
+        str_ = "if x > 0 return 1 end"
+        str = """
+        if x > 0
+            return 1
+        end"""
+        @test fmt(str_; preserve_single_line_if = false) == str
+        @test fmt(str_) == str
+
+        # Multi-line if is not affected by the option
+        str = """
+        if x > 0
+            return 1
+        end
+        """
+        @test fmt(str; preserve_single_line_if = true) == str
+
+        # Single-line if-else
+        str = "if x > 0 1 else 2 end"
+        @test fmt(str; preserve_single_line_if = true) == str
+
+        # Single-line if-elseif-else
+        str = "if x > 0 1 elseif x < 0 2 else 0 end"
+        @test fmt(str; preserve_single_line_if = true) == str
+
+        # Multi-line if-else is not affected
+        str = """
+        if x > 0
+            return 1
+        else
+            return 2
+        end
+        """
+        @test fmt(str; preserve_single_line_if = true) == str
+
+        # Nested single-line if
+        str = "if x > 0 if y > 0 return 1 end end"
+        @test fmt(str; preserve_single_line_if = true) == str
+
+        # Inside a function
+        str = """
+        function f()
+            if rand() < 0.5 return 2 end
+            0
+        end
+        """
+        @test fmt(str; preserve_single_line_if = true) == str
+
+        # Inside a function, expanded when option is false
+        str_ = """
+        function f()
+            if rand() < 0.5 return 2 end
+            0
+        end
+        """
+        str = """
+        function f()
+            if rand() < 0.5
+                return 2
+            end
+            0
+        end
+        """
+        @test fmt(str_; preserve_single_line_if = false) == str
+    end
 end
