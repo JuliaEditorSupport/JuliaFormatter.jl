@@ -278,6 +278,7 @@
             @test fmt("x $dot|> f()"; pipe_to_function_call = true) == "f()$dot(x)"
             @test fmt("x $dot|> f(a)"; pipe_to_function_call = true) == "f(a)$dot(x)"
             @test fmt("x $dot|> M.f"; pipe_to_function_call = true) == "M.f$dot(x)"
+            @test fmt("x $dot|> T{x}"; pipe_to_function_call = true) == "T{x}$dot(x)"
             # Check that callable is parenthesised if necessary
             @test fmt("x $dot|> y -> y + 1"; pipe_to_function_call = true) == "(y -> y + 1)$dot(x)"
             @test fmt("x $dot|> f ∘ g"; pipe_to_function_call = true) == "(f ∘ g)$dot(x)"

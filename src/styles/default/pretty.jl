@@ -2168,6 +2168,7 @@ function p_pipe_to_call(
     #   - a field access                   arg |> obj.f -> obj.f(arg)
     #   - something already parenthesised  arg |> (f)   -> (f)(arg)
     #   - a function call                  arg |> f()   -> f()(arg)
+    #   - a parametrised type constructor  arg |> F{x}  -> F{x}(arg)
     #
     # There are two edge cases (of course there are).
     #
@@ -2196,7 +2197,7 @@ function p_pipe_to_call(
     else
         false
     end
-    caller_needs_parens = if kind(rhs_cst) in KSet"Identifier . parens"
+    caller_needs_parens = if kind(rhs_cst) in KSet"Identifier . parens curly"
         false
     elseif kind(rhs_cst) === K"call" && haschildren(rhs_cst)
         # In JuliaSyntax, infix operators are also parsed as `call`, so we need to really
