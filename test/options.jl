@@ -360,12 +360,12 @@
         end
 
         @testset "block argument" begin
-            for dot in (""," .")
-                str_ = """quote
-                    foo
-                end $dot|> esc"""
-                str = """esc$dot(quote
-                    foo
+            for dot in ("", ".")
+                str_ = """begin
+                    f
+                end $dot|> g"""
+                str = """g$dot(begin
+                    f
                 end)"""
                 @test fmt(str_; pipe_to_function_call = true) == str
             end
