@@ -1972,30 +1972,53 @@ function p_if(
         return t
     end
 
+    # Flag to indicate when we are processing the condition of an if or elseif.
+    is_cond = false
+
     for c in children(cst)
         if kind(c) in KSet"if elseif else"
             if !haschildren(c)
                 add_node!(t, pretty(style, c, s, ctx, lineage), s; max_padding = 0)
             else
+                # TODO(penelopeysm) how can an if/elseif/else keyword have a child?
                 len = length(t)
                 n = pretty(style, c, s, ctx, lineage)
                 add_node!(t, n, s)
                 t.len = max(len, length(n))
             end
+            if kind(c) in KSet"if elseif"
+                # The next non-whitespace node we see is the condition.
+                is_cond = true
+            end
         elseif kind(c) === K"end"
             add_node!(t, pretty(style, c, s, ctx, lineage), s)
         elseif kind(c) === K"block"
-            s.indent += s.opts.indent
-            add_node!(
-                t,
-                pretty(style, c, s, newctx(ctx; ignore_single_line = true), lineage),
-                s;
-                max_padding = s.opts.indent,
-            )
-            s.indent -= s.opts.indent
+            # This block could either be the condition (if it immediatelly follows an `if`
+            # or `elseif`, ignoring whitespace), or it could be the actual body. This is
+            # determined by the `is_cond` flag.
+            if is_cond
+                add_node!(t, Whitespace(1), s)
+                add_node!(t, pretty(style, c, s, ctx, lineage), s; join_lines = true)
+                # The next block will be the body.
+                is_cond = false
+            else
+                s.indent += s.opts.indent
+                add_node!(
+                    t,
+                    pretty(style, c, s, newctx(ctx; ignore_single_line = true), lineage),
+                    s;
+                    max_padding = s.opts.indent,
+                )
+                s.indent -= s.opts.indent
+            end
         elseif !JuliaSyntax.is_whitespace(c)
+            # This branch is hit for non-block conditions (i.e. simple things like the `x`
+            # in `if x; ...`).
             add_node!(t, Whitespace(1), s)
             add_node!(t, pretty(style, c, s, ctx, lineage), s; join_lines = true)
+            if is_cond # should be true, but check just to be safe
+                is_cond = false
+            end
         else
             add_node!(t, pretty(style, c, s, ctx, lineage), s)
         end
@@ -2122,7 +2145,7 @@ function p_pipe_to_call(
         " meaning that you must explicitly opt out. Alternatively, you can use" *
         " `#! format: off` and `#! format: on` to disable formatting for specific" *
         " sections of code that use `|>`."
-    ) maxlog=1
+    ) maxlog = 1
 
     call_node = FST(Call, nspaces(s))
     childs = children(cst)
