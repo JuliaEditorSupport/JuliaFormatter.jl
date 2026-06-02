@@ -1454,6 +1454,65 @@
         end"""
         t = run_pretty(str, 80)
         @test length(t) == 14
+
+        @testset "block conditions" begin
+            # https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/1025
+            for block in (
+                "(a; b)",
+                "begin\n    a\n    b\nend\n",
+            )
+                str = """
+                if $block
+                    foo
+                end
+                """
+                @test fmt(str) == str
+
+                str = """
+                if x
+                    foo
+                elseif $block
+                    bar
+                end
+                """
+                @test fmt(str) == str
+
+                str = """
+                if $block
+                    foo
+                elseif $block
+                    bar
+                end
+                """
+                @test fmt(str) == str
+
+                str = """
+                if $block
+                    foo
+                else
+                    bar
+                end
+                """
+                @test fmt(str) == str
+            end
+
+            # Nesting
+            str_ = """
+            if (veryverylong; veryverylongtoo)
+                f
+            end
+            """
+            str = """
+            if (
+                veryverylong;
+                veryverylongtoo
+            )
+                f
+            end
+            """
+            @test fmt(str_; margin=20) == str
+        end
+
     end
 
     @testset "strings" begin
