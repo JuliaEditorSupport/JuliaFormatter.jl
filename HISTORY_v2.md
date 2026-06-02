@@ -1,22 +1,46 @@
+# v2.5.5
+
+Fixed a number of issues with `pipe_to_function_call=true`:
+
+- Various constructions such as `x .|> f()`, `x .|> !`, and `x |> a + b` were being transformed into code that had a different meaning from the original. (#927, #1023)
+
+- Transforming pipes inside macros was fundamentally dangerous.
+  This patch conservatively refuses to transform pipes inside macros. (#439, #1023)
+
+- Transforming pipes inside an `Expr` changes the `Expr`.
+  This patch prevents this. (#1023)
+
+- The expression `1 .|> (sin, cos)` cannot be transformed into a function call as there is no equivalent syntax for this. This patch leaves such expressions unchanged. (#647, #1023)
+
+- For the transformations that do happen, this patch elides unnecessary parentheses. For example `(x) |> f` is now transformed into `f(x)` rather than `f((x))`. (#1023)
+
+- Fixed cases where newly transformed function calls would be generated with the wrong nesting, leading to a loss of idempotency. (#1023)
+
+Finally, this patch also causes a warning to be emitted whenever a pipe is transformed into a function call. (#1023)
+
+This is because `|>` is an ordinary Julia function, and can be overloaded by users such that `x |> f` may not always be equivalent to `f(x)`.
+A formatter should _never_ change the meaning of code.
+Thus, it is possible, or even likely, that this option will be completely removed in the future (it could be turned into a _linter_ rule, for example, where the user can be alerted to the presence of `|>` in their code; but the _formatter_ should not change it).
+
 # v2.5.4
 
-Fixed a bug where `jlfmt` would not use the style set in a `.JuliaFormatter.toml` configuration file (unless `--prioritize-config-file` was specified) (#951, #1021).
+Fixed a bug where `jlfmt` would not use the style set in a `.JuliaFormatter.toml` configuration file (unless `--prioritize-config-file` was specified). (#951, #1021)
 
-Fixed a bug where JuliaFormatter (both the library and app) would not correctly ignore files in subdirectories on Windows due to path separator differences (#898, #1021).
+Fixed a bug where JuliaFormatter (both the library and app) would not correctly ignore files in subdirectories on Windows due to path separator differences. (#898, #1021)
 
 # v2.5.3
 
-Fixed a bug where postfix operators (e.g. transpose) were not being recognised as unary operators, causing formatting to output unparseable code in some circumstances (#1011).
+Fixed a bug where postfix operators (e.g. transpose) were not being recognised as unary operators, causing formatting to output unparseable code in some circumstances. (#1011)
 
-Improved consistency when parenthesising the value of a keyword argument with `whitespace_in_kwargs=false`, e.g., `(; x=-pi/2)` is now formatted as `(; x=(-pi/2))` (#1011).
+Improved consistency when parenthesising the value of a keyword argument with `whitespace_in_kwargs=false`, e.g., `(; x=-pi/2)` is now formatted as `(; x=(-pi/2))`. (#1011)
 
 # v2.5.2
 
-Fixed a bug where, under SciML style, indentations of bracketed expressions on the RHS of assignments were being removed for anything on the second line onwards (#935, #1006).
+Fixed a bug where, under SciML style, indentations of bracketed expressions on the RHS of assignments were being removed for anything on the second line onwards. (#935, #1006)
 
 # v2.5.1
 
-Fix some formatting regressions introduced in v2.5.0 (#1002, #996).
+Fix some formatting regressions introduced in v2.5.0. (#1002, #996)
 In particular, this version:
 
 - no longer aggressively adds spaces around `x=>y` and `x->y` (unless spaces are already present).

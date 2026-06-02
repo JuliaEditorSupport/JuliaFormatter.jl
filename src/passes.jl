@@ -74,99 +74,6 @@ function flatten_fst!(fst::FST)
     end
 end
 
-"""
-    pipe_to_function_call_pass!(fst::FST)
-
-Rewrites `x |> f` to `f(x)`.
-"""
-function pipe_to_function_call_pass!(fst::FST)
-    if is_leaf(fst)
-        return
-    end
-
-    # the RHS must be a valid type to apply a function call.
-    if op_kind(fst) === K"|>" && (fst[end].typ !== PUNCTUATION)
-        fst.nodes = pipe_to_function_call(fst)
-        fst.typ = Call
-        return
-    end
-    for n in fst.nodes::Vector{FST}
-        if is_leaf(n)
-            continue
-        elseif op_kind(n) === K"|>" && (n[end].typ !== PUNCTUATION)
-            n.nodes = pipe_to_function_call(n)
-            n.typ = Call
-        else
-            pipe_to_function_call_pass!(n)
-        end
-    end
-end
-
-function pipe_to_function_call(fst::FST)
-    nodes = FST[]
-    dot = !isnothing(fst.metadata) && (fst.metadata::Metadata).op_dotted
-    arg2 = fst[end]
-
-    # is RHS is an anon function?
-    # need to wrap it parens, i.e. "(x -> x + 1)(arg)"
-    # and then possibly add a "." as well !
-    if op_kind(arg2) === K"->"
-        n = FST(PUNCTUATION, -1, arg2.endline, arg2.endline, "(")
-        push!(nodes, n)
-
-        # go into anon function and convert all the pipe calls there too.
-        # The precedence of -> is greater then |> so if the anon func is of the
-        # the form `x -> x |> f`, the pipe call will not be converted unless well
-        # recurse into the anon func.
-        pipe_to_function_call_pass!(arg2)
-
-        push!(nodes, arg2)
-        n = FST(PUNCTUATION, -1, arg2.endline, arg2.endline, ")")
-        push!(nodes, n)
-        if dot
-            n = FST(PUNCTUATION, -1, arg2.endline, arg2.endline, ".")
-            push!(nodes, n)
-        end
-    else
-        push!(nodes, arg2)
-
-        if dot && arg2.typ === IDENTIFIER
-            n = FST(PUNCTUATION, -1, arg2.endline, arg2.endline, ".")
-            push!(nodes, n)
-        elseif dot &&
-               arg2.typ === Binary &&
-               arg2[end].typ === Quotenode &&
-               arg2[end][end].typ === IDENTIFIER
-            n = FST(PUNCTUATION, -1, arg2.endline, arg2.endline, ".")
-            push!(nodes, n)
-        elseif dot &&
-               arg2.typ === Accessor &&
-               arg2[end].typ === Quote &&
-               arg2[end][end].typ === IDENTIFIER
-            n = FST(PUNCTUATION, -1, arg2.endline, arg2.endline, ".")
-            push!(nodes, n)
-        elseif dot && arg2.typ === Accessor && arg2[end].typ === IDENTIFIER
-            n = FST(PUNCTUATION, -1, arg2.endline, arg2.endline, ".")
-            push!(nodes, n)
-        elseif dot && arg2.typ === Brackets
-            idx = findfirst(n -> n.typ === Binary && op_kind(n) === K"->", arg2.nodes)
-            if idx !== nothing
-                n = FST(PUNCTUATION, -1, arg2.endline, arg2.endline, ".")
-                push!(nodes, n)
-            end
-        end
-    end
-
-    paren = FST(PUNCTUATION, -1, arg2.endline, arg2.endline, "(")
-    push!(nodes, paren)
-    pipe_to_function_call_pass!(fst[1])
-    arg1 = fst[1]
-    push!(nodes, arg1)
-    paren = FST(PUNCTUATION, -1, arg1.endline, arg1.endline, ")")
-    push!(nodes, paren)
-    return nodes
-end
-
 function import_to_usings(fst::FST, s::State)
     nodes = fst.nodes::Vector{FST}
     if !(findfirst(n -> is_colon(n) || n.typ === As, nodes) === nothing)
@@ -197,7 +104,7 @@ function import_to_usings(fst::FST, s::State)
 
         add_node!(use, n, s; join_lines = true)
         colon = FST(OPERATOR, -1, sl, el, ":")
-        colon.metadata = Metadata(K"::", false)
+        colon.metadata = Metadata(K"::")
         add_node!(use, colon, s; join_lines = true)
         add_node!(use, Whitespace(1), s)
         add_node!(use, n[end], s; join_lines = true)
@@ -226,7 +133,7 @@ function annotate_typefields_with_any!(fst::FST, s::State)
             add_node!(nn, n, s)
             line_offset = n.line_offset + length(n)
             op = FST(OPERATOR, line_offset, n.startline, n.endline, "::")
-            op.metadata = Metadata(K"::", false)
+            op.metadata = Metadata(K"::")
             add_node!(nn, op, s; join_lines = true)
             line_offset += 2
             add_node!(
@@ -411,13 +318,13 @@ function long_to_short_function_def!(fst::FST, s::State)
     end
 
     funcdef = FST(Binary, fst.indent)
-    funcdef.metadata = Metadata(K"=", false, false, true, false, false, false)
+    funcdef.metadata = Metadata(K"=", false, true, false, false, false)
     kw = (join_lines = true, override_join_lines_based_on_source = true)
 
     add_node!(funcdef, lhs, s; kw...)
     add_node!(funcdef, Whitespace(1), s; kw...)
     op = FST(OPERATOR, 0, 0, 0, "=")
-    op.metadata = Metadata(K"=", false)
+    op.metadata = Metadata(K"=")
     add_node!(funcdef, op, s; kw...)
     add_node!(funcdef, Placeholder(1), s; kw...)
     add_node!(funcdef, Placeholder(0), s; kw...)

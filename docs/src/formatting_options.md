@@ -390,7 +390,30 @@ One of `"unix"` (normalize all `\r\n` to `\n`), `"windows"` (normalize all `\n` 
 
 Default: `false`
 
-If true, `x |> f` is rewritten to `f(x)`.
+If true, `x |> f` is rewritten to `f(x)`, and `x .|> f` to `f.(x)`.
+
+!!! danger "Semantics may be changed"
+
+    **Note that this transformation may change the semantics of the code in
+    some cases:**
+
+    1. If `Base.:(|>)` is overloaded to have a different meaning for a given
+       `f` and `x`.
+
+    2. If the call to `x |> f` is intercepted by a macro that transforms it to 
+       something other than `f(x)`. For example,
+       [Pipe.jl](https://github.com/oxinabox/Pipe.jl).
+
+    To avoid (2), JuliaFormatter refuses to apply this transformation within the
+    body of a macro. However, there is no way to detect (1). As such,
+    JuliaFormatter will emit a warning if this transformation is applied during
+    formatting, to alert the user to the potential of unwanted changes.
+
+    It is recommended to set this option to `true` only if you are confident
+    that there are no such cases. **Note:** `pipe_to_function_call` is set to
+    `true` by default for Blue and YAS styles, so in such cases you have to opt
+    out manually!
+
 
 ## [`remove_extra_newlines`](@id options-remove-extra-newlines)
 
