@@ -2298,19 +2298,22 @@ function p_binaryopcall(
     # If overloading `p_binaryopcall` for a custom style you will have to make sure to
     # include this logic!
     if opkind === K"|>" && s.opts.pipe_to_function_call
-        # We purposely exclude two cases:
+        # We purposely exclude three cases:
         # 
         # 1. `x |> f` inside a macro. It's too dangerous to change that inside a macro as
         #    the macro may well be handling `|>` in a custom way.
         #
-        # 2. `x .|> (f1, f2)`. This is a very weird Julia quirk where you can broadcast
+        # 2. `:(x |> f)` or `quote x |> f end`. Changing the code inside an `Expr` makes
+        #    it a different `Expr`.
+        #
+        # 3. `x .|> (f1, f2)`. This is a very weird Julia quirk where you can broadcast
         #    over the _caller_ rather than the callee. There's no equivalent way to express
         #    this in function call form, so we shouldn't try to transform it. See
         #    https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/647.
-        inside_macro = any(t -> t[1] === K"macrocall", lineage)
+        inside_macro_or_quote = any(t -> t[1] in K"macrocall quote", lineage)
         rhs_cst = childs[findlast(n -> !JuliaSyntax.is_whitespace(n), childs)]
         dotted_tuple = kind(cst) === K"dotcall" && kind(rhs_cst) === K"tuple"
-        if !inside_macro && !dotted_tuple
+        if !inside_macro_or_quote && !dotted_tuple
             return p_pipe_to_call(ds, cst, s, ctx, lineage)
         end
     end

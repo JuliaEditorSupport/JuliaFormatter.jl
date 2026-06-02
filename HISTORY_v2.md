@@ -7,6 +7,9 @@ Fixed a number of issues with `pipe_to_function_call=true`:
 - Transforming pipes inside macros was fundamentally dangerous.
   This patch conservatively refuses to transform pipes inside macros. (#439, #1023)
 
+- Transforming pipes inside an `Expr` changes the `Expr`.
+  This patch prevents this. (#1023)
+
 - The expression `1 .|> (sin, cos)` cannot be transformed into a function call as there is no equivalent syntax for this. This patch leaves such expressions unchanged. (#647, #1023)
 
 - For the transformations that do happen, this patch elides unnecessary parentheses. For example `(x) |> f` is now transformed into `f(x)` rather than `f((x))`. (#1023)

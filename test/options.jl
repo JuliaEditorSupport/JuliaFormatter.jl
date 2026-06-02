@@ -272,100 +272,119 @@
     end
 
     @testset "rewrite x |> f to f(x)" begin
-        for dot in ("", ".")
-            # Basic cases
-            @test fmt("x $dot|> f"; pipe_to_function_call = true) == "f$dot(x)"
-            @test fmt("x $dot|> f()"; pipe_to_function_call = true) == "f()$dot(x)"
-            @test fmt("x $dot|> f(a)"; pipe_to_function_call = true) == "f(a)$dot(x)"
-            @test fmt("x $dot|> M.f"; pipe_to_function_call = true) == "M.f$dot(x)"
-            @test fmt("x $dot|> T{x}"; pipe_to_function_call = true) == "T{x}$dot(x)"
-            # Check that callable is parenthesised if necessary
-            @test fmt("x $dot|> y -> y + 1"; pipe_to_function_call = true) == "(y -> y + 1)$dot(x)"
-            @test fmt("x $dot|> f ∘ g"; pipe_to_function_call = true) == "(f ∘ g)$dot(x)"
-        end
-
-        # Operators
-        @test fmt("x |> !"; pipe_to_function_call = true) == "!(x)"
-        @test fmt("x .|> !"; pipe_to_function_call = true) == ".!(x)"
-
-        # Removal of extra argument parentheses
-        @test fmt("(x) |> f"; pipe_to_function_call = true) == "f(x)"
-        @test fmt("(x) .|> f"; pipe_to_function_call = true) == "f.(x)"
-        @test fmt("(a for a in x) |> f()"; pipe_to_function_call = true) == "f()(a for a in x)"
-        # make sure that genuine tuples don't get de-parenthesised
-        @test fmt("(x, y) |> f()"; pipe_to_function_call = true) == "f()((x, y))"
-        @test fmt("(x,) |> f()"; pipe_to_function_call = true) == "f()((x,))"
-        @test fmt("(; x) |> f()"; pipe_to_function_call = true) == "f()((; x))"
-
-        # Chained pipes
-        str_ = "var = func1(arg1) |> func2 |> func3 |> func4 |> func5"
-        str = "var = func5(func4(func3(func2(func1(arg1)))))"
-        @test fmt(str_; pipe_to_function_call = true) == str
-        @test fmt(str_; pipe_to_function_call = true, margin = 1) == fmt(str)
-        @test fmt("x .|> f .|> g"; pipe_to_function_call = true) == "g.(f.(x))"
-        @test fmt("(x |> f) |> g"; pipe_to_function_call = true) == "g(f(x))"
-        @test fmt("x |> f .|> g"; pipe_to_function_call = true) == "g.(f(x))"
-        @test fmt("x .|> f |> g"; pipe_to_function_call = true) == "g(f.(x))"
-        @test fmt("x |> y -> y |> f"; pipe_to_function_call = true) == "(y -> f(y))(x)"
-
-        # Complex LHS
-        @test fmt("f(a, b) |> g"; pipe_to_function_call = true) == "g(f(a, b))"
-        @test fmt("a + b |> f"; pipe_to_function_call = true) == "f(a + b)"
-        @test fmt("[1...] |> f"; pipe_to_function_call = true) == "f([1...])"
-        @test fmt("1:10 |> collect"; pipe_to_function_call = true) == "collect(1:10)"
-
-        # Nesting with narrow margin
-        for dot in ("", ".")
-            f = "some_long_function_name"
-            x = "very_long_variable_name"
-            str_ = "$x $(dot)|> $f"
-            str = "$f$(dot)($x)"
-            @test fmt(str_; pipe_to_function_call = true, margin = 1) == fmt(str; margin = 1)
-        end
-
-        # Do block
-        for dot in ("", ".")
-            str_ = """
-            x $dot|> f(a) do a
-                g(a)
+        @testset "basic cases" begin
+            for dot in ("", ".")
+                @test fmt("x $dot|> f"; pipe_to_function_call = true) == "f$dot(x)"
+                @test fmt("x $dot|> f()"; pipe_to_function_call = true) == "f()$dot(x)"
+                @test fmt("x $dot|> f(a)"; pipe_to_function_call = true) == "f(a)$dot(x)"
+                @test fmt("x $dot|> M.f"; pipe_to_function_call = true) == "M.f$dot(x)"
+                @test fmt("x $dot|> T{x}"; pipe_to_function_call = true) == "T{x}$dot(x)"
+                # Check that callable is parenthesised if necessary
+                @test fmt("x $dot|> y -> y + 1"; pipe_to_function_call = true) == "(y -> y + 1)$dot(x)"
+                @test fmt("x $dot|> f ∘ g"; pipe_to_function_call = true) == "(f ∘ g)$dot(x)"
             end
-            """
-            str = """
-            (f(a) do a
-                g(a)
-            end)$dot(x)
-            """
-            @test fmt(str_; pipe_to_function_call = true) == str
         end
 
-        @testset "nesting & idempotence" begin
-            # Make sure that nesting decisions are made correctly the first time
-            # see https://github.com/JuliaEditorSupport/JuliaFormatter.jl/pull/1023
-            # Formatting the string below used to not be idempotent.
-            str_ = """
-            function f()
-                ps_mods = map(
-                    layer_mods -> (
-                        layer_mods === nothing ? () :
-                            map(l -> initialparameters(rng, l), layer_mods) |> Tuple
-                    ),
-                    mods
-                ) |> Tuple
-            end"""
-            str = """
-            function f()
-                ps_mods = Tuple(
-                    map(
+        @testset "operators on rhs" begin
+            @test fmt("x |> !"; pipe_to_function_call = true) == "!(x)"
+            @test fmt("x .|> !"; pipe_to_function_call = true) == ".!(x)"
+        end
+
+        @testset "elision of extra argument parentheses" begin
+            @test fmt("(x) |> f"; pipe_to_function_call = true) == "f(x)"
+            @test fmt("(x) .|> f"; pipe_to_function_call = true) == "f.(x)"
+            @test fmt("(a for a in x) |> f()"; pipe_to_function_call = true) == "f()(a for a in x)"
+            # make sure that genuine tuples don't get de-parenthesised
+            @test fmt("(x, y) |> f()"; pipe_to_function_call = true) == "f()((x, y))"
+            @test fmt("(x,) |> f()"; pipe_to_function_call = true) == "f()((x,))"
+            @test fmt("(; x) |> f()"; pipe_to_function_call = true) == "f()((; x))"
+        end
+
+        @testset "chained pipes" begin
+            str_ = "var = func1(arg1) |> func2 |> func3 |> func4 |> func5"
+            str = "var = func5(func4(func3(func2(func1(arg1)))))"
+            @test fmt(str_; pipe_to_function_call = true) == str
+            @test fmt(str_; pipe_to_function_call = true, margin = 1) == fmt(str)
+            @test fmt("x .|> f .|> g"; pipe_to_function_call = true) == "g.(f.(x))"
+            @test fmt("(x |> f) |> g"; pipe_to_function_call = true) == "g(f(x))"
+            @test fmt("x |> f .|> g"; pipe_to_function_call = true) == "g.(f(x))"
+            @test fmt("x .|> f |> g"; pipe_to_function_call = true) == "g(f.(x))"
+            @test fmt("x |> y -> y |> f"; pipe_to_function_call = true) == "(y -> f(y))(x)"
+        end
+
+        @testset "expressions on lhs" begin
+            @test fmt("f(a, b) |> g"; pipe_to_function_call = true) == "g(f(a, b))"
+            @test fmt("a + b |> f"; pipe_to_function_call = true) == "f(a + b)"
+            @test fmt("[1...] |> f"; pipe_to_function_call = true) == "f([1...])"
+            @test fmt("1:10 |> collect"; pipe_to_function_call = true) == "collect(1:10)"
+        end
+
+        @testset "nesting" begin
+            for dot in ("", ".")
+                f = "some_long_function_name"
+                x = "very_long_variable_name"
+                str_ = "$x $(dot)|> $f"
+                str = "$f$(dot)($x)"
+                @test fmt(str_; pipe_to_function_call = true, margin = 1) == fmt(str; margin = 1)
+            end
+
+            @testset "extra idempotence test" begin
+                # Make sure that nesting decisions are made correctly the first time
+                # see https://github.com/JuliaEditorSupport/JuliaFormatter.jl/pull/1023
+                # Formatting the string below used to not be idempotent.
+                str_ = """
+                function f()
+                    ps_mods = map(
                         layer_mods -> (
                             layer_mods === nothing ? () :
-                            Tuple(map(l -> initialparameters(rng, l), layer_mods))
+                                map(l -> initialparameters(rng, l), layer_mods) |> Tuple
                         ),
-                        mods,
-                    ),
-                )
-            end"""
-            @test fmt(str_; pipe_to_function_call = true) == str
-            @test fmt(str; pipe_to_function_call = true) == str
+                        mods
+                    ) |> Tuple
+                end"""
+                str = """
+                function f()
+                    ps_mods = Tuple(
+                        map(
+                            layer_mods -> (
+                                layer_mods === nothing ? () :
+                                Tuple(map(l -> initialparameters(rng, l), layer_mods))
+                            ),
+                            mods,
+                        ),
+                    )
+                end"""
+                @test fmt(str_; pipe_to_function_call = true) == str
+                @test fmt(str; pipe_to_function_call = true) == str
+            end
+        end
+
+        @testset "block argument" begin
+            for dot in (""," .")
+                str_ = """quote
+                    foo
+                end $dot|> esc"""
+                str = """esc$dot(quote
+                    foo
+                end)"""
+                @test fmt(str_; pipe_to_function_call = true) == str
+            end
+        end
+
+        @testset "function with do block" begin
+            for dot in ("", ".")
+                str_ = """
+                x $dot|> f(a) do a
+                    g(a)
+                end
+                """
+                str = """
+                (f(a) do a
+                    g(a)
+                end)$dot(x)
+                """
+                @test fmt(str_; pipe_to_function_call = true) == str
+            end
         end
 
         @testset "cases where transformation should not happen" begin
@@ -374,6 +393,12 @@
             @test fmt(smacro; pipe_to_function_call = true) == smacro
             smacro2 = "@macro function f()\n    x |> g\nend"
             @test fmt(smacro2; pipe_to_function_call = true) == smacro2
+
+            # inside Expr
+            sexpr = ":(x |> f)"
+            @test fmt(sexpr; pipe_to_function_call = true) == sexpr
+            squote = "quote\n    x |> f\nend"
+            @test fmt(squote; pipe_to_function_call = true) == squote
 
             # dotted tuple of functions
             # https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/647
