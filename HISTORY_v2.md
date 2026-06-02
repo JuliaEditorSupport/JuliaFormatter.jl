@@ -1,3 +1,7 @@
+# v2.5.6
+
+Fixed a bug where JuliaFormatter would fail to format a condition (following an `if` or `elseif` keyword) was a block (e.g. `(a; b)` or `begin ... end`). (#1025, #1026)
+
 # v2.5.5
 
 Fixed a number of issues with `pipe_to_function_call=true`:
