@@ -1497,19 +1497,15 @@
             end
 
             # Nesting
-            str_ = """
-            if (veryverylong; veryverylongtoo)
+            str_ = """if (veryverylong; veryverylongtoo)
                 f
-            end
-            """
-            str = """
-            if (
+            end"""
+            str = """if (
                 veryverylong;
                 veryverylongtoo
             )
                 f
-            end
-            """
+            end"""
             @test fmt(str_; margin=20) == str
         end
 
