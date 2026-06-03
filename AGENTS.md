@@ -11,7 +11,10 @@
 # Tracing JuliaFormatter's output
 
 - Use the `JuliaFormatter.Internal.format_to_stage` function to inspect the output of each stage of the formatting process.
-  If `s` is a string containing the code to be formatted, then:
+  If `s` is a string containing the code to be formatted, then `format_to_stage(stage, s[, style]; options...)` will give the output of the specified stage, where `stage` is one of:
 
-  - `format_to_stage(:cst, s[, style]; options...)` gives the CST from JuliaSyntax;
-  - `format_to_stage(:fst, s[, style]; options...)` gives the initial FST that JuliaFormatter constructs from the CST using `pretty()`.
+  - `:cst` gives the CST from JuliaSyntax;
+  - `:fst` gives the initial FST that JuliaFormatter constructs from the CST using `pretty()`;
+  - `:nest` gives the FST after flattening, alignment, and nesting;
+  - `:out` gives the final formatted string;
+  - `:print` prints the final formatted string.
