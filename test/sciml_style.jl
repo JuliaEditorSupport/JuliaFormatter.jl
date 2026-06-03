@@ -156,6 +156,7 @@
     end
 
     @testset "wrapped hcat with ncat separator" begin
+        # SciML's fixpoint pass reparses this as Hcat; it must keep `;;` wrapped.
         str = raw"""
         x = [f(a=1)
              f(a=1);;

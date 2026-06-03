@@ -3478,6 +3478,8 @@ function p_hcat(
     for (i, a) in enumerate(childs)
         n = pretty(style, a, s, ctx, lineage)
         if JuliaSyntax.is_whitespace(a)
+            # Wrapped ncat like `[a b;;\n c d]` reparses as Hcat with `;` leaves.
+            # That newline is syntactic, not cosmetic; joining it makes invalid Julia.
             prev_idx = findprev(n -> !JuliaSyntax.is_whitespace(n), childs, i - 1)
             prev_prev_idx = isnothing(prev_idx) ? nothing :
                             findprev(n -> !JuliaSyntax.is_whitespace(n), childs, prev_idx - 1)
@@ -3495,6 +3497,7 @@ function p_hcat(
         elseif i > st
             add_node!(t, n, s; join_lines = true)
             next_idx = findnext(n -> !JuliaSyntax.is_whitespace(n), childs, i + 1)
+            # Do not manufacture whitespace between hcat entries and ncat separators.
             if needs_placeholder(childs, i + 1, K"]") &&
                !(!isnothing(next_idx) && kind(childs[next_idx]) === K";")
                 add_node!(t, Whitespace(1), s)

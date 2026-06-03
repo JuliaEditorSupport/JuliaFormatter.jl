@@ -207,6 +207,7 @@ function n_hcat!(
     s::State,
     lineage::Vector{Tuple{FNode,Union{Nothing,Metadata}}},
 )
+    # Wrapped ncat can reparse as Hcat; keep YAS alignment on that second pass.
     n_tuple!(ys, fst, s, lineage)
 end
 function n_bracescat!(

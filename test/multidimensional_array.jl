@@ -52,6 +52,8 @@
     end
 
     @testset "wrapped hcat with ncat separators" begin
+        # Repeated semicolons are n-dimensional concatenation separators.
+        # They may follow an hcat row only when the next row is wrapped.
         separators = [";;", ";;;", ";;;;"]
         styles = (DefaultStyle(), YASStyle(), SciMLStyle())
 
@@ -69,6 +71,7 @@
                 @test JuliaSyntax.parseall(JuliaSyntax.GreenNode, str) isa
                       JuliaSyntax.GreenNode
 
+                # Styles choose different layouts here, so the invariant is parsability.
                 for style in styles
                     formatted = format_text(str, style; join_lines_based_on_source = false)
                     @test JuliaSyntax.parseall(JuliaSyntax.GreenNode, formatted) isa
