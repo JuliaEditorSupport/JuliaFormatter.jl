@@ -3478,10 +3478,25 @@ function p_hcat(
     for (i, a) in enumerate(childs)
         n = pretty(style, a, s, ctx, lineage)
         if JuliaSyntax.is_whitespace(a)
+            prev_idx = findprev(n -> !JuliaSyntax.is_whitespace(n), childs, i - 1)
+            prev_prev_idx = isnothing(prev_idx) ? nothing :
+                            findprev(n -> !JuliaSyntax.is_whitespace(n), childs, prev_idx - 1)
+            if kind(a) === K"NewlineWs" &&
+               !isnothing(prev_idx) &&
+               !isnothing(prev_prev_idx) &&
+               kind(childs[prev_idx]) === K";" &&
+               kind(childs[prev_prev_idx]) === K";"
+                add_node!(t, Newline(; nest_behavior = AlwaysNest), s)
+            else
+                add_node!(t, n, s; join_lines = true)
+            end
+        elseif kind(a) === K";"
             add_node!(t, n, s; join_lines = true)
         elseif i > st
             add_node!(t, n, s; join_lines = true)
-            if needs_placeholder(childs, i + 1, K"]")
+            next_idx = findnext(n -> !JuliaSyntax.is_whitespace(n), childs, i + 1)
+            if needs_placeholder(childs, i + 1, K"]") &&
+               !(!isnothing(next_idx) && kind(childs[next_idx]) === K";")
                 add_node!(t, Whitespace(1), s)
             end
         else

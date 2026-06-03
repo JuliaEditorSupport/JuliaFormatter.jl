@@ -118,6 +118,8 @@ function nest!(
         n_vect!(style, fst, s, lineage)
     elseif fst.typ === Vcat
         n_vcat!(style, fst, s, lineage)
+    elseif fst.typ === Hcat
+        n_hcat!(style, fst, s, lineage)
     elseif fst.typ === Ncat
         n_vcat!(style, fst, s, lineage)
     elseif fst.typ === Braces
@@ -442,6 +444,15 @@ function n_vcat!(
     lineage::Vector{Tuple{FNode,Union{Nothing,Metadata}}},
 )
     n_tuple!(ds, fst, s, lineage)
+end
+
+function n_hcat!(
+    ds::AbstractStyle,
+    fst::FST,
+    s::State,
+    lineage::Vector{Tuple{FNode,Union{Nothing,Metadata}}},
+)
+    nest!(getstyle(ds), fst.nodes::Vector, s, fst.indent, lineage; extra_margin = fst.extra_margin)
 end
 
 function n_braces!(

@@ -155,6 +155,22 @@
         @test format_text(str2, SciMLStyle()) == str2
     end
 
+    @testset "wrapped hcat with ncat separator" begin
+        str = raw"""
+        x = [f(a=1)
+             f(a=1);;
+             f(a=2)
+             f(a=2)]
+        """
+        formatted_str = raw"""
+        x = [f(a = 1) f(a = 1);;
+             f(a = 2) f(a = 2)]
+        """
+
+        @test format_text(str, SciMLStyle(); join_lines_based_on_source = false) ==
+              formatted_str
+    end
+
     str = raw"""
     Dict{Int, Int}(1 => 2,
         3 => 4)
