@@ -1,3 +1,11 @@
+# v2.5.6
+
+Fixed a bug where JuliaFormatter would emit invalid code when parsing an `if`/`elseif` with a block condition (e.g. `(a; b)` or `begin ... end`). (#1025, #1026)
+
+The same bug was present for `while` loops with similar block conditions.
+Although Julia would still parse the code correctly, the output was ugly.
+This PR therefore also fixes this. (#1026)
+
 # v2.5.5
 
 Fixed a number of issues with `pipe_to_function_call=true`:
