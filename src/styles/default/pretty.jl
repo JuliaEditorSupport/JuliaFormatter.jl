@@ -1736,9 +1736,9 @@ function p_for(
             # the loop, or the condition of a while loop such as `while (a; b; c) ... end`.
             # See also `p_if` for similar considerations.
             if is_while_cond
+                is_while_cond = false
                 add_node!(t, Whitespace(1), s)
                 add_node!(t, pretty(style, c, s), s; join_lines = true)
-                is_while_cond = false
             else
                 # The body of the for/while loop.
                 s.indent += s.opts.indent
@@ -1754,6 +1754,7 @@ function p_for(
             add_node!(t, pretty(style, c, s, ctx, lineage), s)
         else
             # Non-block while conditions or for loop iterables fall here.
+            is_while_cond = false
             add_node!(t, Whitespace(1), s)
             n = if kind(c) === K"iteration"
                 rhs_is_iterable = !iteration_has_comma(c) && is_iterable(iteration_rhs(c))
