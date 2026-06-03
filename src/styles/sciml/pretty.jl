@@ -41,13 +41,9 @@ function options(::SciMLStyle)
 end
 
 function is_binaryop_nestable(::SciMLStyle, cst::JuliaSyntax.GreenNode)
-    if (defines_function(cst) || is_assignment(cst))
-        return false
-    else
-        false
-    end
-    !(op_kind(cst) in KSet"=> -> in")
+    !defines_function(cst) && !is_assignment(cst) && !(op_kind(cst) in KSet"=> -> in")
 end
+
 @doc """
     SciMLStyle()
 

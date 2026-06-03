@@ -26,53 +26,169 @@ function newctx(s::PrettyContext; kwargs...)
     PrettyContext(values...)
 end
 
-function source_kind(s::State, cst::JuliaSyntax.GreenNode, offset::Integer)
-    span(cst) == 0 && return nothing
-    offset = Int(offset)
-    n = Int(span(cst))
-    val = getsrcval(s.doc, offset:(offset+n-1))
-    try
-        return JuliaSyntax.Kind(val)
-    catch
-        return nothing
+"""
+    source_op_kind_from_offset(s, cst, offset)::Union{Nothing,JuliaSyntax.Kind}
+
+Return the operator kind of `cst`, using the source text at `offset` if necessary to help
+determine this. If `cst` is not an operator, returns `nothing`.
+
+Note that this function may still return a K"Identifier"! This is because Julia allows some
+weird postfix operators. See the comments in the function for more info.
+
+The check against the source is needed because JuliaSyntax v1 can encode source operators as
+Identifier leaves in call forms. For example:
+
+```julia
+julia> JuliaSyntax.parseall(JuliaSyntax.GreenNode, "+y")
+     1:2      │[toplevel]
+     1:2      │  [call]
+     1:1      │    Identifier           ✔
+     2:2      │    Identifier           ✔
+```
+
+See https://github.com/JuliaLang/JuliaSyntax.jl/issues/548 for more information.
+"""
+function source_op_kind_from_offset(s::State, cst::JuliaSyntax.GreenNode, offset::Integer)
+    return if JuliaSyntax.is_operator(cst) && !haschildren(cst)
+        # Already have the right kind stored in the GreenNode
+        kind(cst)
+    elseif kind(cst) === K"Identifier" && !haschildren(cst)
+        # The operator was reduced to an Identifier (this happens in JuliaSyntax v1).
+        # Attempt to recover the original kind from the source.
+        span(cst) == 0 && return nothing
+        source_text = getsrcval(s.doc, offset:(offset+span(cst)-1))
+        try
+            # Parse the source text and check whether it's a valid operator.
+            k = JuliaSyntax.Kind(source_text)
+            return if JuliaSyntax.is_operator(k)
+                # This is the happy path. It's hit for things like e.g. "+x".
+                k
+            else
+                # There are a lot of Identifiers which can be parsed as kinds, but aren't
+                # operators. For example, the `string` in `string(x)` will be converted to
+                # K"string" here, which is totally not what we want. Hence we return
+                # nothing.
+                nothing
+            end
+        catch
+            # There are some operators for which JuliaSyntax does not actually have a
+            # dedicated kind. For example, `a'ᵀ` is a postfix operator `'ᵀ`, and
+            # JuliaSyntax.is_postfix_op_call will correctly return true. Specifically, the '
+            # postfix operator can be followed by any Unicode modifier:
+            # https://github.com/JuliaLang/julia/pull/37247
+            #
+            # However, the operator is stored as Identifier and calling Kind("'ᵀ") throws an
+            # error. We catch such instances here. Thankfully, Base gives us a function
+            # (albeit unexported) to detect these. If this function returns K"Identifier",
+            # then we know that it's one of these odd postfix operators.
+            return if kind(cst) === K"Identifier" && Base.ispostfixoperator(source_text)
+                K"Identifier"
+            else
+                nothing
+            end
+        end
+    else
+        # Can't be an operator at all
+        nothing
     end
 end
 
-# JuliaSyntax v1 can encode source operators as Identifier leaves in call
-# forms, e.g. `a + b`, `x .+ y`, `+(x)`, and `>=(x)`. The parent call flags
-# describe the shape, but the leaf itself is not `is_operator`, and the exact
-# operator kind is only recoverable from the source span.
-function source_op_kind_from_offset(s::State, cst::JuliaSyntax.GreenNode, offset::Integer)
-    if JuliaSyntax.is_operator(cst) && !haschildren(cst)
-        return kind(cst)
-    elseif kind(cst) === K"Identifier" && !haschildren(cst)
-        k = source_kind(s, cst, offset)
-        if !isnothing(k) && JuliaSyntax.is_operator(k)
-            return k
+"""
+    first_nonws_leaf_and_offset(
+        node::JuliaSyntax.GreenNode,
+    )::Union{Nothing,Tuple{JuliaSyntax.GreenNode,Int}
+
+Return the first non-whitespace leaf node in `node` plus its offset from the beginning of
+`node`, or `nothing` if there are no non-whitespace leaves.
+"""
+function first_nonws_leaf_and_offset(
+    node::JuliaSyntax.GreenNode,
+    # Callers should not set _acc, this is only used in this function to recurse
+    _acc::Integer = 0,
+)::Union{Nothing,Tuple{JuliaSyntax.GreenNode,Int}}
+    if JuliaSyntax.is_leaf(node)
+        return JuliaSyntax.is_whitespace(node) ? nothing : (node, _acc)
+    end
+    # Recursively search children
+    for c in children(node)
+        result = first_nonws_leaf_and_offset(c, _acc)
+        if result !== nothing
+            return result
         end
+        _acc += span(c)
     end
     return nothing
 end
 
+"""
+   source_begins_with_op_needing_parens(s, cst, offset) 
+
+Check whether the first token of `cst` is an operator. Used in `p_kw`: if the value on the
+rhs of `kwarg=value` begins with an operator, then we parenthesise `value` to avoid
+ambiguity.
+
+Note that the behaviour of this differs from `unary_info(cst)`: for example,
+`unary_info(cst)` does not pick up  expressions such as `>=(1)`, which is interpreted as a
+function call, not an application of a unary operator. However, these are exactly the sort
+of things that we want to parenthesise in `p_kw` -- hence this function.
+"""
+function source_begins_with_op_needing_parens(
+    s::State,
+    cst::JuliaSyntax.GreenNode,
+    offset::Integer,
+)
+    # Get the first leaf of `cst` that isn't whitespace.
+    result = first_nonws_leaf_and_offset(cst)
+    result === nothing && return false
+    # Check if it's an operator and specifically one that we care about putting
+    # parentheses around.
+    leaf, extra_offset = result
+    opkind = source_op_kind_from_offset(s, leaf, offset + extra_offset)
+    return (
+        opkind !== nothing &&
+        JuliaSyntax.is_operator(opkind)
+        # is_word_operator filters out things like `isa`.
+        &&
+        !JuliaSyntax.is_word_operator(opkind)
+        # Ignore `K":"` as that indicates the beginning of a symbol, which we don't care
+        # about parenthesising.
+        &&
+        opkind !== K":"
+    )
+end
+
 function is_source_operator(s::State, cst::JuliaSyntax.GreenNode, offset::Integer)
+    # TODO(penelopeysm): do we need to check JuliaSyntax.is_operator as well?
     !isnothing(source_op_kind_from_offset(s, cst, offset))
 end
 
-function source_prefix_operator_index(cst::JuliaSyntax.GreenNode, s::State)
-    kind(cst) in KSet"call dotcall" && haschildren(cst) || return nothing
+function source_unary_operator_index(is_prefix::Bool, cst::JuliaSyntax.GreenNode, s::State)
+    if !haschildren(cst) ||
+       !(JuliaSyntax.is_operator(cst) || kind(cst) in KSet"call dotcall")
+        return nothing
+    end
+
     childs = children(cst)
     args = findall(n -> !JuliaSyntax.is_whitespace(n), childs)
     isempty(args) && return nothing
 
-    op_arg =
-        if kind(cst) === K"dotcall" &&
-           length(args) >= 2 &&
-           kind(childs[args[1]]) === K"." &&
-           !haschildren(childs[args[1]])
+    op_arg = if is_prefix
+        if (
+            kind(cst) === K"dotcall" &&
+            length(args) >= 2 &&
+            kind(childs[args[1]]) === K"." &&
+            !haschildren(childs[args[1]])
+        )
+            # e.g. `.+x`
             args[2]
         else
+            # e.g. `+x`
             args[1]
         end
+    else
+        # postfix operator
+        args[end]
+    end
     offset = s.offset + sum(span, childs[1:(op_arg-1)]; init = 0)
     return is_source_operator(s, childs[op_arg], offset) ? op_arg : nothing
 end
@@ -200,6 +316,8 @@ function pretty(
     do_block_idx = has_do_block_call(node)
     push!(lineage, (k, is_iterable(node), is_assignment(node)))
 
+    _unaryinfo = unary_info(node)
+
     ret = if k == K"Identifier" && !haschildren(node)
         p_identifier(style, node, s, ctx, lineage)
         # Example: `try f() catch g() end` has a zero-width Placeholder
@@ -298,20 +416,21 @@ function pretty(
         # Example: `map(xs) do x; x + 1; end` is a call node with a do child.
     elseif !isnothing(do_block_idx)
         p_do_call(style, node, s, ctx, lineage, do_block_idx)
-        # Example: `+(x)` parses as a prefix-op call.
-    elseif JuliaSyntax.is_prefix_op_call(node)
-        p_unaryopcall(style, node, s, ctx, lineage)
+    elseif _unaryinfo !== nothing
+        # _unaryinfo === nothing means that it's not unary; true/false indicates whether
+        # it's a prefix/postfix.
+        p_unaryopcall(style, node, s, ctx, lineage, _unaryinfo)
     elseif is_binary(node)
         p_binaryopcall(style, node, s, ctx, lineage)
     elseif is_chain(node)
         p_chainopcall(style, node, s, ctx, lineage)
-    elseif is_unary(node)
-        p_unaryopcall(style, node, s, ctx, lineage)
     elseif is_func_call(node)
         p_call(style, node, s, ctx, lineage)
     elseif k === K"comparison"
         p_comparison(style, node, s, ctx, lineage)
     elseif JuliaSyntax.is_operator(node) && haschildren(node)
+        # TODO(penelopeysm) What does this catch that is_binary didn't? Should run test
+        # suite with a print statement here to find out
         p_binaryopcall(style, node, s, ctx, lineage)
     elseif k in KSet"dotcall call"
         p_binaryopcall(style, node, s, ctx, lineage)
@@ -479,7 +598,7 @@ function p_operator(
     val = getsrcval(s.doc, (s.offset):(s.offset+span(cst)-1))
     s.offset += span(cst)
     t = FST(OPERATOR, loc[2], loc[1], loc[1], val)
-    t.metadata = Metadata(kind(cst), JuliaSyntax.is_dotted(cst))
+    t.metadata = Metadata(kind(cst))
     return t
 end
 
@@ -695,7 +814,7 @@ function p_stringh(
     if !haschildren(cst)
         return FST(StringN, loc[2] - 1)
     end
-    loc2 = cursor_loc(s, s.offset+span(cst)-1)
+    loc2 = cursor_loc(s, s.offset + span(cst) - 1)
 
     val = getsrcval(s.doc, (s.offset):(s.offset+span(cst)-1))
     startline = loc[1]
@@ -799,11 +918,7 @@ function p_macrocall(
     end
 
     args = get_args(cst)
-    nest =
-        length(args) > 0 && !(
-            length(args) == 1 &&
-            (unnestable_node(args[1]) || s.opts.disallow_single_arg_nesting)
-        )
+    nest = should_nest_call_args(args, s.opts.disallow_single_arg_nesting)
     childs = children(cst)
 
     has_closer = is_closer(childs[end])
@@ -929,7 +1044,7 @@ function p_block(
         elseif single_line
             if kind(a) in KSet", ;"
                 add_node!(t, n, s; join_lines = true)
-                if needs_placeholder(childs, i+1, K")")
+                if needs_placeholder(childs, i + 1, K")")
                     add_node!(t, Placeholder(1), s)
                 end
             else
@@ -1104,7 +1219,7 @@ function p_functiondef(
             add_node!(t, pretty(style, c, s, ctx, lineage), s; join_lines = true)
         end
     end
-    t.metadata = Metadata(kind(cst), false, false, false, false, true, false)
+    t.metadata = Metadata(kind(cst), false, false, false, true, false)
     t
 end
 
@@ -1931,41 +2046,235 @@ function p_kw(
 
     push!(lineage, (kind(cst), false, true))
 
+    # We need to process the LHS and RHS slightly differently in the loop below.
+    is_rhs_of_equal = false
+
     for c in children(cst)
-        if kind(c) === K"=" && s.opts.whitespace_in_kwargs
-            add_node!(t, Whitespace(1), s)
+        if kind(c) === K"="
+            s.opts.whitespace_in_kwargs && add_node!(t, Whitespace(1), s)
             add_node!(t, pretty(style, c, s, ctx, lineage), s; join_lines = true)
-            add_node!(t, Whitespace(1), s)
+            s.opts.whitespace_in_kwargs && add_node!(t, Whitespace(1), s)
+            # Now that we've seen the equal, we know that what comes after it must
+            # be the RHS.
+            is_rhs_of_equal = true
         else
-            # Need to explicitly check source_prefix rather than relying on
-            # JuliaSyntax.is_prefix_op_call, as the latter doesn't identify e.g.
-            # `>=(x)` as operators.
-            source_prefix = !isnothing(source_prefix_operator_index(c, s))
+            child_offset = s.offset
             n = pretty(style, c, s, ctx, lineage)
-            if !s.opts.whitespace_in_kwargs &&
-               ((n.typ === IDENTIFIER && endswith(n.val, "!")) || source_prefix)
-                add_node!(
-                    t,
-                    FST(PUNCTUATION, -1, n.startline, n.startline, "("),
-                    s;
-                    join_lines = true,
-                )
-                add_node!(t, n, s; join_lines = true)
-                add_node!(
-                    t,
-                    FST(PUNCTUATION, -1, n.startline, n.startline, ")"),
-                    s;
-                    join_lines = true,
-                )
-            else
-                add_node!(t, n, s; join_lines = true)
-            end
+            # Check if the value of the kwarg begins with an operator, or if the name ends
+            # with an exclamation mark. If so, then we should parenthesise it to avoid
+            # ambiguity.
+            lhs_ends_with_bang =
+                !is_rhs_of_equal && kind(c) === K"Identifier" && endswith(n.val, "!")
+            rhs_begins_with_op =
+                is_rhs_of_equal && source_begins_with_op_needing_parens(s, c, child_offset)
+            parenthesise =
+                (lhs_ends_with_bang || rhs_begins_with_op) && !s.opts.whitespace_in_kwargs
+
+            parenthesise && add_node!(
+                t,
+                FST(PUNCTUATION, -1, n.startline, n.startline, "("),
+                s;
+                join_lines = true,
+            )
+            add_node!(t, n, s; join_lines = true)
+            parenthesise && add_node!(
+                t,
+                FST(PUNCTUATION, -1, n.startline, n.startline, ")"),
+                s;
+                join_lines = true,
+            )
         end
     end
 
     pop!(lineage)
 
     t
+end
+
+"""
+    p_pipe_to_call
+
+Take a CST of the form `x |> y` or `x .|> y`, but return a FST with the equivalent function
+call `y(x)` or `y.(x)` instead.
+
+Note that this function is only called for certain pipe-applications. See the call site in
+`p_binaryopcall` for details.
+"""
+function p_pipe_to_call(
+    style::AbstractStyle,
+    # cst here must be a binary op call with |> as the operator (possibly dotted).
+    cst::JuliaSyntax.GreenNode,
+    s::State,
+    ctx::PrettyContext,
+    lineage::Vector{Tuple{JuliaSyntax.Kind,Bool,Bool}},
+)
+    # WARNING: This transformation can lead to semantic changes. See e.g.
+    # - https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/439
+    # - https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/647
+    # 
+    # This should really be removed in a future version of JuliaFormatter.
+    @warn (
+        "JuliaFormatter transformed one or more expressions with the form `x |> f` into" *
+        " the equivalent function call `f(x)`.\n\nNote that that this can lead to" *
+        " semantic changes if `|>` has been overloaded or otherwise has a custom meaning!" *
+        "\n\nYou can disable this behaviour by setting the `pipe_to_function_call` option" *
+        " to `false`. Note that this option is `true` by default for Blue and YAS styles," *
+        " meaning that you must explicitly opt out. Alternatively, you can use" *
+        " `#! format: off` and `#! format: on` to disable formatting for specific" *
+        " sections of code that use `|>`."
+    ) maxlog=1
+
+    call_node = FST(Call, nspaces(s))
+    childs = children(cst)
+
+    # Identify the operator LHS (callee) and RHS (caller).
+    lhs_idx = findfirst(n -> !JuliaSyntax.is_whitespace(n), childs)
+    rhs_idx = findlast(n -> !JuliaSyntax.is_whitespace(n), childs)
+    if isnothing(lhs_idx) || isnothing(rhs_idx) || lhs_idx >= rhs_idx
+        error(
+            "pipe operator with lhs_idx=$(lhs_idx) and rhs_idx=$(rhs_idx): should not happen",
+        )
+    end
+
+    # Convert each node to an FST, storing references to the LHS and RHS nodes for later.
+    lhs, rhs = nothing, nothing
+    for (i, c) in enumerate(childs)
+        if i == lhs_idx
+            if kind(c) === K"parens" && haschildren(c)
+                # If the lhs is a parenthesised expression, we can strip the parentheses.
+                # For example
+                #     (x) |> f
+                # can just become f(x) rather than f((x)).
+                for pc in children(c)
+                    if kind(pc) in KSet"( )" || JuliaSyntax.is_whitespace(pc)
+                        s.offset += span(pc)
+                    else
+                        lhs = pretty(style, pc, s, ctx, lineage)
+                    end
+                end
+            else
+                lhs = pretty(style, c, s, ctx, lineage)
+            end
+        elseif i == rhs_idx
+            rhs = pretty(style, c, s, ctx, lineage)
+        else
+            s.offset += span(c)
+        end
+    end
+
+    # Handle the caller.
+    #
+    # Some things need to be wrapped in parens. We behave conservatively here and only opt
+    # out of wrapping for the following callers:
+    #
+    #   - a plain identifier               arg |> f     -> f(arg)
+    #   - a field access                   arg |> obj.f -> obj.f(arg)
+    #   - something already parenthesised  arg |> (f)   -> (f)(arg)
+    #   - a function call                  arg |> f()   -> f()(arg)
+    #   - a parametrised type constructor  arg |> F{x}  -> F{x}(arg)
+    #
+    # There are two edge cases (of course there are).
+    #
+    # 1. For the function call case, we need to parenthesise a function call with a
+    #    do-block:
+    #
+    #     arg |> f() do           (f() do
+    #         g()          --->        g()
+    #     end                     end)(arg)
+    #
+    # 2. For the identifier case, if it's a dotted operator, we need to store a flag,
+    #    `is_dotted_operator`. This is because
+    #
+    #        arg .|> ! 
+    #
+    #    should become `.!(arg)` rather than `!.(arg)` which is a parse error.
+    #    (Alternatively, (!).(arg) would work too, but looks uglier.)
+    rhs_cst = childs[rhs_idx]
+    is_dotted_operator = if kind(cst) === K"dotcall" && kind(rhs_cst) === K"Identifier"
+        try
+            k = JuliaSyntax.Kind(rhs.val)
+            JuliaSyntax.is_operator(k) && !JuliaSyntax.is_word_operator(k)
+        catch
+            false
+        end
+    else
+        false
+    end
+    caller_needs_parens = if kind(rhs_cst) in KSet"Identifier . parens curly"
+        false
+    elseif kind(rhs_cst) === K"call" && haschildren(rhs_cst)
+        # In JuliaSyntax, infix operators are also parsed as `call`, so we need to really
+        # check that it is a function call with parentheses.
+        has_parens = any(n -> kind(n) === K"(", children(rhs_cst))
+        has_do = any(n -> kind(n) === K"do", children(rhs_cst))
+        if has_parens
+            has_do
+        else
+            true # infix operator
+        end
+    else
+        true
+    end
+
+    # Add a dot *before* the function if needed.
+    if kind(cst) === K"dotcall" && is_dotted_operator
+        add_node!(
+            call_node,
+            FST(PUNCTUATION, -1, rhs.startline, rhs.startline, "."),
+            s;
+            join_lines = true,
+        )
+    end
+
+    # Add the function, parenthesising if needed.
+    caller_needs_parens && add_node!(
+        call_node,
+        FST(PUNCTUATION, -1, rhs.startline, rhs.startline, "("),
+        s;
+        join_lines = true,
+    )
+    add_node!(call_node, rhs, s; join_lines = true)
+    caller_needs_parens && add_node!(
+        call_node,
+        FST(PUNCTUATION, -1, rhs.startline, rhs.startline, ")"),
+        s;
+        join_lines = true,
+    )
+
+    # Add a dot *after* the function if needed.
+    if kind(cst) === K"dotcall" && !is_dotted_operator
+        add_node!(
+            call_node,
+            FST(PUNCTUATION, -1, rhs.startline, rhs.startline, "."),
+            s;
+            join_lines = true,
+        )
+    end
+
+    # Handle the callee.
+    nest = should_nest_call_args([cst[lhs_idx]], s.opts.disallow_single_arg_nesting)
+    add_node!(
+        call_node,
+        FST(PUNCTUATION, -1, rhs.startline, rhs.startline, "("),
+        s;
+        join_lines = true,
+    )
+    if nest
+        add_node!(call_node, Placeholder(0), s)
+    end
+    add_node!(call_node, lhs, s; join_lines = true)
+    if nest
+        add_node!(call_node, TrailingComma(), s)
+        add_node!(call_node, Placeholder(0), s)
+    end
+    add_node!(
+        call_node,
+        FST(PUNCTUATION, -1, rhs.startline, rhs.startline, ")"),
+        s;
+        join_lines = true,
+    )
+
+    return call_node
 end
 
 function p_binaryopcall(
@@ -1985,6 +2294,30 @@ function p_binaryopcall(
     op_indices = source_operator_indices(cst)
     opkind = source_op_kind(s, cst)
 
+    # Intercept piped function calls and construct a normal function call FST instead. NOTE:
+    # If overloading `p_binaryopcall` for a custom style you will have to make sure to
+    # include this logic!
+    if opkind === K"|>" && s.opts.pipe_to_function_call
+        # We purposely exclude three cases:
+        # 
+        # 1. `x |> f` inside a macro. It's too dangerous to change that inside a macro as
+        #    the macro may well be handling `|>` in a custom way.
+        #
+        # 2. `:(x |> f)` or `quote x |> f end`. Changing the code inside an `Expr` makes
+        #    it a different `Expr`.
+        #
+        # 3. `x .|> (f1, f2)`. This is a very weird Julia quirk where you can broadcast
+        #    over the _caller_ rather than the callee. There's no equivalent way to express
+        #    this in function call form, so we shouldn't try to transform it. See
+        #    https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/647.
+        inside_macro_or_quote = any(t -> t[1] in KSet"macrocall quote", lineage)
+        rhs_cst = childs[findlast(n -> !JuliaSyntax.is_whitespace(n), childs)]
+        dotted_tuple = kind(cst) === K"dotcall" && kind(rhs_cst) === K"tuple"
+        if !inside_macro_or_quote && !dotted_tuple
+            return p_pipe_to_call(ds, cst, s, ctx, lineage)
+        end
+    end
+
     nonest = ctx.nonest || opkind === K":"
 
     nrhs = nest_rhs(cst)
@@ -2000,7 +2333,6 @@ function p_binaryopcall(
     end
 
     is_short_form_function = defines_function(cst) && !ctx.from_let
-    op_dotted = kind(cst) === K"dotcall"
     standalone_binary_circuit = ctx.standalone_binary_circuit
     can_separate_kwargs = ctx.can_separate_kwargs && !is_function_or_macro_def(cst)
 
@@ -2020,7 +2352,6 @@ function p_binaryopcall(
 
     t.metadata = Metadata(
         opkind,
-        op_dotted,
         lazy_op && standalone_binary_circuit,
         is_short_form_function,
         is_assignment(cst) || defines_function(cst),
@@ -2092,7 +2423,7 @@ function p_binaryopcall(
             val = getsrcval(s.doc, (s.offset):(s.offset+op_span-1))
             s.offset += op_span
             n = FST(OPERATOR, loc[2], loc[1], loc[1], val)
-            n.metadata = Metadata(K"op=", startswith(val, "."))
+            n.metadata = Metadata(K"op=")
             if nws > 0 && i > 1
                 add_node!(t, Whitespace(nws), s)
             end
@@ -2129,7 +2460,7 @@ function p_binaryopcall(
         if is_op && n.typ === IDENTIFIER
             n.typ = OPERATOR
             n.metadata =
-                Metadata(source_op_kind_from_offset(s, c, offset)::JuliaSyntax.Kind, is_dot)
+                Metadata(source_op_kind_from_offset(s, c, offset)::JuliaSyntax.Kind)
         end
         if is_dot && haschildren(c) && length(children(c)) == 2
             # [.]
@@ -2258,11 +2589,7 @@ function p_whereopcall(
     end
 
     args = get_args(cst)
-    nest =
-        length(args) > 0 && !(
-            length(args) == 1 &&
-            (unnestable_node(args[1]) || s.opts.disallow_single_arg_nesting)
-        )
+    nest = should_nest_call_args(args, s.opts.disallow_single_arg_nesting)
 
     childs = children(cst)
     where_idx = findfirst(c -> kind(c) === K"where" && !haschildren(c), childs)
@@ -2354,6 +2681,7 @@ function p_unaryopcall(
     s::State,
     ctx::PrettyContext,
     lineage::Vector{Tuple{JuliaSyntax.Kind,Bool,Bool}},
+    is_prefix::Bool,
 )
     style = getstyle(ds)
     t = FST(Unary, nspaces(s))
@@ -2363,14 +2691,13 @@ function p_unaryopcall(
 
     childs = children(cst)
     first_idx = findfirst(n -> !JuliaSyntax.is_whitespace(n), childs)
-    op_idx = source_prefix_operator_index(cst, s)
+    op_idx = source_unary_operator_index(is_prefix, cst, s)
     if isnothing(op_idx)
         op_idx = first_idx
     end
     opkind = isnothing(op_idx) ? op_kind(cst) : source_op_kind(s, cst)
-    op_dotted = kind(cst) === K"dotcall"
 
-    t.metadata = Metadata(opkind, op_dotted)
+    t.metadata = Metadata(opkind)
 
     for (i, c) in enumerate(childs)
         offset = s.offset
@@ -2382,7 +2709,7 @@ function p_unaryopcall(
             k = source_op_kind_from_offset(s, c, offset)
             if !isnothing(k)
                 n.typ = OPERATOR
-                n.metadata = Metadata(k, false)
+                n.metadata = Metadata(k)
             end
         end
         add_node!(t, n, s; join_lines = true)
@@ -2404,11 +2731,7 @@ function p_curly(
     end
 
     args = get_args(cst)
-    nest =
-        length(args) > 0 && !(
-            length(args) == 1 &&
-            (unnestable_node(args[1]) || s.opts.disallow_single_arg_nesting)
-        )
+    nest = should_nest_call_args(args, s.opts.disallow_single_arg_nesting)
 
     nws = s.opts.whitespace_typedefs ? 1 : 0
 
@@ -2464,11 +2787,7 @@ function p_call(
     end
 
     args = call_args(childs)
-    nest =
-        length(args) > 0 && !(
-            length(args) == 1 &&
-            (unnestable_node(args[1]) || s.opts.disallow_single_arg_nesting)
-        )
+    nest = should_nest_call_args(args, s.opts.disallow_single_arg_nesting)
 
     for (i, a) in enumerate(childs)
         k = kind(a)
@@ -2583,11 +2902,7 @@ function p_tupleblock(
     end
 
     args = get_args(cst)
-    nest =
-        length(args) > 0 && !(
-            length(args) == 1 &&
-            (unnestable_node(args[1]) || s.opts.disallow_single_arg_nesting)
-        )
+    nest = should_nest_call_args(args, s.opts.disallow_single_arg_nesting)
 
     childs = children(cst)
     for (i, a) in enumerate(childs)
@@ -2632,11 +2947,7 @@ function p_tuple(
     end
 
     args = get_args(cst)
-    nest =
-        length(args) > 0 && !(
-            length(args) == 1 &&
-            (unnestable_node(args[1]) || s.opts.disallow_single_arg_nesting)
-        )
+    nest = should_nest_call_args(args, s.opts.disallow_single_arg_nesting)
 
     childs = children(cst)
     for (i, a) in enumerate(childs)
@@ -2650,8 +2961,6 @@ function p_tuple(
             add_node!(t, n, s; join_lines = true)
             if nest
                 add_node!(t, Placeholder(0), s)
-            else
-                false
             end
         elseif kind(a) === K")"
             # An odd case but this could occur if there are no keyword arguments.
@@ -2691,11 +3000,7 @@ function p_braces(
     end
 
     args = get_args(cst)
-    nest =
-        length(args) > 0 && !(
-            length(args) == 1 &&
-            (unnestable_node(args[1]) || s.opts.disallow_single_arg_nesting)
-        )
+    nest = should_nest_call_args(args, s.opts.disallow_single_arg_nesting)
 
     nws = ctx.from_typedef && !s.opts.whitespace_typedefs ? 0 : 1
 
@@ -2707,8 +3012,6 @@ function p_braces(
             add_node!(t, n, s; join_lines = true)
             if nest
                 add_node!(t, Placeholder(0), s)
-            else
-                false
             end
         elseif kind(a) === K"}"
             if nest
@@ -2742,11 +3045,7 @@ function p_bracescat(
     end
 
     args = get_args(cst)
-    nest =
-        length(args) > 0 && !(
-            length(args) == 1 &&
-            (unnestable_node(args[1]) || s.opts.disallow_single_arg_nesting)
-        )
+    nest = should_nest_call_args(args, s.opts.disallow_single_arg_nesting)
 
     nws = ctx.from_typedef && !s.opts.whitespace_typedefs ? 0 : 1
     childs = children(cst)
@@ -2792,11 +3091,7 @@ function p_vect(
     end
 
     args = get_args(cst)
-    nest =
-        length(args) > 0 && !(
-            length(args) == 1 &&
-            (unnestable_node(args[1]) || s.opts.disallow_single_arg_nesting)
-        )
+    nest = should_nest_call_args(args, s.opts.disallow_single_arg_nesting)
 
     childs = children(cst)
     for (i, a) in enumerate(childs)
@@ -3053,11 +3348,7 @@ function p_ref(
     end
 
     args = get_args(cst)
-    nest =
-        length(args) > 1 && !(
-            length(args) == 1 &&
-            (unnestable_node(args[1]) || s.opts.disallow_single_arg_nesting)
-        )
+    nest = length(args) > 1
 
     childs = children(cst)
     for (i, a) in enumerate(childs)
@@ -3103,11 +3394,7 @@ function p_vcat(
     end
 
     args = get_args(cst)
-    nest =
-        length(args) > 0 && !(
-            length(args) == 1 &&
-            (unnestable_node(args[1]) || s.opts.disallow_single_arg_nesting)
-        )
+    nest = should_nest_call_args(args, s.opts.disallow_single_arg_nesting)
     childs = children(cst)
     idx = findfirst(n -> kind(n) === K"[", childs)::Int
     first_arg_idx = findnext(n -> !JuliaSyntax.is_whitespace(n), childs, idx + 1)

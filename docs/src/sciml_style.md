@@ -1,4 +1,4 @@
-# SciML Style
+# [SciML Style](@id sciml-style)
 
 ```@docs
 SciMLStyle

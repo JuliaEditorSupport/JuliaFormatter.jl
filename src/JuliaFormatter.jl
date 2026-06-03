@@ -169,7 +169,7 @@ normalize_line_ending(s::AbstractString, replacer = WINDOWS_TO_UNIX) = replace(s
 Formats a Julia source passed in as a string, returning the formatted
 code as another string.
 
-See [Formatting Options](@ref "Formatting-Options") for details on available options.
+See [Formatting Options](@ref formatting-options) for details on available options.
 """
 function format_text(text::AbstractString; style::AbstractStyle = DefaultStyle(), kwargs...)
     return format_text(text, style; kwargs...)
@@ -227,10 +227,6 @@ function format_text(node::JuliaSyntax.GreenNode, style::AbstractStyle, s::State
     end
     if hascomment(s.doc, fst.endline)
         add_node!(fst, InlineComment(fst.endline), s)
-    end
-
-    if s.opts.pipe_to_function_call
-        pipe_to_function_call_pass!(fst)
     end
 
     flatten_fst!(fst)
@@ -341,7 +337,7 @@ const CONFIG_FILE_NAME = ".JuliaFormatter.toml"
 
 Formats the contents of `filename` assuming it's a `.jl`, `.md`, `.jmd` or `.qmd` file.
 
-See [File Options](@ref "File-Options") for details on available options.
+See [File Options](@ref file-options) for details on available options.
 
 ## Output
 
@@ -539,7 +535,10 @@ end
 
 function isignored(path, options)
     ignore = get(options, "ignore", String[])
-    return any(x -> occursin(Glob.FilenameMatch("*$x"), path), ignore)
+    # Glob.jl only matches paths that have '/' as the pathsep, so we need to normalise to
+    # that before matching, otherwise ignore patterns won't work on Windows
+    path_posix = replace(path, Base.Filesystem.path_separator => "/")
+    return any(x -> occursin(Glob.FilenameMatch("*$x"), path_posix), ignore)
 end
 
 include("app.jl")

@@ -1,19 +1,21 @@
-# Custom Alignment
+# [Custom Alignment](@id custom-alignment)
 
-> Solution for [issue 179](https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/179)
+Custom alignment is a scenario where extra whitespace is inserted into the formatted output to make sure that tokens (typically operators, such as `=`, `?`, and `::`) on contiguous lines are vertically aligned.
+This was implemented as a solution for [issue 179](https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/179).
 
-Custom alignment is determined by a whitespace heuristic:
+Custom alignment is determined by a whitespace heuristic.
+Since JuliaFormatter usually only outputs either 0 or 1 spaces as separations between tokens, the presence of more than one space between tokens is used as a signal to trigger custom alignment.
+If a formatter detects that a token is custom-aligned, then all tokens in the same code block (i.e., contiguous lines, not separated by comments or empty lines) will be aligned to the furthest aligned token.
 
-A token (typically an operator, i.e. `=, ?, ::, etc`) is custom aligned if there are
-`> 1` whitespaces from the previous expression since the formatter only outputs
-0 or 1 whitespaces for separation. If custom alignment is determined then all
-expressions in the code block will be aligned to the furthest aligned token.
+!!! warning
+    If active, custom alignment will override pre-existing nesting behaviour.
+    This means that lines can exceed the maximum margin.
 
-> NOTE: alignment overrides nesting behavior, meaning it ignores the allowed maximum margin
+Custom alignment must be opted into via [the configuration options](@ref formatting-options) `align_assignment`, `align_conditional`, `align_matrix`, `align_pair_arrow`, and `align_struct_field`.
 
 ### Example
 
-Suppose the source text is as follows
+Suppose the source text is as follows:
 
 ```julia
 const variable1 = 1
@@ -23,12 +25,10 @@ const var4 = 4
 const var5          = 5
 ```
 
-If the `align_assignment` option is enabled the formatter will detect that `var2`
-is aligned to `variable1` AND `var2` has several whitespaces (>1) prior to
-`=`. Since `var3`,`var4`, and `var5` are part of the same code block (no comments
-or newlines separating code) they will also be aligned.
+If the option `align_assignment=true` is set, the formatter will detect that `var2` is aligned to `variable1` *and* that `var2` has more than 1 space prior to its `=`.
+Since `var3`,`var4`, and `var5` are part of the same code block (no comments or newlines separating code) their `=` operators will then be aligned to `var2`'s `=`, which is the furthest aligned token.
 
-So the output would be
+The resulting output would be
 
 ```julia
 const variable1 = 1
@@ -38,8 +38,7 @@ const var4      = 4
 const var5      = 5
 ```
 
-Notice how the `=` operator for `var5` is correctly positioned
-despite it being located further to the right than other `=` operators.
+Notice how the `=` operator for `var5` is correctly positioned despite it being located further to the right than other `=` operators in the original source.
 
 However, if the source code is
 
@@ -51,13 +50,11 @@ const var4 = 4
 const var5 = 5
 ```
 
-It's now ambiguous whether this is meant to be aligned and so the formatter will
-proceed with normal behavior.
+it is now not clear whether the user intended for this to be aligned and so the formatter will not inject any custom behaviour.
 
 ## Alignment Options
 
-
-In order for alignment to occur the option must be set to `true`. Available options:
+In order for custom alignment to occur, the corresponding option must be set to `true`. Available options:
 
 - `align_assignment`
 - `align_struct_field`
@@ -65,31 +62,12 @@ In order for alignment to occur the option must be set to `true`. Available opti
 - `align_pair_arrow`
 - `align_matrix`
 
-!!! warning "Caveat"
-    Since nesting is disabled when alignment occurs be careful when adding comments to the RHS expression. This will be fixed in a future release
-
-For example:
-
-```julia
-const variable1 = 1
-const var2      = foo(10,
-    # comment,
-    20)
-```
-
-This will be formatted to
-
-```julia
-const variable1 = 1
-const var2      = foo(10, # comment, 20)
-```
-
-which causes a parsing error.
-
 ### `align_assignment`
 
-Align to `=`-like operators. This covers variable assignments and short definition functions.
+Align `=`-like operators.
+This covers variable assignments and short definition functions.
 
+Here are some examples of code formatted with `align_assignment=true`:
 
 ```julia
 const UTF8PROC_STABLE    = (1 << 1)
@@ -122,7 +100,7 @@ other_var     = 2
 
 ### `align_struct_field`
 
-Align struct field definitions to `::` or `=` - whichever has higher precedence.
+Align struct field definitions to `::` or `=`, whichever has higher precedence.
 
 ```julia
 Base.@kwdef struct Options
@@ -183,7 +161,6 @@ index =
         n <= typemax(Int32) ? Int32 : Int64,
         n,
     )
-
 ```
 
 ### `align_pair_arrow`
@@ -204,47 +181,3 @@ pages = [
     "API Reference"       => "api.md",
 ]
 ```
-
-
-### `align_matrix`
-
- > TLDR: If you want to align matrix elements yourself set this to `true`
-
-Whitespace surrounding matrix elements in the original source file is maintained. Differs from other alignment options since it does not try to "detect" alignment and then adjust other elements.
-
-```julia-repl
-# Elements left-aligned in original source
-julia> s = """
-       a = [
-       100 300 400
-       1   eee 40000
-       2   α   b
-       ]"""
-"a = [\n100 300 400\n1   eee 40000\n2   α   b\n]"
-
-julia> format_text(s, align_matrix=true) |> print
-a = [
-    100 300 400
-    1   eee 40000
-    2   α   b
-]
-
-# Elements right-aligned in original source
-julia> s = """
-       a = [
-       100 300   400
-         1  ee 40000
-         2   a     b
-       ]"""
-"a = [\n100 300   400\n  1  ee 40000\n  2   a     b\n]"
-
-julia>
-
-julia> format_text(s, align_matrix=true) |> print
-a = [
-    100 300   400
-      1  ee 40000
-      2   a     b
-]
-```
-

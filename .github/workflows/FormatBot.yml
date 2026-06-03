@@ -1,0 +1,278 @@
+name: FormatBot
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  format:
+    name: FormatBot
+    # TODO: Let other people trigger the bot as well. It's restricted for now so that I can test.
+    if: >-
+      github.event.issue.pull_request
+      && github.actor == 'penelopeysm'
+      && startsWith(github.event.comment.body, '!formatbot')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: React to comment
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api repos/${{ github.repository }}/issues/comments/${{ github.event.comment.id }}/reactions \
+            -f content=eyes
+
+      - name: Get PR info
+        id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          PR=$(gh api repos/${{ github.repository }}/pulls/${{ github.event.issue.number }})
+          {
+            echo "base_sha=$(echo "$PR" | jq -r '.base.sha')"
+            echo "head_sha=$(echo "$PR" | jq -r '.head.sha')"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Checkout JuliaFormatter (base)
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # 6.0.2
+        with:
+          ref: ${{ steps.pr.outputs.base_sha }}
+          path: formatter-base
+
+      - name: Checkout JuliaFormatter (PR)
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # 6.0.2
+        with:
+          ref: refs/pull/${{ github.event.issue.number }}/head
+          path: formatter-pr
+
+      - name: Setup Julia
+        uses: julia-actions/setup-julia@fa02766e078afaaf09b14210362cee14137e6a32 # 3.0.2
+        with:
+          version: '1'
+
+      - name: Setup Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # 6.2.0
+        with:
+          python-version: '3.13'
+
+      - name: Run FormatBot
+        env:
+          GH_TOKEN: ${{ github.token }}
+          COMMENT_BODY: ${{ github.event.comment.body }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+          BASE_SHA: ${{ steps.pr.outputs.base_sha }}
+          HEAD_SHA: ${{ steps.pr.outputs.head_sha }}
+          REPO_URL: ${{ github.server_url }}/${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        shell: python
+        run: |
+          import os
+          import subprocess
+          import sys
+          import uuid
+          from pathlib import Path
+
+          comment = os.environ["COMMENT_BODY"]
+          pr_number = os.environ["PR_NUMBER"]
+          base_sha = os.environ["BASE_SHA"]
+          head_sha = os.environ["HEAD_SHA"]
+          repo_url = os.environ["REPO_URL"]
+          run_url = os.environ["RUN_URL"]
+
+          # --- Parse command ---
+          parts = comment.split()
+          if len(parts) < 2:
+              print("::error::No repository specified")
+              sys.exit(1)
+
+          repo_rev = parts[1]
+          if "@" in repo_rev:
+              repo, rev = repo_rev.rsplit("@", 1)
+          else:
+              repo, rev = repo_rev, None
+
+          opts = parts[2:]
+          target_dir = "target"
+          subdir = None
+          use_config = False
+          for token in opts:
+              if token.startswith("subdir="):
+                  subdir = token.split("=", 1)[1]
+              elif token.startswith("use_config="):
+                  use_config = token.split("=", 1)[1].lower() == "true"
+          uid = uuid.uuid4().hex[:8]
+          branch_clean = f"formatbot-clean-{uid}"
+          branch_base = f"formatbot-base-{uid}"
+          branch_pr = f"formatbot-pr-{uid}"
+
+          # --- Comment helpers ---
+          def post_comment(body):
+              comment_path = Path(os.environ["RUNNER_TEMP"]) / "comment.md"
+              comment_path.write_text(body)
+              subprocess.run(
+                  ["gh", "pr", "comment", pr_number, "--body-file", str(comment_path)],
+                  check=True,
+                  cwd="formatter-base",
+              )
+
+          repo_display = f"{repo}@{rev}" if rev else repo
+          header_lines = [
+              "### FormatBot Results",
+              "",
+              "| Description | Value |",
+              "|---|---|",
+              f"| **FormatBot workflow run** | [workflow run]({run_url}) |",
+              f"| **Target repo** | [`{repo_display}`](https://github.com/{repo}{f'/tree/{rev}' if rev else ''}) |",
+              f"| **JuliaFormatter base** | [`{base_sha[:7]}`]({repo_url}/commit/{base_sha}) |",
+              f"| **JuliaFormatter PR** | [`{head_sha[:7]}`]({repo_url}/commit/{head_sha}) |",
+          ]
+          if opts:
+              header_lines.append(f"| **Options** | `{' '.join(opts)}` |")
+          header_lines.append("")
+          header = "\n".join(header_lines)
+
+          def git(*args):
+              subprocess.run(["git", "-C", target_dir, *args], check=True)
+
+          try:
+              # --- Clone target repo ---
+              clone_cmd = ["git", "clone", "--depth", "1"]
+              if rev:
+                  clone_cmd += ["--branch", rev]
+              clone_cmd += [f"https://github.com/{repo}.git", target_dir]
+              subprocess.run(clone_cmd, check=True)
+
+              # Delete JuliaFormatter config files (unless use_config is set)
+              if not use_config:
+                  for name in [".JuliaFormatter.toml", "JuliaFormatter.toml"]:
+                      subprocess.run(["find", target_dir, "-name", name, "-delete"])
+
+              # Resolve format path
+              format_path = os.path.join(target_dir, subdir) if subdir else target_dir
+              if subdir and not os.path.isdir(format_path):
+                  post_comment(f"{header}\n**Error:** Directory `{subdir}` not found in target repo.")
+                  sys.exit(1)
+
+              # Commit clean state so we can branch from it
+              git("config", "user.name", "FormatBot")
+              git("config", "user.email", "noreply@github.com")
+              git("checkout", "-b", branch_clean)
+              git("add", "-A")
+              git("commit", "--allow-empty", "-m", branch_clean)
+
+              # --- Write Julia format script ---
+              # style is a positional arg; extract it from opts if present
+              style_shortcuts = {
+                  "default": "DefaultStyle()",
+                  "yas": "YASStyle()",
+                  "blue": "BlueStyle()",
+                  "sciml": "SciMLStyle()",
+                  "minimal": "MinimalStyle()",
+              }
+              style = None
+              kwargs = []
+              for token in opts:
+                  if token.startswith("style="):
+                      val = token.split("=", 1)[1]
+                      if val not in style_shortcuts:
+                          post_comment(f"{header}\n**Error:** Unknown style `{val}`. Valid: {', '.join(style_shortcuts)}.")
+                          sys.exit(1)
+                      style = style_shortcuts[val]
+                  elif token.startswith("subdir=") or token.startswith("use_config="):
+                      pass
+                  else:
+                      kwargs.append(token)
+
+              args = ["ARGS[1]"]
+              if style:
+                  args.append(style)
+
+              all_args = args + kwargs
+              fmt_call = f"format({', '.join(all_args)})"
+
+              Path("format.jl").write_text(
+                  "using Pkg\nPkg.instantiate()\nusing JuliaFormatter\ntry\n"
+                  f"    {fmt_call}\n"
+                  "catch e\n"
+                  '    @error "Formatting failed" exception=(e, catch_backtrace())\n'
+                  "    exit(1)\nend\n"
+              )
+
+              # --- Format with base, commit to branch ---
+              git("checkout", "-b", branch_base)
+              base_result = subprocess.run(
+                  ["julia", "--project=formatter-base", "format.jl", format_path],
+              )
+              if base_result.returncode != 0:
+                  post_comment(
+                      f"{header}\n**Error:** Formatting with base failed. "
+                      f"See [workflow run]({run_url})."
+                  )
+                  sys.exit(1)
+              git("add", "-A")
+              git("commit", "--allow-empty", "-m", "formatted with base")
+
+              # --- Format with PR, commit to branch ---
+              git("checkout", branch_clean)
+              git("checkout", "-b", branch_pr)
+              pr_result = subprocess.run(
+                  ["julia", "--project=formatter-pr", "format.jl", format_path],
+              )
+              if pr_result.returncode != 0:
+                  post_comment(
+                      f"{header}\n**Error:** Formatting with PR failed. "
+                      f"See [workflow run]({run_url})."
+                  )
+                  sys.exit(1)
+              git("add", "-A")
+              git("commit", "--allow-empty", "-m", "formatted with pr")
+
+              # --- Compute diff ---
+              diff_result = subprocess.run(
+                  ["git", "-C", target_dir, "diff", "--diff-algorithm=histogram", branch_base, branch_pr],
+                  capture_output=True,
+                  text=True,
+              )
+              diff_text = diff_result.stdout
+
+              if not diff_text:
+                  post_comment(f"{header}\nNo formatting differences.")
+              else:
+                  diff_bytes = len(diff_text.encode())
+                  if diff_bytes > 50000:
+                      diff_display = diff_text[:50000]
+                      warning = f"\n\n**Warning:** Diff truncated ({diff_bytes} bytes total). See [workflow run]({run_url}) for full output.\n"
+                  else:
+                      diff_display = diff_text
+                      warning = ""
+                  post_comment(
+                      f"{header}{warning}\n<details>\n<summary>Diff ({diff_bytes} bytes)</summary>"
+                      f"\n\n```````diff\n{diff_display}\n```````\n\n</details>"
+                  )
+
+          except subprocess.CalledProcessError as e:
+              cmd = " ".join(str(c) for c in e.cmd)
+              try:
+                  post_comment(
+                      f"{header}\n**Error:** `{cmd}` failed with exit code {e.returncode}. "
+                      f"See [workflow run]({run_url})."
+                  )
+              except Exception:
+                  pass
+              sys.exit(1)
+          except Exception as e:
+              try:
+                  post_comment(f"{header}\n**Error:** {e}. See [workflow run]({run_url}).")
+              except Exception:
+                  pass
+              sys.exit(1)
+
+      - name: Add completion reaction
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api repos/${{ github.repository }}/issues/comments/${{ github.event.comment.id }}/reactions \
+            -f content=rocket

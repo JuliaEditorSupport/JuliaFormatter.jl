@@ -20,10 +20,16 @@ stage.
 
 Available stages:
 
- - (:gn, :greennode, :parse): the output of the JuliaSyntax parser, which is a
-   `JuliaSyntax.GreenNode`.
+ - `:gn` or `:cst`: the output of the JuliaSyntax parser, which is a
+   `JuliaSyntax.GreenNode`. Note that directly calling `JuliaSyntax.parseall` will yield a
+   `toplevel` node with the actual tree of interest as its only child. This function will
+   directly return the child.
 
-This is the only stage currently implemented, but more will be added in the future.
+ - `:fst`: the output of prettification.
+ 
+ - `:out`: the string output of the formatter.
+
+ - `:print`: the string output but printed. Saves you having to wrap it in `print()`.
 
 !!! tip
     For a utility that is meant to be convenient to access, typing the full qualified
@@ -40,6 +46,8 @@ This is the only stage currently implemented, but more will be added in the futu
         ])
     end
     ```
+
+    and then just call `fs(:gn, "1 + 2")` from the REPL without having to import it.
 """
 function format_to_stage(
     stage::Symbol,
@@ -47,8 +55,13 @@ function format_to_stage(
     style::JF.AbstractStyle = JF.DefaultStyle();
     options...,
 )
-    parsed = JS.parseall(JS.GreenNode, text)
-    stage in (:gn, :greennode, :parse) && return parsed
+    cst = JS.parseall(JS.GreenNode, text)
+    stage in (:gn, :greennode, :parse, :cst) && return cst[1]
+
+    opts = JF.Options(; merge(JF.options(style), options)...)
+    state = JF.State(JF.Document(text), opts)
+    fst = JF.pretty(style, cst, state)
+    stage === :fst && return fst
 
     throw(ArgumentError("unknown stage: $stage"))
 end
