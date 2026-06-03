@@ -1721,24 +1721,39 @@ function p_for(
     end
 
     ends_in_iterable = false
+    is_while_cond = false
 
     for c in children(cst)
         if kind(c) in KSet"for while" && !haschildren(c)
             add_node!(t, pretty(style, c, s), s)
+            if kind(c) === K"while"
+                is_while_cond = true
+            end
         elseif kind(c) === K"end"
             add_node!(t, pretty(style, c, s), s)
         elseif kind(c) === K"block"
-            s.indent += s.opts.indent
-            n = pretty(style, c, s, newctx(ctx; ignore_single_line = true), lineage)
-            add_node!(t, n, s; max_padding = s.opts.indent)
-            s.indent -= s.opts.indent
+            # We need `is_while_cond` to determine whether the block we see is the body of
+            # the loop, or the condition of a while loop such as `while (a; b; c) ... end`.
+            # See also `p_if` for similar considerations.
+            if is_while_cond
+                add_node!(t, Whitespace(1), s)
+                add_node!(t, pretty(style, c, s), s; join_lines = true)
+                is_while_cond = false
+            else
+                # The body of the for/while loop.
+                s.indent += s.opts.indent
+                n = pretty(style, c, s, newctx(ctx; ignore_single_line = true), lineage)
+                add_node!(t, n, s; max_padding = s.opts.indent)
+                s.indent -= s.opts.indent
 
-            if !ends_in_iterable && (t.nodes::Vector{FST})[end-2].typ !== NOTCODE
-                insert!(t, length(t.nodes) - 1, Placeholder(0))
+                if !ends_in_iterable && (t.nodes::Vector{FST})[end-2].typ !== NOTCODE
+                    insert!(t, length(t.nodes) - 1, Placeholder(0))
+                end
             end
         elseif JuliaSyntax.is_whitespace(c)
             add_node!(t, pretty(style, c, s, ctx, lineage), s)
         else
+            # Non-block while conditions or for loop iterables fall here.
             add_node!(t, Whitespace(1), s)
             n = if kind(c) === K"iteration"
                 rhs_is_iterable = !iteration_has_comma(c) && is_iterable(iteration_rhs(c))

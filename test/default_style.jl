@@ -1235,6 +1235,30 @@
         end"""
         t = run_pretty(str, 80)
         @test length(t) == 27
+
+        @testset "block conditions" begin
+            s1 = """while (a; b)
+                c
+            end"""
+            @test fmt(s1) == s1
+            s2 = """while begin
+                a
+                b
+            end
+                c
+            end"""
+            @test fmt(s2) == s2
+            s3_ = """while (prettylong; prettylongtoo)
+                c
+            end"""
+            s3 = """while (
+                prettylong;
+                prettylongtoo
+            )
+                c
+            end"""
+            @test fmt(s3_, 4, 20) == s3
+        end
     end
 
     @testset "let" begin
