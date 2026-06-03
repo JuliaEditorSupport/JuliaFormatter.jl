@@ -453,7 +453,14 @@ function n_hcat!(
     lineage::Vector{Tuple{FNode,Union{Nothing,Metadata}}},
 )
     # Keep DefaultStyle's old fallback behavior while allowing style-specific Hcat hooks.
-    nest!(getstyle(ds), fst.nodes::Vector, s, fst.indent, lineage; extra_margin = fst.extra_margin)
+    nest!(
+        getstyle(ds),
+        fst.nodes::Vector,
+        s,
+        fst.indent,
+        lineage;
+        extra_margin = fst.extra_margin,
+    )
 end
 
 function n_braces!(

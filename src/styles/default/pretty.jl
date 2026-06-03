@@ -3481,8 +3481,11 @@ function p_hcat(
             # Wrapped ncat like `[a b;;\n c d]` reparses as Hcat with `;` leaves.
             # That newline is syntactic, not cosmetic; joining it makes invalid Julia.
             prev_idx = findprev(n -> !JuliaSyntax.is_whitespace(n), childs, i - 1)
-            prev_prev_idx = isnothing(prev_idx) ? nothing :
-                            findprev(n -> !JuliaSyntax.is_whitespace(n), childs, prev_idx - 1)
+            prev_prev_idx = if isnothing(prev_idx)
+                nothing
+            else
+                findprev(n -> !JuliaSyntax.is_whitespace(n), childs, prev_idx - 1)
+            end
             if kind(a) === K"NewlineWs" &&
                !isnothing(prev_idx) &&
                !isnothing(prev_prev_idx) &&
