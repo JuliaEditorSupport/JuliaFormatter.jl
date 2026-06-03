@@ -121,8 +121,7 @@ function n_tuple!(
     style = getstyle(ys)
     # SciML can opt into YAS nesting, but the tuple-binding margin overrun is
     # still SciML-specific. Plain YASStyle should keep its existing behavior.
-    for_tuple_binding_lhs =
-        style isa SciMLStyle && _is_for_tuple_binding_lhs(fst, lineage)
+    for_tuple_binding_lhs = style isa SciMLStyle && _is_for_tuple_binding_lhs(fst, lineage)
     if for_tuple_binding_lhs
         optimal_placeholders = find_optimal_nest_placeholders(
             fst,
