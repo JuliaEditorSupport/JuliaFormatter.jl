@@ -884,7 +884,8 @@ function n_binaryopcall!(
     line_offset = s.line_offset
     line_margin = line_offset + length(fst) + fst.extra_margin
 
-    # If there's no placeholder the binary call is not nestable
+    # If there are no top-level placeholders in the FST, the binary call itself is not
+    # nestable (although its children, i.e. the operands, might be).
     nodes = fst.nodes::Vector
     idxs = findall(n -> n.typ === PLACEHOLDER, nodes)
 
@@ -993,10 +994,11 @@ function n_binaryopcall!(
     # could itself be nested, and in general nesting the RHS is preferable to nesting the
     # LHS as it's prettier. That means we only need to account for the RHS up to the first
     # point where it could be nested.
+    #
     # Since node 1 is the LHS, we start looking for the first placeholder from node 2
     # onwards.
     len_to_first_placeholder, found = length_to(fst, (PLACEHOLDER, NEWLINE); start = 2)
-    lhs_extra_margin_needed = if found
+    lhs_extra_margin_needed = if found && op_kind(fst) !== K"::"
         len_to_first_placeholder
     else
         # Can't nest the op or RHS. That means that we need to account for the entire RHS,

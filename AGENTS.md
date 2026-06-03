@@ -8,6 +8,11 @@
 
 - Code changes in the local checkout should be immediately visible without having to reload the session (thanks to Revise.jl).
 
+# Running tests
+
+- Do not run the full test suite unless explicitly instructed to.
+  Only run specific, targeted tests that are relevant to the changes you are making.
+
 # Tracing JuliaFormatter's output
 
 - Use the `JuliaFormatter.Internal.format_to_stage` function to inspect the output of each stage of the formatting process.
