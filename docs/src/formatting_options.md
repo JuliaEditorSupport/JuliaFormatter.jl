@@ -40,7 +40,6 @@ Values that differ from `DefaultStyle` are shown in **bold**.
 | [`join_lines_based_on_source`](@ref options-join-lines-based-on-source)             | `false`   | **`true`**  | `false`     | **`true`**   | **`true`**    |
 | [`long_to_short_function_def`](@ref options-long-to-short-function-def)             | `false`   | `false`     | `false`     | `false`      | `false`       |
 | [`margin`](@ref options-margin)                                                     | `92`      | `92`        | `92`        | `92`         | **`10_000`**  |
-| [`margin_overrun`](@ref options-margin-overrun)                                     | `20`      | `20`        | `20`        | `20`         | `20`          |
 | [`normalize_line_endings`](@ref options-normalize-line-endings)                     | `"auto"`  | `"auto"`    | `"auto"`    | **`"unix"`** | `"auto"`      |
 | [`pipe_to_function_call`](@ref options-pipe-to-function-call)                       | `false`   | **`true`**  | **`true`**  | `false`      | `false`       |
 | [`remove_extra_newlines`](@ref options-remove-extra-newlines)                       | `false`   | **`true`**  | **`true`**  | **`true`**   | `false`       |
@@ -55,6 +54,7 @@ Values that differ from `DefaultStyle` are shown in **bold**.
 | [`whitespace_ops_in_indices`](@ref options-whitespace-ops-in-indices)               | `false`   | **`true`**  | **`true`**  | **`true`**   | `false`       |
 | [`whitespace_typedefs`](@ref options-whitespace-typedefs)                           | `false`   | `false`     | `false`     | **`true`**   | `false`       |
 | [`yas_style_nesting`](@ref options-yas-style-nesting)                               | `false`   | `false`     | `false`     | `false`      | `false`       |
+| [`sciml_margin_overrun`](@ref options-sciml-margin-overrun)                         | unused    | unused      | unused      | `20`         | unused        |
 
 ## [`align_...`](@id options-align-star)
 
@@ -381,14 +381,6 @@ Default: `92`
 The maximum length of a line.
 Code exceeding this margin will, in general, be formatted across multiple lines.
 
-## [`margin_overrun`](@id options-margin-overrun)
-
-Default: `20`
-
-Additional columns the formatter may use when a slightly over-margin line is
-more readable than an aggressive line break.
-Set this to `0` to make soft-margin checks strict.
-
 ## [`normalize_line_endings`](@id options-normalize-line-endings)
 
 Default: `"auto"`
@@ -665,3 +657,13 @@ function my_large_function(argument1, argument2,
     foo(x) + goo(y)
 end
 ```
+
+## [`sciml_margin_overrun`](@id options-sciml-margin-overrun)
+
+Default: `20`
+
+Additional columns `SciMLStyle` may use when a slightly over-margin line is
+more readable than an aggressive line break.
+Set this to `0` to make SciML soft-margin checks strict.
+
+This option has no effect for other styles.

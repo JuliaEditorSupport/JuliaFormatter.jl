@@ -22,7 +22,6 @@ function options(::SciMLStyle)
         whitespace_typedefs = true,
         indent = 4,
         margin = 92,
-        margin_overrun = 20,
         format_docstrings = false,
         align_struct_field = false,
         align_assignment = false,
@@ -36,6 +35,7 @@ function options(::SciMLStyle)
         surround_whereop_typeparameters = true,
         variable_call_indent = [],
         yas_style_nesting = false,
+        sciml_margin_overrun = 20,
         disallow_single_arg_nesting = true,
     )
 end

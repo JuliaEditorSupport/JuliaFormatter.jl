@@ -3,7 +3,6 @@ const VALID_FOR_IN_OPERATORS = ("in", "=", "∈")
 Base.@kwdef struct Options
     indent::Int = 4
     margin::Int = 92
-    margin_overrun::Int = 20
     always_for_in::Union{Bool,Nothing} = false
     for_in_replacement::String = "in"
     whitespace_typedefs::Bool = false
@@ -35,6 +34,7 @@ Base.@kwdef struct Options
     ignore::Vector{String} = String[]
     variable_call_indent::Vector{String} = []
     yas_style_nesting::Bool = false
+    sciml_margin_overrun::Int = 20
     short_circuit_to_if::Bool = false
     disallow_single_arg_nesting::Bool = false
 
@@ -47,8 +47,8 @@ Base.@kwdef struct Options
             """
             throw(ArgumentError(msg))
         end
-        if opts.margin_overrun < 0
-            throw(ArgumentError("`margin_overrun` must be greater than or equal to 0."))
+        if opts.sciml_margin_overrun < 0
+            throw(ArgumentError("`sciml_margin_overrun` must be greater than or equal to 0."))
         end
         return opts
     end

@@ -688,7 +688,7 @@
                 SciMLStyle();
                 yas_style_nesting = true,
                 margin = 92,
-                margin_overrun = 0,
+                sciml_margin_overrun = 0,
             ) == fstr
         end
     end

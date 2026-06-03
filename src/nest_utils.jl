@@ -154,10 +154,10 @@ function unnest!(style::AbstractStyle; dedent::Bool)
     end
 end
 
-small_margin_overrun(opts::Options) = opts.margin_overrun ÷ 2
-default_margin_overrun(opts::Options) = opts.margin_overrun
-index_margin_overrun(opts::Options) = (3 * opts.margin_overrun) ÷ 2
-macro_margin_overrun(opts::Options) = 3 * opts.margin_overrun
+small_margin_overrun(opts::Options) = opts.sciml_margin_overrun ÷ 2
+default_margin_overrun(opts::Options) = opts.sciml_margin_overrun
+index_margin_overrun(opts::Options) = (3 * opts.sciml_margin_overrun) ÷ 2
+macro_margin_overrun(opts::Options) = 3 * opts.sciml_margin_overrun
 
 """
     nest_if_over_margin!(

@@ -156,8 +156,8 @@ function print_help()
                --margin=<n>
                    Maximum line width. Default: 92
 
-               --margin_overrun=<n>
-                   Additional columns the formatter may use when a slightly
+               --sciml_margin_overrun=<n>
+                   Additional columns SciMLStyle may use when a slightly
                    over-margin line is more readable. Default: 20
 
                --format_markdown
@@ -384,9 +384,9 @@ function main(argv::Vector{String})
             m = match(r"^--margin=(\d+)$", x)
             format_options[:margin] = Base.parse(Int, m.captures[1]::AbstractString)
             i += 1
-        elseif startswith(x, "--margin_overrun=")
-            m = match(r"^--margin_overrun=(\d+)$", x)
-            format_options[:margin_overrun] =
+        elseif startswith(x, "--sciml_margin_overrun=")
+            m = match(r"^--sciml_margin_overrun=(\d+)$", x)
+            format_options[:sciml_margin_overrun] =
                 Base.parse(Int, m.captures[1]::AbstractString)
             i += 1
         elseif startswith(x, "--normalize_line_endings=")

@@ -21,7 +21,6 @@ function options(::BlueStyle)
         separate_kwargs_with_semicolon = true,
         indent = 4,
         margin = 92,
-        margin_overrun = 20,
         whitespace_typedefs = false,
         format_docstrings = false,
         align_struct_field = false,

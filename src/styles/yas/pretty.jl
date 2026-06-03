@@ -19,7 +19,6 @@ function options(::YASStyle)
         separate_kwargs_with_semicolon = true,
         indent = 4,
         margin = 92,
-        margin_overrun = 20,
         whitespace_typedefs = false,
         annotate_untyped_fields_with_any = true,
         format_docstrings = false,
