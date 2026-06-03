@@ -25,41 +25,6 @@ for f in [
     end
 end
 
-function _is_for_tuple_binding(
-    fst::FST,
-    s::State,
-    lineage::Vector{Tuple{FNode,Union{Nothing,Metadata}}},
-)
-    first_line_length, _ = length_to(fst, (NEWLINE,))
-    length(lineage) >= 2 &&
-        lineage[end-1][1] === CartesianIterator &&
-        op_kind(fst) in KSet"in ∈" &&
-        fst[1].typ === TupleN &&
-        s.line_offset + first_line_length + fst.extra_margin <=
-        s.opts.margin + default_margin_overrun(s.opts)
-end
-
-function n_binaryopcall!(
-    ss::SciMLStyle,
-    fst::FST,
-    s::State,
-    lineage::Vector{Tuple{FNode,Union{Nothing,Metadata}}};
-    indent::Int = -1,
-)
-    if _is_for_tuple_binding(fst, s, lineage)
-        lhs = fst[1]
-        nest_behavior = lhs.nest_behavior
-        lhs.nest_behavior = NeverNest
-        try
-            return n_binaryopcall!(DefaultStyle(getstyle(ss)), fst, s, lineage; indent)
-        finally
-            lhs.nest_behavior = nest_behavior
-        end
-    end
-
-    n_binaryopcall!(DefaultStyle(getstyle(ss)), fst, s, lineage; indent)
-end
-
 function n_functiondef!(
     ss::SciMLStyle,
     fst::FST,
@@ -142,7 +107,16 @@ function _n_tuple!(
     end
 
     nested = false
-    optimal_placeholders = find_optimal_nest_placeholders(fst, fst.indent, s.opts)
+    # Let find_optimal_nest_placeholders decide whether a for-loop tuple
+    # binding can remain flat instead of overriding binary-op nesting.
+    for_tuple_binding_lhs = _is_for_tuple_binding_lhs(fst, lineage)
+    optimal_placeholders = find_optimal_nest_placeholders(
+        fst,
+        fst.indent,
+        s.opts;
+        margin_line_offset = start_line_offset,
+        for_tuple_binding_lhs,
+    )
     if length(optimal_placeholders) > 0
         nested = true
     end
@@ -172,7 +146,10 @@ function _n_tuple!(
     should_nest = line_margin > s.opts.margin || must_nest(fst) || src_diff_line
 
     # For certain types, be more conservative about nesting
-    if should_nest && !must_nest(fst) && !src_diff_line
+    if for_tuple_binding_lhs && isempty(optimal_placeholders)
+        # The tuple binding already fit under the SciML overrun budget.
+        should_nest = false
+    elseif should_nest && !must_nest(fst) && !src_diff_line
         total_length = line_margin
         if (
             fst.typ === Call &&
@@ -239,6 +216,8 @@ function _n_tuple!(
         nested |= nest!(style, nodes, s, fst.indent, lineage; extra_margin = extra_margin)
     end
 
+    s.line_offset = start_line_offset
+    join_for_tuple_binding_rhs_lines!(fst, s, lineage)
     s.line_offset = start_line_offset
     walk(unnest!(style; dedent = false), fst, s)
     s.line_offset = start_line_offset

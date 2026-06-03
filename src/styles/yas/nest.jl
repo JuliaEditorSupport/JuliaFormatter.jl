@@ -119,13 +119,31 @@ function n_tuple!(
     indent::Int = -1,
 )
     style = getstyle(ys)
+    # SciML can opt into YAS nesting, but the tuple-binding margin overrun is
+    # still SciML-specific. Plain YASStyle should keep its existing behavior.
+    for_tuple_binding_lhs =
+        style isa SciMLStyle && _is_for_tuple_binding_lhs(fst, lineage)
+    if for_tuple_binding_lhs
+        optimal_placeholders = find_optimal_nest_placeholders(
+            fst,
+            fst.indent,
+            s.opts;
+            margin_line_offset = s.line_offset,
+            for_tuple_binding_lhs,
+        )
+        if isempty(optimal_placeholders)
+            walk(increment_line_offset!, fst, s)
+            return false
+        end
+    end
+
     if indent > -1
         fst.indent = indent
     else
         fst.indent = s.line_offset
     end
     nodes = fst.nodes::Vector
-    if length(nodes) > 0 && is_opener(fst[1])
+    if !for_tuple_binding_lhs && length(nodes) > 0 && is_opener(fst[1])
         (fst.indent += 1)
     else
         false

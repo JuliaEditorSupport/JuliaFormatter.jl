@@ -266,8 +266,98 @@ function find_optimal_nest_placeholders(
     fst::FST,
     start_line_offset::Int,
     opts::Options,
+    ;
+    margin_line_offset::Int = start_line_offset,
+    for_tuple_binding_lhs::Bool = false,
 )::Vector{Int}
-    return find_optimal_nest_placeholders(fst, start_line_offset, opts.margin, opts)
+    return find_optimal_nest_placeholders(
+        fst,
+        start_line_offset,
+        opts.margin,
+        opts;
+        margin_line_offset,
+        for_tuple_binding_lhs,
+    )
+end
+
+function _is_for_tuple_binding_lhs(
+    fst::FST,
+    lineage::Vector{Tuple{FNode,Union{Nothing,Metadata}}},
+)
+    # The LHS tuple in `for (a, b, ...) in rhs` is the special case that SciML
+    # keeps flat when it fits within the configured margin overrun.
+    if fst.typ !== TupleN ||
+       length(lineage) < 3 ||
+       lineage[end-1][1] !== Binary ||
+       lineage[end-2][1] !== CartesianIterator
+        return false
+    end
+
+    metadata = lineage[end-1][2]
+    return metadata isa Metadata && metadata.op_kind in KSet"in ∈"
+end
+
+function join_for_tuple_binding_rhs_lines!(
+    fst::FST,
+    s::State,
+    lineage::Vector{Tuple{FNode,Union{Nothing,Metadata}}},
+)::Bool
+    # When the tuple binding is kept flat, source-aware nesting can still leave
+    # `zip(` on one line and each argument on its own line. Join those RHS
+    # argument lines back together when the continuation line fits.
+    if fst.typ !== Call ||
+       length(lineage) < 3 ||
+       lineage[end-1][1] !== Binary ||
+       lineage[end-2][1] !== CartesianIterator
+        return false
+    end
+
+    metadata = lineage[end-1][2]
+    if !(metadata isa Metadata && metadata.op_kind in KSet"in ∈")
+        return false
+    end
+
+    nodes = fst.nodes::Vector
+    newline_inds = findall(n -> n.typ === NEWLINE, nodes)
+    isempty(newline_inds) && return false
+
+    r = linerange(s, fst.startline)
+    line = s.doc.srcfile.code[first(r):last(r)]
+    call_offset = fst[1].line_offset
+    indent = nothing
+
+    # Nest lineage does not carry sibling nodes, so the source token `for (`
+    # is the narrow tuple-binding guard for this RHS call.
+    for m in eachmatch(r"\bfor\s+\(", line)
+        if call_offset < 0 || m.offset - 1 <= call_offset
+            indent = m.offset + length(m.match) - 1
+        end
+    end
+    isnothing(indent) && return false
+
+    first_newline = newline_inds[1]
+
+    tail_len = 0
+    for i in (first_newline+1):length(nodes)
+        n = nodes[i]
+        (is_comment(n) || n.typ === NOTCODE) && return false
+
+        if n.typ === NEWLINE
+            tail_len += nodes[i-1].typ === WHITESPACE ? 0 : 1
+        else
+            tail_len += length(n)
+        end
+    end
+    indent + tail_len + fst.extra_margin <= s.opts.margin || return false
+
+    # Align the continuation with the tuple binding column and keep the first
+    # newline after the call opener. Only later newlines are join candidates.
+    fst.indent = indent
+    for i in newline_inds[2:end]
+        fst[i] = Whitespace(nodes[i-1].typ === WHITESPACE ? 0 : 1)
+    end
+
+    return length(newline_inds) > 1
 end
 
 function find_optimal_nest_placeholders(
@@ -275,16 +365,23 @@ function find_optimal_nest_placeholders(
     start_line_offset::Int,
     max_margin::Int,
     opts::Options = Options(),
+    ;
+    margin_line_offset::Int = start_line_offset,
+    for_tuple_binding_lhs::Bool = false,
 )::Vector{Int}
     placeholder_inds = findall(n -> n.typ === PLACEHOLDER, fst.nodes)
-    if length(placeholder_inds) <= 1 || length(placeholder_inds) >= 500
+    total_length = margin_line_offset + length(fst) + fst.extra_margin
+
+    # SciML tuple bindings are allowed to stay flat within margin overrun even
+    # when the surrounding iterator expression needs to break.
+    if for_tuple_binding_lhs && total_length <= max_margin + default_margin_overrun(opts)
+        return Int[]
+    elseif length(placeholder_inds) <= 1 || length(placeholder_inds) >= 500
         return placeholder_inds
     end
 
     # For certain expression types, be more conservative about line breaking
     # to avoid breaking readable expressions across multiple lines
-    total_length = start_line_offset + length(fst) + fst.extra_margin
-
     if (fst.typ === RefN && length(placeholder_inds) <= 4)
         # Don't break short array indexing expressions like II[i, j, 1]
         return Int[]
