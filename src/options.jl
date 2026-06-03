@@ -3,6 +3,7 @@ const VALID_FOR_IN_OPERATORS = ("in", "=", "∈")
 Base.@kwdef struct Options
     indent::Int = 4
     margin::Int = 92
+    margin_overrun::Int = 20
     always_for_in::Union{Bool,Nothing} = false
     for_in_replacement::String = "in"
     whitespace_typedefs::Bool = false
@@ -45,6 +46,9 @@ Base.@kwdef struct Options
             The combination `force_long_function_def = true` and `short_to_long_function_def = false` is invalid.
             """
             throw(ArgumentError(msg))
+        end
+        if opts.margin_overrun < 0
+            throw(ArgumentError("`margin_overrun` must be greater than or equal to 0."))
         end
         return opts
     end

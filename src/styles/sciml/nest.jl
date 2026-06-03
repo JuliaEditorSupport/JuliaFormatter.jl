@@ -49,11 +49,13 @@ function _is_for_tuple_binding(
     s::State,
     lineage::Vector{Tuple{FNode,Union{Nothing,Metadata}}},
 )
+    first_line_length, _ = length_to(fst, (NEWLINE,))
     length(lineage) >= 2 &&
         lineage[end-1][1] === CartesianIterator &&
         op_kind(fst) in KSet"in ∈" &&
         fst[1].typ === TupleN &&
-        s.line_offset + length(fst[1]) <= s.opts.margin
+        s.line_offset + first_line_length + fst.extra_margin <=
+        s.opts.margin + default_margin_overrun(s.opts)
 end
 
 function n_binaryopcall!(
@@ -158,7 +160,7 @@ function _n_tuple!(
     end
 
     nested = false
-    optimal_placeholders = find_optimal_nest_placeholders(fst, fst.indent, s.opts.margin)
+    optimal_placeholders = find_optimal_nest_placeholders(fst, fst.indent, s.opts)
     if length(optimal_placeholders) > 0
         nested = true
     end
@@ -193,17 +195,17 @@ function _n_tuple!(
         if (
             fst.typ === Call &&
             length(placeholder_inds) <= 5 &&
-            total_length <= s.opts.margin + 20
+            total_length <= s.opts.margin + default_margin_overrun(s.opts)
         )
             should_nest = false
         elseif (fst.typ === Binary || fst.typ === Chain) &&
                length(placeholder_inds) <= 6 &&
-               total_length <= s.opts.margin + 20
+               total_length <= s.opts.margin + default_margin_overrun(s.opts)
             should_nest = false
         elseif (
             fst.typ === RefN &&
             length(placeholder_inds) <= 4 &&
-            total_length <= s.opts.margin + 30
+            total_length <= s.opts.margin + index_margin_overrun(s.opts)
         )
             # Keep array indexing together when reasonable (e.g., du[i, j, 1])
             should_nest = false

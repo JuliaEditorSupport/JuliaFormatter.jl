@@ -22,6 +22,7 @@ function options(::SciMLStyle)
         whitespace_typedefs = true,
         indent = 4,
         margin = 92,
+        margin_overrun = 20,
         format_docstrings = false,
         align_struct_field = false,
         align_assignment = false,

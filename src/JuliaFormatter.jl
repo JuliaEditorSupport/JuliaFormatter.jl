@@ -81,6 +81,7 @@ function options(::DefaultStyle)
     return (;
         indent = 4,
         margin = 92,
+        margin_overrun = 20,
         always_for_in = false,
         whitespace_typedefs = false,
         whitespace_ops_in_indices = false,

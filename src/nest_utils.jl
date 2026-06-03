@@ -154,6 +154,11 @@ function unnest!(style::AbstractStyle; dedent::Bool)
     end
 end
 
+small_margin_overrun(opts::Options) = opts.margin_overrun ÷ 2
+default_margin_overrun(opts::Options) = opts.margin_overrun
+index_margin_overrun(opts::Options) = (3 * opts.margin_overrun) ÷ 2
+macro_margin_overrun(opts::Options) = 3 * opts.margin_overrun
+
 """
     nest_if_over_margin!(
         style,
@@ -260,7 +265,16 @@ Finds the optimal placeholders to turn into a newlines such that the length of t
 function find_optimal_nest_placeholders(
     fst::FST,
     start_line_offset::Int,
+    opts::Options,
+)::Vector{Int}
+    return find_optimal_nest_placeholders(fst, start_line_offset, opts.margin, opts)
+end
+
+function find_optimal_nest_placeholders(
+    fst::FST,
+    start_line_offset::Int,
     max_margin::Int,
+    opts::Options = Options(),
 )::Vector{Int}
     placeholder_inds = findall(n -> n.typ === PLACEHOLDER, fst.nodes)
     if length(placeholder_inds) <= 1 || length(placeholder_inds) >= 500
@@ -277,23 +291,23 @@ function find_optimal_nest_placeholders(
     elseif (fst.typ === MacroCall && length(placeholder_inds) <= 10)
         # Don't break macro calls like @unpack a, b, c = struct or @time ts, us = func()
         # unless they're significantly over the margin
-        if total_length <= max_margin + 60
+        if total_length <= max_margin + macro_margin_overrun(opts)
             return Int[]
         end
     elseif (fst.typ === Call && length(placeholder_inds) <= 5)
         # Be more conservative with function calls to avoid awkward breaks
-        if total_length <= max_margin + 20
+        if total_length <= max_margin + default_margin_overrun(opts)
             return Int[]
         end
     elseif (fst.typ === Curly && length(placeholder_inds) <= 4)
         # Don't break short type parameter lists like Type{A, B, C}
         # unless the margin is extremely tight
-        if total_length <= max_margin + 10
+        if total_length <= max_margin + small_margin_overrun(opts)
             return Int[]
         end
     elseif (fst.typ === Vect && length(placeholder_inds) <= 4)
         # Don't break short vector literals like [a, b, c] unless necessary
-        if total_length <= max_margin + 10
+        if total_length <= max_margin + small_margin_overrun(opts)
             return Int[]
         end
     elseif (fst.typ === Binary || fst.typ === Chain || fst.typ === Comparison)
@@ -312,14 +326,16 @@ function find_optimal_nest_placeholders(
 
         # For mathematical expressions, be conservative about breaking
         # Only break if significantly over margin or has many operations
-        if length(placeholder_inds) <= 3 && total_length <= max_margin + 20
+        if length(placeholder_inds) <= 3 &&
+           total_length <= max_margin + default_margin_overrun(opts)
             return Int[]
         elseif length(placeholder_inds) <= 6 && total_length <= max_margin
             return Int[]
         end
     elseif (fst.typ === Conditional)
         # For ternary operators, avoid breaking unless necessary
-        if length(placeholder_inds) <= 2 && total_length <= max_margin + 10
+        if length(placeholder_inds) <= 2 &&
+           total_length <= max_margin + small_margin_overrun(opts)
             return Int[]
         end
     end

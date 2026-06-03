@@ -15,6 +15,7 @@ function options(::MinimalStyle)
         trailing_comma = nothing,
         trailing_zero = false,
         margin = 10_000,
+        margin_overrun = 20,
         always_for_in = nothing,
         whitespace_in_kwargs = false,
         whitespace_typedefs = false,

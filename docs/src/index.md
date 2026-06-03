@@ -52,6 +52,14 @@ Default: `92`
 The maximum length of a line. Code exceeding this margin will
 be formatted across multiple lines.
 
+### `margin_overrun`
+
+Default: `20`
+
+Additional columns the formatter may use when a slightly over-margin line is
+more readable than an aggressive line break. Set this to `0` to make soft
+margin checks strict.
+
 ### `always_for_in`
 
 Default: `false`

@@ -156,6 +156,10 @@ function print_help()
                --margin=<n>
                    Maximum line width. Default: 92
 
+               --margin_overrun=<n>
+                   Additional columns the formatter may use when a slightly
+                   over-margin line is more readable. Default: 20
+
                --format_markdown
                    Also format code blocks in Markdown files (.md, .jmd, .qmd).
 
@@ -379,6 +383,11 @@ function main(argv::Vector{String})
         elseif startswith(x, "--margin=")
             m = match(r"^--margin=(\d+)$", x)
             format_options[:margin] = Base.parse(Int, m.captures[1]::AbstractString)
+            i += 1
+        elseif startswith(x, "--margin_overrun=")
+            m = match(r"^--margin_overrun=(\d+)$", x)
+            format_options[:margin_overrun] =
+                Base.parse(Int, m.captures[1]::AbstractString)
             i += 1
         elseif startswith(x, "--normalize_line_endings=")
             m = match(r"^--normalize_line_endings=(.+)$", x)

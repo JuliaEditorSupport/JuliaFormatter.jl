@@ -641,6 +641,36 @@
             end
             """
             @test format_text(str, SciMLStyle(); yas_style_nesting = true) == fstr
+
+            str = """
+            @threaded destination.scheduler for (dest_id, src_id, aaaa, bbbb, ccccc, dddd) in zip(eachindex(destination),
+                      eachindex(source))
+                @inbounds destination[dest_id] = source[src_id]
+            end
+            """
+
+            fstr = """
+            @threaded destination.scheduler for (dest_id, src_id, aaaa, bbbb, ccccc, dddd) in zip(eachindex(destination),
+                                                                                                  eachindex(source))
+                @inbounds destination[dest_id] = source[src_id]
+            end
+            """
+            @test format_text(str, SciMLStyle(); yas_style_nesting = true, margin = 92) == fstr
+
+            fstr = """
+            @threaded destination.scheduler for (dest_id, src_id, aaaa, bbbb, ccccc,
+                                                dddd) in zip(eachindex(destination),
+                                                             eachindex(source))
+                @inbounds destination[dest_id] = source[src_id]
+            end
+            """
+            @test format_text(
+                str,
+                SciMLStyle();
+                yas_style_nesting = true,
+                margin = 92,
+                margin_overrun = 0,
+            ) == fstr
         end
     end
 
