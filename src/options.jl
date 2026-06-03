@@ -48,7 +48,9 @@ Base.@kwdef struct Options
             throw(ArgumentError(msg))
         end
         if opts.sciml_margin_overrun < 0
-            throw(ArgumentError("`sciml_margin_overrun` must be greater than or equal to 0."))
+            throw(
+                ArgumentError("`sciml_margin_overrun` must be greater than or equal to 0."),
+            )
         end
         return opts
     end
