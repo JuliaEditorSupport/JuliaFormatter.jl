@@ -1235,6 +1235,30 @@
         end"""
         t = run_pretty(str, 80)
         @test length(t) == 27
+
+        @testset "block conditions" begin
+            s1 = """while (a; b)
+                c
+            end"""
+            @test fmt(s1) == s1
+            s2 = """while begin
+                a
+                b
+            end
+                c
+            end"""
+            @test fmt(s2) == s2
+            s3_ = """while (prettylong; prettylongtoo)
+                c
+            end"""
+            s3 = """while (
+                prettylong;
+                prettylongtoo
+            )
+                c
+            end"""
+            @test fmt(s3_, 4, 20) == s3
+        end
     end
 
     @testset "let" begin
@@ -1454,6 +1478,61 @@
         end"""
         t = run_pretty(str, 80)
         @test length(t) == 14
+
+        @testset "block conditions" begin
+            # https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/1025
+            for block in (
+                "(a; b)",
+                "begin\n    a\n    b\nend\n",
+            )
+                str = """
+                if $block
+                    foo
+                end
+                """
+                @test fmt(str) == str
+
+                str = """
+                if x
+                    foo
+                elseif $block
+                    bar
+                end
+                """
+                @test fmt(str) == str
+
+                str = """
+                if $block
+                    foo
+                elseif $block
+                    bar
+                end
+                """
+                @test fmt(str) == str
+
+                str = """
+                if $block
+                    foo
+                else
+                    bar
+                end
+                """
+                @test fmt(str) == str
+            end
+
+            # Nesting
+            str_ = """if (veryverylong; veryverylongtoo)
+                f
+            end"""
+            str = """if (
+                veryverylong;
+                veryverylongtoo
+            )
+                f
+            end"""
+            @test fmt(str_, 4, 20) == str
+        end
+
     end
 
     @testset "strings" begin

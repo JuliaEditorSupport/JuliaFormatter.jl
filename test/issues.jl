@@ -1964,4 +1964,25 @@
         s = "-0x1p1"
         @test fmt(s) == s
     end
+
+    @testset "1025" begin
+        # from julia@1.12.6 Compiler/src/typelimits.jl
+        s = """
+        if is_lattice_equal(𝕃, ai, bi) || is_lattice_equal(𝕃, ai, ft)
+            tyi = ai
+        elseif is_lattice_equal(𝕃, bi, ft)
+            tyi = bi
+        elseif (tyi′ = tmerge_field(𝕃, ai, bi); tyi′ !== nothing)
+            tyi = tyi′
+        else
+            tni = _typename(widenconst(ai))
+            if tni isa Const && tni === _typename(widenconst(bi))
+                tyi = typeintersect(ft, (tni.val::Core.TypeName).wrapper)
+            else
+                tyi = ft
+            end
+        end
+        """
+        @test fmt(s) == s
+    end
 end
