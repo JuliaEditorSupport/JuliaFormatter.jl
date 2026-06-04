@@ -691,9 +691,19 @@
                 sciml_margin_overrun = 0,
             ) == fstr
 
+            # todo:
+            # fstr = """
+            # @threaded destination.scheduler for (dest_id, src_id, aaaa, bbbb, ccccc, dddd) in zip(
+            #                                      eachindex(destination),
+            #                                      eachindex(source))
+            #     @inbounds destination[dest_id] = source[src_id]
+            # end
+            # """
+
             fstr = """
             @threaded destination.scheduler for (dest_id, src_id, aaaa, bbbb, ccccc, dddd) in zip(
-                                                 eachindex(destination), eachindex(source))
+                eachindex(destination),
+                eachindex(source))
                 @inbounds destination[dest_id] = source[src_id]
             end
             """
