@@ -1,3 +1,22 @@
+# v2.6.0
+
+Fixed a number of cases where the left-hand operand of binary operators would be aggressively nested.
+(In general, it is better to nest the right-hand operand as that keeps as much of the operation as possible on the same line.)
+These fixes were applied to DefaultStyle and thus should propagate to other styles as well.
+On top of this, SciMLStyle goes slightly further and also allows expressions to extend beyond the stated margin in the interests of not nesting the LHS. (#998, #1012)
+
+Added a new formatting option, `sciml_margin_overrun`, which controls the extent to which SciMLStyle allows expressions to extend beyond the margin in order to avoid nesting the LHS of binary operators.
+The default is 20, but it can be set to 0 to prevent this behaviour if undesired.
+This option has no effect for styles apart from SciML. (#998)
+
+# v2.5.6
+
+Fixed a bug where JuliaFormatter would emit invalid code when parsing an `if`/`elseif` with a block condition (e.g. `(a; b)` or `begin ... end`). (#1025, #1026)
+
+The same bug was present for `while` loops with similar block conditions.
+Although Julia would still parse the code correctly, the output was ugly.
+This PR therefore also fixes this. (#1026)
+
 # v2.5.5
 
 Fixed a number of issues with `pipe_to_function_call=true`:

@@ -35,6 +35,7 @@ function options(::SciMLStyle)
         surround_whereop_typeparameters = true,
         variable_call_indent = [],
         yas_style_nesting = false,
+        sciml_margin_overrun = 20,
         disallow_single_arg_nesting = true,
     )
 end

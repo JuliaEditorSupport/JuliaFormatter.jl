@@ -1,5 +1,6 @@
-# NOTE: Do NOT use this config in your own repositories. Instead, see 
-#   docs/integrations.md
+# NOTE: This pre-commit configuration is meant for the JuliaFormatter repo itself.
+# Do not use this config in your own repositories! Instead, see
+# https://juliaeditorsupport.github.io/JuliaFormatter.jl/stable/precommit/
 repos:
 - repo: local
   hooks:

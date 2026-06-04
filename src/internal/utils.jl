@@ -26,6 +26,8 @@ Available stages:
    directly return the child.
 
  - `:fst`: the output of prettification.
+
+ - `:nest`: the nested FST.
  
  - `:out`: the string output of the formatter.
 
@@ -55,13 +57,61 @@ function format_to_stage(
     style::JF.AbstractStyle = JF.DefaultStyle();
     options...,
 )
+    # :cst
     cst = JS.parseall(JS.GreenNode, text)
-    stage in (:gn, :greennode, :parse, :cst) && return cst[1]
+    stage in (:gn, :cst) && return cst[1]
 
+    # :fst
     opts = JF.Options(; merge(JF.options(style), options)...)
     state = JF.State(JF.Document(text), opts)
     fst = JF.pretty(style, cst, state)
     stage === :fst && return fst
+
+    # :nest
+    if JF.hascomment(state.doc, fst.endline)
+        JF.add_node!(fst, JF.InlineComment(fst.endline), state)
+    end
+    JF.flatten_fst!(fst)
+    if state.opts.short_circuit_to_if
+        JF.short_circuit_to_if_pass!(fst, state)
+    end
+    if JF.needs_alignment(state.opts)
+        JF.align_fst!(fst, state.doc, state.opts)
+    end
+    JF.nest!(style, fst, state)
+    if state.opts.join_lines_based_on_source
+        JF.remove_superfluous_whitespace!(fst)
+    end
+    stage === :nest && return fst
+
+    # :out
+    state.line_offset = 0
+    io = IOBuffer()
+    if fst.startline > 1
+        JF.format_check(io, JF.Notcode(1, fst.startline - 1), state)
+        JF.print_leaf(io, JF.Newline(), state)
+    end
+    JF.print_tree(io, fst, state)
+    nlines = JF.numlines(state.doc)
+    if state.on && fst.endline < nlines
+        JF.print_leaf(io, JF.Newline(), state)
+        JF.format_check(io, JF.Notcode(fst.endline + 1, nlines), state)
+    end
+    if state.doc.ends_on_nl
+        JF.print_leaf(io, JF.Newline(), state)
+    end
+    out = String(take!(io))
+    replacer = if state.opts.normalize_line_endings == "unix"
+        JF.WINDOWS_TO_UNIX
+    elseif state.opts.normalize_line_endings == "windows"
+        JF.UNIX_TO_WINDOWS
+    else
+        JF.choose_line_ending_replacer(state.doc.srcfile.code)
+    end
+    out = JF.normalize_line_ending(out, replacer)
+    stage === :out && return out
+
+    stage === :print && return print(out)
 
     throw(ArgumentError("unknown stage: $stage"))
 end
