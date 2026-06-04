@@ -297,69 +297,6 @@ function _is_for_tuple_binding_lhs(
     return metadata isa Metadata && metadata.op_kind in KSet"in ∈"
 end
 
-function join_for_tuple_binding_rhs_lines!(
-    fst::FST,
-    s::State,
-    lineage::Vector{Tuple{FNode,Union{Nothing,Metadata}}},
-)::Bool
-    # When the tuple binding is kept flat, source-aware nesting can still leave
-    # `zip(` on one line and each argument on its own line. Join those RHS
-    # argument lines back together when the continuation line fits.
-    if fst.typ !== Call ||
-       length(lineage) < 3 ||
-       lineage[end-1][1] !== Binary ||
-       lineage[end-2][1] !== CartesianIterator
-        return false
-    end
-
-    metadata = lineage[end-1][2]
-    if !(metadata isa Metadata && metadata.op_kind in KSet"in ∈")
-        return false
-    end
-
-    nodes = fst.nodes::Vector
-    newline_inds = findall(n -> n.typ === NEWLINE, nodes)
-    isempty(newline_inds) && return false
-
-    r = linerange(s, fst.startline)
-    line = s.doc.srcfile.code[first(r):last(r)]
-    call_offset = fst[1].line_offset
-    indent = nothing
-
-    # Nest lineage does not carry sibling nodes, so the source token `for (`
-    # is the narrow tuple-binding guard for this RHS call.
-    for m in eachmatch(r"\bfor\s+\(", line)
-        if call_offset < 0 || m.offset - 1 <= call_offset
-            indent = m.offset + length(m.match) - 1
-        end
-    end
-    isnothing(indent) && return false
-
-    first_newline = newline_inds[1]
-
-    tail_len = 0
-    for i in (first_newline+1):length(nodes)
-        n = nodes[i]
-        (is_comment(n) || n.typ === NOTCODE) && return false
-
-        if n.typ === NEWLINE
-            tail_len += nodes[i-1].typ === WHITESPACE ? 0 : 1
-        else
-            tail_len += length(n)
-        end
-    end
-    indent + tail_len + fst.extra_margin <= s.opts.margin || return false
-
-    # Align the continuation with the tuple binding column and keep the first
-    # newline after the call opener. Only later newlines are join candidates.
-    fst.indent = indent
-    for i in newline_inds[2:end]
-        fst[i] = Whitespace(nodes[i-1].typ === WHITESPACE ? 0 : 1)
-    end
-
-    return length(newline_inds) > 1
-end
-
 function find_optimal_nest_placeholders(
     fst::FST,
     start_line_offset::Int,

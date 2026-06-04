@@ -77,6 +77,69 @@ function n_macro!(
     n_functiondef!(ss, fst, s, lineage)
 end
 
+function _join_flat_for_tuple_binding_rhs_lines!(
+    fst::FST,
+    s::State,
+    lhs_line_offset::Int,
+)::Bool
+    s.opts.yas_style_nesting && return false
+
+    metadata = fst.metadata
+    if fst.typ !== Binary ||
+       !(metadata isa Metadata && metadata.op_kind in KSet"in ∈") ||
+       fst[1].typ !== TupleN ||
+       fst[end].typ !== Call
+        return false
+    end
+
+    lhs = fst[1]
+    rhs = fst[end]
+    any(n -> n.typ === NEWLINE, lhs.nodes::Vector) && return false
+
+    nodes = rhs.nodes::Vector
+    newline_inds = findall(n -> n.typ === NEWLINE, nodes)
+    isempty(newline_inds) && return false
+
+    tuple_arg_indent = lhs_line_offset
+    if length(lhs.nodes::Vector) > 0 && is_opener(lhs[1])
+        tuple_arg_indent += length(lhs[1])
+    end
+
+    first_newline = newline_inds[1]
+    tail_len = 0
+    for i in (first_newline+1):length(nodes)
+        n = nodes[i]
+        (is_comment(n) || n.typ === NOTCODE) && return false
+
+        if n.typ === NEWLINE
+            tail_len += nodes[i-1].typ === WHITESPACE ? 0 : 1
+        else
+            tail_len += length(n)
+        end
+    end
+    tuple_arg_indent + tail_len + rhs.extra_margin <= s.opts.margin || return false
+
+    rhs.indent = tuple_arg_indent
+    for i in newline_inds[2:end]
+        rhs[i] = Whitespace(nodes[i-1].typ === WHITESPACE ? 0 : 1)
+    end
+
+    return length(newline_inds) > 1
+end
+
+function n_binaryopcall!(
+    ss::SciMLStyle,
+    fst::FST,
+    s::State,
+    lineage::Vector{Tuple{FNode,Union{Nothing,Metadata}}};
+    indent::Int = -1,
+)
+    lhs_line_offset = s.line_offset
+    nested = n_binaryopcall!(DefaultStyle(getstyle(ss)), fst, s, lineage; indent = indent)
+    _join_flat_for_tuple_binding_rhs_lines!(fst, s, lhs_line_offset)
+    return nested
+end
+
 function _n_tuple!(
     ss::SciMLStyle,
     fst::FST,
@@ -216,8 +279,6 @@ function _n_tuple!(
         nested |= nest!(style, nodes, s, fst.indent, lineage; extra_margin = extra_margin)
     end
 
-    s.line_offset = start_line_offset
-    join_for_tuple_binding_rhs_lines!(fst, s, lineage)
     s.line_offset = start_line_offset
     walk(unnest!(style; dedent = false), fst, s)
     s.line_offset = start_line_offset
