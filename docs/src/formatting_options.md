@@ -594,17 +594,22 @@ Add a trailing zero, if needed.
 Default: `[]`
 
 The `SciMLStyle` supports the additional option `variable_call_indent`.
-It permits continuation lines in calls to not align with the opening parenthesis:
+It permits continuation lines in calls to not align with the opening parenthesis.
+
+For example, if `variable_call_indent = ["Dict"]`, the following is allowed:
 
 ```julia
-# Allowed with and without `Dict in variable_call_indent`
-Dict{Int, Int}(1 => 2,
-    3 => 4)
-
-# Allowed when `Dict in variable_call_indent`, but
-# will be changed to the first example when `Dict ∉ variable_call_indent`.
 Dict{Int, Int}(
     1 => 2,
+    3 => 4)
+```
+
+(Note that in the configuration, `"Dict"` must be passed as a string: this is because JuliaFormatter matches it against the name of the function being called.)
+
+If `variable_call_indent` is empty, the above will be formatted to
+
+```julia
+Dict{Int, Int}(1 => 2,
     3 => 4)
 ```
 
