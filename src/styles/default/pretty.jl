@@ -3497,6 +3497,22 @@ function p_typedvcat(
     t
 end
 
+"""
+    is_newline_after_2semicolons(cst::JuliaSyntax.GreenNode, i::Int)
+
+Detect if child node `i` of `cst` is a newline that follows two semicolons. For example,
+this will detect the newline in constructs such as
+
+    [a b;;
+     c d]
+"""
+function is_newline_after_2semicolons(cst::JuliaSyntax.GreenNode, i::Int)
+    return i >= 3 &&
+        kind(cst[i]) === K"NewlineWs"
+        kind(cst[i - 1]) === K";" &&
+        kind(cst[i - 2]) === K";"
+end
+
 function p_hcat(
     ds::AbstractStyle,
     cst::JuliaSyntax.GreenNode,
@@ -3511,37 +3527,54 @@ function p_hcat(
     end
 
     childs = children(cst)
-    # st = kind(cst) === K"hcat" ? 1 : 2
     st = findfirst(n -> kind(n) === K"[", childs)::Int
+
+    # Deciding whether to nest hcat expressions
+    # -----------------------------------------
+    #
+    # hcat is very sensitive towards newlines. There are several potential 'hcat' separators
+    # that are allowed:
+    #
+    #  (1) spaces
+    #  (2) double semicolon
+    #  (3) double semicolon followed by newline
+    #
+    # Now, there are some Julia syntax rules that must be obeyed.
+    # (See: https://docs.julialang.org/en/v1/manual/arrays/#man-array-concatenation)
+    #
+    #  - (1) and (2) cannot be mixed, but (1) and (3) can be mixed.
+    #
+    #    This implies that if we have a (3), we *must not* remove the newline to make a (2).
+    #
+    #  - Otherwise, it's illegal to have a newline separator between hcat arguments. The
+    #    meaning of newline is 'vertical concatenation', and any vertical concat would turn
+    #    the hcat node into ncat, so a hcat node itself can't have newline separators.
+    #
+    #    This implies that we *must not* add newline separators on our own accord as that
+    #    would change the semantics.
+    #
+    #  - The only other place where newlines are allowed to be present are after the opening
+    #    `[` and before the closing `]`. Let's call these 'boundary newlines'.
+    #
+    #    We are allowed to decide whether to place boundary newlines. In other words, we can
+    #    safely insert Placeholder nodes at these positions. For hcat, we will elect to
+    #    always do so.
 
     for (i, a) in enumerate(childs)
         n = pretty(style, a, s, ctx, lineage)
-        if JuliaSyntax.is_whitespace(a)
-            # Wrapped ncat like `[a b;;\n c d]` reparses as Hcat with `;` leaves.
-            # That newline is syntactic, not cosmetic; joining it makes invalid Julia.
-            prev_idx = findprev(n -> !JuliaSyntax.is_whitespace(n), childs, i - 1)
-            prev_prev_idx = if isnothing(prev_idx)
-                nothing
-            else
-                findprev(n -> !JuliaSyntax.is_whitespace(n), childs, prev_idx - 1)
-            end
-            if kind(a) === K"NewlineWs" &&
-               !isnothing(prev_idx) &&
-               !isnothing(prev_prev_idx) &&
-               kind(childs[prev_idx]) === K";" &&
-               kind(childs[prev_prev_idx]) === K";"
+        if kind(a) === K"["
+            add_node!(t, n, s; join_lines = true)
+            add_node!(t, Placeholder(0), s)
+        elseif kind(a) === K"]"
+            add_node!(t, Placeholder(0), s)
+            add_node!(t, n, s; join_lines = true)
+        elseif JuliaSyntax.is_whitespace(a)
+            if is_newline_after_2semicolons(cst, i)
+                # See above: we cannot convert ';;\n' to ';;'
                 add_node!(t, Newline(; nest_behavior = AlwaysNest), s)
-            else
-                add_node!(t, n, s; join_lines = true)
-            end
-        elseif kind(a) === K";"
-            add_node!(t, n, s; join_lines = true)
-        elseif i > st
-            add_node!(t, n, s; join_lines = true)
-            next_idx = findnext(n -> !JuliaSyntax.is_whitespace(n), childs, i + 1)
-            # Do not manufacture whitespace between hcat entries and ncat separators.
-            if needs_placeholder(childs, i + 1, K"]") &&
-               !(!isnothing(next_idx) && kind(childs[next_idx]) === K";")
+            elseif !(kind(cst[i + 1]) in KSet"; ]")
+                # Don't print spaces before ';;' separators, since they do the same job.
+                # Same logic for the closing brace.
                 add_node!(t, Whitespace(1), s)
             end
         else

@@ -7,11 +7,7 @@
   Create a temporary test environment with `Pkg.activate(; temp=true)`, `Pkg.develop(; path=...)` the current checkout of JuliaFormatter, and add any other packages you need.
 
 - Code changes in the local checkout should be immediately visible without having to reload the session (thanks to Revise.jl).
-
-# Running tests
-
-- Do not run the full test suite unless explicitly instructed to.
-  Only run specific, targeted tests that are relevant to the changes you are making.
+  If you encounter any issues with this, try restarting the MCP session.
 
 # Tracing JuliaFormatter's output
 
@@ -23,3 +19,10 @@
   - `:nest` gives the FST after flattening, alignment, and nesting;
   - `:out` gives the final formatted string;
   - `:print` prints the final formatted string.
+
+# Running tests
+
+- Do not run the full test suite unless explicitly instructed to.
+  Only run specific, targeted tests that are relevant to the changes you are making.
+
+- To test whether a string is valid Julia code, you can use `Meta.parse(s)` or `format_to_stage(:cst, s)`. Both throw if the code is invalid.
