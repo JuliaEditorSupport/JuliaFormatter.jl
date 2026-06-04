@@ -3508,7 +3508,7 @@ this will detect the newline in constructs such as
 """
 function is_newline_after_2semicolons(cst::JuliaSyntax.GreenNode, i::Int)
     return i >= 3 &&
-        kind(cst[i]) === K"NewlineWs"
+        kind(cst[i]) === K"NewlineWs" &&
         kind(cst[i - 1]) === K";" &&
         kind(cst[i - 2]) === K";"
 end
@@ -3572,9 +3572,18 @@ function p_hcat(
             if is_newline_after_2semicolons(cst, i)
                 # See above: we cannot convert ';;\n' to ';;'
                 add_node!(t, Newline(; nest_behavior = AlwaysNest), s)
-            elseif !(kind(cst[i + 1]) in KSet"; ]")
-                # Don't print spaces before ';;' separators, since they do the same job.
-                # Same logic for the closing brace.
+                # Additionally, because the contents of the hcat will be on different lines
+                # and there's no way to later un-nest it without breaking semantics, we can
+                # set the nest behaviour of the entire hcat to AlwaysNest. This means that
+                # later on, `n_tuple!` will insert newlines after the `[` and before the
+                # `].`
+                t.nest_behavior = AlwaysNest
+            elseif !(kind(cst[i + 1]) in KSet"; ]") && kind(cst[i - 1]) !== K"["
+                # Whitespace is generally important to retain, because it can be a separator
+                # -- but we should omit it in a few cases:
+                # 1. If it's followed by a ';;' separator, since it's not needed.
+                # 2. Directly after the opening bracket.
+                # 3. Directly before the closing bracket.
                 add_node!(t, Whitespace(1), s)
             end
         else

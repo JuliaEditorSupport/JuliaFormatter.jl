@@ -118,7 +118,7 @@ function nest!(
         n_vect!(style, fst, s, lineage)
     elseif fst.typ === Vcat
         n_vcat!(style, fst, s, lineage)
-    elseif fst.typ === Hcat
+    elseif fst.typ === Hcat || fst.typ === TypedHcat
         n_hcat!(style, fst, s, lineage)
     elseif fst.typ === Ncat
         n_vcat!(style, fst, s, lineage)

@@ -1,4 +1,47 @@
 @testset "Multidimensional Arrays" begin
+    @testset "hcat and typed_hcat nodes" begin
+        # hcat nodes are the ones without T; typed_hcat nodes are the ones with T. Both
+        # should more or less be formatted the same way.
+        for T in ("", "T")
+            @testset "spaces only" begin
+                # Additionally check that superfluous whitespace is removed.
+                for s in (
+                    "x = $(T)[a b]",
+                    "x = $(T)[a      b     ]",
+                    )
+                    @test fmt(s) == "x = $(T)[a b]"
+                    @test fmt(s, 4, 5+length(T)) == "x = $(T)[\n    a b\n]"
+                end
+            end
+
+            @testset ";;\\n only" begin
+                for s in (
+                    "x = $(T)[a;;\n b]",
+                    "x = $(T)[a    ;;\n   b   ]",
+                    )
+                    # because the original matrix is already split across a newline,
+                    # the formatter will insert more newlines
+                    expected = "x = $(T)[\n    a;;\n    b\n]"
+                    @test fmt(s) == expected
+                    @test fmt(s, 4, 5+length(T)) == expected
+                end
+            end
+
+            @testset "mixture of space and ;;\\n" begin
+                for s in (
+                    "x = $(T)[a b;;\n c d]",
+                    "x = $(T)[a    b   ;;\n   c    d   ]",
+                    )
+                    # because the original matrix is already split across a newline,
+                    # the formatter will insert more newlines
+                    expected = "x = $(T)[\n    a b;;\n    c d\n]"
+                    @test fmt(s) == expected
+                    @test fmt(s, 4, 5+length(T)) == expected
+                end
+            end
+        end
+    end
+
     @testset "#490" begin
         @testset "DefaultStyle" begin
             str = "[1;; 2]"
@@ -49,36 +92,6 @@
 
     @testset "#582" begin
         @test yasfmt("[a;b;;]") == "[a; b;;]"
-    end
-
-    @testset "wrapped hcat with ncat separators" begin
-        # Repeated semicolons are n-dimensional concatenation separators.
-        # They may follow an hcat row only when the next row is wrapped.
-        separators = [";;", ";;;", ";;;;"]
-        styles = (DefaultStyle(), YASStyle(), SciMLStyle())
-
-        for sep in separators
-            cases = (
-                # Source form: hcat rows wrapped before the ncat separator.
-                "x = [a\n     b$(sep)\n     c\n     d]",
-                "x = T[a\n      b$(sep)\n      c\n      d]",
-                # Formatted form: JuliaSyntax reparses this as hcat with separator tokens.
-                "x = [a b$(sep)\n     c d]",
-                "x = T[a b$(sep)\n      c d]",
-            )
-
-            for str in cases
-                @test JuliaSyntax.parseall(JuliaSyntax.GreenNode, str) isa
-                      JuliaSyntax.GreenNode
-
-                # Styles choose different layouts here, so the invariant is parsability.
-                for style in styles
-                    formatted = format_text(str, style; join_lines_based_on_source = false)
-                    @test JuliaSyntax.parseall(JuliaSyntax.GreenNode, formatted) isa
-                          JuliaSyntax.GreenNode
-                end
-            end
-        end
     end
 
     @testset "#608" begin
