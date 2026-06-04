@@ -107,7 +107,16 @@ function _n_tuple!(
     end
 
     nested = false
-    optimal_placeholders = find_optimal_nest_placeholders(fst, fst.indent, s.opts.margin)
+    # Let find_optimal_nest_placeholders decide whether a for-loop tuple
+    # binding can remain flat instead of overriding binary-op nesting.
+    for_tuple_binding_lhs = _is_for_tuple_binding_lhs(fst, lineage)
+    optimal_placeholders = find_optimal_nest_placeholders(
+        fst,
+        fst.indent,
+        s.opts;
+        margin_line_offset = start_line_offset,
+        for_tuple_binding_lhs,
+    )
     if length(optimal_placeholders) > 0
         nested = true
     end
@@ -137,22 +146,25 @@ function _n_tuple!(
     should_nest = line_margin > s.opts.margin || must_nest(fst) || src_diff_line
 
     # For certain types, be more conservative about nesting
-    if should_nest && !must_nest(fst) && !src_diff_line
+    if for_tuple_binding_lhs && isempty(optimal_placeholders)
+        # The tuple binding already fit under the SciML overrun budget.
+        should_nest = false
+    elseif should_nest && !must_nest(fst) && !src_diff_line
         total_length = line_margin
         if (
             fst.typ === Call &&
             length(placeholder_inds) <= 5 &&
-            total_length <= s.opts.margin + 20
+            total_length <= s.opts.margin + default_margin_overrun(s.opts)
         )
             should_nest = false
         elseif (fst.typ === Binary || fst.typ === Chain) &&
                length(placeholder_inds) <= 6 &&
-               total_length <= s.opts.margin + 20
+               total_length <= s.opts.margin + default_margin_overrun(s.opts)
             should_nest = false
         elseif (
             fst.typ === RefN &&
             length(placeholder_inds) <= 4 &&
-            total_length <= s.opts.margin + 30
+            total_length <= s.opts.margin + index_margin_overrun(s.opts)
         )
             # Keep array indexing together when reasonable (e.g., du[i, j, 1])
             should_nest = false

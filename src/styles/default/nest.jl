@@ -988,8 +988,8 @@ function n_binaryopcall!(
         return nested
     end
 
-    # length of operator, surrounding whitespace, and right operand
-    op_and_rhs_len = sum(length.(fst[2:end]))
+    # length of operator, surrounding whitespace, and the first line of the right operand
+    op_and_rhs_len, _ = length_to(fst, (NEWLINE,); start = 2)
 
     for (i, n) in enumerate(nodes)
         if n.typ === NEWLINE

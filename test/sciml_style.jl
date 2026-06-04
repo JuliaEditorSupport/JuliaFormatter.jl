@@ -640,6 +640,130 @@
             """
             @test format_text(str, SciMLStyle(); margin = 13) == fstr
         end
+
+        @testset "for tuple binding regression" begin
+            # see: https://github.com/JuliaEditorSupport/JuliaFormatter.jl/pull/998
+            str = """
+            function copy_values!(destination::ThreadedArray, source::AbstractArray)
+                @threaded destination.scheduler for (dest_id, src_id) in zip(eachindex(destination),
+                                                            eachindex(source))
+                    @inbounds destination[dest_id] = source[src_id]
+                end
+            end
+            """
+
+            fstr = """
+            function copy_values!(destination::ThreadedArray, source::AbstractArray)
+                @threaded destination.scheduler for (dest_id, src_id) in zip(eachindex(destination),
+                                                                             eachindex(source))
+                    @inbounds destination[dest_id] = source[src_id]
+                end
+            end
+            """
+            @test format_text(str, SciMLStyle(); yas_style_nesting = true) == fstr
+
+            str = """
+            @threaded destination.scheduler for (dest_id, src_id, aaaa, bbbb, ccccc, dddd) in zip(eachindex(destination),
+                      eachindex(source))
+                @inbounds destination[dest_id] = source[src_id]
+            end
+            """
+
+            fstr = """
+            @threaded destination.scheduler for (dest_id, src_id, aaaa, bbbb, ccccc, dddd) in zip(eachindex(destination),
+                                                                                                  eachindex(source))
+                @inbounds destination[dest_id] = source[src_id]
+            end
+            """
+            @test format_text(str, SciMLStyle(); yas_style_nesting = true, margin = 92) == fstr
+
+            fstr = """
+            @threaded destination.scheduler for (dest_id, src_id, aaaa, bbbb, ccccc,
+                                                 dddd) in zip(eachindex(destination),
+                                                              eachindex(source))
+                @inbounds destination[dest_id] = source[src_id]
+            end
+            """
+            @test format_text(
+                str,
+                SciMLStyle();
+                yas_style_nesting = true,
+                margin = 92,
+                sciml_margin_overrun = 0,
+            ) == fstr
+
+            # todo:
+            # fstr = """
+            # @threaded destination.scheduler for (dest_id, src_id, aaaa, bbbb, ccccc, dddd) in zip(
+            #                                      eachindex(destination),
+            #                                      eachindex(source))
+            #     @inbounds destination[dest_id] = source[src_id]
+            # end
+            # """
+
+            fstr = """
+            @threaded destination.scheduler for (dest_id, src_id, aaaa, bbbb, ccccc, dddd) in zip(
+                eachindex(destination),
+                eachindex(source))
+                @inbounds destination[dest_id] = source[src_id]
+            end
+            """
+            @test format_text(str, SciMLStyle(); margin = 92) == fstr
+            @test format_text(str, SciMLStyle(); margin = 92, sciml_margin_overrun = 0) ==
+                  fstr
+
+            str = """
+            @threaded destination.scheduler for i in zip(eachindex(destination),
+                      eachindex(source))
+                body
+            end
+            """
+
+            fstr = """
+            @threaded destination.scheduler for i in zip(eachindex(destination),
+                eachindex(source))
+                body
+            end
+            """
+            @test format_text(str, SciMLStyle(); margin = 92) == fstr
+
+            str = """
+            @threaded destination.scheduler for (dest_id, src_id, aaaa, bbbb, ccccc, dddd) ∈ zip(eachindex(destination),
+                      eachindex(source))
+                @inbounds destination[dest_id] = source[src_id]
+            end
+            """
+
+            fstr = """
+            @threaded destination.scheduler for (dest_id, src_id, aaaa, bbbb, ccccc, dddd) ∈ zip(eachindex(destination),
+                                                                                                 eachindex(source))
+                @inbounds destination[dest_id] = source[src_id]
+            end
+            """
+            @test format_text(
+                str,
+                SciMLStyle();
+                yas_style_nesting = true,
+                margin = 92,
+                always_for_in = false,
+            ) == fstr
+
+            fstr = """
+            @threaded destination.scheduler for (dest_id, src_id, aaaa, bbbb, ccccc,
+                                                 dddd) ∈ zip(eachindex(destination),
+                                                             eachindex(source))
+                @inbounds destination[dest_id] = source[src_id]
+            end
+            """
+            @test format_text(
+                str,
+                SciMLStyle();
+                yas_style_nesting = true,
+                margin = 92,
+                always_for_in = false,
+                sciml_margin_overrun = 0,
+            ) == fstr
+        end
     end
 
     str = raw"""
@@ -677,7 +801,7 @@
     lines = split(formatted, "\n")
     @test length(lines) <= 2  # Should not create excessive line breaks
 
-    # Test 4: Type parameters should not be broken unnecessarily  
+    # Test 4: Type parameters should not be broken unnecessarily
     str = "Vector{Float64, Int32, String}"
     formatted = format_text(str, SciMLStyle())
     @test !contains(formatted, "{\n")  # Should not break type parameters
@@ -782,7 +906,7 @@
             formatted = format_text(str, SciMLStyle())
             @test formatted == str
 
-            # Short array literals should not be broken  
+            # Short array literals should not be broken
             str = "[1, 2, 3, 4, 5]"
             formatted = format_text(str, SciMLStyle())
             @test formatted == str
@@ -873,7 +997,7 @@
         str = "[1 2 3]"  # 1×3 matrix
         @test format_text(str, SciMLStyle()) == str
 
-        str = "[1; 2; 3]"  # 3×1 matrix  
+        str = "[1; 2; 3]"  # 3×1 matrix
         @test format_text(str, SciMLStyle()) == str
 
         str = "[1 2; 3 4]"  # 2×2 matrix
