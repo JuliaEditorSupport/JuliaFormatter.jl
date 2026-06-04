@@ -142,7 +142,7 @@ function n_tuple!(
         fst.indent = s.line_offset
     end
     nodes = fst.nodes::Vector
-    if !for_tuple_binding_lhs && length(nodes) > 0 && is_opener(fst[1])
+    if length(nodes) > 0 && is_opener(fst[1])
         (fst.indent += 1)
     else
         false
