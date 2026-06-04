@@ -884,7 +884,8 @@ function n_binaryopcall!(
     line_offset = s.line_offset
     line_margin = line_offset + length(fst) + fst.extra_margin
 
-    # If there's no placeholder the binary call is not nestable
+    # If there are no top-level placeholders in the FST, the binary call itself is not
+    # nestable (although its children, i.e. the operands, might be).
     nodes = fst.nodes::Vector
     idxs = findall(n -> n.typ === PLACEHOLDER, nodes)
 
@@ -988,15 +989,28 @@ function n_binaryopcall!(
         return nested
     end
 
-    # length of operator, surrounding whitespace, and the first line of the right operand
-    op_and_rhs_len, _ = length_to(fst, (NEWLINE,); start = 2)
+    # When we nest the LHS, we have to do so with some knowledge of how much space the RHS
+    # will take up. However, we don't need to account for the _full_ RHS, because the RHS
+    # could itself be nested, and in general nesting the RHS is preferable to nesting the
+    # LHS as it's prettier. That means we only need to account for the RHS up to the first
+    # point where it could be nested.
+    #
+    # Since node 1 is the LHS, we start looking for the first placeholder from node 2
+    # onwards.
+    len_to_first_placeholder, found = length_to(fst, (PLACEHOLDER, NEWLINE); start = 2)
+    lhs_extra_margin_needed = if found && op_kind(fst) !== K"::"
+        len_to_first_placeholder
+    else
+        # Can't nest the op or RHS. That means that we need to account for the entire RHS,
+        # plus anything that comes after the binary expression as well.
+        sum(length, fst[2:end]) + fst.extra_margin
+    end
 
     for (i, n) in enumerate(nodes)
         if n.typ === NEWLINE
             s.line_offset = fst.indent
         elseif i == 1
-            # lhs
-            n.extra_margin = op_and_rhs_len + fst.extra_margin
+            n.extra_margin = lhs_extra_margin_needed
             nested |= nest!(style, n, s, lineage)
         elseif i == length(nodes)
             # rhs

@@ -392,6 +392,7 @@ function binaryop_to_whereop!(fst::FST, s::State)
 
     # get everything up to the where
     binop = FST(Binary, fst[1].indent)
+    binop.metadata = oldbinop.metadata
     for n in oldbinop.nodes
         if n.typ === Where
             break
