@@ -1,4 +1,4 @@
-# v2.5.7
+# v2.6.0
 
 Fixed a number of cases where the left-hand operand of binary operators would be aggressively nested.
 (In general, it is better to nest the right-hand operand as that keeps as much of the operation as possible on the same line.)
