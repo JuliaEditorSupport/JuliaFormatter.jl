@@ -642,6 +642,7 @@
         end
 
         @testset "for tuple binding regression" begin
+            # see: https://github.com/JuliaEditorSupport/JuliaFormatter.jl/pull/998
             str = """
             function copy_values!(destination::ThreadedArray, source::AbstractArray)
                 @threaded destination.scheduler for (dest_id, src_id) in zip(eachindex(destination),
