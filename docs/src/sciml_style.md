@@ -1,8 +1,8 @@
 # [SciML Style](@id sciml-style)
 
-!!! warning "SciMLStyle !== 'SciML style' === Runic"
+!!! warning "`SciMLStyle()` !== 'SciML style' === Runic"
 
-    Note that the SciML Style Guide currently suggests using Runic.jl for formatting instead.
+    Note that the SciML Style Guide [currently suggests using Runic.jl for formatting instead](https://github.com/SciML/SciMLStyle/tree/af867dabfeb1012d9c3f8d76e458b56a934b6212#Runic).
 
     JuliaFormatter's `SciMLStyle()` represents a collection of styles that predated this recommendation, and is being kept in v2 for compatibility.
     In a future major release this style may be renamed to avoid confusion.
