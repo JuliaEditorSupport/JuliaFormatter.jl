@@ -3508,9 +3508,9 @@ this will detect the newline in constructs such as
 """
 function is_newline_after_2semicolons(cst::JuliaSyntax.GreenNode, i::Int)
     return i >= 3 &&
-        kind(cst[i]) === K"NewlineWs" &&
-        kind(cst[i - 1]) === K";" &&
-        kind(cst[i - 2]) === K";"
+           kind(cst[i]) === K"NewlineWs" &&
+           kind(cst[i-1]) === K";" &&
+           kind(cst[i-2]) === K";"
 end
 
 function p_hcat(
@@ -3578,7 +3578,7 @@ function p_hcat(
                 # later on, `n_tuple!` will insert newlines after the `[` and before the
                 # `].`
                 t.nest_behavior = AlwaysNest
-            elseif !(kind(cst[i + 1]) in KSet"; ]") && kind(cst[i - 1]) !== K"["
+            elseif !(kind(cst[i+1]) in KSet"; ]") && kind(cst[i-1]) !== K"["
                 # Whitespace is generally important to retain, because it can be a separator
                 # -- but we should omit it in a few cases:
                 # 1. If it's followed by a ';;' separator, since it's not needed.
