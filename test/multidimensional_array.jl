@@ -26,7 +26,11 @@ ALL_STYLES = (DefaultStyle(), YASStyle(), BlueStyle(), MinimalStyle(), SciMLStyl
                     # place. But we can at least check for now that it parses to the same
                     # AST (meaning that at worst, it's ugly, but not wrong), and that it's
                     # idempotent.
-                    for style in ALL_STYLES, kwargs in ((;), (;margin=5+length(T)))
+                    for style in ALL_STYLES, kwargs in (
+                        (;),
+                        (;margin=5+length(T)),
+                        (;join_lines_based_on_source=false),
+                        )
                         out1 = format_text(s, style; kwargs...)
                         out2 = format_text(out1, style; kwargs...)
                         @test out1 == out2
@@ -71,7 +75,11 @@ ALL_STYLES = (DefaultStyle(), YASStyle(), BlueStyle(), MinimalStyle(), SciMLStyl
                     # place. But we can at least check for now that it parses to the same
                     # AST (meaning that at worst, it's ugly, but not wrong), and that it's
                     # idempotent.
-                    for style in ALL_STYLES, kwargs in ((;), (;margin=5+length(T)))
+                    for style in ALL_STYLES, kwargs in (
+                        (;),
+                        (;margin=5+length(T)),
+                        (;join_lines_based_on_source=false),
+                        )
                         out1 = format_text(s, style; kwargs...)
                         out2 = format_text(out1, style; kwargs...)
                         @test out1 == out2

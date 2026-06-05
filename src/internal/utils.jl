@@ -150,19 +150,19 @@ function test_format(
 )
     out = JF.format_text(input, style; options...)
     if out != expected
-        printstyled("Formatting output did not match expected value.\n\n"; color=:cyan)
-        printstyled("Expected:\n$expected\n\n"; color=:green)
-        printstyled("Got:\n$out\n\n"; color=:red)
-        printstyled("Repro:\n$(_repro_hint(input, style, options))\n"; color=:cyan)
+        printstyled("Formatting output did not match expected value.\n\n"; color = :cyan)
+        printstyled("Expected:\n$expected\n\n"; color = :green)
+        printstyled("Got:\n$out\n\n"; color = :red)
+        printstyled("Repro:\n$(_repro_hint(input, style, options))\n"; color = :cyan)
     end
     @test out == expected
 
     out2 = JF.format_text(out, style; options...)
     if out2 != out
-        printstyled("Formatting was not idempotent.\n\n"; color=:cyan)
-        printstyled("First pass:\n$out\n\n"; color=:green)
-        printstyled("Second pass:\n$out2\n\n"; color=:red)
-        printstyled("Repro:\n$(_repro_hint(out, style, options))\n"; color=:cyan)
+        printstyled("Formatting was not idempotent.\n\n"; color = :cyan)
+        printstyled("First pass:\n$out\n\n"; color = :green)
+        printstyled("Second pass:\n$out2\n\n"; color = :red)
+        printstyled("Repro:\n$(_repro_hint(out, style, options))\n"; color = :cyan)
     end
     @test out2 == out
 end
