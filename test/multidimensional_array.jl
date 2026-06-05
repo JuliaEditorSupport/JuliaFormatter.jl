@@ -38,6 +38,13 @@ ALL_STYLES = (DefaultStyle(), YASStyle(), BlueStyle(), MinimalStyle(), SciMLStyl
                     end
                 end
 
+                @testset "with call arguments" begin
+                    # https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/1038
+                    x = "$(T)[1:2 3:4 5:6]"
+                    for style in ALL_STYLES
+                        test_format(x, x)
+                    end
+                end
             end
 
             @testset ";;\\n only" begin
