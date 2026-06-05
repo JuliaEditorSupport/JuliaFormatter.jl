@@ -1,3 +1,7 @@
+# v2.6.1
+
+Fixed a bug where matrices with `;;\n` horizontal concatenation separators were being formatted into invalid code. (#1029)
+
 # v2.6.0
 
 Fixed a number of cases where the left-hand operand of binary operators would be aggressively nested.
