@@ -3558,7 +3558,6 @@ function p_hcat(
     #    safely insert Placeholder nodes at these positions. For hcat, we will elect to
     #    always do so.
 
-    # Note: for the indexing operations b need to check i > 1 since hcat must begin with a `[`.
     for (i, a) in enumerate(childs)
         n = pretty(style, a, s, ctx, lineage)
         if kind(a) === K"["
@@ -3585,6 +3584,9 @@ function p_hcat(
                 # 3. Directly before the closing bracket.
                 add_node!(t, Whitespace(1), s)
             end
+        elseif i == 1 && kind(a) !== K"["
+            # Type preceding the `[`, e.g. `T` in `T[1 2 3]`.
+            add_node!(t, n, s; join_lines = true)
         else
             # Argument that is being hcatted. Annoyingly, there isn't always whitespace
             # between hcat arguments (see e.g. `[1:2 3:4 5:6]`), so sometimes we have to
