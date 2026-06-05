@@ -1,54 +1,145 @@
+module MultidimensionalArrayTests
+
+using JuliaFormatter
+using JuliaFormatter.Internal: test_format
+using Test
+
+ALL_STYLES = (DefaultStyle(), YASStyle(), BlueStyle(), MinimalStyle(), SciMLStyle())
+
 @testset "Multidimensional Arrays" begin
+    @testset "hcat and typed_hcat nodes" begin
+        # hcat nodes are the ones without T; typed_hcat nodes are the ones with T. Both
+        # should more or less be formatted the same way.
+        for T in ("", "T")
+            @testset "spaces only" begin
+                # Additionally check that superfluous whitespace is removed.
+                for s in (
+                    "x = $(T)[a b]",
+                    "x = $(T)[a      b     ]",
+                    )
+                    for style in ALL_STYLES
+                        test_format(s, "x = $(T)[a b]", style)
+                    end
+                    test_format(s, "x = $(T)[\n    a b\n]"; margin=5+length(T))
+
+                    # TODO(penelopeysm): The indentation for other styles is all over the
+                    # place. But we can at least check for now that it parses to the same
+                    # AST (meaning that at worst, it's ugly, but not wrong), and that it's
+                    # idempotent.
+                    for style in ALL_STYLES, kwargs in (
+                        (;),
+                        (;margin=5+length(T)),
+                        (;join_lines_based_on_source=false),
+                        )
+                        out1 = format_text(s, style; kwargs...)
+                        out2 = format_text(out1, style; kwargs...)
+                        @test out1 == out2
+                        @test Meta.parse(out1) == Meta.parse(s)
+                    end
+                end
+
+            end
+
+            @testset ";;\\n only" begin
+                for s in (
+                    "x = $(T)[a;;\n b]",
+                    "x = $(T)[a    ;;\n   b   ]",
+                    )
+                    # because the original matrix is already split across a newline,
+                    # the formatter will insert more newlines
+                    expected_default = "x = $(T)[\n    a;;\n    b\n]"
+                    test_format(s, expected_default)
+                    test_format(s, expected_default; margin=5+length(T))
+
+                    ws = " " ^ (5 + length(T))
+                    expected_sciml = "x = $(T)[a;;\n$(ws)b]"
+                    test_format(s, expected_sciml, SciMLStyle())
+                    test_format(s, expected_sciml, SciMLStyle(); margin=5+length(T))
+                    test_format(s, expected_sciml, YASStyle())
+                    test_format(s, expected_sciml, YASStyle(); margin=5+length(T))
+                end
+            end
+
+            @testset "mixture of space and ;;\\n" begin
+                for s in (
+                    "x = $(T)[a b;;\n c d]",
+                    "x = $(T)[a    b   ;;\n   c    d   ]",
+                    )
+                    # because the original matrix is already split across a newline,
+                    # the formatter will insert more newlines
+                    expected = "x = $(T)[\n    a b;;\n    c d\n]"
+                    test_format(s, expected)
+                    test_format(s, expected; margin=5+length(T))
+
+                    # TODO(penelopeysm): The indentation for other styles is all over the
+                    # place. But we can at least check for now that it parses to the same
+                    # AST (meaning that at worst, it's ugly, but not wrong), and that it's
+                    # idempotent.
+                    for style in ALL_STYLES, kwargs in (
+                        (;),
+                        (;margin=5+length(T)),
+                        (;join_lines_based_on_source=false),
+                        )
+                        out1 = format_text(s, style; kwargs...)
+                        out2 = format_text(out1, style; kwargs...)
+                        @test out1 == out2
+                        @test Meta.parse(out1) == Meta.parse(s)
+                    end
+                end
+            end
+        end
+    end
+
     @testset "#490" begin
         @testset "DefaultStyle" begin
             str = "[1;; 2]"
-            @test fmt(str) == str
+            test_format(str, str)
 
             str_ = """
             [
                 1;;
                 2
             ]"""
-            @test fmt(str, 4, 1) == str_
+            test_format(str, str_; margin=1)
 
             str = "T[1;; 2]"
-            @test fmt(str) == str
+            test_format(str, str)
 
             str_ = """
             T[
                 1;;
                 2
             ]"""
-            @test fmt(str, 4, 1) == str_
+            test_format(str, str_; margin=1)
         end
 
         @testset "YASStyle" begin
             str = "[1;; 2]"
-            @test yasfmt(str) == str
+            test_format(str, str, YASStyle())
 
             str_ = """
             [1;;
              2]"""
-            @test yasfmt(str, 4, 1) == str_
+            test_format(str, str_, YASStyle(); margin=1)
 
             str = "T[1;; 2]"
-            @test yasfmt(str) == str
+            test_format(str, str, YASStyle())
 
             str_ = """
             T[1;;
               2]"""
-            @test yasfmt(str, 4, 1) == str_
+            test_format(str, str_, YASStyle(); margin=1)
         end
     end
 
     @testset "#620" begin
         s = "[1; 0;;]"
-        @test fmt(s) == s
-        @test yasfmt(s) == s
+        test_format(s, s)
+        test_format(s, s, YASStyle())
     end
 
     @testset "#582" begin
-        @test yasfmt("[a;b;;]") == "[a; b;;]"
+        test_format("[a;b;;]", "[a; b;;]", YASStyle())
     end
 
     @testset "#608" begin
@@ -56,18 +147,23 @@
         hcat([zeros(1); ones(3)], [zeros(2); ones(2)], [zeros(3); ones(1)], [zeros(1); ones(3)], [zeros(2); ones(2)], [zeros(3); ones(1)])
         """
         s2 = """
-        hcat([zeros(1); ones(3)], [zeros(2); ones(2)], [zeros(3); ones(1)],
-             [zeros(1); ones(3)], [zeros(2); ones(2)], [zeros(3); ones(1)])
+        hcat([zeros(1); ones(3)], [zeros(2); ones(2)], [zeros(3); ones(1)], [zeros(1); ones(3)],
+             [zeros(2); ones(2)], [zeros(3); ones(1)])
         """
-        @test yasfmt(s1) == s2
+        test_format(s1, s2, YASStyle())
     end
 
     @testset "#532" begin
         s = "(; a = [1;;], b = cos[2;;])"
-        @test fmt(s) == s
-        @test bluefmt(s) == s
-        @test yasfmt(s) == s
-        @test format_text(s, SciMLStyle()) == s
-        @test minimalfmt(s) == s
+        s_nospace = "(; a=[1;;], b=cos[2;;])"
+        for style in (DefaultStyle(), SciMLStyle())
+            test_format(s, s, style)
+        end
+        # whitespace_around_kwarg = false
+        for style in (BlueStyle(), YASStyle(), MinimalStyle())
+            test_format(s, s_nospace, style)
+        end
     end
 end
+
+end # module

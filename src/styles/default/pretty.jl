@@ -3497,6 +3497,22 @@ function p_typedvcat(
     t
 end
 
+"""
+    is_newline_after_2semicolons(cst::JuliaSyntax.GreenNode, i::Int)
+
+Detect if child node `i` of `cst` is a newline that follows two semicolons. For example,
+this will detect the newline in constructs such as
+
+    [a b;;
+     c d]
+"""
+function is_newline_after_2semicolons(cst::JuliaSyntax.GreenNode, i::Int)
+    return i >= 3 &&
+           kind(cst[i]) === K"NewlineWs" &&
+           kind(cst[i-1]) === K";" &&
+           kind(cst[i-2]) === K";"
+end
+
 function p_hcat(
     ds::AbstractStyle,
     cst::JuliaSyntax.GreenNode,
@@ -3511,16 +3527,63 @@ function p_hcat(
     end
 
     childs = children(cst)
-    # st = kind(cst) === K"hcat" ? 1 : 2
     st = findfirst(n -> kind(n) === K"[", childs)::Int
+
+    # Deciding whether to nest hcat expressions
+    # -----------------------------------------
+    #
+    # hcat is very sensitive towards newlines. There are several potential 'hcat' separators
+    # that are allowed:
+    #
+    #  (1) spaces
+    #  (2) double semicolon
+    #  (3) double semicolon followed by newline
+    #
+    # Now, there are some Julia syntax rules that must be obeyed.
+    # (See: https://docs.julialang.org/en/v1/manual/arrays/#man-array-concatenation)
+    #
+    #  - (1) and (2) cannot be mixed, but (1) and (3) can be mixed.
+    #
+    #    This implies that if we have a (3), we *must not* remove the newline to make a (2).
+    #
+    #  - Otherwise, it's illegal to have a newline separator between hcat arguments. The
+    #    meaning of newline is 'vertical concatenation', and any vertical concat would turn
+    #    the hcat node into ncat, so a hcat node itself can't have newline separators.
+    #
+    #    This implies that we *must not* add newline separators on our own accord as that
+    #    would change the semantics.
+    #
+    #  - The only other place where newlines are allowed to be present are after the opening
+    #    `[` and before the closing `]`. Let's call these 'boundary newlines'.
+    #
+    #    We are allowed to decide whether to place boundary newlines. In other words, we can
+    #    safely insert Placeholder nodes at these positions. For hcat, we will elect to
+    #    always do so.
 
     for (i, a) in enumerate(childs)
         n = pretty(style, a, s, ctx, lineage)
-        if JuliaSyntax.is_whitespace(a)
+        if kind(a) === K"["
             add_node!(t, n, s; join_lines = true)
-        elseif i > st
+            add_node!(t, Placeholder(0), s)
+        elseif kind(a) === K"]"
+            add_node!(t, Placeholder(0), s)
             add_node!(t, n, s; join_lines = true)
-            if needs_placeholder(childs, i + 1, K"]")
+        elseif JuliaSyntax.is_whitespace(a)
+            if is_newline_after_2semicolons(cst, i)
+                # See above: we cannot convert ';;\n' to ';;'
+                add_node!(t, Newline(; nest_behavior = AlwaysNest), s)
+                # Additionally, because the contents of the hcat will be on different lines
+                # and there's no way to later un-nest it without breaking semantics, we can
+                # set the nest behaviour of the entire hcat to AlwaysNest. This means that
+                # later on, `n_tuple!` will insert newlines after the `[` and before the
+                # `].`
+                t.nest_behavior = AlwaysNest
+            elseif !(kind(cst[i+1]) in KSet"; ]") && kind(cst[i-1]) !== K"["
+                # Whitespace is generally important to retain, because it can be a separator
+                # -- but we should omit it in a few cases:
+                # 1. If it's followed by a ';;' separator, since it's not needed.
+                # 2. Directly after the opening bracket.
+                # 3. Directly before the closing bracket.
                 add_node!(t, Whitespace(1), s)
             end
         else

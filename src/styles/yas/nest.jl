@@ -218,6 +218,14 @@ function n_vcat!(
 )
     n_tuple!(ys, fst, s, lineage)
 end
+function n_hcat!(
+    ys::YASStyle,
+    fst::FST,
+    s::State,
+    lineage::Vector{Tuple{FNode,Union{Nothing,Metadata}}},
+)
+    n_tuple!(ys, fst, s, lineage)
+end
 function n_bracescat!(
     ys::YASStyle,
     fst::FST,
