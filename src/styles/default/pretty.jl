@@ -3566,6 +3566,8 @@ function p_hcat(
         elseif kind(a) === K"]"
             add_node!(t, Placeholder(0), s)
             add_node!(t, n, s; join_lines = true)
+        elseif kind(a) === K";"
+            add_node!(t, n, s; join_lines = true)
         elseif JuliaSyntax.is_whitespace(a)
             if is_newline_after_2semicolons(cst, i)
                 # See above: we cannot convert ';;\n' to ';;'

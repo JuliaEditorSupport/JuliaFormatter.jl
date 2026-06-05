@@ -12,6 +12,7 @@ ALL_STYLES = (DefaultStyle(), YASStyle(), BlueStyle(), MinimalStyle(), SciMLStyl
         for s in (
             "$(T)[1, 2, 3]",
             "$(T)[1:2 3:4 5:6]",
+            "$(T)[1, 2.3, 4//5]",
         )
             for style in ALL_STYLES
                 test_format(s, s)
