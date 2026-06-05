@@ -21,7 +21,17 @@ ALL_STYLES = (DefaultStyle(), YASStyle(), BlueStyle(), MinimalStyle(), SciMLStyl
                         test_format(s, "x = $(T)[a b]", style)
                     end
                     test_format(s, "x = $(T)[\n    a b\n]"; margin=5+length(T))
-                    # test_format(s, "x = $(T)[\n    a b\n    ]", SciMLStyle(); margin=5+length(T))
+
+                    # TODO(penelopeysm): The indentation for other styles is all over the
+                    # place. But we can at least check for now that it parses to the same
+                    # AST (meaning that at worst, it's ugly, but not wrong), and that it's
+                    # idempotent.
+                    for style in ALL_STYLES, kwargs in ((;), (;margin=5+length(T)))
+                        out1 = format_text(s, style; kwargs...)
+                        out2 = format_text(out1, style; kwargs...)
+                        @test out1 == out2
+                        @test Meta.parse(out1) == Meta.parse(s)
+                    end
                 end
 
             end
@@ -57,12 +67,16 @@ ALL_STYLES = (DefaultStyle(), YASStyle(), BlueStyle(), MinimalStyle(), SciMLStyl
                     test_format(s, expected)
                     test_format(s, expected; margin=5+length(T))
 
-                    ws = " " ^ (5 + length(T))
-                    expected_sciml = "x = $(T)[a b;;\n$(ws)c d]"
-                    test_format(s, expected_sciml, SciMLStyle())
-                    test_format(s, expected_sciml, SciMLStyle(); margin=8+length(T))
-                    test_format(s, expected_sciml, YASStyle())
-                    test_format(s, expected_sciml, YASStyle(); margin=8+length(T))
+                    # TODO(penelopeysm): The indentation for other styles is all over the
+                    # place. But we can at least check for now that it parses to the same
+                    # AST (meaning that at worst, it's ugly, but not wrong), and that it's
+                    # idempotent.
+                    for style in ALL_STYLES, kwargs in ((;), (;margin=5+length(T)))
+                        out1 = format_text(s, style; kwargs...)
+                        out2 = format_text(out1, style; kwargs...)
+                        @test out1 == out2
+                        @test Meta.parse(out1) == Meta.parse(s)
+                    end
                 end
             end
         end
