@@ -6,17 +6,41 @@ using Test
 
 ALL_STYLES = (DefaultStyle(), YASStyle(), BlueStyle(), MinimalStyle(), SciMLStyle())
 
-@testset "examples from docs" begin
+@testset "array literal examples from docs" begin
+    # Don't really care how it formats, but make sure that it parses to the same AST. Some
+    # of these are probably redundant; that's fine, we can just be safe.
+    #
     # https://docs.julialang.org/en/v1/manual/arrays/#man-array-literals
     for T in ("", "T")
         for s in (
             "$(T)[1, 2, 3]",
-            "$(T)[1:2 3:4 5:6]",
             "$(T)[1, 2.3, 4//5]",
+            "$(T)[1:2, 4:5]",
+            "$(T)[1:2\n 4:5\n 6]",
+            "$(T)[1:2  4:5  7:8]",
+            "$(T)[[1,2]  [4,5]  [7,8]]",
+            "$(T)[1 2 3]",
+            "$(T)[1;; 2;; 3;; 4]",
+            "$(T)[1 2\n 3 4]",
+            "$(T)[zeros(Int, 2, 2) [1; 2]\n [3 4]            5]",
+            "$(T)[[1 1]; 2 3; [4 4]]",
+            "$(T)[zeros(Int, 2, 2) ; [3 4] ;; [1; 2] ; 5]",
+            "$(T)[1:2; 4;; 1; 3:4]",
+            "$(T)[1; 2;; 3; 4;; 5; 6;;;\n 7; 8;; 9; 10;; 11; 12]",
+            # BROKEN
+            # "$(T)[1 3 5\n 2 4 6;;;\n 7 9 11\n 8 10 12]",
+            "$(T)[1 2;;; 3 4;;;; 5 6;;; 7 8]",
+            "$(T)[[1 2;;; 3 4];;;; [5 6];;; [7 8]]",
+            "$(T)[1 2 ;;\n 3 4]",
+            "$(T)[1;;]",
+            "$(T)[2; 3;;;]",
+            "$(T)[[1 2] [3 4]]",
         )
             for style in ALL_STYLES
-                test_format(s, s)
-                @test Meta.parse(s) == Meta.parse(format_text(s, style))
+                out1 = format_text(s, style)
+                out2 = format_text(out1, style)
+                @test out1 == out2
+                @test Meta.parse(out1) == Meta.parse(s)
             end
         end
     end
