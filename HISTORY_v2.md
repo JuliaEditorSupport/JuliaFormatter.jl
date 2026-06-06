@@ -1,6 +1,6 @@
 # v2.6.1
 
-Fixed a number of bugs where newlines in array literals were not being correctly handled, which meant that formatting led to either invalid code or silently different code. (#1029, #1037, #1038, #1039)
+Fixed a number of bugs where newlines in array literals were not being correctly handled, which caused JuliaFormatter to output invalid code (or worse!) silently different code. (#1029, #1037, #1038, #1039)
 
 # v2.6.0
 
