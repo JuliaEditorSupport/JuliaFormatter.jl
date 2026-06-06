@@ -3,6 +3,9 @@
 - If you have a Julia MCP tool, always run code with that.
   Don't invoke julia from bash as that is very slow.
 
+- When running code in the MCP tool it's not easily visible to the user.
+  If you're e.g. checking how a string parses, you should explicitly report the user what you tested and what the result was.
+
 - Avoid using Julia environments that the user has already set up.
   Create a temporary test environment with `Pkg.activate(; temp=true)`, `Pkg.develop(; path=...)` the current checkout of JuliaFormatter, and add any other packages you need.
 
@@ -25,11 +28,10 @@
 
 # Running tests
 
-- Do not run the full test suite unless explicitly instructed to.
-  Only run specific, targeted tests that are relevant to the changes you are making.
-
-- To test formatting, you should always use `JuliaFormatter.Internal.test_format(input_string, expected_output[, style]; options...)`, which checks that formatting `input_string` produces `expected_output`, and also for idempotence.
-  This function prints helpful information if it fails so that you can easily debug the issue.
+- Do NOT run complete segments of the test suite unless explicitly instructed to.
+  Only run specific, targeted tests that are relevant to the changes you are making, using `JuliaFormatter.Internal.test_format(input_string, expected_output[, style]; options...)`
+  This function checks that formatting `input_string` produces `expected_output`, and also for idempotence.
+  It also prints helpful information if it fails so that you can easily debug the issue.
 
 - To test whether a string is valid Julia code, you can use `Meta.parse(s)` or `format_to_stage(:cst, s)`. Both throw if the code is invalid.
 
@@ -41,5 +43,8 @@ For example, when writing function-level comments, it's useful to illustrate you
 
 # Avoid hacks
 
-Do not use fragile heuristics or hacks to achieve the desired formatting.
-Where possible, you should always try to implement formatting logic at the CST stage (i.e. `pretty()`), because the CST has more precise structural information about the code being run.
+- Do not write off any valid syntactic construct as "pathological" or not worth supporting.
+  ALL valid Julia code should be supported by the formatter, even if it's not common in practice.
+
+- Do not use fragile heuristics or hacks to achieve the desired formatting.
+  Where possible, you should always try to implement formatting logic at the CST stage (i.e. `pretty()`), because the CST has more precise structural information about the code being run.

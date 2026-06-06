@@ -12,6 +12,15 @@
     from_ref::Bool = false
     from_colon::Bool = false
     from_for::Bool = false
+
+    # These two flags are used to compensate for weird structure of ncat and nrow
+    # nodes in JuliaSyntax. See p_ncat for more info
+    #
+    # indicates whether newlines inside are semantically meaningful
+    from_nrow::Bool = false
+    # indicates whether newlines at the end are semantically meaningful
+    is_last_ncat_or_nrow_arg::Bool=false
+
     ignore_single_line::Bool = false
     from_quote::Bool = false
     join_body::Bool = false
@@ -3435,31 +3444,33 @@ function p_vcat(
     args = get_args(cst)
     nest = should_nest_call_args(args, s.opts.disallow_single_arg_nesting)
     childs = children(cst)
-    idx = findfirst(n -> kind(n) === K"[", childs)::Int
-    first_arg_idx = findnext(n -> !JuliaSyntax.is_whitespace(n), childs, idx + 1)
+    opening_idx = findfirst(n -> kind(n) === K"[", childs)::Int
+    closing_idx = findlast(n -> kind(n) === K"]", childs)::Int
+    first_arg_idx = findnext(n -> !JuliaSyntax.is_whitespace(n), childs, opening_idx + 1)
+    last_arg_idx = findprev(n -> !JuliaSyntax.is_whitespace(n), childs, closing_idx - 1)
 
     for (i, a) in enumerate(childs)
-        n = pretty(style, a, s, ctx, lineage)
+        n = if i == last_arg_idx
+            ctx2 = newctx(ctx; is_last_ncat_or_nrow_arg = true)
+            pretty(style, a, s, ctx2, lineage)
+        else
+            pretty(style, a, s)
+        end
+
         diff_line = t.endline != t.startline
         # If arguments are on different lines then always nest
         if diff_line
-            (t.nest_behavior = AlwaysNest)
-        else
-            false
+            t.nest_behavior = AlwaysNest
         end
 
         if kind(a) === K"["
             add_node!(t, n, s; join_lines = true)
             if nest
                 add_node!(t, Placeholder(0), s)
-            else
-                false
             end
         elseif kind(a) === K"]"
             if nest
                 add_node!(t, Placeholder(0), s)
-            else
-                false
             end
             add_node!(t, n, s; join_lines = true)
         elseif JuliaSyntax.is_whitespace(a)
@@ -3525,40 +3536,48 @@ function p_hcat(
     if !haschildren(cst)
         return t
     end
-
     childs = children(cst)
-    st = findfirst(n -> kind(n) === K"[", childs)::Int
 
-    # Deciding whether to nest hcat expressions
-    # -----------------------------------------
+    # Handling newlines in hcat nodes
+    # -------------------------------
     #
-    # hcat is very sensitive towards newlines. There are several potential 'hcat' separators
-    # that are allowed:
+    # hcat is very sensitive towards newlines. There are several potential separators that
+    # *semantically*, lead to horizontal concatenation of the arguments:
     #
-    #  (1) spaces
-    #  (2) double semicolon
-    #  (3) double semicolon followed by newline
+    #  (A) spaces, e.g. `[1 2 3]`
+    #  (B) double semicolon, e.g. `[1;; 2;; 3;; 4]`
+    #  (C) double semicolon followed by newline, e.g. `[1;;\n 2;;\n 3;;\n 4]`
     #
-    # Now, there are some Julia syntax rules that must be obeyed.
-    # (See: https://docs.julialang.org/en/v1/manual/arrays/#man-array-concatenation)
+    # However, *syntactically*, an expression is only parsed as a `hcat` if it contains **at
+    # least one** space separator (i.e., (A)). That means that 
     #
-    #  - (1) and (2) cannot be mixed, but (1) and (3) can be mixed.
+    #    `[1 2 3]`         -> parsed as hcat
+    #    `[1 2;;\n3]`      -> parsed as hcat
     #
-    #    This implies that if we have a (3), we *must not* remove the newline to make a (2).
+    # but anything _without_ space separators is parsed as `ncat`, even if semantically
+    # it means the same thing as `hcat`.
     #
-    #  - Otherwise, it's illegal to have a newline separator between hcat arguments. The
-    #    meaning of newline is 'vertical concatenation', and any vertical concat would turn
-    #    the hcat node into ncat, so a hcat node itself can't have newline separators.
+    #    `[1;; 2;; 3]`     -> parsed as ncat
+    #    `[1;;\n2;;\n3]`   -> parsed as ncat
     #
-    #    This implies that we *must not* add newline separators on our own accord as that
-    #    would change the semantics.
+    # Now, the catch (see the Julia docs:)
+    # https://docs.julialang.org/en/v1/manual/arrays/#man-array-concatenation)
+    # is that (A) and (B) *cannot* be mixed, but (A) and (C) can be mixed.
     #
-    #  - The only other place where newlines are allowed to be present are after the opening
-    #    `[` and before the closing `]`. Let's call these 'boundary newlines'.
+    # Given that in this function we *must* have at least one (A) separator, this implies
+    # that if we have a (C) ";;\\n", we *must not* remove the newline to make a (B) ";;".
+    # Otherwise, this would lead to a mixture of (A) and (B), which is disallowed.
     #
-    #    We are allowed to decide whether to place boundary newlines. In other words, we can
-    #    safely insert Placeholder nodes at these positions. For hcat, we will elect to
-    #    always do so.
+    # Furthermore, it's otherwise illegal to have a newline separator between hcat
+    # arguments. The meaning of newline is 'vertical concatenation', and any vertical concat
+    # would turn the hcat node into ncat, so a hcat node itself can't have newline
+    # separators. This implies that we *must not* add newline separators on our own accord
+    # as that would change the semantics.
+    #
+    # The only other place where newlines are allowed to be present are after the opening
+    # `[` and before the closing `]`. Let's call these 'boundary newlines'. We are allowed
+    # to decide whether to place boundary newlines. In other words, we can safely insert
+    # Placeholder nodes at these positions.
 
     for (i, a) in enumerate(childs)
         n = pretty(style, a, s, ctx, lineage)
@@ -3567,6 +3586,8 @@ function p_hcat(
             add_node!(t, Placeholder(0), s)
         elseif kind(a) === K"]"
             add_node!(t, Placeholder(0), s)
+            add_node!(t, n, s; join_lines = true)
+        elseif kind(a) === K";"
             add_node!(t, n, s; join_lines = true)
         elseif JuliaSyntax.is_whitespace(a)
             if is_newline_after_2semicolons(cst, i)
@@ -3586,7 +3607,17 @@ function p_hcat(
                 # 3. Directly before the closing bracket.
                 add_node!(t, Whitespace(1), s)
             end
+        elseif i == 1 && kind(a) !== K"["
+            # Type preceding the `[`, e.g. `T` in `T[1 2 3]`.
+            add_node!(t, n, s; join_lines = true)
         else
+            # Argument that is being hcatted. Annoyingly, there isn't always whitespace
+            # between hcat arguments (see e.g. `[1:2 3:4 5:6]`), so sometimes we have to
+            # manually add some ourselves.
+            # https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/1038
+            if !JuliaSyntax.is_whitespace(childs[i-1]) && kind(childs[i-1]) !== K"["
+                add_node!(t, Whitespace(1), s)
+            end
             add_node!(t, n, s; join_lines = true)
         end
     end
@@ -3612,6 +3643,43 @@ function p_ncat(
     ctx::PrettyContext,
     lineage::Vector{Tuple{JuliaSyntax.Kind,Bool,Bool}},
 )
+    # Unfortunately `ncat` nodes cover a diverse range of syntax and the way the parser
+    # groups it can be somewhat inconsistent at times.
+    #
+    # It's very lucky that we can simply delegate to `p_vcat` and have it Just Work; but
+    # it's still worth documenting and understanding this. The main reason why `p_vcat`
+    # handles it correctly is because the main separator is a sequence of semicolons (see
+    # (1)), and newlines inserted after those separators have no effect on the semantics.
+    # This is the same as for a vcat node which has single semicolons as separators.
+    #
+    # (1) In general, arguments to `ncat` are separated by 2 or more semicolons. The 'main'
+    #     separator is the longest contiguous sequence of semicolons.
+    #
+    #        `[1;; 2]` is ncat with main separator ';;'
+    #                           and arguments `1` and `2`
+    #
+    #        `[1; 2;; 3; 4]` is ncat with main separator ';;'
+    #                                 and arguments `1; 2` and `3; 4`
+    #
+    #        `[1; 2;; 3;;; 4]` is ncat with main separator ';;;'
+    #                                   and arguments `1; 2;; 3` and `4`
+    #
+    # (2) When the arguments don't contain semicolons, they are placed at the top level of
+    #     the `ncat` node. The semicolon separators that follow them are also placed at the
+    #     top level of the `ncat` node.
+    #
+    # (3) When the arguments themselves contain semicolons, they are further grouped into `nrow`
+    #     nodes. In the above examples, the arguments `1; 2`, `3; 4`, and `1; 2;; 3` are all
+    #     parsed as `nrow` nodes.
+    #
+    # (4) Main separators that follow `nrow` nodes are placed *inside* the `nrow` node, NOT
+    #     at the top level of the `ncat` node.
+    #
+    # (5) When `nrow` nodes contain different *levels* of semicolons, they themselves will
+    #     contain `nrow` nodes. Just like for `ncat` nodes, the 'main' separator for the
+    #     `nrow` node will be the longest contiguous sequence of semicolons. In the above
+    #     examples, the `nrow` node `1; 2;; 3` has main separator ';;' and arguments `1; 2`
+    #     `3`.
     t = p_vcat(ds, cst, s, ctx, lineage)
     t.typ = Ncat
     return t
@@ -3629,6 +3697,76 @@ function p_typedncat(
     t
 end
 
+"""
+    last_row_ends_with_newline
+
+Checks whether the last nrow or row element (recursively) ends in a newline.
+"""
+function last_row_ends_with_newline(cst::JuliaSyntax.GreenNode)
+    haschildren(cst) || return false
+
+    last_child = children(cst)[end]
+    if kind(last_child) in KSet"row nrow"
+        return last_row_ends_with_newline(last_child)
+    else
+        return kind(last_child) === K"NewlineWs"
+    end
+end
+
+"""
+    is_semantically_important_newline
+
+Checks whether the `i`-th child of `row_cst` is a newline that is semantically important.
+See comment in `p_row` for details.
+"""
+function is_semantically_important_newline(
+    row_cst::JuliaSyntax.GreenNode,
+    i::Int,
+    is_last_arg_of_parent::Bool,
+)
+    kind(row_cst[i]) === K"NewlineWs" || return false
+    n = length(children(row_cst))
+    # Start of the row - not important
+    i == 1 && return false
+    # End of the row -- might be important
+    i == n && return (!is_last_arg_of_parent && kind(row_cst[i-1]) !== K";")
+    # Otherwise it's important
+    return true
+end
+
+# `nrow` and `row` nodes both delegate to this function, and the underlying logic is the
+# same, but newlines need to be handled differently, which motivates the `ctx.from_nrow`
+# and `ctx.is_last_ncat_or_nrow_arg` flags.
+#
+# In general for `row` nodes, newlines are unnecessary so can be collapsed to ordinary
+# whitespace.
+#
+# However, for `nrow` nodes AND `row` children of `nrow` nodes, there are two kinds of
+# newlines:
+#
+#  - Those that are semantically *necessary*, because they are used to indicate vertical
+#    concatenation. These can be:
+#
+#    (1) Newlines in the middle of the row: [1\n2;; 3\n4]
+#    (2) Newlines at the end of a row: [1 2 3\n4 5 6]. In general, all newlines at the end
+#        of a row are considered semantically important, with the exceptions listed below.
+#
+#  - Those that are semantically *unnecessary*. These could be:
+#
+#    (3) Newlines at the start of the row, e.g. [\n1 2;; 3 4].
+#    (4) Newlines at the end of the row but preceded by a semicolon, e.g. [1 2;;\n 3 4].
+#    (5) Newlines at the end of the row but before the closing brace, e.g. [1 2;; 3 4\n].
+#
+# The annoying thing about JuliaSyntax's parser is that all the newlines are placed inside
+# the child nodes rather than the parent nodes. For example, in the last example
+#
+#     [1 2;; 3 4\n]
+#
+# the newline is a child of the last row, rather than a child of the ncat. (If it were
+# the latter, then this would be trivial to handle since we could just check if it's the
+# last child before the closing brace!) This means that we have to thread this information
+# into each recursive pretty() call to tell us whether we are allowed to remove the newline
+# or not.
 function p_row(
     ds::AbstractStyle,
     cst::JuliaSyntax.GreenNode,
@@ -3636,6 +3774,8 @@ function p_row(
     ctx::PrettyContext,
     lineage::Vector{Tuple{JuliaSyntax.Kind,Bool,Bool}},
 )
+    is_last_arg_of_parent = ctx.is_last_ncat_or_nrow_arg
+
     style = getstyle(ds)
     t = FST(Row, nspaces(s))
     if !haschildren(cst)
@@ -3644,24 +3784,53 @@ function p_row(
 
     childs = children(cst)
     first_arg_idx = findfirst(n -> !JuliaSyntax.is_whitespace(n), childs)
+    last_arg_idx = findlast(n -> !JuliaSyntax.is_whitespace(n), childs)
 
+    # To detect the final newline i.e. (5) above, we need to handle two cases:
+    #
+    # (a) Either the newline is part of this node, in which case it will be the last child
+    #     of this node.
+    # (b) Or this node will have an nrow/row child that ends with a newline.
+
+    last_node_ended_with_newline = false
     for (i, a) in enumerate(childs)
-        n = if is_opcall(a)
-            pretty(style, a, s, newctx(ctx; nonest = true), lineage)
-        else
-            pretty(style, a, s, ctx, lineage)
-        end
-
+        forced_newline = false
+        nonest = is_opcall(a)
+        # Threading is_last_ncat_or_nrow_arg through here handles case (b).
+        is_last_ncat_or_nrow_arg =
+            is_last_arg_of_parent && i == last_arg_idx && kind(a) in KSet"nrow row"
+        n = pretty(
+            style,
+            a,
+            s,
+            newctx(
+                ctx;
+                nonest = nonest,
+                is_last_ncat_or_nrow_arg = is_last_ncat_or_nrow_arg,
+            ),
+            lineage,
+        )
         if kind(a) === K";"
             add_node!(t, n, s; join_lines = true)
         elseif JuliaSyntax.is_whitespace(a)
-            add_node!(t, n, s; join_lines = true)
+            # is_semantically_important_newline handles case (a)
+            if ctx.from_nrow &&
+               is_semantically_important_newline(cst, i, is_last_arg_of_parent)
+                # Must force this newline!
+                add_node!(t, Newline(; nest_behavior = AlwaysNest), s)
+                forced_newline = true
+            else
+                add_node!(t, n, s; join_lines = true)
+            end
         else
-            if !isnothing(first_arg_idx) && i > first_arg_idx
+            if !isnothing(first_arg_idx) &&
+               i > first_arg_idx &&
+               !last_node_ended_with_newline
                 add_node!(t, Whitespace(1), s; join_lines = true)
             end
             add_node!(t, n, s; join_lines = true)
         end
+        last_node_ended_with_newline = forced_newline || is_prev_newline(n)
     end
     t.nest_behavior = NeverNest
     t
@@ -3674,7 +3843,7 @@ function p_nrow(
     ctx::PrettyContext,
     lineage::Vector{Tuple{JuliaSyntax.Kind,Bool,Bool}},
 )
-    t = p_row(ds, cst, s, ctx, lineage)
+    t = p_row(ds, cst, s, newctx(ctx; from_nrow = true), lineage)
     t.typ = NRow
     t
 end
