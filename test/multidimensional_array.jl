@@ -9,7 +9,7 @@ ALL_STYLES = (DefaultStyle(), YASStyle(), BlueStyle(), MinimalStyle(), SciMLStyl
 @testset "array literal examples" begin
     # Don't really care how it formats, but make sure that it parses to the same AST. Some
     # of these are probably redundant; that's fine, we can just be safe.
-    for T in ("", "T")
+    for T in ("", "T", "x = ")
         for s in (
             # These are taken from the docs:
             # https://docs.julialang.org/en/v1/manual/arrays/#man-array-literals
@@ -119,6 +119,26 @@ end
                 end
             end
         end
+    end
+end
+
+@testset "ncat and typed ncat nodes" begin
+    @testset "newline and ;;" begin
+        s = "[1\n2;;\n3\n4]"
+        # Default and Blue style will impose the standard 4-space indentation
+        expected_indent4 = "[\n    1\n    2;;\n    3\n    4\n]"
+        # SciML and YAS style will indent to the opening brace
+        expected_indent1 = "[1\n 2;;\n 3\n 4]"
+        for style in (DefaultStyle(), BlueStyle())
+            test_format(s, expected_indent4, style)
+            test_format(s, expected_indent4, style; margin = 1)
+        end
+        for style in (SciMLStyle(), YASStyle())
+            test_format(s, expected_indent1, style)
+            test_format(s, expected_indent1, style; margin = 1)
+        end
+        # MinimalStyle is weird...
+        test_format(s, "[1\n    2;;\n    3\n    4]", MinimalStyle())
     end
 end
 
