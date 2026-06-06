@@ -308,6 +308,20 @@
         @test bluefmt(str_) == str
     end
 
+    @testset "has always_use_return=true" begin
+        str_ = """
+        function foo()
+            x
+        end
+        """
+        str = """
+        function foo()
+            return x
+        end
+        """
+        @test bluefmt(str_) == str
+    end
+
     @testset "use `return nothing` instead of `return`" begin
         str_ = """
         function foo()
