@@ -37,10 +37,12 @@ ALL_STYLES = (DefaultStyle(), YASStyle(), BlueStyle(), MinimalStyle(), SciMLStyl
             "$(T)[[1 2] [3 4]]",
         )
             for style in ALL_STYLES
-                out1 = format_text(s, style)
-                out2 = format_text(out1, style)
-                @test out1 == out2
-                @test Meta.parse(out1) == Meta.parse(s)
+                @testset let style = style
+                    out1 = format_text(s, style)
+                    out2 = format_text(out1, style)
+                    @test out1 == out2
+                    @test Meta.parse(out1) == Meta.parse(s)
+                end
             end
         end
     end
