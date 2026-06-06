@@ -1,5 +1,7 @@
 using JuliaFormatter
-using JuliaFormatter: DefaultStyle, YASStyle, Options, options, CONFIG_FILE_NAME
+using JuliaFormatter: DefaultStyle, YASStyle, BlueStyle, Options, options, CONFIG_FILE_NAME
+using JuliaFormatter: format_text
+using JuliaFormatter.Internal: test_format
 using Test
 using JuliaSyntax
 
@@ -21,26 +23,6 @@ function fmt(s; i = 4, m = 80, kwargs...)
     return fmt1(s1; kws..., i = i, m = m)
 end
 fmt(s, i, m; kwargs...) = fmt(s; kwargs..., i = i, m = m)
-
-function yasfmt1(str; kwargs...)
-    fmt1(str; style = YASStyle(), options(DefaultStyle())..., kwargs...)
-end
-function yasfmt(str; i = 4, m = 80, kwargs...)
-    fmt(str; i = i, m = m, style = YASStyle(), kwargs...)
-end
-yasfmt(str, i::Int, m::Int; kwargs...) = yasfmt(str; i = i, m = m, kwargs...)
-
-bluefmt1(str) = fmt1(str; style = BlueStyle(), options(DefaultStyle())...)
-function bluefmt(str; i = 4, m = 80, kwargs...)
-    fmt(str; i = i, m = m, style = BlueStyle(), kwargs...)
-end
-bluefmt(str, i::Int, m::Int; kwargs...) = bluefmt(str; i = i, m = m, kwargs...)
-
-minimalfmt1(str) = fmt1(str; style = MinimalStyle(), options(DefaultStyle())...)
-function minimalfmt(str; i = 4, m = 92, kwargs...)
-    fmt(str; i = i, m = m, style = MinimalStyle(), kwargs...)
-end
-minimalfmt(str, i::Int, m::Int; kwargs...) = minimalfmt(str; i = i, m = m, kwargs...)
 
 function run_pretty(text::String; style = DefaultStyle(), opts = Options())
     d = JuliaFormatter.Document(text)

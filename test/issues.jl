@@ -1,3 +1,28 @@
+module IssuesTests
+
+using JuliaFormatter
+using JuliaFormatter: DefaultStyle, YASStyle, BlueStyle, MinimalStyle, Options, format_text
+using JuliaFormatter.Internal: test_format
+using JuliaSyntax
+using Test
+
+function run_nest(text::String; opts = Options(), style = DefaultStyle())
+    d = JuliaFormatter.Document(text)
+    s = JuliaFormatter.State(d, opts)
+    g = JuliaSyntax.parseall(JuliaSyntax.GreenNode, text)
+    t = JuliaFormatter.pretty(style, g, s)
+    JuliaFormatter.nest!(style, t, s)
+    t, s
+end
+
+function run_format(text::String; style = DefaultStyle(), opts = Options())
+    d = JuliaFormatter.Document(text)
+    s = JuliaFormatter.State(d, opts)
+    g = JuliaSyntax.parseall(JuliaSyntax.GreenNode, text)
+    JuliaFormatter.format_text(g, style, s)
+    s
+end
+
 @testset "GitHub Issues" begin
     @testset "issue #137" begin
         str = """
@@ -16,7 +41,7 @@
                    x
                end for x in xs
          )"""
-        @test fmt(str_) == str
+        test_format(str_, str)
 
         str = """
         (
@@ -35,7 +60,7 @@
               end
               x
           end for x in xs)"""
-        @test fmt(str_) == str
+        test_format(str_, str)
 
         str = """
         let n = try
@@ -45,7 +70,7 @@
             end
             ..
         end"""
-        @test fmt(str) == str
+        test_format(str, str)
 
         str = """
         let n = let
@@ -53,7 +78,7 @@
             end
             ..
         end"""
-        @test fmt(str) == str
+        test_format(str, str)
 
         str = """
         let n = begin
@@ -61,7 +86,7 @@
             end
             ..
         end"""
-        @test fmt(str) == str
+        test_format(str, str)
     end
 
     @testset "multiline / issue 139" begin
@@ -85,7 +110,7 @@
             aaa,
             str,
         )"""
-        @test fmt(str_) == str
+        test_format(str_, str)
 
         str_ = """
         m = match(r```
@@ -107,7 +132,7 @@
             aaa,
             str,
         )"""
-        @test fmt(str_) == str
+        test_format(str_, str)
 
         str_ = """
         y = similar([
@@ -124,7 +149,7 @@
             ],
             (4, 5),
         )"""
-        @test fmt(str_) == str
+        test_format(str_, str)
 
         str_ = """
         y = similar(T[
@@ -141,16 +166,16 @@
             ],
             (4, 5),
         )"""
-        @test fmt(str_) == str
+        test_format(str_, str)
     end
 
     @testset "issue #150" begin
         str_ = "const SymReg{B,MT} = ArrayReg{B,Basic,MT} where {MT <:AbstractMatrix{Basic}}"
         str = "const SymReg{B,MT} = ArrayReg{B,Basic,MT} where {MT<:AbstractMatrix{Basic}}"
-        @test fmt(str_; whitespace_typedefs = false) == str
+        test_format(str_, str; whitespace_typedefs = false)
 
         str = "const SymReg{B, MT} = ArrayReg{B, Basic, MT} where {MT <: AbstractMatrix{Basic}}"
-        @test fmt(str_; whitespace_typedefs = true) == str
+        test_format(str_, str; whitespace_typedefs = true)
     end
 
     @testset "issue #170 - block within comprehension" begin
@@ -174,7 +199,7 @@
             end for x in xs
         )
         """
-        @test fmt(str_) == str
+        test_format(str_, str)
 
         str = """
         ys = map(xs) do x
@@ -187,7 +212,7 @@
             end
         end
         """
-        @test fmt(str) == str
+        test_format(str, str)
 
         str_ = """
         y1 = Any[if true
@@ -199,7 +224,7 @@
                 very_very_very_very_very_very_very_very_very_very_very_very_very_very_very_very_long_expr
             end for i = 1:1
         ]"""
-        @test fmt(str_) == str
+        test_format(str_, str)
         _, s = run_nest(str_, 100)
         @test s.line_offset == 1
 
@@ -213,7 +238,7 @@
                 very_very_very_very_very_very_very_very_very_very_very_very_very_very_very_very_long_expr
             end for i = 1:1
         ]"""
-        @test fmt(str_) == str
+        test_format(str_, str)
         _, s = run_nest(str_, 100)
         @test s.line_offset == 1
 
@@ -227,7 +252,7 @@
                 short_expr
             end for i = 1:1
         ]"""
-        @test fmt(str_) == str
+        test_format(str_, str)
         _, s = run_nest(str_, 100)
         @test s.line_offset == 1
     end
@@ -255,7 +280,7 @@
             )
             nothing
         end"""
-        @test fmt(str_) == str
+        test_format(str_, str)
     end
 
     @testset "issue #189" begin
@@ -274,7 +299,7 @@
             (b_hat - y_hat) * delta[i] +
             (b - y) * delta_hat[i] - delta[i] * delta_hat[i] for i = 1:8
         ]"""
-        @test fmt(str_) == str
+        test_format(str_, str)
     end
 
     @testset "issue #193" begin
@@ -282,7 +307,7 @@
         module Module
         # comment
         end"""
-        @test fmt(str) == str
+        test_format(str, str)
 
         str = """
         module Module
@@ -290,7 +315,7 @@
         @test
         # comment
         end"""
-        @test fmt(str) == str
+        test_format(str, str)
     end
 
     @testset "issue #194" begin
@@ -303,7 +328,7 @@
         function mystr(str::String)
             return SubString(str, 1:3)
         end"""
-        @test fmt(str_) == str
+        test_format(str_, str)
     end
 
     @testset "issue #200" begin
@@ -324,8 +349,8 @@
                                    weightedsum(Qe)
             end
         end"""
-        @test fmt(str_; m = 81) == str
-        @test fmt(str; m = 82) == str_
+        test_format(str_, str; margin = 81)
+        test_format(str, str_; margin = 82)
     end
 
     @testset "issue #202" begin
@@ -345,7 +370,7 @@
             end
             return function (xs) end
         end"""
-        @test fmt(str_; m = 92) == str
+        test_format(str_, str; margin = 92)
 
         str_ = """
         @vlplot(
@@ -383,7 +408,7 @@
                 ],
             }
         )"""
-        @test fmt(str_; m = 92) == str
+        test_format(str_, str; margin = 92)
     end
 
     @testset "issue #207" begin
@@ -398,7 +423,7 @@
             n::Int = 1;
             y_past = get_y(m),
         ) where {T,TGP<:AbstractGP{T};IsMultiOutput{TGP}} end"""
-        @test fmt(str_; m = 92) == str
+        test_format(str_, str; margin = 92)
 
         str = """
         @traitfn function predict_ar(
@@ -407,7 +432,7 @@
             n::Int = 1;
             y_past = get_y(m),
         ) where {T, TGP <: AbstractGP{T}; IsMultiOutput{TGP}} end"""
-        @test fmt(str_; m = 92, whitespace_typedefs = true) == str
+        test_format(str_, str; margin = 92, whitespace_typedefs = true)
 
         str_ = """
         @traitfn function predict_ar(m::TGP, p::Int = 3, n::Int = 1; y_past = get_y(m)) where C <: Union{T,TGP<:AbstractGP{T};IsMultiOutput{TGP}}
@@ -420,7 +445,7 @@
             n::Int = 1;
             y_past = get_y(m),
         ) where {C<:Union{T,TGP<:AbstractGP{T};IsMultiOutput{TGP}}} end"""
-        @test fmt(str_; m = 92) == str
+        test_format(str_, str; margin = 92)
 
         str = """
         @traitfn function predict_ar(
@@ -429,7 +454,7 @@
             n::Int = 1;
             y_past = get_y(m),
         ) where {C <: Union{T, TGP <: AbstractGP{T}; IsMultiOutput{TGP}}} end"""
-        @test fmt(str_; m = 92, whitespace_typedefs = true) == str
+        test_format(str_, str; margin = 92, whitespace_typedefs = true)
     end
 
     @testset "issue #218" begin
@@ -452,8 +477,8 @@
                 end,
             )
         end"""
-        @test fmt1(str_) == str
-        @test fmt(str_) == str
+        test_format(str_, str)
+        test_format(str_, str)
     end
 
     @testset "issue 248" begin
@@ -465,12 +490,12 @@
                 a,
                 @macrocall b
             )"""
-        @test fmt(str_, 4, 1) == str
+        test_format(str_, str; indent=4, margin=1)
     end
 
     @testset "issue 260 - BracesCat" begin
         str = "{1; 2; 3}"
-        @test fmt(str, 4, length(str)) == str
+        test_format(str, str; indent=4, margin=length(str))
 
         str_ = "{1; 2; 3}"
         str = """
@@ -479,33 +504,33 @@
           2;
           3
         }"""
-        @test fmt(str_, 2, length(str_) - 1) == str
-        @test fmt(str, 2, length(str_)) == str_
+        test_format(str_, str; indent=2, margin=length(str_) - 1)
+        test_format(str, str_; indent=2, margin=length(str_))
 
         str_ = "{1; 2; 3;}"
         str = "{1; 2; 3}"
-        @test fmt(str_, 2, 90) == str
+        test_format(str_, str; indent=2, margin=90)
     end
 
     @testset "issue 262 - removal of @ in nested macrocall" begin
         str = raw":($(@__MODULE__).@macro)"
-        @test fmt(str) == str
+        test_format(str, str)
 
         str = raw":($(@__MODULE__).property)"
-        @test fmt(str) == str
+        test_format(str, str)
 
         str = raw":($(@__MODULE__))"
-        @test fmt(str) == str
+        test_format(str, str)
 
         str_ = raw":($(@__MODULE__.macro).field.macro)"
         str = raw":($(__MODULE__.@macro).field.macro)"
-        @test fmt(str_) == str
-        @test fmt(str) == str
+        test_format(str_, str)
+        test_format(str, str)
 
         str_ = raw"@a.b.c"
         str = raw"a.b.@c"
-        @test fmt(str_) == str
-        @test fmt(str) == str
+        test_format(str_, str)
+        test_format(str, str)
     end
 
     @testset "issue 264 - `let` empty block body" begin
@@ -513,23 +538,23 @@
         str = """
         let;
         end"""
-        @test fmt(str_) == str
+        test_format(str_, str)
     end
 
     @testset "issue 268 - whitespace around dot op if LHS is number literal" begin
         str = "xs[-5 .<= xs .& xs .<= 5]"
-        @test fmt(str) == str
+        test_format(str, str)
         str_ = "xs[(-5 .<= xs).&(xs.<=5)]"
         str = "xs[(-5 .<= xs) .& (xs .<= 5)]"
-        @test fmt(str_) == str
+        test_format(str_, str)
     end
 
     @testset "issue 277 - flatten ops when no whitespace is allowed" begin
         # previously this would remove |>
         str_ = "get_actions(env)[env |> π.learner |> π.explorer]"
         str = "get_actions(env)[env|>π.learner|>π.explorer]"
-        @test fmt(str_) == str
-        @test fmt(str; whitespace_ops_in_indices = true) == str_
+        test_format(str_, str)
+        test_format(str, str_; whitespace_ops_in_indices = true)
     end
 
     @testset "issue 286 - Float32 leading/trailing zeros" begin
@@ -549,7 +574,7 @@
         e = 30.123f0
         f = 0.123f0
         """
-        @test fmt(str_) == str
+        test_format(str_, str)
 
         @testset "500 - leading zeros with '-.'" begin
             s0 = """
@@ -560,7 +585,7 @@
             a = -0.2
             b = - 0.2
             """
-            @test fmt(s0) == s1
+            test_format(s0, s1)
 
             s0 = """
             a = -.2f32
@@ -570,7 +595,7 @@
             a = -0.2f32
             b = - 0.2f32
             """
-            @test fmt(s0) == s1
+            test_format(s0, s1)
 
             s0 = """
             a = -.2f-5
@@ -580,7 +605,7 @@
             a = -0.2f-5
             b = - 0.2f-5
             """
-            @test fmt(s0) == s1
+            test_format(s0, s1)
         end
     end
 
@@ -601,7 +626,7 @@
                 f(1, 2) c/Ja -k/Ja -c/Ja
             ]
         """
-        @test fmt(str_, 4, 1) == str
+        test_format(str_, str; indent=4, margin=1)
     end
 
     @testset "issue 317 - infinite recursion" begin
@@ -652,15 +677,15 @@
             Val{1},
         )::Int
         """
-        @test fmt(str_, 4, 80) == str
+        test_format(str_, str; indent=4, margin=80)
     end
 
     @testset "issue 375" begin
         s = raw"conflictstatus = @jimport ilog.cp.IloCP$ConflictStatus"
-        @test fmt(s) == s
+        test_format(s, s)
 
         s = raw"conflictstatus = @jimport ilog.cp.IloCP$ConflictStatus"
-        @test bluefmt(s) == s
+        test_format(s, s, BlueStyle())
     end
 
     @testset "issue 352" begin
@@ -674,7 +699,7 @@
 
             a = f + m + l + k
         end"""
-        @test yasfmt(str_; always_for_in = true, join_lines_based_on_source = false) == str
+        test_format(str_, str, YASStyle(); always_for_in = true, join_lines_based_on_source = false)
 
         str_ = """
         using Test
@@ -692,7 +717,7 @@
             @test true
         end
         """
-        @test bluefmt(str_; always_for_in = true) == str
+        test_format(str_, str, BlueStyle(); always_for_in = true)
     end
 
     @testset "issue 387" begin
@@ -701,15 +726,15 @@
         new{T1,
             T2}(arg1,
                 arg2)"""
-        @test yasfmt(str_; m = 1) == str
+        test_format(str_, str, YASStyle(); m = 1)
     end
 
     if VERSION >= v"1.6.0"
         @testset "issue 396 (import as)" begin
             str = """import Base.threads as th"""
-            @test fmt(str) == str
-            @test fmt(str; m = 1) == str
-            @test fmt(str; m = 1, import_to_using = true) == str
+            test_format(str, str)
+            test_format(str, str; margin = 1)
+            test_format(str, str; margin = 1, import_to_using = true)
         end
     end
 
@@ -719,7 +744,7 @@
             raw\""" Doc string.\"""f
         end
         """
-        @test fmt(str; always_use_return = true) == str
+        test_format(str, str; always_use_return = true)
 
         str = """
         function __init__()
@@ -729,7 +754,7 @@
             f
         end
         """
-        @test fmt(str; always_use_return = true) == str
+        test_format(str, str; always_use_return = true)
 
         str = """
         function __init__()
@@ -739,38 +764,38 @@
             f
         end
         """
-        @test fmt(str; always_use_return = true) == str
+        test_format(str, str; always_use_return = true)
     end
 
     @testset "issue 417" begin
         str = """
         formαt"JPEG"
         """
-        @test fmt(str) == str
+        test_format(str, str)
 
         str = """
         A.formαt"JPEG"
         """
-        @test fmt(str) == str
+        test_format(str, str)
 
         str = """
         A.B.formαt"JPEG"
         """
-        @test fmt(str) == str
+        test_format(str, str)
     end
 
     @testset "issue 419" begin
         str = """
         [z for y in x for z in y]
         """
-        @test yasfmt(str) == str
-        @test yasfmt(str; m = 25) == str
+        test_format(str, str, YASStyle())
+        test_format(str, str, YASStyle(); m = 25)
 
         str_ = """
         [z for y in x
          for z in y]
         """
-        @test yasfmt(str; m = 24) == str_
+        test_format(str, str_, YASStyle(); m = 24)
 
         str_ = """
         [z
@@ -779,17 +804,17 @@
          for z in
              y]
         """
-        @test yasfmt(str; m = 1) == str_
+        test_format(str, str_, YASStyle(); m = 1)
     end
 
     @testset "issue 427" begin
         str = "var\"##iv#469\" = (@variables(t))[1]"
-        @test fmt(str) == str
+        test_format(str, str)
 
         str_ = """
         var\"##iv#469\" =
             (@variables(t))[1]"""
-        @test fmt(str; m = length(str) - 1) == str_
+        test_format(str, str_; margin = length(str) - 1)
     end
 
     @testset "issue 429" begin
@@ -801,12 +826,12 @@
             (find_derivatives!(vars, expr.lhs, f); find_derivatives!(vars, expr.rhs, f); vars)
         end
         """
-        @test fmt(str; m = 92, short_to_long_function_def = true) == str_
+        test_format(str, str_; margin = 92, short_to_long_function_def = true)
     end
 
     @testset "issue 440" begin
         str = "import Base.+"
-        @test fmt(str) == str
+        test_format(str, str)
     end
 
     @testset "issue 444" begin
@@ -824,30 +849,30 @@
             body
         end
         """
-        @test fmt(str_; m = 1) == str
-        @test bluefmt(str_; m = 1) == str
+        test_format(str_, str; margin = 1)
+        test_format(str_, str, BlueStyle(); m = 1)
     end
 
     @testset "issue 431" begin
         str = """
         local Jcx_rows, Jcx_cols, Jcx_vals, Jct_val
         """
-        @test fmt(str) == str
+        test_format(str, str)
 
         str_ = "global a=2,b"
         str = "global a=2, b"
-        @test fmt(str_) == str
+        test_format(str_, str)
 
         str_ = "global a = 2,b"
         str = "global a = 2, b"
-        @test fmt(str_) == str
+        test_format(str_, str)
     end
 
     @testset "issue 449" begin
         str = """
         (var"x" = 1.0,)
         """
-        @test fmt(str) == str
+        test_format(str, str)
     end
 
     @testset "issue 451" begin
@@ -869,7 +894,7 @@
             end
         end
         """
-        @test fmt(str_; import_to_using = true) == str
+        test_format(str_, str; import_to_using = true)
     end
 
     @testset "issue 456" begin
@@ -880,7 +905,7 @@
             var3 = 2
         end
         """
-        @test fmt(str; align_assignment = true) == str
+        test_format(str, str; align_assignment = true)
 
         str = """
         function update()
@@ -896,7 +921,7 @@
             var3                 = 5
         end
         """
-        @test fmt(str; align_assignment = true) == str_aligned
+        test_format(str, str_aligned; align_assignment = true)
     end
 
     @testset "issue 460" begin
@@ -920,7 +945,7 @@
         @everywhere import Distributed
         have_workers = Distributed.nprocs() - 1
         """
-        @test fmt(str; import_to_using = true) == str
+        test_format(str, str; import_to_using = true)
     end
 
     @testset "issue 463" begin
@@ -933,24 +958,21 @@
             end
         end
         """
-        @test fmt(
-            str;
-            annotate_untyped_fields_with_any = false,
-            align_struct_field = true,
-        ) == str
+        test_format(str, str; annotate_untyped_fields_with_any = false,
+            align_struct_field = true)
     end
 
     @testset "issue 467" begin
         str_ = "-3.. -2"
         str = "-3 .. -2"
-        @test fmt(str_) == str
-        @test bluefmt(str_) == str
+        test_format(str_, str)
+        test_format(str_, str, BlueStyle())
     end
 
     @testset "issue 473" begin
         str_ = "[1.0, 2.0, 3.0] .|> Int"
         str = "Int.([1.0, 2.0, 3.0])"
-        @test fmt(str_; pipe_to_function_call = true) == str
+        test_format(str_, str; pipe_to_function_call = true)
         st = run_format(str_; opts = Options(; pipe_to_function_call = true))
         @test st.line_offset == length(str)
     end
@@ -964,52 +986,32 @@
             AWSS3.s3_sign_url(config, path.bucket, path.key, Dates.value(Second(duration))),
         )
         """
-        @test fmt(
-            str,
-            4,
-            100;
-            whitespace_in_kwargs = false,
-            separate_kwargs_with_semicolon = true,
-        ) == str
+        test_format(str, str; indent=4, margin=100, whitespace_in_kwargs = false,
+            separate_kwargs_with_semicolon = true)
         str = """
         @deprecate(
             presign(path::AWSS3.S3Path; duration::Period=Hour(1), config::AWSConfig=aws_config()),
             AWSS3.s3_sign_url(config, path.bucket, path.key, Dates.value(Second(duration))),
         )
         """
-        @test fmt(
-            str,
-            4,
-            100;
-            whitespace_in_kwargs = false,
-            separate_kwargs_with_semicolon = true,
-        ) == str
+        test_format(str, str; indent=4, margin=100, whitespace_in_kwargs = false,
+            separate_kwargs_with_semicolon = true)
 
         str = """
         @deprecate(presign(path::AWSS3.S3Path, duration::Period=Hour(1); config::AWSConfig=aws_config()),
                    AWSS3.s3_sign_url(config, path.bucket, path.key, Dates.value(Second(duration))),)
         """
-        @test yasfmt(
-            str,
-            4,
-            100;
-            margin = 100,
+        test_format(str, str, YASStyle(); margin = 100,
             whitespace_in_kwargs = false,
-            separate_kwargs_with_semicolon = true,
-        ) == str
+            separate_kwargs_with_semicolon = true)
 
         str = """
         @deprecate(presign(path::AWSS3.S3Path, duration::Period=Hour(1), config::AWSConfig=aws_config()),
                    AWSS3.s3_sign_url(config, path.bucket, path.key, Dates.value(Second(duration))),)
         """
-        @test yasfmt(
-            str,
-            4,
-            100;
-            margin = 100,
+        test_format(str, str, YASStyle(); margin = 100,
             whitespace_in_kwargs = false,
-            separate_kwargs_with_semicolon = true,
-        ) == str
+            separate_kwargs_with_semicolon = true)
     end
 
     @testset "485 - blue style binary/chain op nesting" begin
@@ -1020,7 +1022,7 @@
             foo()
         end
         """
-        @test bluefmt(str, 4, 80) == str
+        test_format(str, str, BlueStyle(); indent=4, margin=80)
 
         str_ = """
         if a && b
@@ -1031,7 +1033,7 @@
             b
         end
         """
-        @test bluefmt(str_, 4, 1) == str
+        test_format(str_, str, BlueStyle(); indent=4, margin=1)
 
         str_ = """
         @test foo == bar == baz
@@ -1041,7 +1043,7 @@
             bar ==
             baz
         """
-        @test bluefmt(str_, 4, 1) == str
+        test_format(str_, str, BlueStyle(); indent=4, margin=1)
 
         str_ = """
         @test foo == bar
@@ -1050,7 +1052,7 @@
         @test foo ==
             bar
         """
-        @test bluefmt(str_, 4, 1) == str
+        test_format(str_, str, BlueStyle(); indent=4, margin=1)
 
         str = """
         const a =
@@ -1058,32 +1060,32 @@
             arg2 +
             arg3
         """
-        @test bluefmt(str, 4, 1) == str
+        test_format(str, str, BlueStyle(); indent=4, margin=1)
 
         str = """
         const a =
             arg1 +
             arg2
         """
-        @test bluefmt(str, 4, 1) == str
+        test_format(str, str, BlueStyle(); indent=4, margin=1)
     end
 
     @testset "494" begin
         str = "Base.@deprecate f(x, y = x) g(x, y)\n"
-        @test bluefmt(str) == str
+        test_format(str, str, BlueStyle())
 
         str = "Base.@deprecate f(x, y) g(x, y = y)\n"
-        @test bluefmt(str) == str
+        test_format(str, str, BlueStyle())
     end
 
     @testset "509" begin
         code = """M.var"@f";"""
-        @test fmt(code) == code
+        test_format(code, code)
 
         code = """
         const var"@_assert" = Base.var"@assert"
         """
-        @test fmt(code) == code
+        test_format(code, code)
     end
 
     @testset "512" begin
@@ -1101,7 +1103,7 @@
             end
         end
         """
-        @test fmt(fmt(str)) == str
+        test_format(str, str)
     end
 
     @testset "513" begin
@@ -1135,7 +1137,7 @@
             + 10 # hello
         )
         """
-        @test fmt(str_) == str
+        test_format(str_, str)
 
         str_ = """
         (
@@ -1155,7 +1157,7 @@
             10 # hello
         )
         """
-        @test fmt(str_) == str
+        test_format(str_, str)
 
         str_ = """
         (
@@ -1173,7 +1175,7 @@
             10 # hello
         )
         """
-        @test fmt(str_) == str
+        test_format(str_, str)
 
         # before this would format to f(a, b)
         str_ = """
@@ -1188,44 +1190,44 @@
             b,
         )
         """
-        @test fmt(str_) == str
+        test_format(str_, str)
     end
 
     @testset "514" begin
         str_ = "output = input .|> f.g"
         str = "output = f.g.(input)"
-        @test fmt(str_; pipe_to_function_call = true) == str
+        test_format(str_, str; pipe_to_function_call = true)
 
         str_ = "output = input .|> f.g.h"
         str = "output = f.g.h.(input)"
-        @test fmt(str_; pipe_to_function_call = true) == str
+        test_format(str_, str; pipe_to_function_call = true)
     end
 
     @testset "526" begin
         str = "Base.:(|>)(r::AbstractRegister, blk::AbstractBlock) = apply!(r, blk)"
-        @test fmt(str; pipe_to_function_call = true) == str
+        test_format(str, str; pipe_to_function_call = true)
     end
 
     @testset "480" begin
         str = "@show (1,)"
-        @test fmt(str) == str
+        test_format(str, str)
 
         str = "@show(1,)"
-        @test fmt(str) == str
+        test_format(str, str)
 
         str = """
         @NamedTuple{a::Int, b::Int}[]
 
         @SVector[@SVector[1, 2], @SVector[1, 2]]
         """
-        @test fmt(str) == str
+        test_format(str, str)
 
         str = """
         @NamedTuple {a::Int, b::Int}[]
 
         @SVector[@SVector[1, 2], @SVector [1, 2]]
         """
-        @test fmt(str) == str
+        test_format(str, str)
     end
 
     @testset "530" begin
@@ -1233,14 +1235,14 @@
         @testset "DefaultStyle" begin
             for op in radical_ops
                 s = "3$(op)2"
-                @test fmt(s) == s
+                test_format(s, s)
             end
         end
 
         @testset "DefaultStyle" begin
             for op in radical_ops
                 s = "3$(op)2"
-                @test bluefmt(s) == s
+                test_format(s, s, BlueStyle())
             end
         end
     end
@@ -1248,23 +1250,23 @@
     @testset "533" begin
         # semicolon should not be added prior to `extrap` since it's a function definition.
         s = "function linterp(x0::T, y0::T, x1::T, y1::T, x::T, extrap::Bool = false)::T where {T<:AbstractFloat} end"
-        @test bluefmt(s; m = 200) == s
-        @test yasfmt(s; m = 200) == s
+        test_format(s, s, BlueStyle(); m = 200)
+        test_format(s, s, YASStyle(); m = 200)
 
         s = "function linterp(x0::T, y0::T, x1::T, y1::T, x::T, extrap::Bool = false)::T end"
-        @test bluefmt(s; m = 200) == s
-        @test yasfmt(s; m = 200) == s
+        test_format(s, s, BlueStyle(); m = 200)
+        test_format(s, s, YASStyle(); m = 200)
     end
 
     @testset "541" begin
         str = """
         [10;]
         """
-        @test fmt(str; align_matrix = true) == str
+        test_format(str, str; align_matrix = true)
         str = """
         [0:0.2:50;]
         """
-        @test fmt(str; align_matrix = true) == str
+        test_format(str, str; align_matrix = true)
     end
 
     @testset "543" begin
@@ -1279,7 +1281,7 @@
             Zero  Zero  H
         ]
         """
-        @test fmt(str_; align_matrix = true) == str
+        test_format(str_, str; align_matrix = true)
 
         str_ = """
         H = [1 1; 1 1]
@@ -1324,7 +1326,7 @@
             Zero  Zero  H
         ]
         """
-        @test fmt(str_; align_matrix = true) == str
+        test_format(str_, str; align_matrix = true)
     end
 
     @testset "546" begin
@@ -1348,14 +1350,9 @@
                                        title_suffix=title_suffix, xaxis_prefix=xaxis_prefix)
         end
         """
-        @test yasfmt(
-            str,
-            4,
-            92;
-            join_lines_based_on_source = true,
+        test_format(str, str_, YASStyle(); indent=4, margin=92, join_lines_based_on_source = true,
             always_use_return = true,
-            whitespace_in_kwargs = false,
-        ) == str_
+            whitespace_in_kwargs = false)
     end
 
     @testset "568" begin
@@ -1374,7 +1371,7 @@
             body
         end
         """
-        @test fmt(s, 4, 19) == s_
+        test_format(s, s_; indent=4, margin=19)
     end
 
     @testset "571" begin
@@ -1386,7 +1383,7 @@
         arraycopy_common(false#=fwd=#, LLVM.Builder(B), orig, origops[1], gutils)
         return nothing
         """
-        @test fmt(s) == s_
+        test_format(s, s_)
 
         s1 = """
         foo(a, b, #=c=#)
@@ -1397,7 +1394,7 @@
             b,#=c=#
         )
         """
-        @test fmt(s1, 4, 1) == s2
+        test_format(s1, s2; indent=4, margin=1)
     end
 
     @testset "604" begin
@@ -1433,7 +1430,7 @@
 
     @testset "636" begin
         s = "a |> M.f"
-        @test fmt(s, 4, 92; pipe_to_function_call = true) == "M.f(a)"
+        test_format(s, "M.f(a)"; indent=4, margin=92, pipe_to_function_call = true)
 
         # -> has a higher precedence than |>
         s = """
@@ -1442,7 +1439,7 @@
         s_ = """
         coordsperm = (x -> CartesianIndex(x.I[[2, 1, 3]])).(coords)
         """
-        @test fmt(s, 4, 92; pipe_to_function_call = true) == s_
+        test_format(s, s_; indent=4, margin=92, pipe_to_function_call = true)
 
         # -> has a higher precedence than |>
         s = """
@@ -1451,7 +1448,7 @@
         s_ = """
         coordsperm = (x -> CartesianIndex.(x.I[[2, 1, 3]])).(coords)
         """
-        @test fmt(s, 4, 92; pipe_to_function_call = true) == s_
+        test_format(s, s_; indent=4, margin=92, pipe_to_function_call = true)
 
         s = """
         coordsperm = coords .|> (x -> x.I[[2, 1, 3]]) .|> CartesianIndex
@@ -1459,7 +1456,7 @@
         s_ = """
         coordsperm = CartesianIndex.((x -> x.I[[2, 1, 3]]).(coords))
         """
-        @test fmt(s, 4, 92; pipe_to_function_call = true) == s_
+        test_format(s, s_; indent=4, margin=92, pipe_to_function_call = true)
 
         s = """
         coordsperm = coords |> (x -> x.I[[2, 1, 3]]) |> CartesianIndex
@@ -1467,7 +1464,7 @@
         s_ = """
         coordsperm = CartesianIndex((x -> x.I[[2, 1, 3]])(coords))
         """
-        @test fmt(s, 4, 92; pipe_to_function_call = true) == s_
+        test_format(s, s_; indent=4, margin=92, pipe_to_function_call = true)
     end
 
     @testset "618" begin
@@ -1477,7 +1474,7 @@
         s_ = """
         (x -> 2x)(2)
         """
-        @test fmt(s, 4, 92; pipe_to_function_call = true) == s_
+        test_format(s, s_; indent=4, margin=92, pipe_to_function_call = true)
     end
 
     @testset "644" begin
@@ -1491,7 +1488,7 @@
         @foo @noinline Base.@constprop :none bbbbbbbbbbbbbbbbbbb()     = 0
         @foo @foo @ccccccccccccccccccccccccccccccccccccccccccccccccc() = 0
         """
-        @test fmt(s, 4, 92; align_assignment = true) == s_
+        test_format(s, s_; indent=4, margin=92, align_assignment = true)
 
         # no manual edit
         s = """
@@ -1499,7 +1496,7 @@
         @foo @noinline Base.@constprop :none bbbbbbbbbbbbbbbbbbbbbbb() = 0
         @foo @foo @ccccccccccccccccccccccccccccccccccccccccccccccccc() = 0
         """
-        @test fmt(s, 4, 92; align_assignment = true) == s
+        test_format(s, s; indent=4, margin=92, align_assignment = true)
     end
 
     @testset "655" begin
@@ -1508,21 +1505,20 @@
           a;
         ]
         """
-        @test fmt(s, 2, 92; join_lines_based_on_source = true) == s
-        @test fmt(s, 2, 1) == s
+        test_format(s, s; indent=2, margin=92, join_lines_based_on_source = true)
+        test_format(s, s; indent=2, margin=1)
         s = """
         [
           a
         ]
         """
-        @test fmt(s, 2, 92; join_lines_based_on_source = true, trailing_comma = nothing) ==
-              s
-        @test fmt(s, 2, 1; trailing_comma = nothing) == s
+        test_format(s, s; indent=2, margin=92, join_lines_based_on_source = true, trailing_comma = nothing)
+        test_format(s, s; indent=2, margin=1, trailing_comma = nothing)
     end
 
     @testset "656" begin
         s = "[x for x in xs if x in 1:length(ys)]"
-        @test fmt(s, 4, 92) == s
+        test_format(s, s; indent=4, margin=92)
     end
 
     @testset "667" begin
@@ -1538,7 +1534,7 @@
         \"""
         @dimension 𝐀 "𝐀" Angle true
         """
-        @test fmt(s; format_docstrings = true) == s
+        test_format(s, s; format_docstrings = true)
     end
 
     @testset "682" begin
@@ -1550,7 +1546,7 @@
                 a;
                 arg = @macrocall b
             )"""
-        @test fmt(str_, 4, 1) == str
+        test_format(str_, str; indent=4, margin=1)
     end
 
     @testset "686" begin
@@ -1564,7 +1560,7 @@
           1
         end
         """
-        @test fmt(s1, 2, 5; short_to_long_function_def = true) == s2
+        test_format(s1, s2; indent=2, margin=5, short_to_long_function_def = true)
     end
 
     @testset "698" begin
@@ -1596,7 +1592,7 @@
             hello()
         end
         """
-        @test fmt(s1, 4, 10; short_to_long_function_def = true) == s2
+        test_format(s1, s2; indent=4, margin=10, short_to_long_function_def = true)
     end
 
     @testset "700" begin
@@ -1612,7 +1608,7 @@
             sum(a_loooooooooooooooooooooooooooooooooooooooooooooooooooooooooong_array_name[:, 1]), :,
         ]
         """
-        @test bluefmt(s1, 4, 92) == s2
+        test_format(s1, s2, BlueStyle(); indent=4, margin=92)
     end
 
     if VERSION >= v"1.8"
@@ -1623,7 +1619,7 @@
                 bcd     :: String
             end
             """
-            @test fmt(s, 4, 92; align_struct_field = true) == s
+            test_format(s, s; indent=4, margin=92, align_struct_field = true)
         end
     end
 
@@ -1634,7 +1630,7 @@
         s2 = """
         [1.0 1; 1 -1]
         """
-        @test fmt(s1, 4, 92; align_matrix = true) == s2
+        test_format(s1, s2; indent=4, margin=92, align_matrix = true)
     end
 
     @testset "714" begin
@@ -1644,7 +1640,7 @@
         s2 = """
         A = [-2 .. -1 3..4; 5..6 7..8]
         """
-        @test fmt(s1, 4, 92) == s2
+        test_format(s1, s2; indent=4, margin=92)
     end
 
     @testset "715" begin
@@ -1653,7 +1649,7 @@
             # empty
         end
         """
-        @test fmt(s, 4, 92; always_use_return = true) == s
+        test_format(s, s; indent=4, margin=92, always_use_return = true)
     end
     @testset "728" begin
         s = """
@@ -1667,7 +1663,7 @@
 
         end
         """
-        @test fmt(s, 4, 92) == s
+        test_format(s, s; indent=4, margin=92)
 
         s = """
         begin
@@ -1675,22 +1671,22 @@
 
         end
         """
-        @test fmt(s, 4, 92) == s
+        test_format(s, s; indent=4, margin=92)
     end
 
     @testset "743" begin
         s = """
         foo(ᶜa) = - ᶜa
         """
-        @test fmt(s, 4, 92) == s
+        test_format(s, s; indent=4, margin=92)
         @test format_text(s, SciMLStyle()) == s
     end
 
     if VERSION >= v"1.8"
         @testset "745" begin
             s = "[;;;]"
-            @test fmt(s, 4, 92) == s
-            @test fmt(s, 4, 1) == s
+            test_format(s, s; indent=4, margin=92)
+            test_format(s, s; indent=4, margin=1)
         end
     end
 
@@ -1707,7 +1703,7 @@
             0.0008014; 0.0001464; 2.67e-05; 4.8e-6; 9e-7; 0.0619917; 1.2444292; 0.0486676;
             199.9383546; 137.4267984; 1.5180203; 1.5180203]
         """
-        @test fmt(str_, 4, 92; join_lines_based_on_source = true) == str
+        test_format(str_, str; indent=4, margin=92, join_lines_based_on_source = true)
     end
 
     @testset "753" begin
@@ -1750,7 +1746,7 @@
 
     @testset "779" begin
         s = "Int <: B where {B} && Int <: C where {C}"
-        fmt(s) == s
+        test_format(s, s)
     end
 
     if VERSION >= v"1.8"
@@ -1760,7 +1756,7 @@
                 const a
             end
             """
-            @test fmt(s, 4, 92; align_struct_field = true) == s
+            test_format(s, s; indent=4, margin=92, align_struct_field = true)
         end
     end
 
@@ -1863,7 +1859,7 @@
             end
         end
         """
-        @test fmt(str) == str
+        test_format(str, str)
     end
 
     if VERSION >= v"1.7"
@@ -1901,14 +1897,14 @@
     @testset "880" begin
         s1 = "constant_list[node_index.val:: UInt16]"
         s2 = "constant_list[node_index.val::UInt16]"
-        @test s1 = fmt(s1, 4, 100, whitespace_ops_in_indices = true) == s2
+        test_format(s1, s2; indent=4, margin=100, whitespace_ops_in_indices = true)
 
         s1 = "constant_list[node_index.val+ UInt16]"
         s2 = "constant_list[node_index.val + UInt16]"
-        @test s1 = fmt(s1, 4, 100, whitespace_ops_in_indices = true) == s2
+        test_format(s1, s2; indent=4, margin=100, whitespace_ops_in_indices = true)
 
         s = ".!purge"
-        @test s = fmt(s, 4, 100) == s
+        test_format(s, s; indent=4, margin=100)
     end
 
     @testset "912" begin
@@ -1921,7 +1917,7 @@
             nothing
         end
         """
-        @test fmt(s, 4, 100) == s
+        test_format(s, s; indent=4, margin=100)
 
         str_ = """
         try
@@ -1945,24 +1941,24 @@
             # comment
         end
         """
-        @test fmt(str_, 4, 100) == s
+        test_format(str_, s; indent=4, margin=100)
     end
 
     @testset "917" begin
         s = "using Foo: ( .. )"
         sf = "using Foo: (..)"
-        @test fmt(s, 4, 100) == sf
+        test_format(s, sf; indent=4, margin=100)
     end
 
     @testset "921" begin
         # These are floating point literals with hexadecimal significands. E.g. 0x1p1 is the
         # float with with 0x1 as the significant and 1 as the exponent.
         s = "0x1p1"
-        @test fmt(s) == s
+        test_format(s, s)
         s = "+0x1p1"
-        @test fmt(s) == s
+        test_format(s, s)
         s = "-0x1p1"
-        @test fmt(s) == s
+        test_format(s, s)
     end
 
     @testset "1025" begin
@@ -1983,6 +1979,8 @@
             end
         end
         """
-        @test fmt(s) == s
+        test_format(s, s)
     end
+end
+
 end

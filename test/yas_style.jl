@@ -1,154 +1,161 @@
+module YasStyleTests
+
+using JuliaFormatter.Internal: test_format
+using Test
+using JuliaFormatter: YASStyle
+using JuliaFormatter: format_text
+
 @testset "YAS Style" begin
     @testset "basic" begin
         str_ = "foo(; k =v)"
         str = "foo(; k = v)"
-        @test yasfmt(str_, 4, 80) == str
+        test_format(str_, str, YASStyle(); indent=4, margin=80)
 
         str_ = "[a,]"
         str = "[a]"
-        @test yasfmt(str_, 4, 92) == str
+        test_format(str_, str, YASStyle(); indent=4, margin=92)
 
         str_ = "T[a,]"
         str = "T[a]"
-        @test yasfmt(str_, 4, 92) == str
+        test_format(str_, str, YASStyle(); indent=4, margin=92)
 
         str_ = "{a,}"
         str = "{a}"
-        @test yasfmt(str_, 4, 92) == str
+        test_format(str_, str, YASStyle(); indent=4, margin=92)
 
         str_ = "T{a,}"
         str = "T{a}"
-        @test yasfmt(str_, 4, 92) == str
+        test_format(str_, str, YASStyle(); indent=4, margin=92)
 
         str_ = "T(a,)"
         str = "T(a)"
-        @test yasfmt(str_, 4, 92) == str
+        test_format(str_, str, YASStyle(); indent=4, margin=92)
 
         str_ = "(a,)"
         str = "(a,)"
-        @test yasfmt(str_, 4, 92) == str
+        test_format(str_, str, YASStyle(); indent=4, margin=92)
 
         str_ = "@foo(a,)"
         str = "@foo(a,)"
-        @test yasfmt(str_, 4, 92) == str
+        test_format(str_, str, YASStyle(); indent=4, margin=92)
 
         str_ = "a = (arg1, arg2, arg3)"
         str = """
         a = (arg1, arg2,
              arg3)"""
-        @test yasfmt(str_, 4, length(str_) - 1) == str
-        @test yasfmt(str_, 4, 16) == str
+        test_format(str_, str, YASStyle(); indent=4, margin=length(str_) - 1)
+        test_format(str_, str, YASStyle(); indent=4, margin=16)
 
         str = """
         a = (arg1,
              arg2,
              arg3)"""
-        @test yasfmt(str_, 4, 15) == str
-        @test yasfmt(str_, 4, 1) == str
+        test_format(str_, str, YASStyle(); indent=4, margin=15)
+        test_format(str_, str, YASStyle(); indent=4, margin=1)
 
         str_ = "a = [arg1, arg2, arg3]"
         str = """
         a = [arg1, arg2,
              arg3]"""
-        @test yasfmt(str_, 4, length(str_) - 1) == str
-        @test yasfmt(str_, 4, 16) == str
+        test_format(str_, str, YASStyle(); indent=4, margin=length(str_) - 1)
+        test_format(str_, str, YASStyle(); indent=4, margin=16)
 
         str = """
         a = [arg1,
              arg2,
              arg3]"""
-        @test yasfmt(str_, 4, 15) == str
-        @test yasfmt(str_, 4, 1) == str
+        test_format(str_, str, YASStyle(); indent=4, margin=15)
+        test_format(str_, str, YASStyle(); indent=4, margin=1)
 
         str_ = "a = {arg1,arg2,arg3}"
         str = """
         a = {arg1, arg2, arg3}"""
-        @test yasfmt(str_, 4, 22) == str
+        test_format(str_, str, YASStyle(); indent=4, margin=22)
 
         str = """
         a = {arg1, arg2,
              arg3}"""
-        @test yasfmt(str_, 4, 21) == str
-        @test yasfmt(str_, 4, 16) == str
+        test_format(str_, str, YASStyle(); indent=4, margin=21)
+        test_format(str_, str, YASStyle(); indent=4, margin=16)
 
         str = """
         a = {arg1,
              arg2,
              arg3}"""
-        @test yasfmt(str_, 4, 15) == str
-        @test yasfmt(str_, 4, 1) == str
+        test_format(str_, str, YASStyle(); indent=4, margin=15)
+        test_format(str_, str, YASStyle(); indent=4, margin=1)
 
         str_ = "a = Union{arg1, arg2, arg3}"
         str = """
         a = Union{arg1,arg2,arg3}"""
-        @test yasfmt(str_, 4, 25) == str
+        test_format(str_, str, YASStyle(); indent=4, margin=25)
 
         str = """
         a = Union{arg1,arg2,
                   arg3}"""
-        @test yasfmt(str_, 4, 24) == str
-        @test yasfmt(str_, 4, 20) == str
+        test_format(str_, str, YASStyle(); indent=4, margin=24)
+        test_format(str_, str, YASStyle(); indent=4, margin=20)
 
         str = """
         a = Union{arg1,
                   arg2,
                   arg3}"""
-        @test yasfmt(str_, 4, 19) == str
-        @test yasfmt(str_, 4, 1) == str
+        test_format(str_, str, YASStyle(); indent=4, margin=19)
+        test_format(str_, str, YASStyle(); indent=4, margin=1)
 
         str_ = "a = fcall(arg1,arg2,arg3)"
         str = """
         a = fcall(arg1, arg2, arg3)"""
-        @test yasfmt(str_, 4, length(str)) == str
+        test_format(str_, str, YASStyle(); indent=4, margin=length(str))
 
         str = """
         a = fcall(arg1, arg2,
                   arg3)"""
-        @test yasfmt(str_, 4, 26) == str
-        @test yasfmt(str_, 4, 21) == str
+        test_format(str_, str, YASStyle(); indent=4, margin=26)
+        test_format(str_, str, YASStyle(); indent=4, margin=21)
 
         str = """
         a = fcall(arg1,
                   arg2,
                   arg3)"""
-        @test yasfmt(str_, 4, 20) == str
-        @test yasfmt(str_, 4, 1) == str
+        test_format(str_, str, YASStyle(); indent=4, margin=20)
+        test_format(str_, str, YASStyle(); indent=4, margin=1)
 
         str_ = "a = @call(arg1,arg2,arg3)"
         str = """
         a = @call(arg1, arg2, arg3)"""
-        @test yasfmt(str_, 4, length(str)) == str
+        test_format(str_, str, YASStyle(); indent=4, margin=length(str))
 
         str = """
         a = @call(arg1, arg2,
                   arg3)"""
-        @test yasfmt(str_, 4, 26) == str
-        @test yasfmt(str_, 4, 21) == str
+        test_format(str_, str, YASStyle(); indent=4, margin=26)
+        test_format(str_, str, YASStyle(); indent=4, margin=21)
 
         str = """
         a = @call(arg1,
                   arg2,
                   arg3)"""
-        @test yasfmt(str_, 4, 20) == str
-        @test yasfmt(str_, 4, 1) == str
+        test_format(str_, str, YASStyle(); indent=4, margin=20)
+        test_format(str_, str, YASStyle(); indent=4, margin=1)
 
         str_ = "a = array[arg1,arg2,arg3]"
         str = """
         a = array[arg1, arg2, arg3]"""
-        @test yasfmt(str_, 4, length(str)) == str
+        test_format(str_, str, YASStyle(); indent=4, margin=length(str))
 
         str = """
         a = array[arg1, arg2,
                   arg3]"""
-        @test yasfmt(str_, 4, 26) == str
-        @test yasfmt(str_, 4, 21) == str
+        test_format(str_, str, YASStyle(); indent=4, margin=26)
+        test_format(str_, str, YASStyle(); indent=4, margin=21)
 
         str = """
         a = array[arg1,
                   arg2,
                   arg3]"""
-        @test yasfmt(str_, 4, 20) == str
-        @test yasfmt(str_, 4, 1) == str
+        test_format(str_, str, YASStyle(); indent=4, margin=20)
+        test_format(str_, str, YASStyle(); indent=4, margin=1)
 
         str_ = """
         using Cassette: A, B, C"""
@@ -156,7 +163,7 @@
         using Cassette: A,
                         B,
                         C"""
-        @test yasfmt(str_, 4, 1) == str
+        test_format(str_, str, YASStyle(); indent=4, margin=1)
     end
 
     # more complicated samples
@@ -165,14 +172,14 @@
         str = """
         comp = [a * b
                 for a in 1:10, b in 11:20]"""
-        @test yasfmt(str_, 2, length(str_) - 1; always_for_in = true) == str
-        @test yasfmt(str_, 2, 34; always_for_in = true) == str
+        test_format(str_, str, YASStyle(); indent=2, margin=length(str_) - 1, always_for_in = true)
+        test_format(str_, str, YASStyle(); indent=2, margin=34, always_for_in = true)
 
         str = """
         comp = [a * b
                 for a in 1:10,
                     b in 11:20]"""
-        @test yasfmt(str_, 2, 33; always_for_in = true) == str
+        test_format(str_, str, YASStyle(); indent=2, margin=33, always_for_in = true)
 
         str = """
         comp = [a *
@@ -181,20 +188,20 @@
                     1:10,
                     b in
                     11:20]"""
-        @test yasfmt(str_, 2, 1; always_for_in = true) == str
+        test_format(str_, str, YASStyle(); indent=2, margin=1, always_for_in = true)
 
         str_ = "comp = Typed[a * b for a in 1:10, b in 11:20]"
         str = """
         comp = Typed[a * b
                      for a in 1:10, b in 11:20]"""
-        @test yasfmt(str_, 2, length(str_) - 1; always_for_in = true) == str
-        @test yasfmt(str_, 2, 39; always_for_in = true) == str
+        test_format(str_, str, YASStyle(); indent=2, margin=length(str_) - 1, always_for_in = true)
+        test_format(str_, str, YASStyle(); indent=2, margin=39, always_for_in = true)
 
         str = """
         comp = Typed[a * b
                      for a in 1:10,
                          b in 11:20]"""
-        @test yasfmt(str_, 2, 38; always_for_in = true) == str
+        test_format(str_, str, YASStyle(); indent=2, margin=38, always_for_in = true)
 
         str = """
         comp = Typed[a *
@@ -203,31 +210,31 @@
                          1:10,
                          b in
                          11:20]"""
-        @test yasfmt(str_, 2, 1; always_for_in = true) == str
+        test_format(str_, str, YASStyle(); indent=2, margin=1, always_for_in = true)
 
         str_ = "foo(arg1, arg2, arg3) == bar(arg1, arg2, arg3)"
         str = """
         foo(arg1, arg2, arg3) ==
         bar(arg1, arg2, arg3)"""
         # change in default behavior
-        @test yasfmt(str, 2, length(str_); join_lines_based_on_source = false) == str_
-        @test yasfmt(str_, 2, length(str_) - 1) == str
-        @test yasfmt(str_, 2, 24) == str
+        test_format(str, str_, YASStyle(); indent=2, margin=length(str_), join_lines_based_on_source = false)
+        test_format(str_, str, YASStyle(); indent=2, margin=length(str_) - 1)
+        test_format(str_, str, YASStyle(); indent=2, margin=24)
 
         str = """
         foo(arg1, arg2,
             arg3) ==
         bar(arg1, arg2, arg3)"""
-        @test yasfmt(str_, 2, 23) == str
-        @test yasfmt(str_, 2, 21) == str
+        test_format(str_, str, YASStyle(); indent=2, margin=23)
+        test_format(str_, str, YASStyle(); indent=2, margin=21)
 
         str = """
         foo(arg1, arg2,
             arg3) ==
         bar(arg1, arg2,
             arg3)"""
-        @test yasfmt(str_, 2, 20) == str
-        @test yasfmt(str_, 2, 15) == str
+        test_format(str_, str, YASStyle(); indent=2, margin=20)
+        test_format(str_, str, YASStyle(); indent=2, margin=15)
 
         str = """
         foo(arg1,
@@ -236,8 +243,8 @@
         bar(arg1,
             arg2,
             arg3)"""
-        @test yasfmt(str_, 2, 14) == str
-        @test yasfmt(str_, 2, 1) == str
+        test_format(str_, str, YASStyle(); indent=2, margin=14)
+        test_format(str_, str, YASStyle(); indent=2, margin=1)
 
         str_ = """
         function func(arg1::Type1, arg2::Type2, arg3) where {Type1,Type2}
@@ -248,8 +255,8 @@
                       arg3) where {Type1,Type2}
           body
         end"""
-        @test yasfmt(str_, 2, 64) == str
-        @test yasfmt(str_, 2, 39) == str
+        test_format(str_, str, YASStyle(); indent=2, margin=64)
+        test_format(str_, str, YASStyle(); indent=2, margin=39)
 
         str = """
         function func(arg1::Type1,
@@ -258,43 +265,43 @@
                                    Type2}
           body
         end"""
-        @test yasfmt(str_, 2, 31) == str
-        @test yasfmt(str_, 2, 1) == str
+        test_format(str_, str, YASStyle(); indent=2, margin=31)
+        test_format(str_, str, YASStyle(); indent=2, margin=1)
 
         str_ = """
         @test TimeSpan(spike_annotation) == TimeSpan(first(spike_annotation), last(spike_annotation))"""
         str = """
         @test TimeSpan(spike_annotation) ==
               TimeSpan(first(spike_annotation), last(spike_annotation))"""
-        @test yasfmt(str_, 4, length(str_) - 1) == str
-        @test yasfmt(str_, 4, 63) == str
+        test_format(str_, str, YASStyle(); indent=4, margin=length(str_) - 1)
+        test_format(str_, str, YASStyle(); indent=4, margin=63)
         str_ = """
         @test TimeSpan(spike_annotation) == TimeSpan(first(spike_annotation), last(spike_annotation))"""
         str = """
         @test TimeSpan(spike_annotation) ==
               TimeSpan(first(spike_annotation),
                        last(spike_annotation))"""
-        @test yasfmt(str_, 4, 62) == str
+        test_format(str_, str, YASStyle(); indent=4, margin=62)
 
         str_ =
             raw"""ecg_signal = signal_from_template(eeg_signal; channel_names=[:avl, :avr], file_extension=Symbol("lpcm.zst"))"""
         str = raw"""
         ecg_signal = signal_from_template(eeg_signal; channel_names = [:avl, :avr],
                                           file_extension = Symbol("lpcm.zst"))"""
-        @test yasfmt(str_, 4, length(str_) - 1) == str
-        @test yasfmt(str_, 4, 75) == str
+        test_format(str_, str, YASStyle(); indent=4, margin=length(str_) - 1)
+        test_format(str_, str, YASStyle(); indent=4, margin=75)
 
         str = raw"""
         ecg_signal = signal_from_template(eeg_signal;
                                           channel_names = [:avl, :avr],
                                           file_extension = Symbol("lpcm.zst"))"""
-        @test yasfmt(str_, 4, 73) == str
+        test_format(str_, str, YASStyle(); indent=4, margin=73)
         str = raw"""
         ecg_signal = signal_from_template(eeg_signal;
                                           channel_names = [:avl,
                                                            :avr],
                                           file_extension = Symbol("lpcm.zst"))"""
-        @test yasfmt(str_, 4, 1) == str
+        test_format(str_, str, YASStyle(); indent=4, margin=1)
     end
 
     @testset "inline comments with arguments" begin
@@ -305,15 +312,15 @@
         str = """
         var = fcall(arg1, arg2, arg3, # comment
                     arg4, arg5)"""
-        @test yasfmt(str_, 4, 80; join_lines_based_on_source = false) == str
-        @test yasfmt(str_, 4, 29; join_lines_based_on_source = false) == str
+        test_format(str_, str, YASStyle(); indent=4, margin=80, join_lines_based_on_source = false)
+        test_format(str_, str, YASStyle(); indent=4, margin=29, join_lines_based_on_source = false)
 
         str = """
         var = fcall(arg1, arg2,
                     arg3, # comment
                     arg4, arg5)"""
-        @test yasfmt(str_, 4, 28; join_lines_based_on_source = false) == str
-        @test yasfmt(str_, 4, 23; join_lines_based_on_source = false) == str
+        test_format(str_, str, YASStyle(); indent=4, margin=28, join_lines_based_on_source = false)
+        test_format(str_, str, YASStyle(); indent=4, margin=23, join_lines_based_on_source = false)
 
         str = """
         var = fcall(arg1,
@@ -321,8 +328,8 @@
                     arg3, # comment
                     arg4,
                     arg5)"""
-        @test yasfmt(str_, 4, 22) == str
-        @test yasfmt(str_, 4, 1) == str
+        test_format(str_, str, YASStyle(); indent=4, margin=22)
+        test_format(str_, str, YASStyle(); indent=4, margin=1)
 
         str_ = """
         comp = [
@@ -341,8 +348,8 @@
                 end
                 for a = 1:10,  # comment 2
                     b = 11:20, c = 300:400]"""
-        @test yasfmt(str_, 2, 80; join_lines_based_on_source = false) == str
-        @test yasfmt(str_, 2, 35; join_lines_based_on_source = false) == str
+        test_format(str_, str, YASStyle(); indent=2, margin=80, join_lines_based_on_source = false)
+        test_format(str_, str, YASStyle(); indent=2, margin=35, join_lines_based_on_source = false)
 
         str = """
         comp = [begin
@@ -352,7 +359,7 @@
                 for a = 1:10,  # comment 2
                     b = 11:20,
                     c = 300:400]"""
-        @test yasfmt(str_, 2, 34) == str
+        test_format(str_, str, YASStyle(); indent=2, margin=34)
 
         str_ = """
         ys = ( if p1(x)
@@ -373,27 +380,27 @@
               end
               for x in xs)
         """
-        @test yasfmt(str_, 2, 80) == str
+        test_format(str_, str, YASStyle(); indent=2, margin=80)
 
         str_ = """spike_annotation = first(ann for ann in recording.annotations if ann.value == "epileptiform_spike")"""
         str = """
         spike_annotation = first(ann
                                  for ann in recording.annotations
                                  if ann.value == "epileptiform_spike")"""
-        @test yasfmt(str_, 2, 80) == str
+        test_format(str_, str, YASStyle(); indent=2, margin=80)
 
         # only that
         str_ = "foo(a, b) = (arg1, arg2, arg3)"
         str = """
         foo(a, b) = (arg1, arg2,
                      arg3)"""
-        @test yasfmt(str_, 2, length(str_) - 1) == str
+        test_format(str_, str, YASStyle(); indent=2, margin=length(str_) - 1)
 
         str = """
         foo(a, b) = (arg1,
                      arg2,
                      arg3)"""
-        @test yasfmt(str_, 2, 1) == str
+        test_format(str_, str, YASStyle(); indent=2, margin=1)
 
         str_ = """
         fooooooooooooooooooo(arg1, arg2,
@@ -406,14 +413,14 @@
                              x -> begin
                                  body
                              end)"""
-        @test yasfmt(str_, 4, 32) == str
+        test_format(str_, str, YASStyle(); indent=4, margin=32)
 
         # parsing error is newline is placed front of `for` here
         str_ = "var = ((x, y) for x = 1:10, y = 1:10)"
         str = """
         var = ((x, y) for x = 1:10,
                           y = 1:10)"""
-        @test yasfmt(str_, 4, length(str_) - 1) == str
+        test_format(str_, str, YASStyle(); indent=4, margin=length(str_) - 1)
     end
 
     @testset "invisbrackets" begin
@@ -431,7 +438,7 @@
              aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa))
           nothing
         end"""
-        @test yasfmt(str_, 2, 92) == str
+        test_format(str_, str, YASStyle(); indent=2, margin=92)
     end
 
     @testset "issue 189" begin
@@ -449,7 +456,7 @@
               (b_hat - y_hat) * delta[i] +
               (b - y) * delta_hat[i] - delta[i] * delta_hat[i]
               for i = 1:8]"""
-        @test yasfmt(str_, 2, 60; join_lines_based_on_source = false) == str
+        test_format(str_, str, YASStyle(); indent=2, margin=60, join_lines_based_on_source = false)
     end
 
     @testset "issue 237" begin
@@ -461,20 +468,20 @@
         for x in (arg1, arg2)
             @info "Test"
         end"""
-        @test yasfmt(str_, 4, 92) == str
+        test_format(str_, str, YASStyle(); indent=4, margin=92)
     end
 
     @testset "issue 320" begin
         str_ = "[x[i] for i = 1:length(x)]"
         str = "[x[i] for i in 1:length(x)]"
-        @test yasfmt(str_, 4, 92; always_for_in = true) == str
+        test_format(str_, str, YASStyle(); indent=4, margin=92, always_for_in = true)
     end
 
     @testset "issue 321 - exponential inline comments !!!" begin
         str = """
         scaled_ticks, mini, maxi = optimize_ticks(scale_func(lmin), scale_func(lmax); k_min=4, # minimum number of ticks
                                                   k_max=8)"""
-        @test yasfmt(str, 4, 92; whitespace_in_kwargs = false) == str
+        test_format(str, str, YASStyle(); indent=4, margin=92, whitespace_in_kwargs = false)
     end
 
     @testset "issue 355 - vcat/typedvcat" begin
@@ -486,7 +493,7 @@
                         @acrule(~x::ismpoly * ~y::ismpoly => ~x * ~y)
                         @rule(*(~x) => ~x)
                         @rule((~x::ismpoly)^(~a::isnonnegint) => (~x)^(~a))]"""
-        @test yasfmt(str) == str
+        test_format(str, str, YASStyle())
 
         str = """
         mpoly_rules = [@rule(~x::ismpoly - ~y::ismpoly => ~x + -1 * (~y))
@@ -496,21 +503,21 @@
                        @acrule(~x::ismpoly * ~y::ismpoly => ~x * ~y)
                        @rule(*(~x) => ~x)
                        @rule((~x::ismpoly)^(~a::isnonnegint) => (~x)^(~a))]"""
-        @test yasfmt(str) == str
+        test_format(str, str, YASStyle())
 
         str_ = """
         [10 20; 30 40; 50 60;
          10
          10]"""
-        @test yasfmt(str_, 4, 21) == str_
+        test_format(str_, str_, YASStyle(); indent=4, margin=21)
 
         str = """
         [10 20; 30 40;
          50 60;
          10
          10]"""
-        @test yasfmt(str_, 4, 20) == str
-        @test yasfmt(str_, 4, 14) == str
+        test_format(str_, str, YASStyle(); indent=4, margin=20)
+        test_format(str_, str, YASStyle(); indent=4, margin=14)
 
         str = """
         [10 20;
@@ -518,21 +525,21 @@
          50 60;
          10
          10]"""
-        @test yasfmt(str_, 4, 13) == str
+        test_format(str_, str, YASStyle(); indent=4, margin=13)
 
         str_ = """
         T[10 20; 30 40; 50 60;
           10
           10]"""
-        @test yasfmt(str_, 4, 22) == str_
+        test_format(str_, str_, YASStyle(); indent=4, margin=22)
 
         str = """
         T[10 20; 30 40;
           50 60;
           10
           10]"""
-        @test yasfmt(str_, 4, 21) == str
-        @test yasfmt(str_, 4, 15) == str
+        test_format(str_, str, YASStyle(); indent=4, margin=21)
+        test_format(str_, str, YASStyle(); indent=4, margin=15)
 
         str = """
         T[10 20;
@@ -540,35 +547,35 @@
           50 60;
           10
           10]"""
-        @test yasfmt(str_, 4, 14) == str
+        test_format(str_, str, YASStyle(); indent=4, margin=14)
 
         str = "(T[10 20; 30 40; 50 60;])"
-        @test yasfmt(str, 4, 25) == str
+        test_format(str, str, YASStyle(); indent=4, margin=25)
         str = "(T[10 20; 30 40; 50 60])"
-        @test yasfmt(str, 4, 24) == str
+        test_format(str, str, YASStyle(); indent=4, margin=24)
 
         str_ = """
         (T[10 20; 30 40;
            50 60])"""
-        @test yasfmt(str, 4, 23) == str_
+        test_format(str, str_, YASStyle(); indent=4, margin=23)
     end
 
     @testset "imports no placeholder, no error" begin
         str = "import A"
-        @test yasfmt(str) == str
+        test_format(str, str, YASStyle())
 
         str = "export A"
-        @test yasfmt(str) == str
+        test_format(str, str, YASStyle())
 
         str = "using A"
-        @test yasfmt(str) == str
+        test_format(str, str, YASStyle())
     end
 
     if VERSION >= v"1.7"
         @testset "issue 582 - vcat" begin
-            @test yasfmt("[sts...;]") == "[sts...;]"
-            @test yasfmt("[a;b;]") == "[a; b;]"
-            @test yasfmt("[a;b;;]") == "[a; b;;]"
+            test_format("[sts...;]", "[sts...;]", YASStyle())
+            test_format("[a;b;]", "[a; b;]", YASStyle())
+            test_format("[a;b;;]", "[a; b;;]", YASStyle())
         end
     end
 
@@ -801,4 +808,6 @@
         @test format_text(str, YASStyle(); variable_call_indent = ["SVector", "test"]) ==
               formatted_str2
     end
+end
+
 end
