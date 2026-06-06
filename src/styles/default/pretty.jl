@@ -3795,14 +3795,26 @@ function p_row(
     for (i, a) in enumerate(childs)
         nonest = is_opcall(a)
         # Threading is_last_ncat_or_nrow_arg through here handles case (b).
-        is_last_ncat_or_nrow_arg = is_last_arg_of_parent && i == last_arg_idx && kind(a) in KSet"nrow row"
-        n = pretty(style, a, s, newctx(ctx; nonest = nonest, is_last_ncat_or_nrow_arg = is_last_ncat_or_nrow_arg), lineage)
+        is_last_ncat_or_nrow_arg =
+            is_last_arg_of_parent && i == last_arg_idx && kind(a) in KSet"nrow row"
+        n = pretty(
+            style,
+            a,
+            s,
+            newctx(
+                ctx;
+                nonest = nonest,
+                is_last_ncat_or_nrow_arg = is_last_ncat_or_nrow_arg,
+            ),
+            lineage,
+        )
 
         if kind(a) === K";"
             add_node!(t, n, s; join_lines = true)
         elseif JuliaSyntax.is_whitespace(a)
             # is_semantically_important_newline handles case (a)
-            if ctx.from_nrow && is_semantically_important_newline(cst, i, is_last_arg_of_parent)
+            if ctx.from_nrow &&
+               is_semantically_important_newline(cst, i, is_last_arg_of_parent)
                 # Must force this newline!
                 add_node!(t, Newline(; nest_behavior = AlwaysNest), s)
             else
@@ -3826,7 +3838,7 @@ function p_nrow(
     ctx::PrettyContext,
     lineage::Vector{Tuple{JuliaSyntax.Kind,Bool,Bool}},
 )
-    t = p_row(ds, cst, s, newctx(ctx; from_nrow=true), lineage)
+    t = p_row(ds, cst, s, newctx(ctx; from_nrow = true), lineage)
     t.typ = NRow
     t
 end
