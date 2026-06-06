@@ -12,7 +12,15 @@
     from_ref::Bool = false
     from_colon::Bool = false
     from_for::Bool = false
+
+    # These two flags are used to compensate for weird structure of ncat and nrow
+    # nodes in JuliaSyntax. See p_ncat for more info
+    #
+    # indicates whether newlines inside are semantically meaningful
     from_nrow::Bool = false
+    # indicates whether newlines at the end are semantically meaningful
+    is_last_ncat_or_nrow_arg::Bool=false
+
     ignore_single_line::Bool = false
     from_quote::Bool = false
     join_body::Bool = false
@@ -3436,11 +3444,19 @@ function p_vcat(
     args = get_args(cst)
     nest = should_nest_call_args(args, s.opts.disallow_single_arg_nesting)
     childs = children(cst)
-    idx = findfirst(n -> kind(n) === K"[", childs)::Int
-    first_arg_idx = findnext(n -> !JuliaSyntax.is_whitespace(n), childs, idx + 1)
+    opening_idx = findfirst(n -> kind(n) === K"[", childs)::Int
+    closing_idx = findlast(n -> kind(n) === K"]", childs)::Int
+    first_arg_idx = findnext(n -> !JuliaSyntax.is_whitespace(n), childs, opening_idx + 1)
+    last_arg_idx = findprev(n -> !JuliaSyntax.is_whitespace(n), childs, closing_idx - 1)
 
     for (i, a) in enumerate(childs)
-        n = pretty(style, a, s, ctx, lineage)
+        n = if i == last_arg_idx
+            ctx2 = newctx(ctx; is_last_ncat_or_nrow_arg = true)
+            pretty(style, a, s, ctx2, lineage)
+        else
+            pretty(style, a, s)
+        end
+
         diff_line = t.endline != t.startline
         # If arguments are on different lines then always nest
         if diff_line
@@ -3706,21 +3722,21 @@ See comment in `p_row` for details.
 function is_semantically_important_newline(
     row_cst::JuliaSyntax.GreenNode,
     i::Int,
+    is_last_arg_of_parent::Bool,
 )
     kind(row_cst[i]) === K"NewlineWs" || return false
-
     n = length(children(row_cst))
     # Start of the row - not important
     i == 1 && return false
     # End of the row -- might be important
-    i == n && return kind(row_cst[i-1]) !== K";"
+    i == n && return (!is_last_arg_of_parent && kind(row_cst[i-1]) !== K";")
     # Otherwise it's important
     return true
 end
 
 # `nrow` and `row` nodes both delegate to this function, and the underlying logic is the
 # same, but newlines need to be handled differently, which motivates the `ctx.from_nrow`
-# flag.
+# and `ctx.is_last_ncat_or_nrow_arg` flags.
 #
 # In general for `row` nodes, newlines are unnecessary so can be collapsed to ordinary
 # whitespace.
@@ -3728,14 +3744,29 @@ end
 # However, for `nrow` nodes AND `row` children of `nrow` nodes, there are two kinds of
 # newlines:
 #
-#  - Newlines at the start at the end of the row OR at the end of the nrow with a preceding
-#    semicolon, for example, the ones in `[\n1; 2;;\n 3; 4]`. These are semantically
-#    unnecessary. Annoyingly, the parser sticks these inside the `nrow` node rather than at
-#    the top level `ncat` row!
+#  - Those that are semantically *necessary*, because they are used to indicate vertical
+#    concatenation. These can be:
 #
-#  - Newlines in the middle of the nrow, or at the end of the row WITHOUT a preceding
-#    semicolon, are semantically important because they represent vertical concatenation of
-#    elements, so we can't ignore them.
+#    (1) Newlines in the middle of the row: [1\n2;; 3\n4]
+#    (2) Newlines at the end of a row: [1 2 3\n4 5 6]. In general, all newlines at the end
+#        of a row are considered semantically important, with the exceptions listed below.
+#
+#  - Those that are semantically *unnecessary*. These could be:
+#
+#    (3) Newlines at the start of the row, e.g. [\n1 2;; 3 4].
+#    (4) Newlines at the end of the row but preceded by a semicolon, e.g. [1 2;;\n 3 4].
+#    (5) Newlines at the end of the row but before the closing brace, e.g. [1 2;; 3 4\n].
+#
+# The annoying thing about JuliaSyntax's parser is that all the newlines are placed inside
+# the child nodes rather than the parent nodes. For example, in the last example
+#
+#     [1 2;; 3 4\n]
+#
+# the newline is a child of the last row, rather than a child of the ncat. (If it were
+# the latter, then this would be trivial to handle since we could just check if it's the
+# last child before the closing brace!) This means that we have to thread this information
+# into each recursive pretty() call to tell us whether we are allowed to remove the newline
+# or not.
 function p_row(
     ds::AbstractStyle,
     cst::JuliaSyntax.GreenNode,
@@ -3743,7 +3774,7 @@ function p_row(
     ctx::PrettyContext,
     lineage::Vector{Tuple{JuliaSyntax.Kind,Bool,Bool}},
 )
-    is_nrow = ctx.from_nrow
+    is_last_arg_of_parent = ctx.is_last_ncat_or_nrow_arg
 
     style = getstyle(ds)
     t = FST(Row, nspaces(s))
@@ -3753,18 +3784,25 @@ function p_row(
 
     childs = children(cst)
     first_arg_idx = findfirst(n -> !JuliaSyntax.is_whitespace(n), childs)
+    last_arg_idx = findlast(n -> !JuliaSyntax.is_whitespace(n), childs)
+
+    # To detect the final newline i.e. (5) above, we need to handle two cases:
+    #
+    # (a) Either the newline is part of this node, in which case it will be the last child
+    #     of this node.
+    # (b) Or this node will have an nrow/row child that ends with a newline.
 
     for (i, a) in enumerate(childs)
-        n = if is_opcall(a)
-            pretty(style, a, s, newctx(ctx; nonest = true), lineage)
-        else
-            pretty(style, a, s, ctx, lineage)
-        end
+        nonest = is_opcall(a)
+        # Threading is_last_ncat_or_nrow_arg through here handles case (b).
+        is_last_ncat_or_nrow_arg = is_last_arg_of_parent && i == last_arg_idx && kind(a) in KSet"nrow row"
+        n = pretty(style, a, s, newctx(ctx; nonest = nonest, is_last_ncat_or_nrow_arg = is_last_ncat_or_nrow_arg), lineage)
 
         if kind(a) === K";"
             add_node!(t, n, s; join_lines = true)
         elseif JuliaSyntax.is_whitespace(a)
-            if is_nrow && is_semantically_important_newline(cst, i)
+            # is_semantically_important_newline handles case (a)
+            if ctx.from_nrow && is_semantically_important_newline(cst, i, is_last_arg_of_parent)
                 # Must force this newline!
                 add_node!(t, Newline(; nest_behavior = AlwaysNest), s)
             else
