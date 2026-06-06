@@ -1,12 +1,10 @@
-@testset "Blue Style" begin
-    # @testset "ops" begin
-    #     # `//` and `^` are binary ops without whitespace around them
-    #     @test bluefmt("1 // 2 + 3 ^ 4") == "1 // 2 + 3 ^ 4"
-    #     @test bluefmt("1 // 2 + 3 ^ 4") == "1//2 + 3^4"
-    #     @test bluefmt("a .// 10") == "a .// 10"
-    #     @test bluefmt("a.//10") == "a .// 10"
-    # end
+module BlueTests
 
+using JuliaFormatter.Internal: test_format
+using Test
+using JuliaFormatter: BlueStyle
+
+@testset "Blue Style" begin
     @testset "nest to one line" begin
         str_ = """
         var = [arg1, #com
@@ -18,7 +16,7 @@
             arg2,
         ]
         """
-        @test bluefmt(str_) == str
+        test_format(str_, str, BlueStyle())
 
         str_ = """
         var = (arg1,
@@ -27,7 +25,7 @@
         str = """
         var = (arg1, arg2)
         """
-        @test bluefmt(str_, 4, 18) == str
+        test_format(str_, str, BlueStyle(); indent=4, margin=18)
 
         str_ = """
         var = {arg1,
@@ -38,8 +36,8 @@
             arg1, arg2
         }
         """
-        @test bluefmt(str_, 4, 17) == str
-        @test bluefmt(str_, 4, 14) == str
+        test_format(str_, str, BlueStyle(); indent=4, margin=17)
+        test_format(str_, str, BlueStyle(); indent=4, margin=14)
 
         str_ = """
         var = call(arg1,
@@ -50,7 +48,7 @@
             arg1, arg2
         )
         """
-        @test bluefmt(str_, 4, 14) == str
+        test_format(str_, str, BlueStyle(); indent=4, margin=14)
 
         str = """
         var = call(
@@ -58,7 +56,7 @@
             arg2,
         )
         """
-        @test bluefmt(str_, 4, 13) == str
+        test_format(str_, str, BlueStyle(); indent=4, margin=13)
 
         str_ = """
         var = ref[arg1,
@@ -69,7 +67,7 @@
             arg1, arg2
         ]
         """
-        @test bluefmt(str_, 4, 14) == str
+        test_format(str_, str, BlueStyle(); indent=4, margin=14)
 
         str = """
         var = ref[
@@ -77,7 +75,7 @@
             arg2,
         ]
         """
-        @test bluefmt(str_, 4, 13) == str
+        test_format(str_, str, BlueStyle(); indent=4, margin=13)
 
         str_ = """
         var = ABC{arg1,
@@ -88,7 +86,7 @@
             arg1,arg2
         }
         """
-        @test bluefmt(str_, 4, 13) == str
+        test_format(str_, str, BlueStyle(); indent=4, margin=13)
 
         str = """
         var = ABC{
@@ -96,7 +94,7 @@
             arg2,
         }
         """
-        @test bluefmt(str_, 4, 12) == str
+        test_format(str_, str, BlueStyle(); indent=4, margin=12)
 
         str_ = """
         var = @call(arg1,
@@ -107,7 +105,7 @@
             arg1, arg2
         )
         """
-        @test bluefmt(str_, 4, 14) == str
+        test_format(str_, str, BlueStyle(); indent=4, margin=14)
 
         str = """
         var = @call(
@@ -115,7 +113,7 @@
             arg2
         )
         """
-        @test bluefmt(str_, 4, 13) == str
+        test_format(str_, str, BlueStyle(); indent=4, margin=13)
 
         str_ = """
         function long_name_of_function_because_i_am_writing_an_example(
@@ -124,7 +122,7 @@
             # code
         end
         """
-        @test bluefmt(str_, 4, 38) == str_
+        test_format(str_, str_, BlueStyle(); indent=4, margin=38)
 
         str = """
         function long_name_of_function_because_i_am_writing_an_example(
@@ -138,7 +136,7 @@
             # code
         end
         """
-        @test bluefmt(str_, 4, 37) == str
+        test_format(str_, str, BlueStyle(); indent=4, margin=37)
 
         str = """
         Dict(
@@ -150,7 +148,7 @@
             ),
         )
         """
-        @test bluefmt(str, 4, 92) == str
+        test_format(str_, str_, BlueStyle(); indent=4, margin=92)
 
         str_ = """
         var = foo(
@@ -161,12 +159,12 @@
         str = """
         var = foo(
             map(arr) do x
-                x * 10
+                return x * 10
             end,
             "",
         )
         """
-        @test bluefmt(str_, 4, 92) == str
+        test_format(str_, str, BlueStyle(); indent=4, margin=92)
 
         str_ = """
         df[:, :some_column] = [some_big_function_name(blahhh) for (fooooo, blahhh) in my_long_list_of_vars]
@@ -176,7 +174,7 @@
             some_big_function_name(blahhh) for (fooooo, blahhh) in my_long_list_of_vars
         ]
         """
-        @test bluefmt(str_, 4, 92) == str
+        test_format(str_, str, BlueStyle(); indent=4, margin=92)
 
         str_ = """
         function f()
@@ -191,18 +189,18 @@
         """
         str = """
         function f()
-            for i = 1:n
+            for i in 1:n
                 @inbounds mul!(
                     reshape(view(C, :, i), eye_n, k), reshape(view(B, :, i), eye_n, l), transpose(A, B)
                 )
             end
         end
         """
-        @test bluefmt(str_, 4, 95) == str
+        test_format(str_, str, BlueStyle(); indent=4, margin=95)
 
         str = """
         function f()
-            for i = 1:n
+            for i in 1:n
                 @inbounds mul!(
                     reshape(view(C, :, i), eye_n, k),
                     reshape(view(B, :, i), eye_n, l),
@@ -211,11 +209,11 @@
             end
         end
         """
-        @test bluefmt(str_, 4, 94) == str
+        test_format(str_, str, BlueStyle(); indent=4, margin=94)
 
         str = """
         function f()
-            for i = 1:n
+            for i in 1:n
                 @inbounds mul!(
                     reshape(
                         view(
@@ -236,11 +234,11 @@
             end
         end
         """
-        @test bluefmt(str_, 4, 28) == str
+        test_format(str_, str, BlueStyle(); indent=4, margin=28)
 
         str = """
         function f()
-            for i = 1:n
+            for i in 1:n
                 @inbounds mul!(
                     reshape(
                         view(
@@ -263,7 +261,7 @@
             end
         end
         """
-        @test bluefmt(str_, 4, 27) == str
+        test_format(str_, str, BlueStyle(); indent=4, margin=27)
     end
 
     @testset "do not nest assignments if the RHS is iterable" begin
@@ -278,20 +276,20 @@
             map(
                 arr,
             ) do x
-                x *
-                10
+                return x *
+                       10
             end,
             "",
         )
         """
-        @test bluefmt(str_, 4, 1) == str
+        test_format(str_, str, BlueStyle(); indent=4, margin=1)
     end
 
     @testset "no chained ternary allowed !!!" begin
         str = """
         E1 ? A : B
         """
-        @test bluefmt(str) == str
+        test_format(str, str, BlueStyle())
 
         str_ = """
         E1 ? A : E2 ? B : C
@@ -305,7 +303,21 @@
             C
         end
         """
-        @test bluefmt(str_) == str
+        test_format(str_, str, BlueStyle())
+    end
+
+    @testset "has always_use_return=true" begin
+        str_ = """
+        function foo()
+            x
+        end
+        """
+        str = """
+        function foo()
+            return x
+        end
+        """
+        test_format(str_, str, BlueStyle())
     end
 
     @testset "use `return nothing` instead of `return`" begin
@@ -319,11 +331,11 @@
             return nothing
         end
         """
-        @test bluefmt(str_) == str
+        test_format(str_, str, BlueStyle())
 
         str_ = "a || return"
         str = "a || return nothing"
-        @test bluefmt(str_) == str
+        test_format(str_, str, BlueStyle())
     end
 
     @testset "weird line removal case" begin
@@ -369,9 +381,8 @@
             end
         end
         """
-        s1 = format_text(str, BlueStyle())
-        @test s1 == str
-        s2 = format_text(s1, BlueStyle())
-        @test s2 == str
+        test_format(str, str, BlueStyle())
     end
+end
+
 end

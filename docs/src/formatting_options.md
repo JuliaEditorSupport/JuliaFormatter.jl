@@ -27,7 +27,7 @@ Values that differ from `DefaultStyle` are shown in **bold**.
 | [`align_pair_arrow`](@ref options-align-star)                                       | `false`   | `false`     | `false`     | `false`      | `false`       |
 | [`align_struct_field`](@ref options-align-star)                                     | `false`   | `false`     | `false`     | `false`      | `false`       |
 | [`always_for_in`](@ref options-always-for-in)                                       | `false`   | **`true`**  | **`true`**  | **`true`**   | **`nothing`** |
-| [`always_use_return`](@ref options-always-use-return)                               | `false`   | **`true`**  | `false`     | `false`      | `false`       |
+| [`always_use_return`](@ref options-always-use-return)                               | `false`   | **`true`**  | **`true`**  | `false`      | `false`       |
 | [`annotate_untyped_fields_with_any`](@ref options-annotate-untyped-fields-with-any) | `true`    | `true`      | **`false`** | `true`       | **`false`**   |
 | [`conditional_to_if`](@ref options-conditional-to-if)                               | `false`   | `false`     | **`true`**  | `false`      | `false`       |
 | [`disallow_single_arg_nesting`](@ref options-disallow-single-arg-nesting)           | `false`   | `false`     | `false`     | **`true`**   | `false`       |

@@ -6,7 +6,7 @@ getstyle(s::BlueStyle) = s.innerstyle isa NoopStyle ? s : s.innerstyle
 
 function options(::BlueStyle)
     return (;
-        always_use_return = false,
+        always_use_return = true,
         short_to_long_function_def = true,
         long_to_short_function_def = false,
         whitespace_ops_in_indices = true,

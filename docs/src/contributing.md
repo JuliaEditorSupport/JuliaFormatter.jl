@@ -32,6 +32,8 @@ The exact label for an issue is left to my discretion, but generally these are t
 Additionally where possible I'll also add **good first issue** tags for changes that are quite self-contained.
 These may include any priority level but should generally be P3 or lower.
 
+You can see a list of all triaged issues [here](https://github.com/orgs/JuliaEditorSupport/projects/1/views/1).
+
 ## AI usage
 
 LLMs and AI in general can be really useful for tracing through some of the logic in the codebase.
