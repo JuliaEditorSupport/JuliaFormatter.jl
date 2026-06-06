@@ -3792,7 +3792,9 @@ function p_row(
     #     of this node.
     # (b) Or this node will have an nrow/row child that ends with a newline.
 
+    last_node_ended_with_newline = false
     for (i, a) in enumerate(childs)
+        forced_newline = false
         nonest = is_opcall(a)
         # Threading is_last_ncat_or_nrow_arg through here handles case (b).
         is_last_ncat_or_nrow_arg =
@@ -3808,7 +3810,6 @@ function p_row(
             ),
             lineage,
         )
-
         if kind(a) === K";"
             add_node!(t, n, s; join_lines = true)
         elseif JuliaSyntax.is_whitespace(a)
@@ -3817,15 +3818,19 @@ function p_row(
                is_semantically_important_newline(cst, i, is_last_arg_of_parent)
                 # Must force this newline!
                 add_node!(t, Newline(; nest_behavior = AlwaysNest), s)
+                forced_newline = true
             else
                 add_node!(t, n, s; join_lines = true)
             end
         else
-            if !isnothing(first_arg_idx) && i > first_arg_idx
+            if !isnothing(first_arg_idx) &&
+               i > first_arg_idx &&
+               !last_node_ended_with_newline
                 add_node!(t, Whitespace(1), s; join_lines = true)
             end
             add_node!(t, n, s; join_lines = true)
         end
+        last_node_ended_with_newline = forced_newline || is_prev_newline(n)
     end
     t.nest_behavior = NeverNest
     t

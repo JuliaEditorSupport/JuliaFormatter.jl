@@ -6,13 +6,13 @@ using Test
 
 ALL_STYLES = (DefaultStyle(), YASStyle(), BlueStyle(), MinimalStyle(), SciMLStyle())
 
-@testset "array literal examples from docs" begin
+@testset "array literal examples" begin
     # Don't really care how it formats, but make sure that it parses to the same AST. Some
     # of these are probably redundant; that's fine, we can just be safe.
-    #
-    # https://docs.julialang.org/en/v1/manual/arrays/#man-array-literals
     for T in ("", "T")
         for s in (
+            # These are taken from the docs:
+            # https://docs.julialang.org/en/v1/manual/arrays/#man-array-literals
             "$(T)[1, 2, 3]",
             "$(T)[1, 2.3, 4//5]",
             "$(T)[1:2, 4:5]",
@@ -27,14 +27,17 @@ ALL_STYLES = (DefaultStyle(), YASStyle(), BlueStyle(), MinimalStyle(), SciMLStyl
             "$(T)[zeros(Int, 2, 2) ; [3 4] ;; [1; 2] ; 5]",
             "$(T)[1:2; 4;; 1; 3:4]",
             "$(T)[1; 2;; 3; 4;; 5; 6;;;\n 7; 8;; 9; 10;; 11; 12]",
-            # BROKEN
-            # "$(T)[1 3 5\n 2 4 6;;;\n 7 9 11\n 8 10 12]",
+            "$(T)[1 3 5\n 2 4 6;;;\n 7 9 11\n 8 10 12]",
             "$(T)[1 2;;; 3 4;;;; 5 6;;; 7 8]",
             "$(T)[[1 2;;; 3 4];;;; [5 6];;; [7 8]]",
             "$(T)[1 2 ;;\n 3 4]",
             "$(T)[1;;]",
             "$(T)[2; 3;;;]",
             "$(T)[[1 2] [3 4]]",
+
+            # These are supplements, not from the docs
+            "$(T)[1\n2;;\n3\n4]",
+            "$(T)[f(a)\n f(a);;\n f(a)\n f(a)]",
         )
             for style in ALL_STYLES
                 @testset let style = style
