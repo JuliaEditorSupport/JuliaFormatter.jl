@@ -1,4 +1,4 @@
-# How It Works
+# [How It Works](@id how-it-works)
 
 JuliaFormatter works in several stages:
 
