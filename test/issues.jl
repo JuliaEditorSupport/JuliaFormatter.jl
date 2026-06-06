@@ -726,7 +726,7 @@ end
         new{T1,
             T2}(arg1,
                 arg2)"""
-        test_format(str_, str, YASStyle(); m = 1)
+        test_format(str_, str, YASStyle(); margin = 1)
     end
 
     if VERSION >= v"1.6.0"
@@ -789,13 +789,13 @@ end
         [z for y in x for z in y]
         """
         test_format(str, str, YASStyle())
-        test_format(str, str, YASStyle(); m = 25)
+        test_format(str, str, YASStyle(); margin = 25)
 
         str_ = """
         [z for y in x
          for z in y]
         """
-        test_format(str, str_, YASStyle(); m = 24)
+        test_format(str, str_, YASStyle(); margin = 24)
 
         str_ = """
         [z
@@ -804,7 +804,7 @@ end
          for z in
              y]
         """
-        test_format(str, str_, YASStyle(); m = 1)
+        test_format(str, str_, YASStyle(); margin = 1)
     end
 
     @testset "issue 427" begin
@@ -850,7 +850,7 @@ end
         end
         """
         test_format(str_, str; margin = 1)
-        test_format(str_, str, BlueStyle(); m = 1)
+        test_format(str_, str, BlueStyle(); margin = 1)
     end
 
     @testset "issue 431" begin
@@ -1250,12 +1250,12 @@ end
     @testset "533" begin
         # semicolon should not be added prior to `extrap` since it's a function definition.
         s = "function linterp(x0::T, y0::T, x1::T, y1::T, x::T, extrap::Bool = false)::T where {T<:AbstractFloat} end"
-        test_format(s, s, BlueStyle(); m = 200)
-        test_format(s, s, YASStyle(); m = 200)
+        test_format(s, s, BlueStyle(); margin = 200)
+        test_format(s, s, YASStyle(); margin = 200)
 
         s = "function linterp(x0::T, y0::T, x1::T, y1::T, x::T, extrap::Bool = false)::T end"
-        test_format(s, s, BlueStyle(); m = 200)
-        test_format(s, s, YASStyle(); m = 200)
+        test_format(s, s, BlueStyle(); margin = 200)
+        test_format(s, s, YASStyle(); margin = 200)
     end
 
     @testset "541" begin
