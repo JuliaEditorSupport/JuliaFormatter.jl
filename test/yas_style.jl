@@ -8,7 +8,7 @@ using JuliaFormatter: format_text
 @testset "YAS Style" begin
     @testset "basic" begin
         str_ = "foo(; k =v)"
-        str = "foo(; k = v)"
+        str = "foo(; k=v)"
         test_format(str_, str, YASStyle(); indent=4, margin=80)
 
         str_ = "[a,]"
@@ -253,7 +253,7 @@ using JuliaFormatter: format_text
         str = """
         function func(arg1::Type1, arg2::Type2,
                       arg3) where {Type1,Type2}
-          body
+          return body
         end"""
         test_format(str_, str, YASStyle(); indent=2, margin=64)
         test_format(str_, str, YASStyle(); indent=2, margin=39)
@@ -263,7 +263,7 @@ using JuliaFormatter: format_text
                       arg2::Type2,
                       arg3) where {Type1,
                                    Type2}
-          body
+          return body
         end"""
         test_format(str_, str, YASStyle(); indent=2, margin=31)
         test_format(str_, str, YASStyle(); indent=2, margin=1)
@@ -286,21 +286,21 @@ using JuliaFormatter: format_text
         str_ =
             raw"""ecg_signal = signal_from_template(eeg_signal; channel_names=[:avl, :avr], file_extension=Symbol("lpcm.zst"))"""
         str = raw"""
-        ecg_signal = signal_from_template(eeg_signal; channel_names = [:avl, :avr],
-                                          file_extension = Symbol("lpcm.zst"))"""
+        ecg_signal = signal_from_template(eeg_signal; channel_names=[:avl, :avr],
+                                          file_extension=Symbol("lpcm.zst"))"""
         test_format(str_, str, YASStyle(); indent=4, margin=length(str_) - 1)
         test_format(str_, str, YASStyle(); indent=4, margin=75)
 
         str = raw"""
         ecg_signal = signal_from_template(eeg_signal;
-                                          channel_names = [:avl, :avr],
-                                          file_extension = Symbol("lpcm.zst"))"""
-        test_format(str_, str, YASStyle(); indent=4, margin=73)
+                                          channel_names=[:avl, :avr],
+                                          file_extension=Symbol("lpcm.zst"))"""
+        test_format(str_, str, YASStyle(); indent=4, margin=71)
         str = raw"""
         ecg_signal = signal_from_template(eeg_signal;
-                                          channel_names = [:avl,
-                                                           :avr],
-                                          file_extension = Symbol("lpcm.zst"))"""
+                                          channel_names=[:avl,
+                                                         :avr],
+                                          file_extension=Symbol("lpcm.zst"))"""
         test_format(str_, str, YASStyle(); indent=4, margin=1)
     end
 
@@ -346,20 +346,20 @@ using JuliaFormatter: format_text
                   x = a * b + c
                   y = x^2 + 3x # comment 1
                 end
-                for a = 1:10,  # comment 2
-                    b = 11:20, c = 300:400]"""
+                for a in 1:10,  # comment 2
+                    b in 11:20, c in 300:400]"""
         test_format(str_, str, YASStyle(); indent=2, margin=80, join_lines_based_on_source = false)
-        test_format(str_, str, YASStyle(); indent=2, margin=35, join_lines_based_on_source = false)
+        test_format(str_, str, YASStyle(); indent=2, margin=38, join_lines_based_on_source = false)
 
         str = """
         comp = [begin
                   x = a * b + c
                   y = x^2 + 3x # comment 1
                 end
-                for a = 1:10,  # comment 2
-                    b = 11:20,
-                    c = 300:400]"""
-        test_format(str_, str, YASStyle(); indent=2, margin=34)
+                for a in 1:10,  # comment 2
+                    b in 11:20,
+                    c in 300:400]"""
+        test_format(str_, str, YASStyle(); indent=2, margin=36)
 
         str_ = """
         ys = ( if p1(x)
@@ -394,13 +394,13 @@ using JuliaFormatter: format_text
         str = """
         foo(a, b) = (arg1, arg2,
                      arg3)"""
-        test_format(str_, str, YASStyle(); indent=2, margin=length(str_) - 1)
+        test_format(str_, str, YASStyle(); indent=2, margin=length(str_) - 1, short_to_long_function_def=false)
 
         str = """
         foo(a, b) = (arg1,
                      arg2,
                      arg3)"""
-        test_format(str_, str, YASStyle(); indent=2, margin=1)
+        test_format(str_, str, YASStyle(); indent=2, margin=1, short_to_long_function_def=false)
 
         str_ = """
         fooooooooooooooooooo(arg1, arg2,
@@ -418,8 +418,8 @@ using JuliaFormatter: format_text
         # parsing error is newline is placed front of `for` here
         str_ = "var = ((x, y) for x = 1:10, y = 1:10)"
         str = """
-        var = ((x, y) for x = 1:10,
-                          y = 1:10)"""
+        var = ((x, y) for x in 1:10,
+                          y in 1:10)"""
         test_format(str_, str, YASStyle(); indent=4, margin=length(str_) - 1)
     end
 
@@ -455,7 +455,7 @@ using JuliaFormatter: format_text
               (b * y_hat - delta[i] * y_hat) * gamma_hat[i] +
               (b_hat - y_hat) * delta[i] +
               (b - y) * delta_hat[i] - delta[i] * delta_hat[i]
-              for i = 1:8]"""
+              for i in 1:8]"""
         test_format(str_, str, YASStyle(); indent=2, margin=60, join_lines_based_on_source = false)
     end
 
@@ -562,7 +562,7 @@ using JuliaFormatter: format_text
 
     @testset "imports no placeholder, no error" begin
         str = "import A"
-        test_format(str, str, YASStyle())
+        test_format(str, "using A: A", YASStyle())
 
         str = "export A"
         test_format(str, str, YASStyle())

@@ -1,4 +1,4 @@
-function test_format(fmt, before, after)
+function test_format_file(fmt, before, after)
     sandbox_dir = joinpath(@__DIR__, "tmp")
     mkdir(sandbox_dir)
     try
@@ -18,14 +18,14 @@ end
         pos = path -> f(path, BlueStyle())
         key = path -> f(path; style = BlueStyle())
         after = "foo(; k=v)"
-        test_format(pos, before, after)
-        test_format(key, before, after)
+        test_format_file(pos, before, after)
+        test_format_file(key, before, after)
     end
     @testset "other keywords take affect" begin
         pos = path -> f(path, BlueStyle(); whitespace_in_kwargs = true)
         key = path -> f(path; style = BlueStyle(), whitespace_in_kwargs = true)
         after = "foo(; k = v)"
-        test_format(pos, before, after)
-        test_format(key, before, after)
+        test_format_file(pos, before, after)
+        test_format_file(key, before, after)
     end
 end
