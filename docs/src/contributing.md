@@ -21,7 +21,7 @@ The exact label for an issue is left to my discretion, but generally these are t
 
 - **P5** - silently changes the meaning of code. This is absolutely terrible!
 
-- **P4** - fails to format code (still bad, but at least this errors loudly)
+- **P4** - fails to format code (still bad, but at least this errors loudly). Non-idempotent formatting also falls into this category.
 
 - **P3** - fails to respect formatting options
 
