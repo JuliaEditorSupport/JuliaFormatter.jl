@@ -9,7 +9,7 @@ import JuliaSyntax as JS
     function parsed_node(text)
         doc = JF.Document(text)
         state = JF.State(doc, JF.Options())
-        root = JS.parseall(JS.GreenNode, text)
+        root = JS.parseall(JS.GreenNode, text; version=JF.SUPPORTED_SYNTAX_VERSION)
         nodes = filter(n -> !JS.is_whitespace(n), JS.children(root))
         return doc, state, only(nodes)
     end
@@ -161,7 +161,7 @@ end
 @testset "predicates on GreenNodes" begin
     @testset "unary_info" begin
         # [1] to index into the actual node we care about
-        p(x) = JS.parseall(JS.GreenNode, strip(x))[1]
+        p(x) = JS.parseall(JS.GreenNode, strip(x); version=JF.SUPPORTED_SYNTAX_VERSION)[1]
         # Prefix operator
         @test JF.unary_info(p("+(x)")) === true
         @test JF.unary_info(p("+x")) === true
@@ -190,7 +190,7 @@ end
     end
 
     @testset "first_nonws_leaf_and_offset" begin
-        p(x) = JS.parseall(JS.GreenNode, x)
+        p(x) = JS.parseall(JS.GreenNode, x; version=JF.SUPPORTED_SYNTAX_VERSION)
         # Simple identifier
         let result = JF.first_nonws_leaf_and_offset(p("x")[1])
             @test result !== nothing
@@ -211,7 +211,7 @@ end
 
     @testset "source_begins_with_op_needing_parens" begin
         function check(code)
-            node = JS.parseall(JS.GreenNode, code)[1]
+            node = JS.parseall(JS.GreenNode, code; version=JF.SUPPORTED_SYNTAX_VERSION)[1]
             opts = JF.Options()
             s = JF.State(JF.Document(code), opts)
             return JF.source_begins_with_op_needing_parens(s, node, s.offset)
