@@ -2236,6 +2236,129 @@ end
         test_format("f(*, +, a, b)", "f(*, +, a, b)")
         test_format("f(*, +, a, b, c)", "f(*, +, a, b, c)")
     end
+
+    @testset "619" begin
+        # Semicolons in vector literals must be preserved (they denote vcat, not hcat).
+        # Previously SciMLStyle dropped semicolons when reformatting.
+        s = "eqs = [0 ~ -1x_f + f(t); 0 ~ -1dm_f1 + g(t)]\n"
+        test_format(s, s, SciMLStyle())
+    end
+
+    @testset "664" begin
+        # `import ..x` should not be converted to `using ..x: x` with `import_to_using`,
+        # because `using ..x: x` is invalid when `x` is not a module.
+        s = "module M\nimport ..x\ny = x\nend\n"
+        test_format(s, s; import_to_using = true)
+    end
+
+    @testset "688" begin
+        # Semicolons in vertical array concatenation must be preserved.
+        # Previously the formatter removed the `;` when breaking across lines.
+        s = "vector_to_concatenate = [\n    repeat([foo], foo_times);\n    repeat([bar], bar_times)\n]\n"
+        test_format(s, s)
+    end
+
+    @testset "736" begin
+        # `!in(x, y)` should not get spaces around `in`.
+        # Previously YASStyle formatted it as `! in(x, y)` or `! in (x, y)`.
+        test_format("!in(x, y)\n", "!in(x, y)\n")
+        test_format("!in(x, y)\n", "!in(x, y)\n", YASStyle())
+    end
+
+    @testset "781" begin
+        # `align_matrix=true` with SciMLStyle should not cause a fixpoint error.
+        # Previously `f([a b\n c d])` failed with "hasn't reached fixpoint in 4 iterations".
+        s = "f([a b\n            c d])\n"
+        s_ = format_text(s, SciMLStyle(); align_matrix = true)
+        @test s_ == format_text(s_, SciMLStyle(); align_matrix = true)
+    end
+
+    @testset "795" begin
+        # Broadcast expressions with multiple dotted operators inside getindex should not
+        # strip whitespace, which previously produced unparseable `1.+1`.
+        test_format("a[1 .+ 1 .+ 1]\n", "a[1 .+ 1 .+ 1]\n")
+    end
+
+    @testset "816" begin
+        # Long comprehension lines should be broken to respect margin.
+        # Previously the comprehension body was kept on one line regardless of length.
+        s_ = """
+        function reorganize_hopping_by_distance()
+            for i in 1:foo
+                for j in 1:bar
+                    distances = [
+                        norm(lattice * (R + wannier_centers[m] - wannier_centers[n] + supercell_lattice * supercell)) for supercell in supercells_to_search
+                    ]
+                end
+            end
+        end
+        """
+        s = """
+        function reorganize_hopping_by_distance()
+            for i = 1:foo
+                for j = 1:bar
+                    distances = [
+                        norm(
+                            lattice * (
+                                R + wannier_centers[m] - wannier_centers[n] +
+                                supercell_lattice * supercell
+                            ),
+                        ) for supercell in supercells_to_search
+                    ]
+                end
+            end
+        end
+        """
+        test_format(s_, s)
+    end
+
+    @testset "833" begin
+        # Broadcast sum inside indexing should not strip whitespace.
+        # Previously `x[n^2 .+ I]` was formatted as `x[n^2.+I]` which is invalid.
+        test_format("x[n^2 .+ I]\n", "x[n^2 .+ I]\n")
+    end
+
+    @testset "837" begin
+        # `Bool[;;]` (empty matrix) should not be collapsed to `Bool[]` (empty vector).
+        test_format("Bool[;;]\n", "Bool[;;]\n")
+    end
+
+    @testset "850" begin
+        # Indexing a string literal should not cause a TypeError.
+        # Previously `"$x"[1:end-2]` threw a TypeError during formatting.
+        s_ = "x = v\"1.0\"\nprintln(\"\$x\"[1:end-2])\n"
+        s = "x = v\"1.0\"\nprintln(\"\$x\"[1:(end-2)])\n"
+        test_format(s_, s)
+    end
+
+    @testset "854" begin
+        # `separate_kwargs_with_semicolon` should not produce invalid syntax.
+        # Previously `plot(df, ..., Layout(...))` was formatted with `Layout(; ...)`
+        # in kwarg position, which is a syntax error.
+        s_ = "plot(df, kind=\"bar\", x=:time, y=:value, color=:asset, Layout(title=\"Title\", barmode=\"relative\"))\n"
+        s = "plot(df; kind = \"bar\", x = :time, y = :value, color = :asset, Layout(; title = \"Title\", barmode = \"relative\"))\n"
+        test_format(s_, s; separate_kwargs_with_semicolon = true, margin = 120)
+    end
+
+    @testset "858" begin
+        # Dict with lambda values in SciMLStyle should not cause a fixpoint error.
+        # Previously errored with "hasn't reached fixpoint in 4 iterations".
+        s_ = """const catr = Dict("MFI" => (est; parallel = true) -> Rule(Search(parallel),
+                InfoCrit(est)),
+            "bOpt" => (est; parallel = true) -> Rule(Search(parallel),
+                UrryCrit(est)))
+        """
+        s = format_text(s_, SciMLStyle())
+        @test s == format_text(s, SciMLStyle())
+    end
+
+    @testset "862" begin
+        # Block comments should not be stripped entirely.
+        # Previously `T <: Tuple #=...=# && ...` lost the first block comment.
+        s_ = "T <: Tuple #=comment1=# && !(T isa Union) #=comment2=#\n"
+        s = "T <: Tuple#=comment1=# && !(T isa Union)#=comment2=#\n"
+        test_format(s_, s)
+    end
 end
 
 end
