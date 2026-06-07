@@ -1,3 +1,29 @@
+module DefaultTests
+
+using Test
+using JuliaSyntax
+using JuliaFormatter: JuliaFormatter, DefaultStyle, Options, format_file
+using JuliaFormatter.Internal: test_format
+
+function run_pretty(text::String; style = DefaultStyle(), opts = Options())
+    d = JuliaFormatter.Document(text)
+    s = JuliaFormatter.State(d, opts)
+    g = JuliaSyntax.parseall(JuliaSyntax.GreenNode, text)
+    t = JuliaFormatter.pretty(style, g, s)
+    t
+end
+run_pretty(text::String, margin::Int) = run_pretty(text, opts = Options(margin = margin))
+
+function run_nest(text::String; opts = Options(), style = DefaultStyle())
+    d = JuliaFormatter.Document(text)
+    s = JuliaFormatter.State(d, opts)
+    g = JuliaSyntax.parseall(JuliaSyntax.GreenNode, text)
+    t = JuliaFormatter.pretty(style, g, s)
+    JuliaFormatter.nest!(style, t, s)
+    t, s
+end
+run_nest(text::String, margin::Int) = run_nest(text, opts = Options(margin = margin))
+
 @testset "Default Style" begin
     @testset "basic" begin
         test_format("", "")
@@ -277,8 +303,7 @@
         test_format("( a, b)", "(a, b)")
         test_format("(a, b )", "(a, b)")
         test_format("(a, b ,)", "(a, b)")
-        @test fmt("""(a,    b ,
-                            c)""") == "(a, b, c)"
+        test_format("(a,    b ,\nc)", "(a, b, c)")
     end
 
     @testset "curly" begin
@@ -831,7 +856,7 @@
         test_format(str, str)
 
         str = "var = \"a_long_function_stringggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg\""
-        fmt(str, 4, 1) == str
+        test_format(str, str; indent=4, margin=1)
     end
 
     @testset "op chain" begin
@@ -972,46 +997,46 @@
         begin
             arg
         end"""
-        @test fmt("""
+        test_format("""
                     begin
                     arg
-                    end""") == str
-        @test fmt("""
+                    end""", str)
+        test_format("""
                     begin
                         arg
-                    end""") == str
-        @test fmt("""
+                    end""", str)
+        test_format("""
                     begin
                         arg
-                    end""") == str
-        @test fmt("""
+                    end""", str)
+        test_format("""
                     begin
                             arg
-                    end""") == str
+                    end""", str)
         str = """
         begin
             begin
                 arg
             end
         end"""
-        @test fmt("""
+        test_format("""
                     begin
                     begin
                     arg
                     end
-                    end""") == str
-        @test fmt("""
+                    end""", str)
+        test_format("""
                     begin
                                 begin
                     arg
                     end
-                    end""") == str
-        @test fmt("""
+                    end""", str)
+        test_format("""
                     begin
                                 begin
                     arg
                             end
-                    end""") == str
+                    end""", str)
 
         str = """
         begin
@@ -1030,18 +1055,18 @@
         quote
             arg
         end"""
-        @test fmt("""
+        test_format("""
         quote
             arg
-        end""") == str
-        @test fmt("""
+        end""", str)
+        test_format("""
         quote
         arg
-        end""") == str
-        @test fmt("""
+        end""", str)
+        test_format("""
         quote
                 arg
-            end""") == str
+            end""", str)
 
         str = """:(a = 10; b = 20; c = a * b)"""
         test_format(":(a = 10; b = 20; c = a * b)", str)
@@ -1087,11 +1112,11 @@
             return x * y
         end"""
 
-        @test fmt("""
+        test_format("""
         map(args) do x
           y = 20
                             return x * y
-            end""") == str
+            end""", str)
 
         str = """
         map(1:10, 11:20) do x, y
@@ -1152,35 +1177,35 @@
         for iter in I
             arg
         end"""
-        @test fmt("""
+        test_format("""
         for iter in I
             arg
-        end""") == str
-        @test fmt("""
+        end""", str)
+        test_format("""
         for iter in I
         arg
-        end""") == str
-        @test fmt("""
+        end""", str)
+        test_format("""
         for iter in I
           arg
-        end""") == str
+        end""", str)
 
         str = """
         for iter in I, iter2 in I2
             arg
         end"""
-        @test fmt("""
+        test_format("""
         for iter = I, iter2= I2
             arg
-        end""") == str
-        @test fmt("""
+        end""", str)
+        test_format("""
         for iter= I, iter2=I2
         arg
-        end""") == str
-        @test fmt("""
+        end""", str)
+        test_format("""
         for iter    = I, iter2 = I2
                 arg
-            end""") == str
+            end""", str)
 
         str = """
         a = 10000
@@ -1204,18 +1229,18 @@
         while cond
             arg
         end"""
-        @test fmt("""
+        test_format("""
         while cond
             arg
-        end""") == str
-        @test fmt("""
+        end""", str)
+        test_format("""
         while cond
         arg
-        end""") == str
-        @test fmt("""
+        end""", str)
+        test_format("""
         while cond
                 arg
-            end""") == str
+            end""", str)
 
         # This will be a FileH header
         # with no blocks
@@ -1266,40 +1291,40 @@
         let x=X
             arg
         end"""
-        @test fmt("""
+        test_format("""
         let x=X
             arg
-        end""") == str
-        @test fmt("""
+        end""", str)
+        test_format("""
         let x=X
         arg
-        end""") == str
-        @test fmt("""
+        end""", str)
+        test_format("""
         let x=X
             arg
-        end""") == str
+        end""", str)
 
         str = """
         let x = X, y = Y
             arg
         end"""
-        @test fmt("""
+        test_format("""
         let x = X, y = Y
             arg
-        end""") == str
-        @test fmt("""
+        end""", str)
+        test_format("""
         let x = X, y = Y
         arg
-        end""") == str
+        end""", str)
 
         str = """
         y, back = let
             body
         end"""
-        @test fmt("""
+        test_format("""
         y,back = let
           body
-        end""") == str
+        end""", str)
 
         str = """
         let x = a,
@@ -1309,13 +1334,13 @@
 
             body
         end"""
-        @test fmt("""
+        test_format("""
         let x = a,
             # comment
                b,
               c
            body
-           end""") == str
+           end""", str)
 
         str = """
         let x = X, y = Y
@@ -1339,26 +1364,26 @@
         catch
             arg
         end"""
-        @test fmt("""
+        test_format("""
         try
             arg
         catch
             arg
-        end""") == str
+        end""", str)
 
-        @test fmt("""
+        test_format("""
         try
         arg
         catch
         arg
-        end""") == str
+        end""", str)
 
-        @test fmt("""
+        test_format("""
         try
                 arg
             catch
                 arg
-            end""") == str
+            end""", str)
 
         str = """
         try
@@ -1366,26 +1391,26 @@
         catch
             arg
         end"""
-        @test fmt("""
+        test_format("""
         try
             arg
         catch
             arg
-        end""") == str
+        end""", str)
 
-        @test fmt("""
+        test_format("""
         try
         arg
         catch
         arg
-        end""") == str
+        end""", str)
 
-        @test fmt("""
+        test_format("""
         try
                 arg
             catch
                 arg
-            end""") == str
+            end""", str)
 
         str = """
         try
@@ -1394,26 +1419,26 @@
             arg
         end"""
 
-        @test fmt("""
+        test_format("""
         try
             arg
         catch err
             arg
-        end""") == str
+        end""", str)
 
-        @test fmt("""
+        test_format("""
         try
         arg
         catch err
         arg
-        end""") == str
+        end""", str)
 
-        @test fmt("""
+        test_format("""
         try
                 arg
             catch err
                 arg
-            end""") == str
+            end""", str)
 
         str = """
         try
@@ -1902,11 +1927,11 @@
             # single comment ending in a subscriptₙ
             x - y
         end"""
-        @test fmt("""
+        test_format("""
         function bar(x, y)
             # single comment ending in a subscriptₙ
             x- y
-        end""") == str
+        end""", str)
 
         str_ = """
         var = foo(      # eat
@@ -2130,23 +2155,6 @@
         )"""
         test_format(str_, str)
 
-        # str = """
-        # [
-        #  a b Expr();
-        #  d e Expr()
-        # ]"""
-        # str_ = """
-        # [
-        # ;
-        # ;
-        # ;
-        #  a b Expr();
-        #  ;
-        #  d e Expr();
-        #  ;
-        # ]"""
-        # @test fmt(str_) == str
-
         # Issue #51
         # NOTE: `str_` has extra whitespace after
         # keywords on purpose
@@ -2299,16 +2307,16 @@
 
     @testset "pretty" begin
         str = """function foo end"""
-        @test fmt("""
+        test_format("""
             function  foo
-            end""") == str
+            end""", str)
         t = run_pretty(str, 80)
         @test length(t) == 16
 
         str = """function foo() end"""
-        @test fmt("""
+        test_format("""
                      function  foo()
-            end""") == str
+            end""", str)
         t = run_pretty(str, 80)
         @test length(t) == 18
 
@@ -2321,15 +2329,15 @@
         @test length(t) == 14
 
         str = """abstract type AbstractFoo end"""
-        @test fmt("""abstract type
+        test_format("""abstract type
                      AbstractFoo
-                end""") == str
+                end""", str)
 
         str = "primitive type A <: B 32 end"
-        @test fmt("""primitive type
+        test_format("""primitive type
                      A   <: B
                      32
-                end""") == str
+                end""", str)
 
         str = """for i = 1:10
                      1;
@@ -2367,8 +2375,8 @@
         str = """map(a) do b, c
                      e
                  end"""
-        @test fmt("""map(a) do b,c
-                     e end""") == str
+        test_format("""map(a) do b,c
+                     e end""", str)
 
         str = """let a=b, c = d
                      e1;
@@ -2380,12 +2388,12 @@
         str = """let a, b
                      e
                  end"""
-        @test fmt("""let a,b
-                     e end""") == str
+        test_format("""let a,b
+                     e end""", str)
 
         str = """return a, b, c"""
-        @test fmt("""return a,b,
-                     c""") == str
+        test_format("""return a,b,
+                     c""", str)
 
         str = """begin
                      a;
@@ -2437,9 +2445,9 @@
                          e8
                      end
                  end"""
-        @test fmt(
+        test_format(
             "begin if cond1 e1; e2 elseif cond2 e3; e4 elseif cond3 e5;e6 else e7;e8  end end",
-        ) == str
+            str)
 
         str = """if cond1
                      e1;
@@ -3661,10 +3669,10 @@
         test_format("a * 1. + b", "a * 1.0 + b")
         test_format("1. + 2. * im", "1.0 + 2.0 * im")
         test_format("[1., 2.]", "[1.0, 2.0]")
-        @test fmt("""
+        test_format("""
         1. +
             2.
-        """) == "1.0 + 2.0\n"
+        """, "1.0 + 2.0\n")
     end
 
     @testset "Leading zeros" begin
@@ -3672,10 +3680,10 @@
         test_format("a * .1 + b", "a * 0.1 + b")
         test_format(".1 + .2 * im", "0.1 + 0.2 * im")
         test_format("[.1, .2]", "[0.1, 0.2]")
-        @test fmt("""
+        test_format("""
         .1 +
             .2
-        """) == "0.1 + 0.2\n"
+        """, "0.1 + 0.2\n")
     end
 
     # https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/77
@@ -3889,7 +3897,7 @@
                 @test x1 == x2
             end
         end"""
-        test_format(str_, str)
+        test_format(str_, str; margin=80)
     end
 
     @testset "single newline at end of file" begin
@@ -4024,7 +4032,6 @@
         test_format(str_, str; indent=4, margin=50)
 
         str_ = "(b for b in bar if b == 0 for bar in foo)"
-        @test format_text(str_) == str_
         test_format(str_, str_)
 
         str = """
@@ -4986,3 +4993,5 @@ some_function(
         end
     end
 end
+
+end # module
