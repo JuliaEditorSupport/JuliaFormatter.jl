@@ -2370,7 +2370,7 @@ function p_binaryopcall(
 
     nrhs = nest_rhs(cst)
     if nrhs
-        (t.nest_behavior = AlwaysNest)
+        t.nest_behavior = AlwaysNest
     end
     nest = (is_binaryop_nestable(style, cst) && !nonest) || nrhs
     if opkind === K"=>" && haschildren(cst)

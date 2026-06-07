@@ -1,9 +1,9 @@
 @testset "Default Style" begin
     @testset "basic" begin
-        @test fmt("") == ""
-        @test fmt("a") == "a"
-        @test fmt("a  #foo") == "a  #foo"
-        @test fmt("#foo") == "#foo"
+        test_format("", "")
+        test_format("a", "a")
+        test_format("a  #foo", "a  #foo")
+        test_format("#foo", "#foo")
 
         str = """
         begin
@@ -12,22 +12,22 @@
              =#
         end
         """
-        @test fmt(str) == str
+        test_format(str, str)
 
         str = """
         #=
         Hello, world!
         =#
         a"""
-        @test fmt(str) == str
+        test_format(str, str)
     end
 
     @testset "format toggle" begin
         str = "#! format: off\n module Foo a \n end"
-        @test fmt(str) == str
+        test_format(str, str)
 
         str = "#! format: off\n#! format: on"
-        @test fmt(str) == str
+        test_format(str, str)
 
         str = """
         begin
@@ -37,7 +37,7 @@
                          this
             #! format: on
         end"""
-        @test fmt(str) == str
+        test_format(str, str)
 
         str = """
         begin
@@ -47,7 +47,7 @@
             #            this
             #! format: on
         end"""
-        @test fmt(str) == str
+        test_format(str, str)
 
         str = """
         # this should be formatted
@@ -84,7 +84,7 @@
         e = "what the foocho"
 
         # comment"""
-        @test fmt(str_) == str
+        test_format(str_, str)
 
         str = """
         # this should be formatted
@@ -138,7 +138,7 @@
         b = 10 *20
 
         # comment"""
-        @test fmt(str_) == str
+        test_format(str_, str)
 
         str = """
         # this should be formatted
@@ -157,19 +157,19 @@
         x =      1
 
         d = @foo 10 20"""
-        @test fmt(str) == str
+        test_format(str, str)
     end
 
     @testset "dot op" begin
-        @test fmt("10 .^ a") == "10 .^ a"
-        @test fmt("10.0 .^ a") == "10.0 .^ a"
-        @test fmt("a.^b") == "a .^ b"
-        @test fmt("a.^10.") == "a .^ 10.0"
-        @test fmt("a.//10") == "a .// 10"
+        test_format("10 .^ a", "10 .^ a")
+        test_format("10.0 .^ a", "10.0 .^ a")
+        test_format("a.^b", "a .^ b")
+        test_format("a.^10.", "a .^ 10.0")
+        test_format("a.//10", "a .// 10")
 
-        @test fmt("a .^ b") == "a .^ b"
-        @test fmt("a .^ 10.") == "a .^ 10.0"
-        @test fmt("a .// 10") == "a .// 10"
+        test_format("a .^ b", "a .^ b")
+        test_format("a .^ 10.", "a .^ 10.0")
+        test_format("a .// 10", "a .// 10")
     end
 
     @testset "toplevel" begin
@@ -193,7 +193,7 @@
         c = 50;
 
         #comment"""
-        @test fmt(str_) == str
+        test_format(str_, str)
         t = run_pretty(str, 80)
         @test length(t) == 17
     end
@@ -203,13 +203,13 @@
         for i = 1:n
             println(i)
         end"""
-        @test fmt(str) == str
+        test_format(str, str)
 
         str = """
         for i in itr
             println(i)
         end"""
-        @test fmt(str) == str
+        test_format(str, str)
 
         str = """
         for i = 1:n
@@ -219,7 +219,7 @@
         for i in 1:n
             println(i)
         end"""
-        @test fmt(str_) == str
+        test_format(str_, str)
 
         str = """
         for i in itr
@@ -229,7 +229,7 @@
         for i = itr
             println(i)
         end"""
-        @test fmt(str_) == str
+        test_format(str_, str)
 
         str_ = """
         for i = I1, j in I2
@@ -239,7 +239,7 @@
         for i in I1, j in I2
             println(i, j)
         end"""
-        @test fmt(str_) == str
+        test_format(str_, str)
 
         str_ = """
         for i = 1:30, j in 100:-2:1
@@ -249,51 +249,51 @@
         for i = 1:30, j = 100:-2:1
             println(i, j)
         end"""
-        @test fmt(str_) == str
+        test_format(str_, str)
 
         str_ = "[(i,j) for i=I1,j=I2]"
         str = "[(i, j) for i in I1, j in I2]"
-        @test fmt(str_) == str
+        test_format(str_, str)
 
         str_ = "((i,j) for i=I1,j=I2)"
         str = "((i, j) for i in I1, j in I2)"
-        @test fmt(str_) == str
+        test_format(str_, str)
 
         str_ = "[(i,j) for i in 1:2:10,j  in 100:-1:10]"
         str = "[(i, j) for i = 1:2:10, j = 100:-1:10]"
-        @test fmt(str_) == str
+        test_format(str_, str)
 
         str_ = "((i,j) for i in 1:2:10,j  in 100:-1:10)"
         str = "((i, j) for i = 1:2:10, j = 100:-1:10)"
-        @test fmt(str_) == str
+        test_format(str_, str)
     end
 
     @testset "tuples" begin
-        @test fmt("(a,)") == "(a,)"
-        @test fmt("a,b") == "a, b"
-        @test fmt("a ,b") == "a, b"
-        @test fmt("(a,b)") == "(a, b)"
-        @test fmt("(a ,b)") == "(a, b)"
-        @test fmt("( a, b)") == "(a, b)"
-        @test fmt("(a, b )") == "(a, b)"
-        @test fmt("(a, b ,)") == "(a, b)"
+        test_format("(a,)", "(a,)")
+        test_format("a,b", "a, b")
+        test_format("a ,b", "a, b")
+        test_format("(a,b)", "(a, b)")
+        test_format("(a ,b)", "(a, b)")
+        test_format("( a, b)", "(a, b)")
+        test_format("(a, b )", "(a, b)")
+        test_format("(a, b ,)", "(a, b)")
         @test fmt("""(a,    b ,
                             c)""") == "(a, b, c)"
     end
 
     @testset "curly" begin
-        @test fmt("X{a,b}") == "X{a,b}"
-        @test fmt("X{ a,b}") == "X{a,b}"
-        @test fmt("X{a ,b}") == "X{a,b}"
-        @test fmt("X{a, b}") == "X{a,b}"
-        @test fmt("X{a,b }") == "X{a,b}"
-        @test fmt("X{a,b }") == "X{a,b}"
+        test_format("X{a,b}", "X{a,b}")
+        test_format("X{ a,b}", "X{a,b}")
+        test_format("X{a ,b}", "X{a,b}")
+        test_format("X{a, b}", "X{a,b}")
+        test_format("X{a,b }", "X{a,b}")
+        test_format("X{a,b }", "X{a,b}")
 
         str = """
         mutable struct Foo{A<:Bar,Union{B<:Fizz,C<:Buzz},<:Any}
             a::A
         end"""
-        @test fmt(str) == str
+        test_format(str, str)
         t = run_pretty(str, 80)
         @test length(t) == 55
 
@@ -301,7 +301,7 @@
         struct Foo{A<:Bar,Union{B<:Fizz,C<:Buzz},<:Any}
             a::A
         end"""
-        @test fmt(str) == str
+        test_format(str, str)
         t = run_pretty(str, 80)
         @test length(t) == 47
     end
@@ -309,23 +309,23 @@
     @testset "where op" begin
         str = "Atomic{T}(value) where {T<:AtomicTypes} = new(value)"
         str_ = "Atomic{T}(value) where T <: AtomicTypes = new(value)"
-        @test fmt(str) == str
-        @test fmt(str_) == str
+        test_format(str, str)
+        test_format(str_, str)
 
         str = "Vector{Vector{T} where T}"
-        @test fmt(str) == str
+        test_format(str, str)
 
         str_ = "Vector{Vector{T}} where T"
         str = "Vector{Vector{T}} where {T}"
-        @test fmt(str_) == str
-        @test fmt(str) == str
+        test_format(str_, str)
+        test_format(str, str)
     end
 
     @testset "unary ops" begin
-        @test fmt("! x") == "! x"
-        @test fmt("x ...") == "x ..."
-        @test fmt("!x") == "!x"
-        @test fmt("x...") == "x..."
+        test_format("! x", "! x")
+        test_format("x ...", "x ...")
+        test_format("!x", "!x")
+        test_format("x...", "x...")
 
         # Issue 110
         str = raw"""
@@ -339,24 +339,24 @@
                 )
             end
         end"""
-        @test fmt(str) == str
+        test_format(str, str)
 
         str_ = "foo(args...)"
         str = """
         foo(
             args...,
         )"""
-        @test fmt(str_; m = 1) == str
-        @test fmt(str; m = 1) == str
+        test_format(str_, str; margin = 1)
+        test_format(str, str; margin = 1)
     end
 
     @testset ": op" begin
-        @test fmt("a:b:c") == "a:b:c"
-        @test fmt("a :b:c") == "a:b:c"
-        @test fmt("a: b:c") == "a:b:c"
-        @test fmt("a:b :c") == "a:b:c"
-        @test fmt("a:b: c") == "a:b:c"
-        @test fmt("a:b:c ") == "a:b:c"
+        test_format("a:b:c", "a:b:c")
+        test_format("a :b:c", "a:b:c")
+        test_format("a: b:c", "a:b:c")
+        test_format("a:b :c", "a:b:c")
+        test_format("a:b: c", "a:b:c")
+        test_format("a:b:c ", "a:b:c")
     end
 
     @testset "binary ops" begin
@@ -370,16 +370,16 @@
             for op in ("+", "*", "/", "-", "^", "%", "<", ">", "<=", ">=", "=>", "->", "-->", "<--", "~", "<:", ">:", "=", "==", "+=", "-=", "&&", "||")
                 # see typedef section below also for <: and >:
                 for (a, b) in (("a", "b"), ("[a", "b]"), ("(a", "b)"))
-                    @test fmt("$a$(op)$b") == "$a$(op)$b"
-                    @test fmt("$a$(op) $b") == "$a $(op) $b"
-                    @test fmt("$a $(op) $b") == "$a $(op) $b"
-                    @test fmt("$a  $(op)  $b") == "$a $(op) $b"
+                    test_format("$a$(op)$b", "$a$(op)$b")
+                    test_format("$a$(op) $b", "$a $(op) $b")
+                    test_format("$a $(op) $b", "$a $(op) $b")
+                    test_format("$a  $(op)  $b", "$a $(op) $b")
 
                     # Some of these are unary operators, so [a <op>b] means a 1x2 matrix
                     # with `a` and `<op>b` as elements, rather than a length-1 vector with
                     # `a<op>b` as its element. We skip those tests.
                     if !(op in ("+", "-", "~") && a == "[a")
-                        @test fmt("$a $(op)$b") == "$a $(op) $b"
+                        test_format("$a $(op)$b", "$a $(op) $b")
                     end
                 end
             end
@@ -387,16 +387,16 @@
             for op in (":", "::")
                 for (a, b) in (("a", "b"), ("[a", "b]"), ("(a", "b)"))
                     target = "$a$(op)$b"
-                    @test fmt("$a$(op)$b") == target
-                    @test fmt("$a$(op) $b") == target
-                    @test fmt("$a $(op) $b") == target
-                    @test fmt("$a  $(op)  $b") == target
+                    test_format("$a$(op)$b", target)
+                    test_format("$a$(op) $b", target)
+                    test_format("$a $(op) $b", target)
+                    test_format("$a  $(op)  $b", target)
 
                     # Just like above, `[a :b]` means a 1x2 matrix wtih with `a` and `:b`
                     # (i.e. a symbol) as elements, rather than a length-1 vector with `a:b`
                     # as its element. We skip those tests.
                     if !(op == ":" && a == "[a")
-                        @test fmt("$a $(op)$b") == target
+                        test_format("$a $(op)$b", target)
                     end
 
                 end
@@ -404,50 +404,50 @@
             # Supertypes / subtypes have special behaviour within typedefs
             for op in ("<:", ">:")
                 target = "function f() where {a$(op)b} end"
-                @test fmt("function f() where {a$(op)b} end") == target
-                @test fmt("function f() where {a $(op)b} end") == target
-                @test fmt("function f() where {a$(op) b} end") == target
-                @test fmt("function f() where {a $(op) b} end") == target
-                @test fmt("function f() where {a  $(op)  b} end") == target
+                test_format("function f() where {a$(op)b} end", target)
+                test_format("function f() where {a $(op)b} end", target)
+                test_format("function f() where {a$(op) b} end", target)
+                test_format("function f() where {a $(op) b} end", target)
+                test_format("function f() where {a  $(op)  b} end", target)
             end
         end
 
-        @test fmt("a+b*c") == "a+b*c"
-        @test fmt("a +b *c") == "a + b * c"
-        @test fmt("a + b      *c") == "a + b * c"
-        @test fmt("a +b*c") == "a + b*c"
-        @test fmt("a + b*c") == "a + b*c"
-        @test fmt("a+b *c") == "a+b * c"
-        @test fmt("a+b* c") == "a+b * c"
-        @test fmt("a+b*c ") == "a+b*c"
-        @test fmt("a:b") == "a:b"
-        @test fmt("a : b") == "a:b"
-        @test fmt("a: b") == "a:b"
-        @test fmt("a :b") == "a:b"
-        @test fmt("a +1 :b -1") == "(a+1):(b-1)"
-        @test fmt("a.b:c.d") == "a.b:c.d" # shouldn't add parens
+        test_format("a+b*c", "a+b*c")
+        test_format("a +b *c", "a + b * c")
+        test_format("a + b      *c", "a + b * c")
+        test_format("a +b*c", "a + b*c")
+        test_format("a + b*c", "a + b*c")
+        test_format("a+b *c", "a+b * c")
+        test_format("a+b* c", "a+b * c")
+        test_format("a+b*c ", "a+b*c")
+        test_format("a:b", "a:b")
+        test_format("a : b", "a:b")
+        test_format("a: b", "a:b")
+        test_format("a :b", "a:b")
+        test_format("a +1 :b -1", "(a+1):(b-1)")
+        test_format("a.b:c.d", "a.b:c.d") # shouldn't add parens
 
-        @test fmt("a::b:: c") == "a::b::c"
-        @test fmt("a :: b::c") == "a::b::c"
-        @test fmt("a      :: b   :: c") == "a::b::c"
+        test_format("a::b:: c", "a::b::c")
+        test_format("a :: b::c", "a::b::c")
+        test_format("a      :: b   :: c", "a::b::c")
         # issue 74
-        @test fmt("0:1/3:2") == "0:(1/3):2"
-        @test fmt("2a") == "2a"
+        test_format("0:1/3:2", "0:(1/3):2")
+        test_format("2a", "2a")
         # issue 251
-        @test fmt("2(a   + 1)") == "2(a + 1)"
-        @test fmt("2(a+1)") == "2(a+1)"
-        @test fmt("1 / 2a^2") == "1 / 2a^2"
+        test_format("2(a   + 1)", "2(a + 1)")
+        test_format("2(a+1)", "2(a+1)")
+        test_format("1 / 2a^2", "1 / 2a^2")
 
         str_ = "a[1:2 * num_source * num_dump-1]"
         str = "a[1:(2*num_source*num_dump-1)]"
-        @test fmt(str_, 4, 1) == str
+        test_format(str_, str; indent=4, margin=1)
 
         str_ = "a[2 * num_source * num_dump-1:1]"
         str = "a[(2*num_source*num_dump-1):1]"
-        @test fmt(str_, 4, 1) == str
+        test_format(str_, str; indent=4, margin=1)
 
         str = "!(typ <: ArithmeticTypes)"
-        @test fmt(str) == str
+        test_format(str, str)
 
         text = "a + b"
         d = JuliaFormatter.Document(text)
@@ -457,8 +457,8 @@
         @test JuliaFormatter.source_op_kind_from_offset(s, op, UInt32(3)) ===
               JuliaSyntax.Kind("+")
 
-        @test fmt("1 // 2 + 3^4") == "1 // 2 + 3^4"
-        @test fmt("1 // 2 + 3 ^ 4") == "1 // 2 + 3 ^ 4"
+        test_format("1 // 2 + 3^4", "1 // 2 + 3^4")
+        test_format("1 // 2 + 3 ^ 4", "1 // 2 + 3 ^ 4")
 
         # Function def
 
@@ -470,7 +470,7 @@
             else
                 b
             end"""
-        @test fmt(str_) == str
+        test_format(str_, str)
 
         str_ = """
         foo() = begin
@@ -481,8 +481,8 @@
             begin
                 body
             end"""
-        @test fmt(str) == str_
-        @test fmt(str_, 4, 1) == str
+        test_format(str, str_)
+        test_format(str_, str; indent=4, margin=1)
 
         str_ = """
         foo() = quote
@@ -493,11 +493,11 @@
             quote
                 body
             end"""
-        @test fmt(str) == str_
-        @test fmt(str_, 4, 1) == str
+        test_format(str, str_)
+        test_format(str_, str; indent=4, margin=1)
 
         str = """foo() = :(Union{})"""
-        @test fmt(str) == str
+        test_format(str, str)
 
         str_ = """foo() = for i=1:10 body end"""
         str = """
@@ -505,7 +505,7 @@
             for i = 1:10
                 body
             end"""
-        @test fmt(str_) == str
+        test_format(str_, str)
 
         str_ = """foo() = for outer i=1:10 body end"""
         str = """
@@ -513,7 +513,7 @@
             for outer i = 1:10
                 body
             end"""
-        @test fmt(str_) == str
+        test_format(str_, str)
 
         str_ = """foo() = while cond body end"""
         str = """
@@ -521,7 +521,7 @@
             while cond
                 body
             end"""
-        @test fmt(str_) == str
+        test_format(str_, str)
 
         str_ = """foo() = try body1 catch e body2 finally body3 end"""
         str = """
@@ -533,7 +533,7 @@
             finally
                 body3
             end"""
-        @test fmt(str_) == str
+        test_format(str_, str)
 
         # Assignment op
 
@@ -545,46 +545,46 @@
           else
             b
           end"""
-        @test fmt(str_, 2, 1) == str
+        test_format(str_, str; indent=2, margin=1)
 
         str_ = """foo = begin body end"""
         str = """
         foo = begin
           body
         end"""
-        @test fmt(str_, 2, 11) == str
+        test_format(str_, str; indent=2, margin=11)
         str = """
         foo =
           begin
             body
           end"""
-        @test fmt(str_, 2, 10) == str
+        test_format(str_, str; indent=2, margin=10)
 
         str_ = """foo = quote body end"""
         str = """
         foo = quote
           body
         end"""
-        @test fmt(str_, 2, 11) == str
+        test_format(str_, str; indent=2, margin=11)
         str = """
         foo =
           quote
             body
           end"""
-        @test fmt(str_, 2, 10) == str
+        test_format(str_, str; indent=2, margin=10)
 
         str_ = """foo = for i=1:10 body end"""
         str = """
         foo = for i = 1:10
           body
         end"""
-        @test fmt(str_, 2, 18) == str
+        test_format(str_, str; indent=2, margin=18)
         str = """
         foo =
           for i = 1:10
             body
           end"""
-        @test fmt(str_, 2, 17) == str
+        test_format(str_, str; indent=2, margin=17)
 
         str_ = """foo = while cond body end"""
         str = """
@@ -592,7 +592,7 @@
           while cond
             body
           end"""
-        @test fmt(str_, 2, 1) == str
+        test_format(str_, str; indent=2, margin=1)
 
         str_ = """foo = try body1 catch e body2 finally body3 end"""
         str = """
@@ -604,61 +604,61 @@
           finally
             body3
           end"""
-        @test fmt(str_, 2, 1) == str
+        test_format(str_, str; indent=2, margin=1)
 
         str_ = """
         foo = let
           body
         end"""
-        @test fmt(str_, 2, 9) == str_
+        test_format(str_, str_; indent=2, margin=9)
         str = """
         foo =
           let
             body
           end"""
-        @test fmt(str_, 2, 8) == str
+        test_format(str_, str; indent=2, margin=8)
         str = """
         foo =
           let
             body
           end"""
-        @test fmt(str_, 2, 1) == str
+        test_format(str_, str; indent=2, margin=1)
 
         str_ = """a, b = cond ? e1 : e2"""
 
         str = """
         a, b =
             cond ? e1 : e2"""
-        @test fmt(str_, 4, length(str_) - 1) == str
-        @test fmt(str_, 4, 18) == str
+        test_format(str_, str; indent=4, margin=length(str_) - 1)
+        test_format(str_, str; indent=4, margin=18)
 
         str = """
         a, b =
             cond ? e1 :
             e2"""
-        @test fmt(str_, 4, 17) == str
-        @test fmt(str_, 4, 15) == str
+        test_format(str_, str; indent=4, margin=17)
+        test_format(str_, str; indent=4, margin=15)
 
         str = """
         a, b =
             cond ?
             e1 : e2"""
-        @test fmt(str_, 4, 14) == str
-        @test fmt(str_, 4, 11) == str
+        test_format(str_, str; indent=4, margin=14)
+        test_format(str_, str; indent=4, margin=11)
 
         str = """
         a, b =
             cond ?
             e1 :
             e2"""
-        @test fmt(str_, 4, 10) == str
+        test_format(str_, str; indent=4, margin=10)
 
         str = """
         begin
             variable_name =
                 argument1 + argument2
         end"""
-        @test fmt(str, 4, 40) == str
+        test_format(str, str; indent=4, margin=40)
 
         str = """
         begin
@@ -666,14 +666,14 @@
                 argument1 +
                 argument2
         end"""
-        @test fmt(str, 4, 28) == str
+        test_format(str, str; indent=4, margin=28)
 
         str = """
         begin
             variable_name =
                 conditional ? expression1 : expression2
         end"""
-        @test fmt(str, 4, 58) == str
+        test_format(str, str; indent=4, margin=58)
 
         str = """
         begin
@@ -681,7 +681,7 @@
                 conditional ? expression1 :
                 expression2
         end"""
-        @test fmt(str, 4, 46) == str
+        test_format(str, str; indent=4, margin=46)
 
         str = """
         begin
@@ -689,8 +689,8 @@
                 conditional ?
                 expression1 : expression2
         end"""
-        @test fmt(str, 4, 34) == str
-        @test fmt(str, 4, 33) == str
+        test_format(str, str; indent=4, margin=34)
+        test_format(str, str; indent=4, margin=33)
 
         str = """
         begin
@@ -699,33 +699,33 @@
                 expression1 :
                 expression2
         end"""
-        @test fmt(str, 4, 32) == str
+        test_format(str, str; indent=4, margin=32)
 
         str = "shmem[pout*rows+row] += shmem[pin*rows+row] + shmem[pin*rows+row-offset]"
 
         str_ = """
         shmem[pout*rows+row] +=
                shmem[pin*rows+row] + shmem[pin*rows+row-offset]"""
-        @test fmt(str, 7, 71) == str_
+        test_format(str, str_; indent=7, margin=71)
         str_ = """
         shmem[pout*rows+row] +=
                shmem[pin*rows+row] +
                shmem[pin*rows+row-offset]"""
-        @test fmt(str, 7, 54) == str_
+        test_format(str, str_; indent=7, margin=54)
 
         str = """
         begin
            var = func(arg1, arg2, arg3) * num
         end"""
-        @test fmt(str, 3, 37) == str
+        test_format(str, str; indent=3, margin=37)
 
         str_ = """
         begin
            var =
               func(arg1, arg2, arg3) * num
         end"""
-        @test fmt(str, 3, 36) == str_
-        @test fmt(str, 3, 34) == str_
+        test_format(str, str_; indent=3, margin=36)
+        test_format(str, str_; indent=3, margin=34)
 
         str_ = """
         begin
@@ -733,8 +733,8 @@
               func(arg1, arg2, arg3) *
               num
         end"""
-        @test fmt(str, 3, 33) == str_
-        @test fmt(str, 3, 30) == str_
+        test_format(str, str_; indent=3, margin=33)
+        test_format(str, str_; indent=3, margin=30)
 
         str_ = """
         begin
@@ -745,7 +745,7 @@
                  arg3,
               ) * num
         end"""
-        @test fmt(str, 3, 29) == str_
+        test_format(str, str_; indent=3, margin=29)
 
         str_ = """
         begin
@@ -757,15 +757,15 @@
               ) *
               num
         end"""
-        @test fmt(str, 3, 1) == str_
+        test_format(str, str_; indent=3, margin=1)
 
         str = """
         begin
             foo() =
                 (one, x -> (true, false))
         end"""
-        @test fmt(str, 4, 36) == str
-        @test fmt(str, 4, 33) == str
+        test_format(str, str; indent=4, margin=36)
+        test_format(str, str; indent=4, margin=33)
 
         str = """
         begin
@@ -774,8 +774,8 @@
                 x -> (true, false),
             )
         end"""
-        @test fmt(str, 4, 32) == str
-        @test fmt(str, 4, 27) == str
+        test_format(str, str; indent=4, margin=32)
+        test_format(str, str; indent=4, margin=27)
         str = """
         begin
             foo() = (
@@ -786,7 +786,7 @@
                 ),
             )
         end"""
-        @test fmt(str, 4, 26) == str
+        test_format(str, str; indent=4, margin=26)
 
         str = """
         ignored_f(f) = f in (
@@ -800,7 +800,7 @@
             GlobalRef(Core, :kwfunc),
             GlobalRef(Core, :isdefined),
         )"""
-        @test fmt(str) == str
+        test_format(str, str)
 
         str = """
         ignored_f(f) = f in foo([{
@@ -814,7 +814,7 @@
             GlobalRef(Core, :kwfunc),
             GlobalRef(Core, :isdefined),
         }])"""
-        @test fmt(str) == str
+        test_format(str, str)
 
         str = """
         ignored_f(f) = f in foo(((
@@ -828,53 +828,53 @@
             GlobalRef(Core, :kwfunc),
             GlobalRef(Core, :isdefined),
         )))"""
-        @test fmt(str) == str
+        test_format(str, str)
 
         str = "var = \"a_long_function_stringggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg\""
         fmt(str, 4, 1) == str
     end
 
     @testset "op chain" begin
-        @test fmt("a+b+c+d") == "a+b+c+d"
-        @test fmt("a + b + c +d") == "a + b + c + d"
+        test_format("a+b+c+d", "a+b+c+d")
+        test_format("a + b + c +d", "a + b + c + d")
     end
 
     @testset "comparison chain" begin
-        @test fmt("a<b==c≥d") == "a<b==c≥d"
-        @test fmt("a<b == c≥d") == "a < b == c ≥ d"
+        test_format("a<b==c≥d", "a<b==c≥d")
+        test_format("a<b == c≥d", "a < b == c ≥ d")
     end
 
     @testset "single line block" begin
-        @test fmt("(a;b;c)") == "(a; b; c)"
+        test_format("(a;b;c)", "(a; b; c)")
     end
 
     @testset "func call" begin
-        @test fmt("func(a, b, c)") == "func(a, b, c)"
-        @test fmt("func(a,b,c)") == "func(a, b, c)"
-        @test fmt("func(a,b,c,)") == "func(a, b, c)"
-        @test fmt("func(a,b,c, )") == "func(a, b, c)"
-        @test fmt("func( a,b,c    )") == "func(a, b, c)"
-        @test fmt("func(a, b, c) ") == "func(a, b, c)"
-        @test fmt("func(a, b; c)") == "func(a, b; c)"
-        @test fmt("func(  a, b; c)") == "func(a, b; c)"
-        @test fmt("func(a  ,b; c)") == "func(a, b; c)"
-        @test fmt("func(a=1,b; c=1)") == "func(a = 1, b; c = 1)"
+        test_format("func(a, b, c)", "func(a, b, c)")
+        test_format("func(a,b,c)", "func(a, b, c)")
+        test_format("func(a,b,c,)", "func(a, b, c)")
+        test_format("func(a,b,c, )", "func(a, b, c)")
+        test_format("func( a,b,c    )", "func(a, b, c)")
+        test_format("func(a, b, c) ", "func(a, b, c)")
+        test_format("func(a, b; c)", "func(a, b; c)")
+        test_format("func(  a, b; c)", "func(a, b; c)")
+        test_format("func(a  ,b; c)", "func(a, b; c)")
+        test_format("func(a=1,b; c=1)", "func(a = 1, b; c = 1)")
 
         str = """
         func(;
           c = 1,
         )"""
-        @test fmt("func(; c = 1)", 2, 1) == str
+        test_format("func(; c = 1)", str; indent=2, margin=1)
 
-        @test fmt("func(; c = 1,)") == "func(; c = 1)"
-        @test fmt("func(a;)") == "func(a;)"
+        test_format("func(; c = 1,)", "func(; c = 1)")
+        test_format("func(a;)", "func(a;)")
 
         str = """
         func(;
             a,
             b,
         )"""
-        @test fmt(str, 4, 1) == str
+        test_format(str, str; indent=4, margin=1)
 
         str = """
         func(
@@ -882,7 +882,7 @@
             a,
             b,
         )"""
-        @test fmt(str, 4, 1) == str
+        test_format(str, str; indent=4, margin=1)
     end
 
     @testset "macro call" begin
@@ -893,8 +893,8 @@
             x
         )"""
         str_ = "@f(a, b; x)"
-        @test fmt(str_) == str_
-        @test fmt(str_, 4, 1) == str
+        test_format(str_, str_)
+        test_format(str_, str; indent=4, margin=1)
 
         str = """
         @f(
@@ -902,23 +902,23 @@
             x
         )"""
         str_ = "@f(a; x)"
-        @test fmt(str_) == str_
-        @test fmt(str_, 4, 1) == str
+        test_format(str_, str_)
+        test_format(str_, str; indent=4, margin=1)
 
         str = """
         @f(;
           x
         )"""
         str_ = "@f(; x)"
-        @test fmt(str_) == str_
-        @test fmt(str_, 2, 1) == str
+        test_format(str_, str_)
+        test_format(str_, str; indent=2, margin=1)
 
         str = """
         @f(;
             a,
             b
         )"""
-        @test fmt(str, 4, 1) == str
+        test_format(str, str; indent=4, margin=1)
 
         str = """
         @f(
@@ -926,24 +926,24 @@
             a,
             b
         )"""
-        @test fmt(str, 4, 1) == str
+        test_format(str, str; indent=4, margin=1)
 
         str = """@warn("Text")"""
-        @test fmt(str) == str
+        test_format(str, str)
 
         str_ = "@Module.macro"
         str = "Module.@macro"
-        @test fmt(str_) == str
-        @test fmt(str) == str
+        test_format(str_, str)
+        test_format(str, str)
 
         str_ = "\$Module.@macro"
         str = "\$Module.@macro"
-        @test fmt(str_) == str
-        @test fmt(str) == str
+        test_format(str_, str)
+        test_format(str, str)
 
         # @doc here should not be parsed as a macro string
         str = raw"push!(docs, :(@doc($meta, $(each.args[end]), $define)))"
-        @test fmt(str) == str
+        test_format(str, str)
     end
 
     @testset "macro block" begin
@@ -964,7 +964,7 @@
         str = """
         __module__ == Main ||
             @warn \"Replacing docs for `\$b :: \$sig` in module `\$(__module__)`\""""
-        @test fmt(str_, 4, length(str_) - 1) == str
+        test_format(str_, str; indent=4, margin=length(str_) - 1)
     end
 
     @testset "begin" begin
@@ -1022,7 +1022,7 @@
                 cccc,
             )
         end"""
-        @test fmt(str, 4, 28) == str
+        test_format(str, str; indent=4, margin=28)
     end
 
     @testset "quote" begin
@@ -1044,7 +1044,7 @@
             end""") == str
 
         str = """:(a = 10; b = 20; c = a * b)"""
-        @test fmt(":(a = 10; b = 20; c = a * b)") == str
+        test_format(":(a = 10; b = 20; c = a * b)", str)
 
         str = """
         :(endidx = ndigits;
@@ -1065,8 +1065,8 @@
                     print(out, '.')
                     unsafe_write(out, pointer(digits) + 1, endidx - 1)
                 end)"""
-        @test fmt(str_) == str
-        @test fmt(str) == str
+        test_format(str_, str)
+        test_format(str, str)
 
         str = """
         quote
@@ -1077,7 +1077,7 @@
                 cccc,
             )
         end"""
-        @test fmt(str, 4, 28) == str
+        test_format(str, str; indent=4, margin=28)
     end
 
     @testset "do" begin
@@ -1130,7 +1130,7 @@
         )
             body
         end"""
-        @test fmt(str_) == str
+        test_format(str_, str)
 
         str_ = """
         model = SDDP.LinearPolicyGraph(stages = 2, lower_bound = 1, direct_mode = false) do subproblem1, subproblem2
@@ -1144,7 +1144,7 @@
         ) do subproblem1, subproblem2
             body
         end"""
-        @test fmt(str_) == str
+        test_format(str_, str)
     end
 
     @testset "for" begin
@@ -1240,14 +1240,14 @@
             s1 = """while (a; b)
                 c
             end"""
-            @test fmt(s1) == s1
+            test_format(s1, s1)
             s2 = """while begin
                 a
                 b
             end
                 c
             end"""
-            @test fmt(s2) == s2
+            test_format(s2, s2)
             s3_ = """while (prettylong; prettylongtoo)
                 c
             end"""
@@ -1257,7 +1257,7 @@
             )
                 c
             end"""
-            @test fmt(s3_, 4, 20) == s3
+            test_format(s3_, s3; indent=4, margin=20)
         end
     end
 
@@ -1490,7 +1490,7 @@
                     foo
                 end
                 """
-                @test fmt(str) == str
+                test_format(str, str)
 
                 str = """
                 if x
@@ -1499,7 +1499,7 @@
                     bar
                 end
                 """
-                @test fmt(str) == str
+                test_format(str, str)
 
                 str = """
                 if $block
@@ -1508,7 +1508,7 @@
                     bar
                 end
                 """
-                @test fmt(str) == str
+                test_format(str, str)
 
                 str = """
                 if $block
@@ -1517,7 +1517,7 @@
                     bar
                 end
                 """
-                @test fmt(str) == str
+                test_format(str, str)
             end
 
             # Nesting
@@ -1530,7 +1530,7 @@
             )
                 f
             end"""
-            @test fmt(str_, 4, 20) == str
+            test_format(str_, str; indent=4, margin=20)
         end
 
     end
@@ -1541,17 +1541,17 @@
         Interpolate using `\\\$`
         \"""
         a"""
-        @test fmt(str) == str
+        test_format(str, str)
 
         str = """error("foo\\n\\nbar")"""
-        @test fmt(str) == str
+        test_format(str, str)
 
         str = """
         \"""
         \\\\
         \"""
         x"""
-        @test fmt(str) == str
+        test_format(str, str)
 
         str = """
         begin
@@ -1569,7 +1569,7 @@
 
                       cool!\"\"\"
         end"""
-        @test fmt(str_) == str
+        test_format(str_, str)
 
         @testset "multiline string starting on line with display width != bytes" begin
             # https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/974
@@ -1607,7 +1607,7 @@
                 # weirdly on Windows causing CI to fail.
                 # https://github.com/JuliaLang/julia/issues/38908
                 s = replace(s, "\r\n" => "\n")
-                @test fmt(s) == s
+                test_format(s, s)
             end
         end
 
@@ -1631,7 +1631,7 @@
                                      can be created at https://gist.github.com/.\"""))
             end
         end"""
-        @test fmt(str_, 4, 120) == str
+        test_format(str_, str; indent=4, margin=120)
 
         str = raw"""
         begin
@@ -1647,16 +1647,16 @@
                 )
             end
         end"""
-        @test fmt(str_, 4, 1) == str
+        test_format(str_, str; indent=4, margin=1)
 
         str = """
         foo() = llvmcall(\"""
                          llvm1
                          llvm2
                          \""")"""
-        @test fmt(str) == str
+        test_format(str, str)
         # nests and then unnests
-        @test fmt(str, 2, 20) == str
+        test_format(str, str; indent=2, margin=20)
 
         str_ = """
         foo() =
@@ -1664,7 +1664,7 @@
                    llvm1
                    llvm2
                    \""")"""
-        @test fmt(str, 2, 19) == str_
+        test_format(str, str_; indent=2, margin=19)
 
         # the length calculation is kind of wonky here
         # but it's still a worthwhile test
@@ -1674,7 +1674,7 @@
                      llvm1
                      llvm2
                      \""")"""
-        @test fmt(str, 4, 19) == str_
+        test_format(str, str_; indent=4, margin=19)
 
         str_ = """
         foo() = llvmcall(
@@ -1683,7 +1683,7 @@
             llvm2
             \""",
         )"""
-        @test fmt(str, 4, 18) == str_
+        test_format(str, str_; indent=4, margin=18)
 
         str_ = """
         foo() =
@@ -1693,7 +1693,7 @@
             llvm2
             \""",
           )"""
-        @test fmt(str, 2, 10) == str_
+        test_format(str, str_; indent=2, margin=10)
 
         str = """
         str = \"""
@@ -1701,7 +1701,7 @@
             arg
         end\"""
         """
-        @test fmt(str) == str
+        test_format(str, str)
 
         str = """
         str = \"""
@@ -1709,10 +1709,10 @@
                   arg
               end\"""
         """
-        @test fmt(str) == str
+        test_format(str, str)
 
         str = raw"""@test :(x`s`flag) == :(@x_cmd "s" "flag")"""
-        @test fmt(str) == str
+        test_format(str, str)
 
         str = raw"""
         if free < min_space
@@ -1735,52 +1735,52 @@
                 ),
             )
         end"""
-        @test fmt(str) == str
-        @test fmt(str, 4, 1) == str_
+        test_format(str, str)
+        test_format(str, str_; indent=4, margin=1)
 
         str_ = """foo(r"hello"x)"""
         str = """
         foo(
             r"hello"x,
         )"""
-        @test fmt(str_, 4, 1) == str
+        test_format(str_, str; indent=4, margin=1)
 
         str_ = """foo(r`hello`x)"""
         str = """
         foo(
             r`hello`x,
         )"""
-        @test fmt(str_, 4, 1) == str
+        test_format(str_, str; indent=4, margin=1)
 
         str_ = """foo(r\"""hello\"""x)"""
         str = """
         foo(
             r\"""hello\"""x,
         )"""
-        @test fmt(str_, 4, 1) == str
+        test_format(str_, str; indent=4, margin=1)
 
         str_ = """foo(r```hello```x)"""
         str = """foo(
             r```hello```x,
         )"""
-        @test fmt(str_, 4, 1) == str
+        test_format(str_, str; indent=4, margin=1)
 
         str_ = """foo(\"""hello\""")"""
         str = """foo(
             \"""hello\""",
         )"""
-        @test fmt(str_, 4, 1) == str
+        test_format(str_, str; indent=4, margin=1)
 
         str_ = """foo(```hello```)"""
         str = """foo(
             ```hello```,
         )"""
-        @test fmt(str_, 4, 1) == str
+        test_format(str_, str; indent=4, margin=1)
 
         str_ = raw"""
         occursin(r"^#!\s*format\s*:\s*off\s*$", t.val)
         """
-        @test fmt(str_) == str_
+        test_format(str_, str_)
 
         str = raw"""
         occursin(
@@ -1788,7 +1788,7 @@
             t.val,
         )
         """
-        @test fmt(str_, 4, 1) == str
+        test_format(str_, str; indent=4, margin=1)
     end
 
     @testset "comments" begin
@@ -1814,7 +1814,7 @@
         end
 
         end"""
-        @test fmt(str) == str
+        test_format(str, str)
         t = run_pretty(str, 80)
         @test length(t) == 14
 
@@ -1862,10 +1862,10 @@
         end
 
         end"""
-        @test fmt(str_) == str
+        test_format(str_, str)
 
         str = "# comment 0\n\n\n\n\na = 1\n\n# comment 1\n\n\n\n\nb = 2\n\n\nc = 3\n\n# comment 2\n\n"
-        @test fmt(str) == str
+        test_format(str, str)
 
         str = """
         #=
@@ -1873,7 +1873,7 @@
         world
         =#
         const a = \"hi there\""""
-        @test fmt(str) == str
+        test_format(str, str)
 
         str = """
         if a
@@ -1883,7 +1883,7 @@
         else
             something_else()
         end"""
-        @test fmt(str) == str
+        test_format(str, str)
 
         str = """
         begin
@@ -1895,7 +1895,7 @@
         a = 10 # foo
         b = 20           # foo
         end    # trailing comment"""
-        @test fmt(str_) == str
+        test_format(str_, str)
 
         str = """
         function bar(x, y)
@@ -1923,7 +1923,7 @@
             # in between comment
             d, # comment 3
         )        # pancakes"""
-        @test fmt(str_) == str
+        test_format(str_, str)
 
         str_ = """
         var = foo(      # eat
@@ -1938,7 +1938,7 @@
             c, # comment 2
             d, # comment 3
         )        # pancakes"""
-        @test fmt(str_) == str
+        test_format(str_, str)
 
         str = """
         A ? # foo
@@ -1947,14 +1947,14 @@
         B :    # bar
         # comment 2
         C"""
-        @test fmt(str) == str
+        test_format(str, str)
 
         str = """
         A ? B :
         # comment
 
         C"""
-        @test fmt(str) == str
+        test_format(str, str)
 
         str_ = """
         foo = A ?
@@ -1968,7 +1968,7 @@
             # comment 1
 
             B : C"""
-        @test fmt(str_) == str
+        test_format(str_, str)
 
         str = """
         foo =
@@ -1977,7 +1977,7 @@
 
            B :
            C"""
-        @test fmt(str_, 3, 1) == str
+        test_format(str_, str; indent=3, margin=1)
 
         str_ = """
         foo = A +
@@ -1992,8 +1992,8 @@
 
            B +
            C"""
-        @test fmt(str_, 3, 100) == str
-        @test fmt(str_, 3, 1) == str
+        test_format(str_, str; indent=3, margin=100)
+        test_format(str_, str; indent=3, margin=1)
 
         str = """
         begin
@@ -2003,7 +2003,7 @@
                 b
         end
         """
-        @test fmt(str) == str
+        test_format(str, str)
 
         str = """
         begin
@@ -2013,7 +2013,7 @@
                 b
         end
         """
-        @test fmt(str) == str
+        test_format(str, str)
 
         str_ = """
         begin
@@ -2032,7 +2032,7 @@
                 b
         end
         """
-        @test fmt(str_) == str
+        test_format(str_, str)
 
         str_ = """
         begin
@@ -2047,7 +2047,7 @@
             b
         end
         """
-        @test fmt(str_, 2, 92) == str
+        test_format(str_, str; indent=2, margin=92)
 
         str = """
         foo() = 10 where {
@@ -2057,7 +2057,7 @@
             B,
             # comment
         }"""
-        @test fmt(str) == str
+        test_format(str, str)
 
         str = """
         foo() = 10 where Foo{
@@ -2067,7 +2067,7 @@
             B,
             # comment
         }"""
-        @test fmt(str) == str
+        test_format(str, str)
 
         str = """
         foo() = Foo(
@@ -2077,7 +2077,7 @@
             B,
             # comment
         )"""
-        @test fmt(str) == str
+        test_format(str, str)
 
         str = """
         foo(
@@ -2088,7 +2088,7 @@
             c = d,
             # comment
         )"""
-        @test fmt(str) == str
+        test_format(str, str)
 
         str = """
         foo(;
@@ -2104,7 +2104,7 @@
             c = d,
             # comment
         )"""
-        @test fmt(str_) == str
+        test_format(str_, str)
 
         str = """
         foo(;;
@@ -2120,7 +2120,7 @@
             c = d,
             # comment
         )"""
-        @test fmt(str_) == str
+        test_format(str_, str)
 
         str_ = """
         foo( ;
@@ -2128,7 +2128,7 @@
             c = d,
             # comment
         )"""
-        @test fmt(str_) == str
+        test_format(str_, str)
 
         # str = """
         # [
@@ -2155,7 +2155,7 @@
         begin
           # comment
         end"""
-        @test fmt(str_, 2, 92) == str
+        test_format(str_, str; indent=2, margin=92)
 
         str_ = "try \n # comment\n catch e\n # comment\nbody\n # comment\n finally \n # comment\n end"
         str = """
@@ -2168,7 +2168,7 @@
         finally
               # comment
         end"""
-        @test fmt(str_, 6, 92) == str
+        test_format(str_, str; indent=6, margin=92)
 
         str_ = "if a \n # comment\n body \n# comment\n elseif b\n # comment\nbody\n #comment\n else\n # comment\n body \n #comment\n end"
         str = """
@@ -2185,17 +2185,17 @@
               body
               #comment
         end"""
-        @test fmt(str_, 6, 92) == str
+        test_format(str_, str; indent=6, margin=92)
 
         str = """a = "hello ##" # # # α"""
-        @test fmt(str) == str
+        test_format(str, str)
 
         # issue #65
         str = "1 # α"
-        @test fmt(str) == str
+        test_format(str, str)
 
         str = "# α"
-        @test fmt(str) == str
+        test_format(str, str)
 
         str = """
         #=
@@ -2203,7 +2203,7 @@
         =#
         x = 1
         """
-        @test fmt(str) == str
+        test_format(str, str)
 
         str_ = """
           \"\"\"
@@ -2225,7 +2225,7 @@
         \"\"\"
         f
         """
-        @test fmt(str_; format_docstrings = true) == str
+        test_format(str_, str; format_docstrings = true)
 
         str = """
         # comments
@@ -2263,7 +2263,7 @@
         end
         #comment
         """
-        @test fmt(str) == str
+        test_format(str, str)
 
         str = """
         foo = [
@@ -2272,7 +2272,7 @@
             2,
             3,
         ]"""
-        @test fmt(str) == str
+        test_format(str, str)
 
         # issue 152
         str = """
@@ -2282,7 +2282,7 @@
             ;
         end   # comment"""
         str_ = """try; catch;  end   # comment"""
-        @test fmt(str_) == str
+        test_format(str_, str)
 
         str = """
         try
@@ -2294,7 +2294,7 @@
         str_ = """
         try; catch;  end   # comment
         a = 10"""
-        @test fmt(str_) == str
+        test_format(str_, str)
     end
 
     @testset "pretty" begin
@@ -2316,7 +2316,7 @@
                      10;
                      20
                  end"""
-        @test fmt("""function foo() 10;  20 end""") == str
+        test_format("""function foo() 10;  20 end""", str)
         t = run_pretty(str, 80)
         @test length(t) == 14
 
@@ -2336,21 +2336,21 @@
                      2;
                      3
                  end"""
-        @test fmt("""for i=1:10 1; 2; 3 end""") == str
+        test_format("""for i=1:10 1; 2; 3 end""", str)
 
         str = """while true
                      1;
                      2;
                      3
                  end"""
-        @test fmt("""while true 1; 2; 3 end""") == str
+        test_format("""while true 1; 2; 3 end""", str)
 
         str = """try
                      a
                  catch e
                      b
                  end"""
-        @test fmt("""try a catch e b end""") == str
+        test_format("""try a catch e b end""", str)
 
         str = """try
                      a1;
@@ -2362,7 +2362,7 @@
                      c1;
                      c2
                  end"""
-        @test fmt("""try a1;a2 catch e b1;b2 finally c1;c2 end""") == str
+        test_format("""try a1;a2 catch e b1;b2 finally c1;c2 end""", str)
 
         str = """map(a) do b, c
                      e
@@ -2375,7 +2375,7 @@
                      e2;
                      e3
                  end"""
-        @test fmt("""let a=b,c  =  d  \ne1; e2; e3 end""") == str
+        test_format("""let a=b,c  =  d  \ne1; e2; e3 end""", str)
 
         str = """let a, b
                      e
@@ -2392,26 +2392,26 @@
                      b;
                      c
                  end"""
-        @test fmt("""begin a; b; c end""") == str
+        test_format("""begin a; b; c end""", str)
 
         str = """begin end"""
-        @test fmt("""begin \n            end""") == str
+        test_format("""begin \n            end""", str)
 
         str = """quote
                      a;
                      b;
                      c
                  end"""
-        @test fmt("""quote a; b; c end""") == str
+        test_format("""quote a; b; c end""", str)
 
         str = """quote end"""
-        @test fmt("""quote \n end""") == str
+        test_format("""quote \n end""", str)
 
         str = """if cond1
                      e1;
                      e2
                  end"""
-        @test fmt("if cond1 e1;e2 end") == str
+        test_format("if cond1 e1;e2 end", str)
 
         str = """if cond1
                      e1;
@@ -2420,7 +2420,7 @@
                      e3;
                      e4
                  end"""
-        @test fmt("if cond1 e1;e2 else e3;e4 end") == str
+        test_format("if cond1 e1;e2 else e3;e4 end", str)
 
         str = """begin
                      if cond1
@@ -2448,27 +2448,27 @@
                      e3;
                      e4
                  end"""
-        @test fmt("if cond1 e1;e2 elseif cond2 e3; e4 end") == str
+        test_format("if cond1 e1;e2 elseif cond2 e3; e4 end", str)
 
         str = """
         [a b c]"""
-        @test fmt("[a   b         c   ]") == str
+        test_format("[a   b         c   ]", str)
 
         str = """
         [a; b; c;]"""
-        @test fmt("[a;   b;         c;   ]") == str
+        test_format("[a;   b;         c;   ]", str)
         str = """
         [a; b; c]"""
-        @test fmt("[a;   b;         c   ]") == str
+        test_format("[a;   b;         c   ]", str)
 
         str = """
         T[a b c]"""
-        @test fmt("T[a   b         c   ]") == str
+        test_format("T[a   b         c   ]", str)
 
         str = """T[a; b; c]"""
-        @test fmt("T[a;   b;         c   ]") == str
+        test_format("T[a;   b;         c   ]", str)
         str = """T[a; b; c;]"""
-        @test fmt("T[a;   b;         c;   ]") == str
+        test_format("T[a;   b;         c;   ]", str)
 
         str = """
         T[
@@ -2476,7 +2476,7 @@
             b;
             c;
         ]"""
-        @test fmt("T[a;   b;         c;   ]", 4, 1) == str
+        test_format("T[a;   b;         c;   ]", str; indent=4, margin=1)
 
         str = """
         T[
@@ -2484,15 +2484,15 @@
             b;
             c
         ]"""
-        @test fmt("T[a;   b;         c   ]", 4, 1) == str
+        test_format("T[a;   b;         c   ]", str; indent=4, margin=1)
 
         str = """
         T[a; b; c; e d f]"""
-        @test fmt("T[a;   b;         c;   e  d    f   ]") == str
+        test_format("T[a;   b;         c;   e  d    f   ]", str)
 
         str = """
         T[a; b; c; e d f;]"""
-        @test fmt("T[a;   b;         c;   e  d    f;   ]") == str
+        test_format("T[a;   b;         c;   e  d    f;   ]", str)
 
         str = """
         T[
@@ -2501,7 +2501,7 @@
             c;
             e d f
         ]"""
-        @test fmt("T[a;   b;         c;   e  d    f   ]", 4, 1) == str
+        test_format("T[a;   b;         c;   e  d    f   ]", str; indent=4, margin=1)
 
         str = """
         T[
@@ -2510,61 +2510,61 @@
             c;
             e d f;
         ]"""
-        @test fmt("T[a;   b;         c;   e  d    f;   ]", 4, 1) == str
+        test_format("T[a;   b;         c;   e  d    f;   ]", str; indent=4, margin=1)
 
         str = "T[a;]"
-        @test fmt(str) == str
+        test_format(str, str)
 
         str = "[a;]"
-        @test fmt(str) == str
+        test_format(str, str)
 
         str = """T[e for e in x]"""
-        @test fmt("T[e  for e= x  ]") == str
+        test_format("T[e  for e= x  ]", str)
 
         str = """T[e for e = 1:2:50]"""
-        @test fmt("T[e  for e= 1:2:50  ]") == str
+        test_format("T[e  for e= 1:2:50  ]", str)
 
         str = """struct Foo end"""
-        @test fmt("struct Foo\n      end") == str
+        test_format("struct Foo\n      end", str)
 
         str = """
         struct Foo
             body::Any
         end"""
-        @test fmt("struct Foo\n    body  end") == str
+        test_format("struct Foo\n    body  end", str)
 
         str = """macro foo() end"""
-        @test fmt("macro foo()\n      end") == str
+        test_format("macro foo()\n      end", str)
 
         str = """macro foo end"""
-        @test fmt("macro foo\n      end") == str
+        test_format("macro foo\n      end", str)
 
         str = """
         macro foo()
             body
         end"""
-        @test fmt("macro foo()\n    body  end") == str
+        test_format("macro foo()\n    body  end", str)
 
         str = """mutable struct Foo end"""
-        @test fmt("mutable struct Foo\n      end") == str
+        test_format("mutable struct Foo\n      end", str)
 
         str = """
         mutable struct Foo
             body::Any
         end"""
-        @test fmt("mutable struct Foo\n    body  end") == str
+        test_format("mutable struct Foo\n    body  end", str)
 
         str = """
         module A
         bodybody
         end"""
-        @test fmt("module A\n    bodybody  end") == str
+        test_format("module A\n    bodybody  end", str)
         t = run_pretty(str, 80)
         @test length(t) == 8
 
         str = """
         module Foo end"""
-        @test fmt("module Foo\n    end") == str
+        test_format("module Foo\n    end", str)
         t = run_pretty(str, 80)
         @test length(t) == 14
 
@@ -2572,13 +2572,13 @@
         baremodule A
         bodybody
         end"""
-        @test fmt("baremodule A\n    bodybody  end") == str
+        test_format("baremodule A\n    bodybody  end", str)
         t = run_pretty(str, 80)
         @test length(t) == 12
 
         str = """
         baremodule Foo end"""
-        @test fmt("baremodule Foo\n    end") == str
+        test_format("baremodule Foo\n    end", str)
         t = run_pretty(str, 80)
         @test length(t) == 18
 
@@ -2592,24 +2592,24 @@
         elseif cond7
         else
         end"""
-        @test fmt(str) == str
+        test_format(str, str)
 
         str = """
         try
         catch
         finally
         end"""
-        @test fmt(str) == str
+        test_format(str, str)
 
         str = """
         (args...; kwargs) -> begin
             body
         end"""
-        @test fmt(str) == str
+        test_format(str, str)
 
-        @test fmt("ref[a: (b + c)]") == "ref[a:(b+c)]"
-        @test fmt("ref[a in b]") == "ref[a in b]"
-        @test fmt("ref[a:b.c]") == "ref[a:b.c]" # shouldn't add parens
+        test_format("ref[a: (b + c)]", "ref[a:(b+c)]")
+        test_format("ref[a in b]", "ref[a in b]")
+        test_format("ref[a:b.c]", "ref[a:b.c]") # shouldn't add parens
     end
 
     @testset "nesting" begin
@@ -2629,7 +2629,7 @@
             20
         end"""
         str_ = "function f(arg1::A,key1=val1;key2=val2) where {A,F{B,C}} 10; 20 end"
-        @test fmt(str_, 4, 1) == str
+        test_format(str_, str; indent=4, margin=1)
 
         str = """
         function f(
@@ -2643,7 +2643,7 @@
             10;
             20
         end"""
-        @test fmt(str_, 4, 17) == str
+        test_format(str_, str; indent=4, margin=17)
 
         str = """
         function f(
@@ -2654,28 +2654,28 @@
             10;
             20
         end"""
-        @test fmt(str_, 4, 18) == str
+        test_format(str_, str; indent=4, margin=18)
 
         str = """
         a |
         b |
         c |
         d"""
-        @test fmt("a | b | c | d", 4, 1) == str
+        test_format("a | b | c | d", str; indent=4, margin=1)
 
         str = """
         a, b, c, d"""
-        @test fmt("a, b, c, d", 4, 10) == str
+        test_format("a, b, c, d", str; indent=4, margin=10)
 
         str = """
         a,
         b,
         c,
         d"""
-        @test fmt("a, b, c, d", 4, 9) == str
+        test_format("a, b, c, d", str; indent=4, margin=9)
 
         str = """(a, b, c, d)"""
-        @test fmt("(a, b, c, d)", 4, 12) == str
+        test_format("(a, b, c, d)", str; indent=4, margin=12)
 
         str = """
         (
@@ -2684,10 +2684,10 @@
             c,
             d,
         )"""
-        @test fmt("(a, b, c, d)", 4, 11) == str
+        test_format("(a, b, c, d)", str; indent=4, margin=11)
 
         str = """{a, b, c, d}"""
-        @test fmt("{a, b, c, d}", 4, 12) == str
+        test_format("{a, b, c, d}", str; indent=4, margin=12)
 
         str = """
         {
@@ -2696,10 +2696,10 @@
             c,
             d,
         }"""
-        @test fmt("{a, b, c, d}", 4, 11) == str
+        test_format("{a, b, c, d}", str; indent=4, margin=11)
 
         str = """[a, b, c, d]"""
-        @test fmt("[a, b, c, d]", 4, 12) == str
+        test_format("[a, b, c, d]", str; indent=4, margin=12)
 
         str = """
         [
@@ -2708,71 +2708,71 @@
             c,
             d,
         ]"""
-        @test fmt("[a, b, c, d]", 4, 11) == str
+        test_format("[a, b, c, d]", str; indent=4, margin=11)
 
         str = """
         cond ?
         e1 :
         e2"""
-        @test fmt("cond ? e1 : e2", 4, 1) == str
+        test_format("cond ? e1 : e2", str; indent=4, margin=1)
 
         str = """
         cond ? e1 :
         e2"""
-        @test fmt("cond ? e1 : e2", 4, 12) == str
+        test_format("cond ? e1 : e2", str; indent=4, margin=12)
 
         str = """
         cond1 ? e1 :
         cond2 ? e2 :
         cond3 ? e3 :
         e4"""
-        @test fmt("cond1 ? e1 : cond2 ? e2 : cond3 ? e3 : e4", 4, 13) == str
+        test_format("cond1 ? e1 : cond2 ? e2 : cond3 ? e3 : e4", str; indent=4, margin=13)
 
         # I'm an importer/exporter
         str = """
         export a,
             b"""
-        @test fmt("export a,b", 4, 1) == str
+        test_format("export a,b", str; indent=4, margin=1)
 
         str = """
         using a,
           b"""
-        @test fmt("using a,b", 2, 1) == str
+        test_format("using a,b", str; indent=2, margin=1)
 
         str_ = "using M1.M2.M3: bar, baz"
         str = """
         using M1.M2.M3:
             bar, baz"""
-        @test fmt(str, 4, 24) == str_
-        @test fmt(str_, 4, 23) == str
-        @test fmt(str_, 4, 12) == str
+        test_format(str, str_; indent=4, margin=24)
+        test_format(str_, str; indent=4, margin=23)
+        test_format(str_, str; indent=4, margin=12)
 
         str = """
         using M1.M2.M3:
             bar,
             baz"""
-        @test fmt(str_, 4, 11) == str
+        test_format(str_, str; indent=4, margin=11)
 
         str_ = "import M1.M2.M3: bar, baz"
         str = """
         import M1.M2.M3:
             bar, baz"""
-        @test fmt(str, 4, 25) == str_
-        @test fmt(str_, 4, 24) == str
-        @test fmt(str_, 4, 12) == str
+        test_format(str, str_; indent=4, margin=25)
+        test_format(str_, str; indent=4, margin=24)
+        test_format(str_, str; indent=4, margin=12)
 
         str = """
         import M1.M2.M3:
             bar,
             baz"""
-        @test fmt(str_, 4, 11) == str
+        test_format(str_, str; indent=4, margin=11)
 
         str_ = """
         using A,
 
         B, C"""
         str = "using A, B, C"
-        @test fmt(str_) == str
+        test_format(str_, str)
 
         str_ = """
         using A,
@@ -2783,7 +2783,7 @@
           # comment
           B,
           C"""
-        @test fmt(str_, 2, 80) == str
+        test_format(str_, str; indent=2, margin=80)
 
         str_ = """
         using A,  #inline
@@ -2794,13 +2794,13 @@
           # comment
           B,
           C#inline"""
-        @test fmt(str_, 2, 80) == str
+        test_format(str_, str; indent=2, margin=80)
 
         str = """
         @somemacro function (fcall_ | fcall_)
             body_
         end"""
-        @test fmt("@somemacro function (fcall_ | fcall_) body_ end", 4, 37) == str
+        test_format("@somemacro function (fcall_ | fcall_) body_ end", str; indent=4, margin=37)
 
         str = """
         @somemacro function (
@@ -2808,8 +2808,8 @@
         )
             body_
         end"""
-        @test fmt("@somemacro function (fcall_ | fcall_) body_ end", 4, 36) == str
-        @test fmt("@somemacro function (fcall_ | fcall_) body_ end", 4, 20) == str
+        test_format("@somemacro function (fcall_ | fcall_) body_ end", str; indent=4, margin=36)
+        test_format("@somemacro function (fcall_ | fcall_) body_ end", str; indent=4, margin=20)
 
         str = """
         @somemacro function (
@@ -2818,32 +2818,32 @@
         )
             body_
         end"""
-        @test fmt("@somemacro function (fcall_ | fcall_) body_ end", 4, 19) == str
+        test_format("@somemacro function (fcall_ | fcall_) body_ end", str; indent=4, margin=19)
 
         str = "Val(x) = (@_pure_meta; Val{x}())"
-        @test fmt("Val(x) = (@_pure_meta ; Val{x}())", 4, 80) == str
+        test_format("Val(x) = (@_pure_meta ; Val{x}())", str; indent=4, margin=80)
 
         # TODO: if this ends up being a issue fix it but it doesn't seem
         # like it actually occurs in the wild.
         str = "(a; b; c)"
-        @test fmt("(a;b;c)", 4, 100) == str
+        test_format("(a;b;c)", str; indent=4, margin=100)
         str = """
         (
             a;
             b;
             c
         )"""
-        @test fmt("(a;b;c)", 4, 1) == str
+        test_format("(a;b;c)", str; indent=4, margin=1)
 
         str = "(x for x = 1:10)"
-        @test fmt("(x   for x  in  1 : 10)", 4, 100) == str
+        test_format("(x   for x  in  1 : 10)", str; indent=4, margin=100)
 
         str = """
         (
           x for
           x = 1:10
         )"""
-        @test fmt("(x   for x  in  1 : 10)", 2, 10) == str
+        test_format("(x   for x  in  1 : 10)", str; indent=2, margin=10)
 
         str = """
         (
@@ -2851,7 +2851,7 @@
           x =
             1:10
         )"""
-        @test fmt("(x   for x  in  1 : 10)", 2, 1) == str
+        test_format("(x   for x  in  1 : 10)", str; indent=2, margin=1)
 
         # indent for TupleN with no parens
         str = """
@@ -2859,54 +2859,54 @@
             arg1,
             arg2
         end"""
-        @test fmt("function foo() arg1, arg2 end", 4, 1) == str
+        test_format("function foo() arg1, arg2 end", str; indent=4, margin=1)
 
         str = """
         function foo()
             # comment
             arg
         end"""
-        @test fmt(str, 4, 1) == str
+        test_format(str, str; indent=4, margin=1)
 
         str = """
         A where {
             B,
         }"""
         str_ = "A where {B}"
-        @test fmt(str_) == str_
-        @test fmt(str_, 4, 1) == str
+        test_format(str_, str_)
+        test_format(str_, str; indent=4, margin=1)
 
         str = """
         foo(
           arg1,
         )"""
         str_ = "foo(arg1)"
-        @test fmt(str_) == str_
-        @test fmt(str, 2, 1) == str
+        test_format(str_, str_)
+        test_format(str, str; indent=2, margin=1)
 
         str = """
         [
           arg1,
         ]"""
         str_ = "[arg1]"
-        @test fmt(str_) == str_
-        @test fmt(str, 2, 1) == str
+        test_format(str_, str_)
+        test_format(str, str; indent=2, margin=1)
 
         str = """
         {
           arg1,
         }"""
         str_ = "{arg1}"
-        @test fmt(str_) == str_
-        @test fmt(str, 2, 1) == str
+        test_format(str_, str_)
+        test_format(str, str; indent=2, margin=1)
 
         str = """
         (
           arg1
         )"""
         str_ = "(arg1)"
-        @test fmt(str_) == str_
-        @test fmt(str_, 2, 1) == str
+        test_format(str_, str_)
+        test_format(str_, str; indent=2, margin=1)
 
         # https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/9#issuecomment-481607068
         str = """
@@ -2921,7 +2921,7 @@
         str_ = """this_is_a_long_variable_name = Dict{Symbol,Any}(:numberofpointattributes => NAttributes,
                :numberofpointmtrs => NMTr, :numberofcorners => NSimplex, :firstnumber => Cint(1),
                :mesh_dim => Cint(3),)"""
-        @test fmt(str_, 4, 80) == str
+        test_format(str_, str; indent=4, margin=80)
 
         str = """
         this_is_a_long_variable_name =
@@ -2937,7 +2937,7 @@
                   :mesh_dim =>
                        Cint(3),
              )"""
-        @test fmt(str_, 5, 23) == str
+        test_format(str_, str; indent=5, margin=23)
 
         str = """
         this_is_a_long_variable_name =
@@ -2957,7 +2957,7 @@
                             3,
                        ),
              )"""
-        @test fmt(str_, 5, 22) == str
+        test_format(str_, str; indent=5, margin=22)
 
         str = """
         this_is_a_long_variable_name =
@@ -2980,7 +2980,7 @@
                             3,
                        ),
              )"""
-        @test fmt(str_, 5, 1) == str
+        test_format(str_, str; indent=5, margin=1)
 
         str = """
         this_is_a_long_variable_name = (
@@ -2994,7 +2994,7 @@
         str_ = """this_is_a_long_variable_name = (:numberofpointattributes => NAttributes,
                :numberofpointmtrs => NMTr, :numberofcorners => NSimplex, :firstnumber => Cint(1),
                :mesh_dim => Cint(3),)"""
-        @test fmt(str_, 4, 80) == str
+        test_format(str_, str; indent=4, margin=80)
 
         str = """
         func(
@@ -3015,7 +3015,7 @@
                 string.
                 Longest line
                 \""", foo(b, c))"""
-        @test fmt(str_) == str
+        test_format(str_, str)
         str_ = """
         func(
             a,
@@ -3030,17 +3030,17 @@
                 c,
             ),
         )"""
-        @test fmt(str, 4, 1) == str_
+        test_format(str, str_; indent=4, margin=1)
 
         # Ref
         str = "a[1+2]"
-        @test fmt("a[1 + 2]", 4, 1) == str
+        test_format("a[1 + 2]", str; indent=4, margin=1)
 
         str = "a[(1+2)]"
-        @test fmt("a[(1 + 2)]", 4, 1) == str
+        test_format("a[(1 + 2)]", str; indent=4, margin=1)
 
         str_ = "(a + b + c + d)"
-        @test fmt(str_, 4, length(str_)) == str_
+        test_format(str_, str_; indent=4, margin=length(str_))
 
         str = """
         (
@@ -3049,11 +3049,11 @@
           c +
           d
         )"""
-        @test fmt(str_, 2, length(str_) - 1) == str
-        @test fmt(str_, 2, 1) == str
+        test_format(str_, str; indent=2, margin=length(str_) - 1)
+        test_format(str_, str; indent=2, margin=1)
 
         str_ = "(a <= b <= c <= d)"
-        @test fmt(str_, 4, length(str_)) == str_
+        test_format(str_, str_; indent=4, margin=length(str_))
 
         str = """
         (
@@ -3062,8 +3062,8 @@
            c <=
            d
         )"""
-        @test fmt(str_, 3, length(str_) - 1) == str
-        @test fmt(str_, 3, 1) == str
+        test_format(str_, str; indent=3, margin=length(str_) - 1)
+        test_format(str_, str; indent=3, margin=1)
 
         # Don't join the first argument in a comparison
         # or chainopcall node, even if possible.
@@ -3073,7 +3073,7 @@
             arg1 +
             arg2 +
             arg3"""
-        @test fmt(str_, 4, 18) == str
+        test_format(str_, str; indent=4, margin=18)
 
         str_ = "const a = arg1 == arg2 == arg3"
         str = """
@@ -3081,7 +3081,7 @@
             arg1 ==
             arg2 ==
             arg3"""
-        @test fmt(str_, 4, 19) == str
+        test_format(str_, str; indent=4, margin=19)
 
         # https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/60
         str_ = """
@@ -3099,7 +3099,7 @@
         )
             body
         end"""
-        @test fmt(str_) == str
+        test_format(str_, str)
 
         # any pairing of argument, kawrg, or param should nest
         str = """
@@ -3107,21 +3107,21 @@
             arg;
             a = 1,
         )"""
-        @test fmt("f(arg;a=1)", 4, 1) == str
+        test_format("f(arg;a=1)", str; indent=4, margin=1)
 
         str = """
         f(
            arg,
            a = 1,
         )"""
-        @test fmt("f(arg,a=1)", 3, 1) == str
+        test_format("f(arg,a=1)", str; indent=3, margin=1)
 
         str = """
         f(
          a = 1;
          b = 2,
         )"""
-        @test fmt("f(a=1; b=2)", 1, 1) == str
+        test_format("f(a=1; b=2)", str; indent=1, margin=1)
 
         str = """
         begin
@@ -3134,7 +3134,7 @@
             else
             end
         end"""
-        @test fmt(str, 4, 1) == str
+        test_format(str, str; indent=4, margin=1)
 
         # https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/453
         str = """
@@ -3143,7 +3143,7 @@
                     with some words in it.\""",
         )
         """
-        @test fmt(str, 4, 20) == str
+        test_format(str, str; indent=4, margin=20)
     end
 
     @testset "nesting line offset" begin
@@ -3284,7 +3284,7 @@
             @Expr :break loop_exit2
             body3
         end)"""
-        @test fmt(str_, 4, 100) == str
+        test_format(str_, str; indent=4, margin=100)
 
         str = """
         @Expr(
@@ -3297,7 +3297,7 @@
                 body3
             end
         )"""
-        @test fmt(str_, 4, 20) == str
+        test_format(str_, str; indent=4, margin=20)
 
         str = "export @esc, isexpr, isline, iscall, rmlines, unblock, block, inexpr, namify, isdef"
         _, s = run_nest(str, length(str))
@@ -3335,8 +3335,8 @@
             @g(b, c),
             d,
         )"""
-        @test fmt(str_, 4, 13) == str
-        @test fmt(str, 4, length(str)) == str_
+        test_format(str_, str; indent=4, margin=13)
+        test_format(str, str_; indent=4, margin=length(str))
 
         str_ = "f(a, @g(b, c), d)"
         str = """
@@ -3348,8 +3348,8 @@
             ),
             d,
         )"""
-        @test fmt(str_, 4, 12) == str
-        @test fmt(str, 4, length(str)) == str_
+        test_format(str_, str; indent=4, margin=12)
+        test_format(str, str_; indent=4, margin=length(str))
 
         str_ = "(a, (b, c), d)"
         str = """
@@ -3358,8 +3358,8 @@
             (b, c),
             d,
         )"""
-        @test fmt(str_, 4, 11) == str
-        @test fmt(str, 4, length(str)) == str_
+        test_format(str_, str; indent=4, margin=11)
+        test_format(str, str_; indent=4, margin=length(str))
 
         str = """
         (
@@ -3370,7 +3370,7 @@
             ),
             d,
         )"""
-        @test fmt(str_, 4, 10) == str
+        test_format(str_, str; indent=4, margin=10)
 
         str_ = "(a, {b, c}, d)"
         str = """
@@ -3379,8 +3379,8 @@
             {b, c},
             d,
         )"""
-        @test fmt(str_, 4, 12) == str
-        @test fmt(str_, 4, 11) == str
+        test_format(str_, str; indent=4, margin=12)
+        test_format(str_, str; indent=4, margin=11)
 
         str = """
         (
@@ -3391,8 +3391,8 @@
             },
             d,
         )"""
-        @test fmt(str_, 4, 10) == str
-        @test fmt(str, 4, length(str)) == str_
+        test_format(str_, str; indent=4, margin=10)
+        test_format(str, str_; indent=4, margin=length(str))
 
         str_ = "(a, [b, c], d)"
         str = """
@@ -3401,8 +3401,8 @@
             [b, c],
             d,
         )"""
-        @test fmt(str_, 4, 13) == str
-        @test fmt(str_, 4, 11) == str
+        test_format(str_, str; indent=4, margin=13)
+        test_format(str_, str; indent=4, margin=11)
 
         str = """
         (
@@ -3413,16 +3413,16 @@
             ],
             d,
         )"""
-        @test fmt(str_, 4, 10) == str
-        @test fmt(str, 4, length(str)) == str_
+        test_format(str_, str; indent=4, margin=10)
+        test_format(str, str_; indent=4, margin=length(str))
 
         str_ = "a, (b, c), d"
         str = """
         a,
         (b, c),
         d"""
-        @test fmt(str_, 4, length(str_) - 1) == str
-        @test fmt(str_, 4, 7) == str
+        test_format(str_, str; indent=4, margin=length(str_) - 1)
+        test_format(str_, str; indent=4, margin=7)
 
         str = """
         a,
@@ -3431,22 +3431,22 @@
             c,
         ),
         d"""
-        @test fmt(str_, 4, 6) == str
-        @test fmt(str, 4, length(str)) == str_
+        test_format(str_, str; indent=4, margin=6)
+        test_format(str, str_; indent=4, margin=length(str))
 
         str_ = "(var1,var2) && var3"
         str = """
         (var1, var2) &&
             var3"""
-        @test fmt(str_, 4, 19) == str
-        @test fmt(str_, 4, 15) == str
+        test_format(str_, str; indent=4, margin=19)
+        test_format(str_, str; indent=4, margin=15)
 
         str = """
         (
             var1,
             var2,
         ) && var3"""
-        @test fmt(str_, 4, 14) == str
+        test_format(str_, str; indent=4, margin=14)
 
         str = """
         (
@@ -3454,14 +3454,14 @@
             var2,
         ) &&
             var3"""
-        @test fmt(str_, 4, 1) == str
+        test_format(str_, str; indent=4, margin=1)
 
         str_ = "(var1,var2) ? (var3,var4) : var5"
         str = """
         (var1, var2) ?
         (var3, var4) :
         var5"""
-        @test fmt(str_, 4, 14) == str
+        test_format(str_, str; indent=4, margin=14)
 
         str = """
         (
@@ -3472,8 +3472,8 @@
             var3,
             var4,
         ) : var5"""
-        @test fmt(str_, 4, 13) == str
-        @test fmt(str_, 4, 8) == str
+        test_format(str_, str; indent=4, margin=13)
+        test_format(str_, str; indent=4, margin=8)
 
         str = """
         (
@@ -3485,24 +3485,24 @@
             var4,
         ) :
         var5"""
-        @test fmt(str_, 4, 7) == str
+        test_format(str_, str; indent=4, margin=7)
 
         str = """
         (var1, var2) ? (var3, var4) :
         var5"""
-        @test fmt(str_, 4, 29) == str
+        test_format(str_, str; indent=4, margin=29)
 
         str = """
         (var1, var2) ?
         (var3, var4) : var5"""
-        @test fmt(str_, 4, 28) == str
+        test_format(str_, str; indent=4, margin=28)
 
         str = """
         f(
             var1::A,
             var2::B,
         ) where {A,B}"""
-        @test fmt("f(var1::A, var2::B) where {A,B}", 4, 30) == str
+        test_format("f(var1::A, var2::B) where {A,B}", str; indent=4, margin=30)
 
         str = """
         f(
@@ -3512,18 +3512,18 @@
             A,
             B,
         }"""
-        @test fmt("f(var1::A, var2::B) where {A,B}", 4, 12) == str
+        test_format("f(var1::A, var2::B) where {A,B}", str; indent=4, margin=12)
 
         str = "foo(a, b, c)::Rtype where {A,B} = 10"
         str_ = "foo(a, b, c)::Rtype where {A,B,} = 10"
-        @test fmt(str, 4, length(str)) == str
-        @test fmt(str_, 4, length(str_)) == str
+        test_format(str, str; indent=4, margin=length(str))
+        test_format(str_, str; indent=4, margin=length(str_))
 
         str_ = """
         foo(a, b, c)::Rtype where {A,B} =
             10"""
-        @test fmt(str, 4, 35) == str_
-        @test fmt(str, 4, 33) == str_
+        test_format(str, str_; indent=4, margin=35)
+        test_format(str, str_; indent=4, margin=33)
 
         str_ = """
         foo(
@@ -3531,8 +3531,8 @@
             b,
             c,
         )::Rtype where {A,B} = 10"""
-        @test fmt(str, 4, 32) == str_
-        @test fmt(str, 4, 25) == str_
+        test_format(str, str_; indent=4, margin=32)
+        test_format(str, str_; indent=4, margin=25)
 
         str_ = """
         foo(
@@ -3541,8 +3541,8 @@
             c,
         )::Rtype where {A,B} =
             10"""
-        @test fmt(str, 4, 24) == str_
-        @test fmt(str, 4, 22) == str_
+        test_format(str, str_; indent=4, margin=24)
+        test_format(str, str_; indent=4, margin=22)
 
         str_ = """
         foo(
@@ -3553,7 +3553,7 @@
             A,
             B,
         } = 10"""
-        @test fmt(str, 4, 21) == str_
+        test_format(str, str_; indent=4, margin=21)
 
         str_ = """
         foo(
@@ -3565,7 +3565,7 @@
           B,
         } =
           10"""
-        @test fmt(str, 2, 1) == str_
+        test_format(str, str_; indent=2, margin=1)
 
         str_ = """
         foo(
@@ -3576,10 +3576,10 @@
               A,
               B,
         } = 10"""
-        @test fmt(str, 6, 18) == str_
+        test_format(str, str_; indent=6, margin=18)
 
         str = "keytype(::Type{<:AbstractDict{K,V}}) where {K,V} = K"
-        @test fmt(str, 4, 52) == str
+        test_format(str, str; indent=4, margin=52)
 
         str_ = "transcode(::Type{THISISONESUPERLONGTYPE1234567}) where {T<:Union{Int32,UInt32}} = transcode(T, String(Vector(src)))"
 
@@ -3587,16 +3587,16 @@
         transcode(
           ::Type{THISISONESUPERLONGTYPE1234567},
         ) where {T<:Union{Int32,UInt32}} = transcode(T, String(Vector(src)))"""
-        @test fmt(str_, 2, 80) == str
-        @test fmt(str_, 2, 68) == str
+        test_format(str_, str; indent=2, margin=80)
+        test_format(str_, str; indent=2, margin=68)
 
         str = """
         transcode(
           ::Type{THISISONESUPERLONGTYPE1234567},
         ) where {T<:Union{Int32,UInt32}} =
           transcode(T, String(Vector(src)))"""
-        @test fmt(str_, 2, 67) == str
-        @test fmt(str_, 2, 40) == str
+        test_format(str_, str; indent=2, margin=67)
+        test_format(str_, str; indent=2, margin=40)
 
         str = """
         transcode(
@@ -3605,7 +3605,7 @@
           },
         ) where {T<:Union{Int32,UInt32}} =
           transcode(T, String(Vector(src)))"""
-        @test fmt(str_, 2, 39) == str
+        test_format(str_, str; indent=2, margin=39)
 
         str_ = "transcode(::Type{T}, src::AbstractVector{UInt8}) where {T<:Union{Int32,UInt32}} = transcode(T, String(Vector(src)))"
         str = """
@@ -3613,8 +3613,8 @@
           ::Type{T},
           src::AbstractVector{UInt8},
         ) where {T<:Union{Int32,UInt32}} = transcode(T, String(Vector(src)))"""
-        @test fmt(str_, 2, 80) == str
-        @test fmt(str_, 2, 68) == str
+        test_format(str_, str; indent=2, margin=80)
+        test_format(str_, str; indent=2, margin=68)
 
         str = """
         transcode(
@@ -3622,7 +3622,7 @@
           src::AbstractVector{UInt8},
         ) where {T<:Union{Int32,UInt32}} =
           transcode(T, String(Vector(src)))"""
-        @test fmt(str_, 2, 67) == str
+        test_format(str_, str; indent=2, margin=67)
 
         # issue 56
         str_ = "a_long_function_name(Array{Float64,2}[[1.0], [0.5 0.5], [0.5 0.5; 0.5 0.5], [0.5 0.5; 0.5 0.5]])"
@@ -3630,9 +3630,9 @@
         a_long_function_name(
             Array{Float64,2}[[1.0], [0.5 0.5], [0.5 0.5; 0.5 0.5], [0.5 0.5; 0.5 0.5]],
         )"""
-        @test fmt(str, 4, length(str)) == str_
-        @test fmt(str_, 4, length(str_) - 1) == str
-        @test fmt(str_, 4, 79) == str
+        test_format(str, str_; indent=4, margin=length(str))
+        test_format(str_, str; indent=4, margin=length(str_) - 1)
+        test_format(str_, str; indent=4, margin=79)
 
         str = """
         a_long_function_name(
@@ -3643,7 +3643,7 @@
                 [0.5 0.5; 0.5 0.5],
             ],
         )"""
-        @test fmt(str_, 4, 78) == str
+        test_format(str_, str; indent=4, margin=78)
 
         # unary op
         str_ = "[1, 1]'"
@@ -3652,15 +3652,15 @@
           1,
           1,
         ]'"""
-        @test fmt(str, 2, length(str)) == str_
-        @test fmt(str_, 2, length(str_) - 1) == str
+        test_format(str, str_; indent=2, margin=length(str))
+        test_format(str_, str; indent=2, margin=length(str_) - 1)
     end
 
     @testset "Trailing zeros" begin
-        @test fmt("1.") == "1.0"
-        @test fmt("a * 1. + b") == "a * 1.0 + b"
-        @test fmt("1. + 2. * im") == "1.0 + 2.0 * im"
-        @test fmt("[1., 2.]") == "[1.0, 2.0]"
+        test_format("1.", "1.0")
+        test_format("a * 1. + b", "a * 1.0 + b")
+        test_format("1. + 2. * im", "1.0 + 2.0 * im")
+        test_format("[1., 2.]", "[1.0, 2.0]")
         @test fmt("""
         1. +
             2.
@@ -3668,10 +3668,10 @@
     end
 
     @testset "Leading zeros" begin
-        @test fmt(".1") == "0.1"
-        @test fmt("a * .1 + b") == "a * 0.1 + b"
-        @test fmt(".1 + .2 * im") == "0.1 + 0.2 * im"
-        @test fmt("[.1, .2]") == "[0.1, 0.2]"
+        test_format(".1", "0.1")
+        test_format("a * .1 + b", "a * 0.1 + b")
+        test_format(".1 + .2 * im", "0.1 + 0.2 * im")
+        test_format("[.1, .2]", "[0.1, 0.2]")
         @test fmt("""
         .1 +
             .2
@@ -3688,7 +3688,7 @@
           a b expr()
           d e expr()
         ]"""
-        @test fmt(str_, 2, 92) == str
+        test_format(str_, str; indent=2, margin=92)
 
         str_ = """
         T[ a b Expr()
@@ -3698,7 +3698,7 @@
             a b Expr()
             d e Expr()
         ]"""
-        @test fmt(str_) == str
+        test_format(str_, str)
 
         str_ = """
         [ a b Expr();
@@ -3708,15 +3708,15 @@
            a b Expr();
            d e Expr();
         ]"""
-        @test fmt(str_, 3, 92) == str
+        test_format(str_, str; indent=3, margin=92)
         str_ = "[a b Expr(); d e Expr()]"
-        @test fmt(str_) == str_
+        test_format(str_, str_)
         str = """
         [
            a b Expr();
            d e Expr()
         ]"""
-        @test fmt(str_, 3, 1) == str
+        test_format(str_, str; indent=3, margin=1)
 
         str_ = """
         T[ a b Expr();
@@ -3726,16 +3726,16 @@
             a b Expr();
             d e Expr();
         ]"""
-        @test fmt(str_) == str
+        test_format(str_, str)
 
         str_ = "T[a b Expr(); d e Expr()]"
-        @test fmt(str_) == str_
+        test_format(str_, str_)
         str = """
         T[
             a b Expr();
             d e Expr()
         ]"""
-        @test fmt(str_, 4, 1) == str
+        test_format(str_, str; indent=4, margin=1)
 
         str = """
         [
@@ -3768,7 +3768,7 @@
           0.4 0.4 0.4 1.0
           0.5 0.5 0.5 1.0
         ]"""
-        @test fmt(str, 2, 92) == str
+        test_format(str, str; indent=2, margin=92)
     end
 
     @testset "multi-variable `for` and `let`" begin
@@ -3784,7 +3784,7 @@
 
             body
         end"""
-        @test fmt(str_) == str
+        test_format(str_, str)
 
         str_ = """
         for a in
@@ -3796,8 +3796,8 @@
 
             body
         end"""
-        @test fmt(str, 4, 1) == str_
-        @test fmt(str_) == str
+        test_format(str, str_; indent=4, margin=1)
+        test_format(str_, str)
 
         str = """
         let a = x, b = y, c = z
@@ -3811,7 +3811,7 @@
 
             body
         end"""
-        @test fmt(str_) == str
+        test_format(str_, str)
 
         str_ = """
         let a = x,
@@ -3820,7 +3820,7 @@
 
             body
         end"""
-        @test fmt(str_) == str
+        test_format(str_, str)
 
         str_ = """
         let a =
@@ -3832,7 +3832,7 @@
 
             body
         end"""
-        @test fmt(str, 4, 1) == str_
+        test_format(str, str_; indent=4, margin=1)
 
         str = """
         let
@@ -3841,7 +3841,7 @@
 
             body
         end"""
-        @test fmt(str) == str
+        test_format(str, str)
 
         # issue 155
         str_ = raw"""
@@ -3889,7 +3889,7 @@
                 @test x1 == x2
             end
         end"""
-        @test fmt(str_) == str
+        test_format(str_, str)
     end
 
     @testset "single newline at end of file" begin
@@ -3918,7 +3918,7 @@
         )"""
         str_ = "gen2 = Iterators.filter(x -> x[1] % 2 == 0 && x[2] % 2 == 0, (x, y) for x = 1:10, y = 1:10)"
 
-        @test fmt(str_, 4, 80) == str
+        test_format(str_, str; indent=4, margin=80)
 
         # With macro calls, a trailing comma can
         # change the semantics of the macro.
@@ -3931,7 +3931,7 @@
             b,
             c
         )"""
-        @test fmt("@func(a, b, c)", 4, 1) == str
+        test_format("@func(a, b, c)", str; indent=4, margin=1)
 
         str = """
         @func(
@@ -3939,7 +3939,7 @@
             b,
             c,
         )"""
-        @test fmt("@func(a, b, c,)", 4, 1) == str
+        test_format("@func(a, b, c,)", str; indent=4, margin=1)
     end
 
     @testset "comprehension types" begin
@@ -3947,21 +3947,21 @@
         str = """
         var =
             ((x, y) for x = 1:10, y = 1:10)"""
-        @test fmt(str_, 4, length(str_) - 1) == str
-        @test fmt(str_, 4, 35) == str
+        test_format(str_, str; indent=4, margin=length(str_) - 1)
+        test_format(str_, str; indent=4, margin=35)
 
         str = """
         var = (
             (x, y) for x = 1:10, y = 1:10
         )"""
-        @test fmt(str_, 4, 34) == str
+        test_format(str_, str; indent=4, margin=34)
 
         str = """
         var = (
             (x, y) for
             x = 1:10, y = 1:10
         )"""
-        @test fmt(str_, 4, 30) == str
+        test_format(str_, str; indent=4, margin=30)
 
         str = """
         var = (
@@ -3969,7 +3969,7 @@
             x = 1:10,
             y = 1:10
         )"""
-        @test fmt(str_, 4, 20) == str
+        test_format(str_, str; indent=4, margin=20)
 
         str = """
         var =
@@ -3983,7 +3983,7 @@
                 y =
                     1:10
             )"""
-        @test fmt(str_, 4, 1) == str
+        test_format(str_, str; indent=4, margin=1)
 
         str_ = """
         begin
@@ -3999,7 +3999,7 @@
                 (i, w) in enumerate(weightfn.(eachrow(subject.events)))
             )
         end"""
-        @test fmt(str_, 4, 90) == str
+        test_format(str_, str; indent=4, margin=90)
 
         str = """
         begin
@@ -4009,7 +4009,7 @@
                 enumerate(weightfn.(eachrow(subject.events)))
             )
         end"""
-        @test fmt(str_, 4, 60) == str
+        test_format(str_, str; indent=4, margin=60)
 
         str = """
         begin
@@ -4021,11 +4021,11 @@
                 )
             )
         end"""
-        @test fmt(str_, 4, 50) == str
+        test_format(str_, str; indent=4, margin=50)
 
         str_ = "(b for b in bar if b == 0 for bar in foo)"
         @test format_text(str_) == str_
-        @test fmt(str_) == str_
+        test_format(str_, str_)
 
         str = """
         (
@@ -4037,7 +4037,7 @@
             bar in
             foo
         )"""
-        @test fmt(str_, 4, 1) == str
+        test_format(str_, str; indent=4, margin=1)
     end
 
     @testset "invisbrackets" begin
@@ -4051,7 +4051,7 @@
             ))),
             another_argument,
         )"""
-        @test fmt(str) == str
+        test_format(str, str)
 
         str_ = """
 some_function(
@@ -4064,7 +4064,7 @@ some_function(
 ))),
            another_argument,
         )"""
-        @test fmt(str_) == str
+        test_format(str_, str)
 
         str = """
         if ((
@@ -4074,7 +4074,7 @@ some_function(
         ))
           nothing
         end"""
-        @test fmt(str, 2, 92) == str
+        test_format(str, str; indent=2, margin=92)
 
         str = """
         begin
@@ -4086,7 +4086,7 @@ some_function(
                         nothing
                 end
         end"""
-        @test fmt(str, 8, 92) == str
+        test_format(str, str; indent=8, margin=92)
 
         #
         # Don't nest the op if an arg is invisbrackets
@@ -4111,7 +4111,7 @@ some_function(
             else
             end
         end"""
-        @test fmt(str_, 4, 24) == str
+        test_format(str_, str; indent=4, margin=24)
 
         str = """
         begin
@@ -4123,7 +4123,7 @@ some_function(
             else
             end
         end"""
-        @test fmt(str_, 4, 23) == str
+        test_format(str_, str; indent=4, margin=23)
 
         str = """
         begin
@@ -4136,7 +4136,7 @@ some_function(
             else
             end
         end"""
-        @test fmt(str_, 4, 15) == str
+        test_format(str_, str; indent=4, margin=15)
 
         str = """
         begin
@@ -4150,8 +4150,8 @@ some_function(
             else
             end
         end"""
-        @test fmt(str_, 4, 14) == str
-        @test fmt(str_, 4, 10) == str
+        test_format(str_, str; indent=4, margin=14)
+        test_format(str_, str; indent=4, margin=10)
 
         str = """
         begin
@@ -4166,8 +4166,8 @@ some_function(
             else
             end
         end"""
-        @test fmt(str_, 4, 9) == str
-        @test fmt(str_, 4, 1) == str
+        test_format(str_, str; indent=4, margin=9)
+        test_format(str_, str; indent=4, margin=1)
 
         str_ = """
         if s.opts.ignore_maximum_width && !(is_comma(n) || is_block(t) || t.typ === FunctionN ||
@@ -4188,7 +4188,7 @@ some_function(
             join_lines = t.endline == n.startline
         end
         """
-        @test fmt(str_, 4, 80) == str
+        test_format(str_, str; indent=4, margin=80)
     end
 
     @testset "unnest" begin
@@ -4201,7 +4201,7 @@ some_function(
 
             @test X <: Y
         end"""
-        @test fmt(str, 4, 92) == str
+        test_format(str, str; indent=4, margin=92)
 
         str = """
         let X = LinearAlgebra.Symmetric{
@@ -4215,7 +4215,7 @@ some_function(
 
             @test X <: Y
         end"""
-        @test fmt(str, 4, 90) == str
+        test_format(str, str; indent=4, margin=90)
 
         str = """
         ys = map(xs) do x
@@ -4224,7 +4224,7 @@ some_function(
                 very_very_very_very_very_very_very_very_very_very_very_long_expr,
             )
         end"""
-        @test fmt(str) == str
+        test_format(str, str)
     end
 
     @testset "remove excess newlines" begin
@@ -4239,7 +4239,7 @@ some_function(
 
         d)"""
         str = "var = foo(a, b, c, d)"
-        @test fmt(str_) == str
+        test_format(str_, str)
 
         str = """
         var =
@@ -4249,7 +4249,7 @@ some_function(
                 c,
                 d,
             )"""
-        @test fmt(str_, 4, 1) == str
+        test_format(str_, str; indent=4, margin=1)
 
         str_ = """
         var = foo(a,
@@ -4273,7 +4273,7 @@ some_function(
 
             d,
         )"""
-        @test fmt(str_) == str
+        test_format(str_, str)
 
         str = """
         var = foo(
@@ -4285,7 +4285,7 @@ some_function(
 
             d,
         )"""
-        @test fmt(str_; remove_extra_newlines = true) == str
+        test_format(str_, str; remove_extra_newlines = true)
 
         str_ = """
         var =
@@ -4296,8 +4296,8 @@ some_function(
 
             c)"""
         str = """var = func(a, b, c)"""
-        @test fmt(str_) == str
-        @test fmt(str_; remove_extra_newlines = true) == str
+        test_format(str_, str)
+        test_format(str_, str; remove_extra_newlines = true)
 
         str_ = """
         var =
@@ -4308,8 +4308,8 @@ some_function(
         b &&
         c"""
         str = """var = a && b && c"""
-        @test fmt(str_) == str
-        @test fmt(str_; remove_extra_newlines = true) == str
+        test_format(str_, str)
+        test_format(str_, str; remove_extra_newlines = true)
 
         str_ = """
         var =
@@ -4323,8 +4323,8 @@ some_function(
 
         c"""
         str = """var = a ? b : c"""
-        @test fmt(str_) == str
-        @test fmt(str_; remove_extra_newlines = true) == str
+        test_format(str_, str)
+        test_format(str_, str; remove_extra_newlines = true)
 
         str_ = """
         var =
@@ -4338,8 +4338,8 @@ some_function(
 
         c"""
         str = """var = a + b + c"""
-        @test fmt(str_) == str
-        @test fmt(str_; remove_extra_newlines = true) == str
+        test_format(str_, str)
+        test_format(str_, str; remove_extra_newlines = true)
 
         str_ = """
         var =
@@ -4353,8 +4353,8 @@ some_function(
 
         c"""
         str = """var = a == b == c"""
-        @test fmt(str_) == str
-        @test fmt(str_; remove_extra_newlines = true) == str
+        test_format(str_, str)
+        test_format(str_, str; remove_extra_newlines = true)
     end
 
     @testset "align ChainOpCall indent" begin
@@ -4378,7 +4378,7 @@ some_function(
                    some_expression *
                    some_expression
         end"""
-        @test fmt(str_) == str
+        test_format(str_, str)
 
         str_ = """
         @some_macro some_expression *
@@ -4396,7 +4396,7 @@ some_function(
                     some_expression *
                     some_expression *
                     some_expression"""
-        @test fmt(str_) == str
+        test_format(str_, str)
 
         str_ = """
         if some_expression && some_expression && some_expression && some_expression
@@ -4411,8 +4411,8 @@ some_function(
 
             body
         end"""
-        @test fmt(str_; m = 74) == str
-        @test fmt(str; m = 75) == str_
+        test_format(str_, str; margin = 74)
+        test_format(str, str_; margin = 75)
 
         str_ = """
         if argument1 && argument2 && (argument3 || argument4 || argument5) && argument6
@@ -4427,7 +4427,7 @@ some_function(
 
             body
         end"""
-        @test fmt(str_; m = 43) == str
+        test_format(str_, str; margin = 43)
 
         str = """
         if argument1 &&
@@ -4441,7 +4441,7 @@ some_function(
 
             body
         end"""
-        @test fmt(str_; m = 42) == str
+        test_format(str_, str; margin = 42)
     end
 
     @testset "standalone lazy expr indent" begin
@@ -4452,7 +4452,7 @@ some_function(
           a ||
             b
         end"""
-        @test fmt(str, 2, 1) == str
+        test_format(str, str; indent=2, margin=1)
 
         str_ = """
         begin
@@ -4464,7 +4464,7 @@ some_function(
             a && b ||
                 c && d
         end"""
-        @test fmt(str_, 4, 19) == str
+        test_format(str_, str; indent=4, margin=19)
 
         str = """
         begin
@@ -4472,7 +4472,7 @@ some_function(
                 c &&
                 d
         end"""
-        @test fmt(str_, 4, 13) == str
+        test_format(str_, str; indent=4, margin=13)
 
         str = """
         begin
@@ -4481,7 +4481,7 @@ some_function(
                 c &&
                 d
         end"""
-        @test fmt(str_, 4, 1) == str
+        test_format(str_, str; indent=4, margin=1)
 
         str_ = """
         begin
@@ -4497,7 +4497,7 @@ some_function(
                     d
                 )
         end"""
-        @test fmt(str_, 4, 1) == str
+        test_format(str_, str; indent=4, margin=1)
 
         str_ = """
         begin
@@ -4513,7 +4513,7 @@ some_function(
             ) ||
                 d
         end"""
-        @test fmt(str_, 4, 1) == str
+        test_format(str_, str; indent=4, margin=1)
 
         str_ = """
         begin
@@ -4526,7 +4526,7 @@ some_function(
                 b && c ||
                 d
         end"""
-        @test fmt(str_, 4, 19) == str
+        test_format(str_, str; indent=4, margin=19)
 
         str = """
         begin
@@ -4535,7 +4535,7 @@ some_function(
                 c ||
                 d
         end"""
-        @test fmt(str_, 4, 16) == str
+        test_format(str_, str; indent=4, margin=16)
 
         str_ = """
         begin
@@ -4549,7 +4549,7 @@ some_function(
                 d ||
                 e
         end"""
-        @test fmt(str_, 4, 1) == str
+        test_format(str_, str; indent=4, margin=1)
 
         str_ = """
         begin
@@ -4563,7 +4563,7 @@ some_function(
                 d &&
                 e
         end"""
-        @test fmt(str_, 4, 1) == str
+        test_format(str_, str; indent=4, margin=1)
 
         str_ = """
         if aa && bb
@@ -4582,7 +4582,7 @@ some_function(
             bb
         )
         end"""
-        @test fmt(str_, 4, 1) == str
+        test_format(str_, str; indent=4, margin=1)
 
         str_ = """
         if aa || bb || cc
@@ -4603,21 +4603,21 @@ some_function(
             cc
         )
         end"""
-        @test fmt(str_, 4, 1) == str
+        test_format(str_, str; indent=4, margin=1)
 
         str_ = """var = a && b"""
         str = """
         var =
             a &&
             b"""
-        @test fmt(str_, 4, 1) == str
+        test_format(str_, str; indent=4, margin=1)
 
         str_ = """var() = a && b"""
         str = """
         var() =
             a &&
             b"""
-        @test fmt(str_, 4, 1) == str
+        test_format(str_, str; indent=4, margin=1)
 
         str_ = """var = a || b || c"""
         str = """
@@ -4625,7 +4625,7 @@ some_function(
             a ||
             b ||
             c"""
-        @test fmt(str_, 4, 1) == str
+        test_format(str_, str; indent=4, margin=1)
 
         str_ = """var() = a || b || c"""
         str = """
@@ -4633,7 +4633,7 @@ some_function(
             a ||
             b ||
             c"""
-        @test fmt(str_, 4, 1) == str
+        test_format(str_, str; indent=4, margin=1)
 
         str_ = """
         @hello arg1 && arg2 && return arg3"""
@@ -4641,21 +4641,21 @@ some_function(
         @hello arg1 &&
                arg2 &&
                return arg3"""
-        @test fmt(str_, 4, 1) == str
+        test_format(str_, str; indent=4, margin=1)
 
         str_ = """
         @hello arg1 || return arg2"""
         str = """
         @hello arg1 ||
                return arg2"""
-        @test fmt(str_, 4, 1) == str
+        test_format(str_, str; indent=4, margin=1)
 
         str_ = """
         return arg1 || arg2"""
         str = """
         return arg1 ||
                arg2"""
-        @test fmt(str_, 4, 1) == str
+        test_format(str_, str; indent=4, margin=1)
 
         str_ = raw"""
         @othermacro begin
@@ -4679,7 +4679,7 @@ some_function(
                 end
         end
         """
-        @test fmt(str_, 4, 80) == str
+        test_format(str_, str; indent=4, margin=80)
     end
 
     @testset "source file line offset with unicode" begin
@@ -4690,34 +4690,34 @@ some_function(
         # └─ code.jl (before -> after2)
         v = "test_basic_config"
         """
-        @test fmt(str) == str
+        test_format(str, str)
 
         str = """
         a = 10
         unicode_str = "α10′"
         v = "test_basic_config"
         """
-        @test fmt(str) == str
+        test_format(str, str)
 
         str = """
         a = 10
         unicode_op = 5 ⪅ 10.0
         v = "test_basic_config"
         """
-        @test fmt(str) == str
+        test_format(str, str)
 
         str = """
         a = 10
         unicode_identifier′ = 10
         v = "test_basic_config"
         """
-        @test fmt(str) == str
+        test_format(str, str)
 
         str = "const FOO = ['😢']"
-        @test fmt(str) == str
+        test_format(str, str)
 
         str = "const FOO = '😢'"
-        @test fmt(str) == str
+        test_format(str, str)
     end
 
     @testset "comprehension leftover extra margin" begin
@@ -4729,17 +4729,17 @@ some_function(
             mod1(div(dest_idx[dim] - 1, inner[dim]) + 1, S[dim]) for dim = 1:length(S)
         ]
         """
-        @test fmt(str_, 4, 78) == str
+        test_format(str_, str; indent=4, margin=78)
     end
 
     @testset "operators as arguments" begin
         str_ = "a    .*     %"
         str = "a .* %"
-        @test fmt(str_, 4, 100) == str
+        test_format(str_, str; indent=4, margin=100)
 
         str_ = "a    *     %"
         str = "a * %"
-        @test fmt(str_, 4, 100) == str
+        test_format(str_, str; indent=4, margin=100)
 
         @test run_pretty("+(y)", 80)[1].typ === JuliaFormatter.Unary
         @test run_pretty(">=(y)", 80)[1].typ === JuliaFormatter.Call
@@ -4774,7 +4774,7 @@ some_function(
                         body4
         end
         """
-        @test fmt(s1, 8, 1) == s2
+        test_format(s1, s2; indent=8, margin=1)
 
         str_ = """
         a =     if where_idx === nothing
@@ -4794,7 +4794,7 @@ some_function(
                     b
             end
         """
-        @test fmt(str_, 4, 1) == str
+        test_format(str_, str; indent=4, margin=1)
     end
 
     @testset "parameter to call nesting" begin
@@ -4810,7 +4810,7 @@ some_function(
             check_inferred = false,
         )
         """
-        @test fmt(s, 4, 100) == s
+        test_format(s, s; indent=4, margin=100)
 
         # always nest is outsite of parameters in the call
         s = raw"""
@@ -4824,7 +4824,7 @@ some_function(
             check_inferred = false,
         )
         """
-        @test fmt(s, 4, 100) == s
+        test_format(s, s; indent=4, margin=100)
     end
 
     @testset "no args before kwargs ; placement" begin
@@ -4834,7 +4834,7 @@ some_function(
             a = b,
             c = d,
         )"""
-        @test fmt(str_, 4, 1) == str
+        test_format(str_, str; indent=4, margin=1)
 
         str_ = """(;  # inline
             a = b, c = d)"""
@@ -4843,7 +4843,7 @@ some_function(
             a = b,
             c = d,
         )"""
-        @test fmt(str_, 4, 1) == str
+        test_format(str_, str; indent=4, margin=1)
 
         str_ = """(;
             # comment
@@ -4854,7 +4854,7 @@ some_function(
             a = b,
             c = d,
         )"""
-        @test fmt(str_, 4, 1) == str
+        test_format(str_, str; indent=4, margin=1)
 
         str_ = """(arg;
             # comment
@@ -4866,7 +4866,7 @@ some_function(
             a = b,
             c = d,
         )"""
-        @test fmt(str_, 4, 1) == str
+        test_format(str_, str; indent=4, margin=1)
 
         str_ = """(arg; # inline
             a = b, c = d)"""
@@ -4876,7 +4876,7 @@ some_function(
             a = b,
             c = d,
         )"""
-        @test fmt(str_, 4, 1) == str
+        test_format(str_, str; indent=4, margin=1)
 
         str_ = """(arg;
             a = b, c = d)"""
@@ -4886,7 +4886,7 @@ some_function(
             a = b,
             c = d,
         )"""
-        @test fmt(str_, 4, 1) == str
+        test_format(str_, str; indent=4, margin=1)
     end
 
     @testset "for loop, extra placeholder not added" begin
@@ -4905,7 +4905,7 @@ some_function(
             body
         end
         """
-        @test fmt(str_, 4, 1) == str
+        test_format(str_, str; indent=4, margin=1)
     end
 
     @testset "for loop, placeholder not removed" begin
@@ -4921,8 +4921,8 @@ some_function(
             a
             b
         end"""
-        @test fmt(str_, 4, 27) == str
-        @test fmt(str, 4, 27; join_lines_based_on_source = true) == str
+        test_format(str_, str; indent=4, margin=27)
+        test_format(str, str; indent=4, margin=27, join_lines_based_on_source = true)
     end
 
     @testset "block automatically assume nested when join_lines_based_on_source" begin
@@ -4936,8 +4936,8 @@ some_function(
 
             body
         end"""
-        @test fmt(str_, 4, 16; join_lines_based_on_source = true) == str_
-        @test fmt(str_, 4, 15; join_lines_based_on_source = true) == str
+        test_format(str_, str_; indent=4, margin=16, join_lines_based_on_source = true)
+        test_format(str_, str; indent=4, margin=15, join_lines_based_on_source = true)
     end
 
     if VERSION >= v"1.11.0"
@@ -4949,13 +4949,13 @@ some_function(
             str = """
             public a, b, c
             """
-            @test fmt(str_, 4, 14) == str
+            test_format(str_, str; indent=4, margin=14)
             str = """
             public a,
                 b,
                 c
             """
-            @test fmt(str_, 4, 1) == str
+            test_format(str_, str; indent=4, margin=1)
         end
     end
 end
