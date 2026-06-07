@@ -1,3 +1,8 @@
+module FormatRepoTests
+
+using JuliaFormatter: format
+using Test
+
 @testset "Format repo" begin
     try
         sandbox_dir = joinpath(tempdir(), join(rand('a':'z', 40)))
@@ -18,4 +23,6 @@
         catch
         end
     end
+end
+
 end

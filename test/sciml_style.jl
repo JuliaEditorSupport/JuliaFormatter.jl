@@ -1,3 +1,8 @@
+module SciMLStyleTests
+
+using Test
+using JuliaFormatter: format_text, SciMLStyle
+
 @testset "SciML Style" begin
     # Test for mathematical expressions not breaking unnecessarily
     str = raw"""
@@ -1585,4 +1590,6 @@
             @test length(eq_lines) > 0
         end
     end
+end
+
 end

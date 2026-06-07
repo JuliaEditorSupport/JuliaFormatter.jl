@@ -1,3 +1,8 @@
+module InterfaceTests
+
+using JuliaFormatter: format, format_file, BlueStyle
+using Test
+
 function test_format_file(fmt, before, after)
     sandbox_dir = joinpath(@__DIR__, "tmp")
     mkdir(sandbox_dir)
@@ -28,4 +33,6 @@ end
         test_format_file(pos, before, after)
         test_format_file(key, before, after)
     end
+end
+
 end

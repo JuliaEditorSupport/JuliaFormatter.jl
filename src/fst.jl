@@ -1085,9 +1085,12 @@ function add_node!(
                 t.typ !== ModuleN &&
                 (n.typ === Block || is_end(n))
 
+            # Force nesting
             nest = true
+            # Unless it's not worth nesting (e.g., inside a function call, or binary op)
             if remove_empty_notcode(t) || rm_block_nl
                 nest = false
+                # ... Unless there are comments, in which case we can't nest
                 for l in notcode_startline:notcode_endline
                     if hascomment(s.doc, l)
                         nest = true
@@ -1095,8 +1098,9 @@ function add_node!(
                     end
                 end
             end
-
-            t.nest_behavior = AlwaysNest
+            if nest || hascomment(s.doc, current_line)
+                t.nest_behavior = AlwaysNest
+            end
 
             # If the previous node type is WHITESPACE - reset it.
             # This fixes cases similar to the one shown in issue #51.

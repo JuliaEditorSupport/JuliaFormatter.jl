@@ -1966,7 +1966,7 @@ function p_try(
             s.indent += s.opts.indent
             add_node!(
                 t,
-                pretty(style, c, s, newctx(ctx; ignore_single_line = false), lineage),
+                pretty(style, c, s, newctx(ctx; ignore_single_line = true), lineage),
                 s;
                 max_padding = s.opts.indent,
             )
@@ -2370,7 +2370,7 @@ function p_binaryopcall(
 
     nrhs = nest_rhs(cst)
     if nrhs
-        (t.nest_behavior = AlwaysNest)
+        t.nest_behavior = AlwaysNest
     end
     nest = (is_binaryop_nestable(style, cst) && !nonest) || nrhs
     if opkind === K"=>" && haschildren(cst)
