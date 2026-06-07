@@ -4311,6 +4311,33 @@ some_function(
         test_format(str_, str)
         test_format(str_, str; remove_extra_newlines = true)
 
+        # Inline comment on the line before blank lines should force nesting
+        str_ = """
+        x =
+
+            a && # inline
+
+            b"""
+        str = """
+        x =
+            a && # inline
+            b"""
+        test_format(str_, str)
+
+        # Comment in gap lines should force nesting
+        str_ = """
+        x =
+
+            a &&
+            # comment
+            b"""
+        str = """
+        x =
+            a &&
+            # comment
+            b"""
+        test_format(str_, str)
+
         str_ = """
         var =
 

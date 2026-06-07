@@ -1091,14 +1091,14 @@ function add_node!(
             if remove_empty_notcode(t) || rm_block_nl
                 nest = false
                 # ... Unless there are comments, in which case we can't nest
-                for l in current_line:notcode_endline
+                for l in notcode_startline:notcode_endline
                     if hascomment(s.doc, l)
                         nest = true
                         break
                     end
                 end
             end
-            if nest
+            if nest || hascomment(s.doc, current_line)
                 t.nest_behavior = AlwaysNest
             end
 
