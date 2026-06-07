@@ -1,10 +1,12 @@
 module IssuesTests
 
 using JuliaFormatter
-using JuliaFormatter: DefaultStyle, YASStyle, BlueStyle, MinimalStyle, Options, format_text
+using JuliaFormatter: DefaultStyle, YASStyle, BlueStyle, MinimalStyle, SciMLStyle, Options, format_text
 using JuliaFormatter.Internal: test_format
 using JuliaSyntax
 using Test
+
+ALL_STYLES = (DefaultStyle(), YASStyle(), BlueStyle(), MinimalStyle(), SciMLStyle())
 
 function run_nest(text::String; opts = Options(), style = DefaultStyle())
     d = JuliaFormatter.Document(text)
@@ -2014,6 +2016,46 @@ end
         # Unary plus in macro call should not break the formatter.
         s = "@constraint(Lower(model), +x[1] + x[2] <= 2)\n"
         test_format(s, s)
+
+        # Unary plus at the start of a chain of multiplications inside `sum()`.
+        s_ = """
+        sum(
+                + _shutdown_margin(u, ng, d, s, t0, t, case, part)
+                * _unit_flow_capacity(u, ng, d, s, t0, t)
+                * _switch(
+                    d; from_node=nonspin_units_started_up, to_node=nonspin_units_shut_down
+                )[u, n, s, t_over]
+                * overlap_duration(t_over, t)
+                for (u, n, s, t_over) in _switch(
+                    d; from_node=nonspin_units_started_up_indices, to_node=nonspin_units_shut_down_indices
+                )(m; unit=u, stochastic_scenario=s, t=t_overlaps_t(m; t=t));
+                init=0
+            )
+        """
+        s = """
+        sum(
+            + _shutdown_margin(u, ng, d, s, t0, t, case, part) *
+            _unit_flow_capacity(u, ng, d, s, t0, t) *
+            _switch(d; from_node = nonspin_units_started_up, to_node = nonspin_units_shut_down)[
+                u,
+                n,
+                s,
+                t_over,
+            ] *
+            overlap_duration(t_over, t) for (u, n, s, t_over) in _switch(
+                d;
+                from_node = nonspin_units_started_up_indices,
+                to_node = nonspin_units_shut_down_indices,
+            )(
+                m;
+                unit = u,
+                stochastic_scenario = s,
+                t = t_overlaps_t(m; t = t),
+            );
+            init = 0,
+        )
+        """
+        test_format(s_, s)
     end
 
     @testset "669" begin
@@ -2060,18 +2102,23 @@ end
 
     @testset "860" begin
         # Integer literals and broadcasting inside `[]` should not cause a parse error.
-        s = "a[x+1 .+ 1]\n"
+        s = "a[x+1 .+ 1]"
         test_format(s, s)
-        test_format(s, "a[x + 1 .+ 1]\n"; whitespace_ops_in_indices = true)
+        test_format(s, "a[x + 1 .+ 1]"; whitespace_ops_in_indices = true)
     end
 
     @testset "885" begin
         # Unary minus with sub/superscript variables like `- ᶠb` should not cause a
         # LoadError. The space is needed for Julia to parse `-` as a unary operator
         # before a subscript/superscript identifier.
-        test_format("a = - ₐb\n", "a = - ₐb\n")
-        test_format("a = - ᵃb\n", "a = - ᵃb\n")
-        test_format("a = - ᶠb\n", "a = - ᶠb\n")
+        for s in (
+            "a = - ₐb",
+            "a = - ᵃb",
+            "a = - ᶠb",
+            "a = - ᶜb",
+        )
+            test_format(s, s)
+        end
     end
 
     @testset "890" begin
@@ -2079,7 +2126,9 @@ end
         # Previously YASStyle turned `public Foo,Bar` into `publicFoo,Bar`.
         s = "public ExcludedRecordingV1, ExcludedRecordingV1SchemaVersion\n"
         s_ = "public ExcludedRecordingV1,ExcludedRecordingV1SchemaVersion\n"
-        test_format(s_, s, YASStyle())
+        for style in ALL_STYLES
+            test_format(s_, s, style)
+        end
     end
 
     @testset "894" begin
@@ -2095,17 +2144,26 @@ end
     @testset "902" begin
         # `short_circuit_to_if` should not transform `&&` into `if` inside a closure
         # argument, because that changes the semantics of the code.
+        s_ = """
+        indices = findall(
+            ss ->
+                ss == 1 &&
+                    ss == 2,
+            my_vec)
+        """
         s = "indices = findall(ss -> ss == 1 && ss == 2, my_vec)\n"
-        test_format(s, s; short_circuit_to_if = true)
+        test_format(s_, s; short_circuit_to_if = true)
     end
 
     @testset "904" begin
         # `foo(::Bool=false)` should not get extra parentheses like `foo((::Bool)=false)`.
         s_ = "foo(::Bool=false) = false\n"
-        test_format(s_, "foo(::Bool = false) = false\n")
         test_format(s_, s_, YASStyle())
         test_format(s_, s_, BlueStyle())
         test_format(s_, s_, MinimalStyle())
+        s_ = "foo(::Bool = false) = false\n"
+        test_format(s_, s_, DefaultStyle())
+        test_format(s_, s_, SciMLStyle())
     end
 
     @testset "911" begin
