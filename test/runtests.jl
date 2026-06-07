@@ -57,9 +57,7 @@ end
     include("yas_style.jl")
     include("blue_style.jl")
     include("sciml_style.jl")
-    if VERSION >= v"1.7"
-        include("multidimensional_array.jl")
-    end
+    include("multidimensional_array.jl")
     include("issues.jl")
     include("options.jl")
     include("interface.jl")
