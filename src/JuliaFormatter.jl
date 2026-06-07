@@ -36,6 +36,11 @@ export format,
 
 haschildren(node::JuliaSyntax.GreenNode) = !JuliaSyntax.is_leaf(node)
 
+# The Julia syntax version we pass to JuliaSyntax.parseall. This should be kept
+# at the latest stable Julia release so that JuliaSyntax can parse all valid
+# syntax up to that version.
+const SUPPORTED_SYNTAX_VERSION = v"1.12"
+
 struct Configuration
     args::Dict{String,Any}
     file::Dict{String,Any}
@@ -209,7 +214,12 @@ function format_text(text::AbstractString, style::AbstractStyle, opts::Options)
     if opts.always_for_in == true
         @assert valid_for_in_op(opts.for_in_replacement) "`for_in_replacement` is set to an invalid operator \"$(opts.for_in_replacement)\", valid operators are $(VALID_FOR_IN_OPERATORS). Change it to one of the valid operators and then reformat."
     end
-    t = JuliaSyntax.parseall(JuliaSyntax.GreenNode, text; ignore_warnings = true, version=v"1.12")
+    t = JuliaSyntax.parseall(
+        JuliaSyntax.GreenNode,
+        text;
+        ignore_warnings = true,
+        version = SUPPORTED_SYNTAX_VERSION,
+    )
     state = State(Document(text), opts)
     text = format_text(t, style, state)
     return text
@@ -275,7 +285,12 @@ function format_text(node::JuliaSyntax.GreenNode, style::AbstractStyle, s::State
     text = normalize_line_ending(text, replacer)
 
     try
-        _ = JuliaSyntax.parseall(JuliaSyntax.GreenNode, text; ignore_warnings = true, version=v"1.12")
+        _ = JuliaSyntax.parseall(
+            JuliaSyntax.GreenNode,
+            text;
+            ignore_warnings = true,
+            version = SUPPORTED_SYNTAX_VERSION,
+        )
     catch err
         @warn "Formatted text is not parsable ... no change made."
         rethrow(err)

@@ -9,7 +9,7 @@ using Test
 function run_pretty(text::String; style = DefaultStyle(), opts = Options())
     d = JuliaFormatter.Document(text)
     s = JuliaFormatter.State(d, opts)
-    g = JuliaSyntax.parseall(JuliaSyntax.GreenNode, text; version=v"1.12"))
+    g = JuliaSyntax.parseall(JuliaSyntax.GreenNode, text; version=JuliaFormatter.SUPPORTED_SYNTAX_VERSION)
     t = JuliaFormatter.pretty(style, g, s)
     t
 end

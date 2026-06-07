@@ -8,7 +8,7 @@ using JuliaFormatter.Internal: test_format
 function run_pretty(text::String; style = DefaultStyle(), opts = Options())
     d = JuliaFormatter.Document(text)
     s = JuliaFormatter.State(d, opts)
-    g = JuliaSyntax.parseall(JuliaSyntax.GreenNode, text; version=v"1.12")
+    g = JuliaSyntax.parseall(JuliaSyntax.GreenNode, text; version=JuliaFormatter.SUPPORTED_SYNTAX_VERSION)
     t = JuliaFormatter.pretty(style, g, s)
     t
 end
@@ -17,7 +17,7 @@ run_pretty(text::String, margin::Int) = run_pretty(text, opts = Options(margin =
 function run_nest(text::String; opts = Options(), style = DefaultStyle())
     d = JuliaFormatter.Document(text)
     s = JuliaFormatter.State(d, opts)
-    g = JuliaSyntax.parseall(JuliaSyntax.GreenNode, text; version=v"1.12")
+    g = JuliaSyntax.parseall(JuliaSyntax.GreenNode, text; version=JuliaFormatter.SUPPORTED_SYNTAX_VERSION)
     t = JuliaFormatter.pretty(style, g, s)
     JuliaFormatter.nest!(style, t, s)
     t, s
@@ -477,7 +477,7 @@ run_nest(text::String, margin::Int) = run_nest(text, opts = Options(margin = mar
         text = "a + b"
         d = JuliaFormatter.Document(text)
         s = JuliaFormatter.State(d, Options())
-        g = JuliaSyntax.parseall(JuliaSyntax.GreenNode, text; version=v"1.12")
+        g = JuliaSyntax.parseall(JuliaSyntax.GreenNode, text; version=JuliaFormatter.SUPPORTED_SYNTAX_VERSION)
         op = JuliaSyntax.children(only(JuliaSyntax.children(g)))[3]
         @test JuliaFormatter.source_op_kind_from_offset(s, op, UInt32(3)) ===
               JuliaSyntax.Kind("+")
