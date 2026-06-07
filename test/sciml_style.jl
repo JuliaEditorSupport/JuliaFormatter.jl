@@ -771,6 +771,56 @@ using JuliaFormatter: format_text, SciMLStyle
         end
     end
 
+    @testset "additional nesting coverage" begin
+        str = """
+        path_lookup = [
+            "Hash table implementation notes" => joinpath("src",
+                                                          "hash_table.md"),
+        ]
+        """
+
+        fstr = """
+        path_lookup = [
+            "Hash table implementation notes" => joinpath("src",
+                                                          "hash_table.md"),
+        ]
+        """
+        @test format_text(str, SciMLStyle(); yas_style_nesting = true) == fstr
+
+        str = """
+        function collect_close_items(points, min_distance)
+            foreach_neighbor(points, points, index;
+                             backend=SerialBackend()) do item, neighbor,
+                                                         _, _
+                if item != neighbor
+                    push!(result, item)
+                end
+            end
+        end
+        """
+
+        fstr = """
+        function collect_close_items(points, min_distance)
+            foreach_neighbor(points, points, index;
+                             backend=SerialBackend()) do item, neighbor,
+                                                         _, _
+                if item != neighbor
+                    push!(result, item)
+                end
+            end
+        end
+        """
+        @test format_text(
+            str,
+            SciMLStyle();
+            yas_style_nesting = true,
+            whitespace_in_kwargs = false,
+        ) == fstr
+
+        str = "Dict(\"a\" => (x = 1,), \"longer key\" => (y = 2,))"
+        @test format_text(str, SciMLStyle()) == str
+    end
+
     str = raw"""
     x = [
         1, 2, 3
