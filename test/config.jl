@@ -1,3 +1,8 @@
+module ConfigTests
+
+using JuliaFormatter: format, CONFIG_FILE_NAME
+using Test
+
 @testset ".JuliaFormatter.toml config" begin
     config2 = "indent = 2"
     config4 = "indent = 4"
@@ -456,4 +461,6 @@
             rm(sandbox_dir; recursive = true)
         end
     end
+end
+
 end
