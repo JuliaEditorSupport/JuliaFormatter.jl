@@ -2,6 +2,7 @@ module SciMLStyleTests
 
 using Test
 using JuliaFormatter: format_text, SciMLStyle
+using JuliaFormatter.Internal: test_format
 
 @testset "SciML Style" begin
     # Test for mathematical expressions not breaking unnecessarily
@@ -819,6 +820,27 @@ using JuliaFormatter: format_text, SciMLStyle
 
         str = "Dict(\"a\" => (x = 1,), \"longer key\" => (y = 2,))"
         @test format_text(str, SciMLStyle()) == str
+
+        str = """
+        metadata = Pair{String, Any}["Start vertex" => first(graph.vertices),
+        "Final vertex" => last(graph.vertices),
+        "search algorithm" => traversal.algorithm |> typeof |> nameof,
+        "directed" => graph.is_directed]
+        """ |> strip
+        sciml = """
+        metadata = Pair{String, Any}["Start vertex" => first(graph.vertices),
+            "Final vertex" => last(graph.vertices),
+            "search algorithm" => traversal.algorithm |> typeof |> nameof,
+            "directed" => graph.is_directed]
+        """ |> strip
+        test_format(str, sciml, SciMLStyle())
+        with_yas = """
+        metadata = Pair{String, Any}["Start vertex" => first(graph.vertices),
+                                     "Final vertex" => last(graph.vertices),
+                                     "search algorithm" => traversal.algorithm |> typeof |> nameof,
+                                     "directed" => graph.is_directed]
+        """ |> strip
+        test_format(str, with_yas, SciMLStyle(); yas_style_nesting = true)
     end
 
     str = raw"""
