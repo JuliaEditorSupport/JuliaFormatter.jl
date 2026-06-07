@@ -1,10 +1,12 @@
 module IssuesTests
 
 using JuliaFormatter
-using JuliaFormatter: DefaultStyle, YASStyle, BlueStyle, MinimalStyle, Options, format_text
+using JuliaFormatter: DefaultStyle, YASStyle, BlueStyle, MinimalStyle, SciMLStyle, Options, format_text
 using JuliaFormatter.Internal: test_format
 using JuliaSyntax
 using Test
+
+ALL_STYLES = (DefaultStyle(), YASStyle(), BlueStyle(), MinimalStyle(), SciMLStyle())
 
 function run_nest(text::String; opts = Options(), style = DefaultStyle())
     d = JuliaFormatter.Document(text)
@@ -1995,6 +1997,242 @@ end
         end
         """
         test_format(s, s)
+    end
+
+    @testset "622" begin
+        # Array indexing with colon should not produce invalid syntax when nested.
+        # Previously, `to_eval[\n    performance_accept, :\n]` had a bare `:` after a
+        # newline, which Julia interpreted as the quoting operator.
+        s = "chainsamples[α_accept_indices[performance_accept], :] = to_eval[performance_accept, :]\n"
+        s_ = """
+        chainsamples[α_accept_indices[performance_accept], :] = to_eval[
+            performance_accept, :,
+        ]
+        """
+        test_format(s, s_, BlueStyle(); margin = 60)
+    end
+
+    @testset "642" begin
+        # Unary plus in macro call should not break the formatter.
+        s = "@constraint(Lower(model), +x[1] + x[2] <= 2)\n"
+        test_format(s, s)
+
+        # Unary plus at the start of a chain of multiplications inside `sum()`.
+        s_ = """
+        sum(
+                + _shutdown_margin(u, ng, d, s, t0, t, case, part)
+                * _unit_flow_capacity(u, ng, d, s, t0, t)
+                * _switch(
+                    d; from_node=nonspin_units_started_up, to_node=nonspin_units_shut_down
+                )[u, n, s, t_over]
+                * overlap_duration(t_over, t)
+                for (u, n, s, t_over) in _switch(
+                    d; from_node=nonspin_units_started_up_indices, to_node=nonspin_units_shut_down_indices
+                )(m; unit=u, stochastic_scenario=s, t=t_overlaps_t(m; t=t));
+                init=0
+            )
+        """
+        s = """
+        sum(
+            + _shutdown_margin(u, ng, d, s, t0, t, case, part) *
+            _unit_flow_capacity(u, ng, d, s, t0, t) *
+            _switch(d; from_node = nonspin_units_started_up, to_node = nonspin_units_shut_down)[
+                u,
+                n,
+                s,
+                t_over,
+            ] *
+            overlap_duration(t_over, t) for (u, n, s, t_over) in _switch(
+                d;
+                from_node = nonspin_units_started_up_indices,
+                to_node = nonspin_units_shut_down_indices,
+            )(
+                m;
+                unit = u,
+                stochastic_scenario = s,
+                t = t_overlaps_t(m; t = t),
+            );
+            init = 0,
+        )
+        """
+        test_format(s_, s)
+    end
+
+    @testset "669" begin
+        # Macro call arguments like `xd(t)=xd_start` should not be rewritten to
+        # `function xd(t) ... end` when `short_to_long_function_def = true`.
+        s = """
+        sts = @variables x(t) = x_start [description = "State of filter"] xd(t) = xd_start [
+            description = "Derivative state of filter",
+        ]
+        """
+        test_format(s, s; short_to_long_function_def = true)
+    end
+
+    @testset "690" begin
+        # Inline comments after trailing comma should not be deleted by SciMLStyle.
+        s_ = """
+        var_to_diff = DiffGraph(
+            [2, 3, nothing, 5, 6, nothing], # primal_to_diff
+            [nothing, 1, 2, nothing, 4, 5], # diff_to_primal
+        )
+        """
+        s = """
+        var_to_diff = DiffGraph(
+            [2, 3, nothing, 5, 6, nothing], # primal_to_diff
+            [nothing, 1, 2, nothing, 4, 5] # diff_to_primal
+        )
+        """
+        test_format(s_, s, SciMLStyle())
+    end
+
+    @testset "782" begin
+        # `catch (e)` should be preserved as-is, not moved into the catch body.
+        # Previously the formatter produced `catch\n    (e)\n    ...` which changes
+        # semantics: `e` would no longer be bound to the exception.
+        s = """
+        try
+            error("Whoops")
+        catch (e)
+            println("Found \$e")
+        end
+        """
+        test_format(s, s)
+    end
+
+    @testset "860" begin
+        # Integer literals and broadcasting inside `[]` should not cause a parse error.
+        s = "a[x+1 .+ 1]"
+        test_format(s, s)
+        test_format(s, "a[x + 1 .+ 1]"; whitespace_ops_in_indices = true)
+    end
+
+    @testset "885" begin
+        # Unary minus with sub/superscript variables like `- ᶠb` should not cause a
+        # LoadError. The space is needed for Julia to parse `-` as a unary operator
+        # before a subscript/superscript identifier.
+        for s in (
+            "a = - ₐb",
+            "a = - ᵃb",
+            "a = - ᶠb",
+            "a = - ᶜb",
+        )
+            test_format(s, s)
+        end
+    end
+
+    @testset "890" begin
+        # `public` keyword should not eat the following space.
+        # Previously YASStyle turned `public Foo,Bar` into `publicFoo,Bar`.
+        s = "public ExcludedRecordingV1, ExcludedRecordingV1SchemaVersion\n"
+        s_ = "public ExcludedRecordingV1,ExcludedRecordingV1SchemaVersion\n"
+        for style in ALL_STYLES
+            test_format(s_, s, style)
+        end
+    end
+
+    @testset "894" begin
+        # MinimalStyle should preserve whitespace around `-`.
+        s = """
+        function sub(a, b)
+            a - b
+        end
+        """
+        test_format(s, s, MinimalStyle())
+    end
+
+    @testset "902" begin
+        # `short_circuit_to_if` should not transform `&&` into `if` inside a closure
+        # argument, because that changes the semantics of the code.
+        s_ = """
+        indices = findall(
+            ss ->
+                ss == 1 &&
+                    ss == 2,
+            my_vec)
+        """
+        s = "indices = findall(ss -> ss == 1 && ss == 2, my_vec)\n"
+        test_format(s_, s; short_circuit_to_if = true)
+    end
+
+    @testset "904" begin
+        # `foo(::Bool=false)` should not get extra parentheses like `foo((::Bool)=false)`.
+        s_ = "foo(::Bool=false) = false\n"
+        test_format(s_, s_, YASStyle())
+        test_format(s_, s_, BlueStyle())
+        test_format(s_, s_, MinimalStyle())
+        s_ = "foo(::Bool = false) = false\n"
+        test_format(s_, s_, DefaultStyle())
+        test_format(s_, s_, SciMLStyle())
+    end
+
+    @testset "911" begin
+        # `@testset` block should not prevent the formatter from nesting function
+        # arguments that exceed the margin.
+        s_ = """
+        @testset begin
+            DynamicPPL.assume(::Random.AbstractRNG, ::DynamicPPL.Sampler{MyEmptyAlg}, dist, vn, vi) = DynamicPPL.assume(
+                    dist, vn, vi
+                )
+        end
+        """
+        s = """
+        @testset begin
+            DynamicPPL.assume(
+                ::Random.AbstractRNG, ::DynamicPPL.Sampler{MyEmptyAlg}, dist, vn, vi
+            ) = DynamicPPL.assume(dist, vn, vi)
+        end
+        """
+        test_format(s_, s, BlueStyle())
+    end
+
+    @testset "914" begin
+        # SciMLStyle with `yas_style_nesting` should produce consistent indentation
+        # regardless of argument length.
+        s_ = """
+        for some_long_variable in some_long_function(some_even_longer_variable,
+                               some_longer_variable)
+        end
+        """
+        s = """
+        for some_long_variable in some_long_function(some_even_longer_variable,
+                                                     some_longer_variable)
+        end
+        """
+        test_format(s_, s, SciMLStyle(); yas_style_nesting = true)
+    end
+
+    @testset "916" begin
+        # Generated docstrings with nested interpolation like `$($("@$f"))` should not
+        # cause a parsing error.
+        s = raw"""
+        for f in [:A, :B]
+            @eval begin
+                export $f
+                \"\"\"
+                    Function $($("$f")) docstring
+
+                # Example
+
+                ```jldoctest
+                julia> $($("@$f")) 1
+                1
+                ```
+                \"\"\"
+                macro $f(p)
+                    p
+                end
+            end
+        end
+        """
+        test_format(s, s)
+    end
+
+    @testset "926" begin
+        # Function calls with binary operators as arguments should preserve whitespace.
+        # Previously `f(*, +, a, b)` was formatted as `f(*,+,a,b)`.
+        test_format("f(*, +, a, b)", "f(*, +, a, b)")
+        test_format("f(*, +, a, b, c)", "f(*, +, a, b, c)")
     end
 end
 
