@@ -59,7 +59,7 @@ function format_to_stage(
     options...,
 )
     # :cst
-    cst = JS.parseall(JS.GreenNode, text)
+    cst = JS.parseall(JS.GreenNode, text; version=v"1.12")
     stage in (:gn, :cst) && return cst[1]
 
     # :fst

@@ -11,7 +11,7 @@ ALL_STYLES = (DefaultStyle(), YASStyle(), BlueStyle(), MinimalStyle(), SciMLStyl
 function run_nest(text::String; opts = Options(), style = DefaultStyle())
     d = JuliaFormatter.Document(text)
     s = JuliaFormatter.State(d, opts)
-    g = JuliaSyntax.parseall(JuliaSyntax.GreenNode, text)
+    g = JuliaSyntax.parseall(JuliaSyntax.GreenNode, text; version=v"1.12")
     t = JuliaFormatter.pretty(style, g, s)
     JuliaFormatter.nest!(style, t, s)
     t, s
@@ -20,7 +20,7 @@ end
 function run_format(text::String; style = DefaultStyle(), opts = Options())
     d = JuliaFormatter.Document(text)
     s = JuliaFormatter.State(d, opts)
-    g = JuliaSyntax.parseall(JuliaSyntax.GreenNode, text)
+    g = JuliaSyntax.parseall(JuliaSyntax.GreenNode, text; version=v"1.12")
     JuliaFormatter.format_text(g, style, s)
     s
 end
