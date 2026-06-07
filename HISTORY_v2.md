@@ -1,3 +1,7 @@
+# v2.6.4
+
+Fixed a bug where running JuliaFormatter on Julia v1.10 would error on syntax that was only valid in Julia v1.11, such as the `public` keyword. (#890, #1055)
+
 # v2.6.3
 
 Fixed a bug where formatting binary expressions with extraneous blank lines was not idempotent. (#1049, #1050)
