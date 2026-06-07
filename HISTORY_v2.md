@@ -1,3 +1,9 @@
+# v2.6.3
+
+Fixed a bug where formatting binary expressions with extraneous blank lines was not idempotent. (#1049, #1050)
+
+Fixed a bug where formatting expressions with semicolons (e.g. `a1; a2`) inside a `try`/`catch` block was not idempotent. (#1051, #1050)
+
 # v2.6.2
 
 Re-enabled `always_use_return=true` for BlueStyle, in line with the Blue style guide. (#906, #1041)
