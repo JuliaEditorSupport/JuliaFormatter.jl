@@ -391,6 +391,11 @@ function format(paths, options::Configuration)::Bool
     # Don't parallelize this, since there could be a race condition on a
     # subdirectory that is included in both paths
     for path in paths
+        if !(path isa AbstractString) && !(path isa Module)
+            error(
+                "`format()` only accepts paths, modules, or collections thereof, but got an element of type $(typeof(path))",
+            )
+        end
         already_formatted &= format(path, options)
     end
     return already_formatted
