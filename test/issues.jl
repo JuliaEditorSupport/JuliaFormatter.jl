@@ -642,7 +642,7 @@ end
         SUITE["manifolds"][name]["tv = 2 * tv1 + 3 * tv2"] = @benchmarkable $tv =
             2 * $tv1 + 3 * $tv2
         """
-        @test format_text(str, BlueStyle()) == str
+        test_format(str, str, BlueStyle())
     end
 
     @testset "issue 324 - bounds error when aligning binary op calls" begin
@@ -655,7 +655,7 @@ end
         θ = eigvals(Matrix([0I(n^2) -I(n^2); P0 P1]), -Matrix([I(n^2) 0I(n^2); 0I(n^2) P2]))
         c = maximum(abs.(θ[(imag.(θ) .== 0) .* (real.(θ) .> 0)]))
         """
-        @test format_text(str_; align_assignment = true) == str
+        test_format(str_, str; align_assignment = true)
     end
 
     @testset "issue 332" begin
@@ -666,7 +666,7 @@ end
                f("A")"""
         str = """a = b || c;
                f("A")"""
-        @test format_text(str_) == str
+        test_format(str_, str)
     end
 
     @testset "issue 336" begin
@@ -1423,7 +1423,7 @@ end
             @foo a
         end
         """
-        @test format_text(str, SciMLStyle()) == str_
+        test_format(str, str_, SciMLStyle())
 
         str = raw"""
         begin @foo(a) end
@@ -1433,7 +1433,7 @@ end
             @foo(a)
         end
         """
-        @test format_text(str, SciMLStyle()) == str_
+        test_format(str, str_, SciMLStyle())
     end
 
     @testset "613" begin
@@ -1442,7 +1442,15 @@ end
         my_cmd very_long command that really should be multi-line but isn't, and exceeds the character limit, will be indented forever by repeated calls to format
         ```
         """
-        @test format_text(s) == s
+        test_format(s, s)
+    end
+
+    @testset "630" begin
+        s = raw"""
+        rn = @reaction_network begin
+            k/$V, A + B --> C
+        end k"""
+        test_format(s, s, SciMLStyle())
     end
 
     @testset "636" begin
@@ -1696,7 +1704,7 @@ end
         foo(ᶜa) = - ᶜa
         """
         test_format(s, s; indent=4, margin=92)
-        @test format_text(s, SciMLStyle()) == s
+        test_format(s, s, SciMLStyle())
     end
 
     if VERSION >= v"1.8"
@@ -1741,7 +1749,7 @@ end
             end
         end
         """
-        @test format_text(str_, SciMLStyle()) == str
+        test_format(str_, str, SciMLStyle())
     end
 
     @testset "624" begin
@@ -1750,15 +1758,14 @@ end
             repo="github.com/julia-vscode/CSTParser.jl",
         )
         """
-        s1 = format_text(s, MinimalStyle())
-        @test format_text(s1, MinimalStyle()) == s
+        test_format(s, s, MinimalStyle())
     end
 
     @testset "769" begin
         s = raw"""
         @assert x isa Tuple \"msg\"
         """
-        @test format_text(s, SciMLStyle()) == s
+        test_format(s, s, SciMLStyle())
     end
 
     @testset "779" begin
@@ -1781,7 +1788,7 @@ end
         s = """
         @f(a, b, c)
         """
-        @test format_text(s, SciMLStyle()) == s
+        test_format(s, s, SciMLStyle())
     end
 
     @testset "817" begin
@@ -1802,7 +1809,7 @@ end
             "Southern Europe" => SubRegion.Southern_Europe,
             "Central Asia" => SubRegion.Central_Asia]
         """
-        @test format_text(s, SciMLStyle()) == s2
+        test_format(s, s2, SciMLStyle())
     end
 
     @testset "822" begin
@@ -1810,7 +1817,7 @@ end
         ℯ #=
         =#
         """
-        @test format_text(s) == s
+        test_format(s, s)
 
         s = """
         begin
@@ -1818,12 +1825,12 @@ end
             comment =#
         end
         """
-        @test format_text(s) == s
+        test_format(s, s)
     end
 
     @testset "820" begin
         s = "this_func(::Tuple{<:(some_func())}) = nothing"
-        @test format_text(s) == s
+        test_format(s, s)
     end
 
     @testset "820" begin
@@ -1839,12 +1846,11 @@ end
             xxxxx=["xxxx", "xxxx", "xxxx"],
         )
         """
-        @test format_text(
-            s1;
-            style = BlueStyle(),
+        test_format(
+            s1, s2, BlueStyle();
             trailing_comma = true,
             join_lines_based_on_source = true,
-        ) == s2
+        )
 
         s1 = """
         XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX = (
@@ -1858,12 +1864,11 @@ end
             xxxxx=["xxxx", "xxxx", "xxxx"],
         )
         """
-        @test format_text(
-            s1;
-            style = BlueStyle(),
+        test_format(
+            s1, s2, BlueStyle(),
             trailing_comma = true,
             join_lines_based_on_source = true,
-        ) == s2
+        )
     end
 
     @testset "774" begin
@@ -1904,10 +1909,7 @@ end
                 return [tuple(first_coord...), tuple(first(second_coord)...)]
             end
             """
-            f1 = format_text(str_, BlueStyle(); join_lines_based_on_source = true)
-            @test f1 == str
-            f1 = format_text(f1, BlueStyle(); join_lines_based_on_source = true)
-            @test f1 == str
+            test_format(str_, str, BlueStyle(); join_lines_based_on_source = true)
         end
     end
 
