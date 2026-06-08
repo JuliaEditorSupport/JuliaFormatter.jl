@@ -1043,6 +1043,18 @@ function add_node!(
         push!(tnodes::Vector{FST}, n)
         return
     elseif is_custom_leaf(n)
+        # Add a space before a `#= =#` comment to avoid it being
+        # glued to the previous node when printed.
+        if n.typ === HASHEQCOMMENT && !isempty(tnodes)
+            nt = (tnodes[end]::FST).typ
+            # TODO(penelopeysm): The PLACEHOLDER check catches cases where there is a
+            # Placeholder(1) before the comment, which can be turned into a Whitespace(1).
+            # I'm not sure if this check is therefore overly broad since it also catches
+            # Placeholder(0) nodes.
+            if nt !== WHITESPACE && nt !== NEWLINE && nt !== PLACEHOLDER
+                add_node!(t, Whitespace(1), s)
+            end
+        end
         t.len += length(n)
         n.startline = t.endline
         n.endline = t.endline
