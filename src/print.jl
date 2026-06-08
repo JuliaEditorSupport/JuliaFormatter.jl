@@ -147,12 +147,13 @@ function print_tree(
         end
 
         if n.typ === NEWLINE && s.on && i < length(nodes)
-            if is_closer(nodes[i+1]) || nodes[i+1].typ === Block || nodes[i+1].typ === Begin
+            next_node = nodes[i+1]
+            if is_closer(next_node) || next_node.typ === Block || next_node.typ === Begin
                 if s.on
-                    write(io, repeat(" ", max(nodes[i+1].indent, 0)))
+                    write(io, repeat(" ", max(next_node.indent, 0)))
                 end
-                s.line_offset = nodes[i+1].indent
-            elseif !skip_indent(nodes[i+1])
+                s.line_offset = next_node.indent
+            elseif !skip_indent(next_node)
                 if s.on
                     write(io, ws)
                 end

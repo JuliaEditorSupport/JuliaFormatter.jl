@@ -741,7 +741,7 @@ function should_nest_call_args(args, disallow_single_arg_nesting::Bool)
 end
 
 function is_binaryop_nestable(::AbstractStyle, cst::JuliaSyntax.GreenNode)
-    if (is_assignment(cst) || is_pairarrow(cst)) && haschildren(cst)
+    if (is_assignment(cst) || is_pairarrow(cst) || defines_function(cst)) && haschildren(cst)
         childs = children(cst)
         idx = findlast(n -> !JuliaSyntax.is_whitespace(n), childs)::Int
         return !is_str_or_cmd(childs[idx])
