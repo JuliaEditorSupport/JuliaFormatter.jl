@@ -4,7 +4,6 @@ using JuliaFormatter: DefaultStyle, YASStyle, BlueStyle, SciMLStyle, MinimalStyl
 using JuliaFormatter.Internal: test_format
 using Test
 
-
 @testset "trailing_comma" begin
     @testset "remove trailing comma" begin
         for str_ in (
@@ -87,4 +86,6 @@ using Test
           ccccccccc)"""
         test_format(s2_, s2, YASStyle(); margin=2)
     end
+end
+
 end # module
