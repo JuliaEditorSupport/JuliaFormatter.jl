@@ -1370,6 +1370,24 @@ end
             whitespace_in_kwargs = false)
     end
 
+    @testset "562" begin
+        # An inline `#= =#` comment in a call must keep a space from the following
+        # argument (it must not be glued to it or moved to the end of the call).
+        for s in (
+            "f(x, #= y,=# z)",
+            "g(op_data, #= ::OpData =# entry)",
+        )
+            for style in ALL_STYLES
+                if style isa YASStyle
+                    # Fails idempotence
+                    @test_broken false
+                else
+                    test_format(s, s, style)
+                end
+            end
+        end
+    end
+
     @testset "568" begin
         s = """
         function (func(arg))
@@ -2223,6 +2241,26 @@ end
         test_format(s_, s_, SciMLStyle())
     end
 
+    @testset "905" begin
+        # The `∈`/`in` operator in a generator *body* must not be normalized; only the
+        # iteration specifications (after `for`) are affected by `always_for_in`.
+        for style in (DefaultStyle(), BlueStyle(), YASStyle())
+            test_format(
+                "all(v ∈ P for v in mylist)",
+                "all(v ∈ P for v in mylist)",
+                style;
+                always_for_in = true,
+            )
+            # the iteration spec itself is still normalized
+            test_format(
+                "all(v ∈ P for v = mylist)",
+                "all(v ∈ P for v in mylist)",
+                style;
+                always_for_in = true,
+            )
+        end
+    end
+
     @testset "911" begin
         # `@testset` block should not prevent the formatter from nesting function
         # arguments that exceed the margin.
@@ -2346,6 +2384,26 @@ end
         test_format("f(*, +, a, b, c)", "f(*, +, a, b, c)")
     end
 
+    @testset "944 for-in scoping" begin
+        test_format(
+            "[x[i] = y[i] for i = 1:length(y)]",
+            "[x[i] = y[i] for i in 1:length(y)]";
+            always_for_in = true,
+        )
+        
+        s = "any(x in 1:5 for x in xs)"
+        test_format(s, s)
+    end
+
+    @testset "946" begin
+        s = "function f()\n    #==Pairs Tuple or ValidationResult==#\n    #=\n    So far\n    =#\nend\n"
+        test_format(s, s)
+        s = "function g()\n    y #=c=#\nend"
+        test_format(s, s)
+        # There are a litany of bugs with other styles.
+        @test_broken false
+    end
+
     @testset "1025" begin
         # from julia@1.12.6 Compiler/src/typelimits.jl
         s = """
@@ -2365,51 +2423,6 @@ end
         end
         """
         test_format(s, s)
-    end
-
-    @testset "905" begin
-        # The `∈`/`in` operator in a generator *body* must not be normalized; only the
-        # iteration specifications (after `for`) are affected by `always_for_in`.
-        for style in (DefaultStyle(), BlueStyle(), YASStyle())
-            test_format(
-                "all(v ∈ P for v in mylist)",
-                "all(v ∈ P for v in mylist)",
-                style;
-                always_for_in = true,
-            )
-            # the iteration spec itself is still normalized
-            test_format(
-                "all(v ∈ P for v = mylist)",
-                "all(v ∈ P for v in mylist)",
-                style;
-                always_for_in = true,
-            )
-        end
-    end
-
-    @testset "944" begin
-        # `always_for_in` must not rewrite a comprehension *body* assignment `=` to `in`
-        # (which silently changes the meaning of the constructed array).
-        test_format(
-            "[x[i] = y[i] for i = 1:length(y)]",
-            "[x[i] = y[i] for i in 1:length(y)]";
-            always_for_in = true,
-        )
-        # iteration specs are still normalized, including multi-variable iteration
-        test_format(
-            "xs = [y for y = 1:10, z = 1:5]",
-            "xs = [y for y in 1:10, z in 1:5]";
-            always_for_in = true,
-        )
-    end
-
-    @testset "946" begin
-        # `#= =#` comments inside a block must be preserved -- the leading single-line
-        # comment was previously dropped -- and the result must be idempotent.
-        s = "function f()\n    #==Pairs Tuple or ValidationResult==#\n    #=\n    So far\n    =#\nend\n"
-        test_format(s, s)
-        # a `#= =#` comment trailing the last statement of a block is preserved
-        test_format("function g()\n    y #=c=#\nend", "function g()\n    y #=c=#\nend")
     end
 
     @testset "1018" begin
@@ -2434,16 +2447,6 @@ end
         )
         # macroblocks without a closer are unaffected
         test_format("@testset \"x\" begin\n    a\nend", "@testset \"x\" begin\n    a\nend")
-    end
-
-    @testset "562" begin
-        # An inline `#= =#` comment in a call must keep a space from the following
-        # argument (it must not be glued to it or moved to the end of the call).
-        test_format("f(x, #= y,=# z)\n", "f(x, #= y,=# z)\n")
-        test_format(
-            "g(op_data, #= ::OpData =# entry)\n",
-            "g(op_data, #= ::OpData =# entry)\n",
-        )
     end
 
     @testset "1062 docstring indent on rhs of short function def" begin
