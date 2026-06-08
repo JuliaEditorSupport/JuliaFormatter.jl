@@ -63,6 +63,8 @@ When invoked on a JuliaFormatter PR, FormatBot will:
    - Run the formatter on the target repository again, with the same style options, and save *those* changes to a different branch (let's call it `headfmt`);
 1. If `against=basefmt`, diff the `basefmt` and `headfmt` branches and post the results as a comment on the PR. If `against=nofmt`, diff the `nofmt` and `headfmt` branches instead.
 
+FormatBot will also include a warning if formatting is not idempotent, or fails.
+
 ### Issue triage
 
 Issues (and sometimes PRs) will be assigned a priority label, with a larger number indicating more important.

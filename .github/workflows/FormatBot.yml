@@ -319,10 +319,3 @@ jobs:
           else
             echo "Diff not found (script may have errored before computing diff)"
           fi
-
-      - name: Add completion reaction
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh api repos/${{ github.repository }}/issues/comments/${{ github.event.comment.id }}/reactions \
-            -f content=rocket
