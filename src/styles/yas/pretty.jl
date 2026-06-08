@@ -875,6 +875,11 @@ function p_generator(
     from_for = has_for_kw || ctx.from_for
 
     past_if = false
+    # Only iteration specifications (between the `for` and `if` keywords) are subject to
+    # `=`/`in` normalization; the comprehension body that precedes `for` must be left
+    # untouched (e.g. `v ∈ P` in `all(v ∈ P for v in xs)`). See the default-style
+    # `p_generator` for details.
+    seen_for = !has_for_kw
     for (i, a) in enumerate(childs)
         n = pretty(style, a, s, newctx(ctx; from_for = from_for), lineage)
         if JuliaSyntax.is_keyword(a) && !haschildren(a)
@@ -897,11 +902,15 @@ function p_generator(
             add_node!(t, n, s; join_lines = true)
         end
 
-        if from_for && !past_if
+        if from_for && seen_for && !past_if
             eq_to_in_normalization!(n, s.opts.always_for_in, s.opts.for_in_replacement)
         end
-        if kind(a) === K"if" && JuliaSyntax.is_keyword(a) && !haschildren(a)
-            past_if = true
+        if JuliaSyntax.is_keyword(a) && !haschildren(a)
+            if kind(a) === K"for"
+                seen_for = true
+            elseif kind(a) === K"if"
+                past_if = true
+            end
         end
     end
 

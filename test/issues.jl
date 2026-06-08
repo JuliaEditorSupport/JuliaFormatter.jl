@@ -2367,29 +2367,35 @@ end
         test_format(s, s)
     end
 
-    @testset "macrocall with do-block" begin
-        # A macrocall followed by a do-block (`@modify(x) do ... end`) must not gain a
-        # double space before `do`, and its parenthesized args must not be treated as a
-        # macroblock and pick up extra whitespace.
-        test_format("@modify(x) do y\n    y\nend", "@modify(x) do y\n    y\nend")
-        test_format(
-            "Makie.@recipe(A, B) do scene\n    t\nend",
-            "Makie.@recipe(A, B) do scene\n    t\nend",
-        )
-        # macroblocks without a closer are unaffected
-        test_format("@testset \"x\" begin\n    a\nend", "@testset \"x\" begin\n    a\nend")
+    @testset "905" begin
+        # The `∈`/`in` operator in a generator *body* must not be normalized; only the
+        # iteration specifications (after `for`) are affected by `always_for_in`.
+        for style in (DefaultStyle(), BlueStyle(), YASStyle())
+            test_format(
+                "all(v ∈ P for v in mylist)",
+                "all(v ∈ P for v in mylist)",
+                style;
+                always_for_in = true,
+            )
+            # the iteration spec itself is still normalized
+            test_format(
+                "all(v ∈ P for v = mylist)",
+                "all(v ∈ P for v in mylist)",
+                style;
+                always_for_in = true,
+            )
+        end
     end
 
-    @testset "comprehension body assignment with always_for_in" begin
-        # `always_for_in` must only normalize iteration specs (after `for`), never the
-        # comprehension body. `[y = f(p) for p in ps]` must not become `[y in f(p) ...]`.
+    @testset "944" begin
+        # `always_for_in` must not rewrite a comprehension *body* assignment `=` to `in`
+        # (which silently changes the meaning of the constructed array).
         test_format(
-            "xs = [y = f(p) for p in ps]",
-            "xs = [y = f(p) for p in ps]";
+            "[x[i] = y[i] for i = 1:length(y)]",
+            "[x[i] = y[i] for i in 1:length(y)]";
             always_for_in = true,
         )
-        # iteration specs are still normalized to `in`
-        test_format("xs = [y for y = 1:10]", "xs = [y for y in 1:10]"; always_for_in = true)
+        # iteration specs are still normalized, including multi-variable iteration
         test_format(
             "xs = [y for y = 1:10, z = 1:5]",
             "xs = [y for y in 1:10, z in 1:5]";
@@ -2397,16 +2403,37 @@ end
         )
     end
 
-    @testset "block #= =# comments are preserved" begin
-        # `#= =#` comments are reported as whitespace by JuliaSyntax; block handlers must
-        # not drop them.
+    @testset "946" begin
+        # `#= =#` comments inside a block must be preserved -- the leading single-line
+        # comment was previously dropped -- and the result must be idempotent.
+        s = "function f()\n    #==Pairs Tuple or ValidationResult==#\n    #=\n    So far\n    =#\nend\n"
+        test_format(s, s)
+        # a `#= =#` comment trailing the last statement of a block is preserved
         test_format("function g()\n    y #=c=#\nend", "function g()\n    y #=c=#\nend")
-        # a comment trailing a header is preserved (relocated onto its own line) rather
-        # than deleted, and must not corrupt the surrounding source.
+    end
+
+    @testset "1018" begin
+        # A macro call using `do` with keyword-style args must be formatted like the
+        # function-call form, not left partially unformatted with extra spaces and
+        # unindented multiline `do` arguments.
         test_format(
-            "function f(x) #=c=#\n    y\nend",
-            "function f(x)\n    #=c=#\n    y\nend",
+            "y = @foo(a=1,  b=2)  do x,\ny\n    x + y\nend\n",
+            "y = @foo(a=1, b=2) do x, y\n    return x + y\nend\n",
+            BlueStyle(),
         )
+        test_format(
+            "expr_spec = @template_spec(parameters=(p1=10, p2=10, p3=1),  expressions=(f, g))  do x1,\nx2,\nclass\n\n    x1 * 2\nend\n",
+            "expr_spec = @template_spec(\n    parameters=(p1=10, p2=10, p3=1), expressions=(f, g)\n) do x1, x2, class\n    return x1 * 2\nend\n",
+            BlueStyle(),
+        )
+        # default-style macrocall + do-block keeps single spaces and indents the body
+        test_format("@modify(x) do y\n    y\nend", "@modify(x) do y\n    y\nend")
+        test_format(
+            "Makie.@recipe(A, B) do scene\n    t\nend",
+            "Makie.@recipe(A, B) do scene\n    t\nend",
+        )
+        # macroblocks without a closer are unaffected
+        test_format("@testset \"x\" begin\n    a\nend", "@testset \"x\" begin\n    a\nend")
     end
 end
 
