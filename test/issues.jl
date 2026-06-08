@@ -1373,17 +1373,25 @@ end
     @testset "562" begin
         # An inline `#= =#` comment in a call must keep a space from the following
         # argument (it must not be glued to it or moved to the end of the call).
-        for s in (
-            "f(x, #= y,=# z)",
-            "g(op_data, #= ::OpData =# entry)",
-        )
-            for style in ALL_STYLES
-                if style isa YASStyle
-                    # Fails idempotence
-                    @test_broken false
-                else
-                    test_format(s, s, style)
-                end
+        #
+        # YASStyle forces nesting, the others preserve it
+        s1 = "f(x, #= y,=# z)"
+        for style in ALL_STYLES
+            if style isa YASStyle
+                s1_yas = "f(x,\n  #= y,=#\n  z)"
+                test_format(s1, s1_yas, style)
+            else
+                test_format(s1, s1, style)
+            end
+        end
+
+        s2 = "g(op_data, #= ::OpData =# entry)"
+        for style in ALL_STYLES
+            if style isa YASStyle
+                s2_yas = "g(op_data,\n  #= ::OpData =#\n  entry)"
+                test_format(s2, s2_yas, style)
+            else
+                test_format(s2, s2, style)
             end
         end
     end

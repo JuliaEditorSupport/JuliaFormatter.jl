@@ -1102,7 +1102,7 @@ function add_node!(
        !is_closer(n) &&
        !is_comma(n) &&
        n.typ !== SEMICOLON
-        add_node!(t, Whitespace(1), s)
+        add_node!(t, Placeholder(1), s)
     end
 
     if !is_prev_newline(tnodes[end]::FST)
