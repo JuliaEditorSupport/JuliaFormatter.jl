@@ -1,3 +1,9 @@
+# v2.6.5
+
+Fixed a bug where short-form function definitions which had string literals on the RHS were being incorrectly indented. (#1062, #1063)
+
+Improved pretty-printing of `FST` struct. (#1063)
+
 # v2.6.4
 
 Fixed a bug where running JuliaFormatter on Julia v1.10 would error on syntax that was only valid in Julia v1.11, such as the `public` keyword. (#890, #1055)

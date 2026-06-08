@@ -2366,6 +2366,18 @@ end
         """
         test_format(s, s)
     end
+
+    @testset "1062 docstring indent on rhs of short function def" begin
+        for str in (
+            "test_f() = \"\"\"\nxxxxx\n\"\"\"",
+            "test_f = \"\"\"\nxxxxx\n\"\"\"",
+        )
+            for style in ALL_STYLES
+                test_format(str, str)
+                test_format(str, str; margin=4)
+            end
+        end
+    end
 end
 
 end
