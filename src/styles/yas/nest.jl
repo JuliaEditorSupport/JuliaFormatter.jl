@@ -194,7 +194,7 @@ function n_parameters!(
 )
     n_tuple!(ys, fst, s, lineage)
 end
-function n_invisbrackets!(
+function n_parens!(
     ys::YASStyle,
     fst::FST,
     s::State,

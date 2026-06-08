@@ -91,7 +91,7 @@ for f in [
     :p_braces,
     # :p_vect, don't use YAS style vector formatting with `yas_style_nesting = true`
     :p_parameters,
-    :p_invisbrackets,
+    :p_parens,
     :p_bracescat,
 ]
     @eval function $f(

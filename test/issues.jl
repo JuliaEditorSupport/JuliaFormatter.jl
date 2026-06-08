@@ -1390,8 +1390,6 @@ end
         end
         """
         # no trailing comma since (arg) is semantically different from (arg,) !!!
-        # NOTE: as of CSTParser 3.4.0 this is no longe parsed as a tuple but as invisbrackets
-        # so we don't need to worry about it
         s_ = """
         function (func(
             arg,

@@ -409,7 +409,7 @@ function pretty(
     elseif k === K"iteration"
         p_iteration(style, node, s, ctx, lineage)
     elseif k === K"parens"
-        p_invisbrackets(style, node, s, ctx, lineage)
+        p_parens(style, node, s, ctx, lineage)
     elseif k === K"curly"
         p_curly(style, node, s, ctx, lineage)
     elseif is_macrostr(node)
@@ -2920,7 +2920,7 @@ function p_call(
     t
 end
 
-function p_invisbrackets(
+function p_parens(
     ds::AbstractStyle,
     cst::JuliaSyntax.GreenNode,
     s::State,

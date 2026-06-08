@@ -127,7 +127,7 @@ function nest!(
     elseif fst.typ === BracesCat
         n_bracescat!(style, fst, s, lineage)
     elseif fst.typ === Brackets
-        n_invisbrackets!(style, fst, s, lineage)
+        n_parens!(style, fst, s, lineage)
     elseif fst.typ === Comprehension
         n_comprehension!(style, fst, s, lineage)
     elseif fst.typ === TypedComprehension
@@ -482,7 +482,7 @@ function n_parameters!(
     n_tuple!(ds, fst, s, lineage)
 end
 
-function n_invisbrackets!(
+function n_parens!(
     ds::AbstractStyle,
     fst::FST,
     s::State,

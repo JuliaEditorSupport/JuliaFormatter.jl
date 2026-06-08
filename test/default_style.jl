@@ -4047,7 +4047,7 @@ run_nest(text::String, margin::Int) = run_nest(text, opts = Options(margin = mar
         test_format(str_, str; indent=4, margin=1)
     end
 
-    @testset "invisbrackets" begin
+    @testset "parens" begin
         str = """
         some_function(
             (((
@@ -4096,7 +4096,7 @@ some_function(
         test_format(str, str; indent=8, margin=92)
 
         #
-        # Don't nest the op if an arg is invisbrackets
+        # Don't nest the op if an arg is parens
         #
 
         str_ = """

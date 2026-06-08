@@ -423,7 +423,7 @@ using JuliaFormatter: format_text
         test_format(str_, str, YASStyle(); indent=4, margin=length(str_) - 1)
     end
 
-    @testset "invisbrackets" begin
+    @testset "parens" begin
         str_ = """
         if ((
           aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa ||

@@ -352,7 +352,7 @@ function p_tuple(
 end
 
 # Brackets
-function p_invisbrackets(
+function p_parens(
     ys::YASStyle,
     cst::JuliaSyntax.GreenNode,
     s::State,
