@@ -151,27 +151,32 @@ function show(io::IO, fst::FST)
     show(io, MIME("text/plain"), fst)
 end
 
-function show(io::IO, ::MIME"text/plain", fst::FST, indent::String = "")
+COLORS = (:blue, :green, :red, :cyan, :magenta, :yellow)
+function show(io::IO, ::MIME"text/plain", fst::FST, level::Int = 1)
+    indent = " " ^ ((level - 1) * 4)
+    color = COLORS[mod1(level, length(COLORS))]
     if !is_leaf(fst)
-        println(io, indent, "FST: $(fst.typ) $(length(fst.nodes::Vector{FST}))")
-        println(
+        printstyled(io, "FST: $(fst.typ) $(length(fst.nodes::Vector{FST}))\n"; color=color, bold=true)
+        printstyled(
             io,
             indent,
-            "  ($(fst.startline), $(fst.endline), $(fst.indent), $(fst.len))",
+            "  ($(fst.startline), $(fst.endline), $(fst.indent), $(fst.len))\n";
+            color=color
         )
-        println(io, indent, "  nest_behavior: ", fst.nest_behavior)
-        println(io, indent, "  extra_margin: ", fst.extra_margin)
+        printstyled(io, indent, "  nest_behavior: $(fst.nest_behavior)\n"; color=color)
+        printstyled(io, indent, "  extra_margin: $(fst.extra_margin)\n"; color=color)
 
-        println(io, indent, "  nodes:")
+        printstyled(io, indent, "  nodes:\n"; color=color)
         for (i, node) in enumerate(fst.nodes)
-            print(io, indent, "    [$i] ")
-            show(io, MIME("text/plain"), node, indent * "    ")
+            next_color = COLORS[mod1(level + 1, length(COLORS))]
+            printstyled(io, indent, "    [$i] "; color=next_color, bold=true)
+            show(io, MIME("text/plain"), node, level + 1)
         end
     else
-        println(io, indent, "FST: $(fst.typ)")
-        println(io, indent, "  val: \"$(fst.val)\"")
-        println(io, indent, "  line_offset: ", fst.line_offset)
-        println(io, indent, "  indent: ", fst.indent)
+        printstyled(io, "FST: $(fst.typ)\n"; color=color, bold=true)
+        printstyled(io, indent, "  val: $(repr(fst.val))\n"; color=color)
+        printstyled(io, indent, "  line_offset: $(fst.line_offset)\n"; color=color)
+        printstyled(io, indent, "  indent: $(fst.indent)\n"; color=color)
     end
 end
 
