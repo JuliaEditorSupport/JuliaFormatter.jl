@@ -36,94 +36,48 @@ cst = parseall(GreenNode, text)</code></pre><pre class="documenter-example-outpu
             3: Symbol z</code></pre><div class="admonition is-info" id="Note-e8f84e24ea5c1260"><header class="admonition-header">Note<a class="admonition-anchor" href="#Note-e8f84e24ea5c1260" title="Permalink"></a></header><div class="admonition-body"><p>The CST parsing backend has varied across versions. JuliaFormatter v2 - v2.4 used JuliaSyntax.jl v0, and JuliaFormatter v1 used <a href="https://github.com/julia-vscode/CSTParser.jl">CSTParser.jl</a>.</p></div></div><h2 id="Generating-an-FST"><a class="docs-heading-anchor" href="#Generating-an-FST">Generating an <code>FST</code></a><a id="Generating-an-FST-1"></a><a class="docs-heading-anchor-permalink" href="#Generating-an-FST" title="Permalink"></a></h2><p>From the CST we transform it into a slightly richer representation, which is internally called an FST. The FST is very similar to the CST, but it contains additional information that is specific to formatting.</p><p>For example, the CST is very lightweight: it actually does not store any strings for the various nodes, only byte offsets. When generating the FST, we use the byte offsets plus the original source code to extract the relevant substrings and store them in the FST.</p><pre><code class="language-julia hljs">using JuliaFormatter: State, Document, Options, pretty, DefaultStyle
 
 state = State(Document(text), Options(; margin=10))
-fst = pretty(DefaultStyle(), cst, state)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">FST: TopLevel 1
-  (1, 1, 0, 12)
-  nest_behavior: AllowNest
-  extra_margin: 0
-  nodes:
-    [1]     FST: Binary 6
-      (1, 1, 0, 12)
-      nest_behavior: AllowNest
-      extra_margin: 0
-      nodes:
-        [1]         FST: IDENTIFIER
-          val: &quot;x&quot;
-          line_offset: 1
-          indent: 0
-        [2]         FST: WHITESPACE
-          val: &quot; &quot;
-          line_offset: -1
-          indent: 0
-        [3]         FST: OPERATOR
-          val: &quot;=&quot;
-          line_offset: 3
-          indent: 0
-        [4]         FST: PLACEHOLDER
-          val: &quot; &quot;
-          line_offset: -1
-          indent: 0
-        [5]         FST: PLACEHOLDER
-          val: &quot;&quot;
-          line_offset: -1
-          indent: 0
-        [6]         FST: Call 7
-          (1, 1, 0, 8)
-          nest_behavior: AllowNest
-          extra_margin: 0
-          nodes:
-            [1]             FST: IDENTIFIER
-              val: &quot;f&quot;
-              line_offset: 5
-              indent: 0
-            [2]             FST: PUNCTUATION
-              val: &quot;(&quot;
-              line_offset: 6
-              indent: 0
-            [3]             FST: PLACEHOLDER
-              val: &quot;&quot;
-              line_offset: -1
-              indent: 0
-            [4]             FST: Binary 6
-              (1, 1, 0, 5)
-              nest_behavior: AllowNest
-              extra_margin: 0
-              nodes:
-                [1]                 FST: IDENTIFIER
-                  val: &quot;y&quot;
-                  line_offset: 7
-                  indent: 0
-                [2]                 FST: WHITESPACE
-                  val: &quot; &quot;
-                  line_offset: -1
-                  indent: 0
-                [3]                 FST: OPERATOR
-                  val: &quot;+&quot;
-                  line_offset: 9
-                  indent: 0
-                [4]                 FST: PLACEHOLDER
-                  val: &quot; &quot;
-                  line_offset: -1
-                  indent: 0
-                [5]                 FST: PLACEHOLDER
-                  val: &quot;&quot;
-                  line_offset: -1
-                  indent: 0
-                [6]                 FST: IDENTIFIER
-                  val: &quot;z&quot;
-                  line_offset: 11
-                  indent: 0
-            [5]             FST: TRAILINGCOMMA
-              val: &quot;&quot;
-              line_offset: -1
-              indent: 0
-            [6]             FST: PLACEHOLDER
-              val: &quot;&quot;
-              line_offset: -1
-              indent: 0
-            [7]             FST: PUNCTUATION
-              val: &quot;)&quot;
-              line_offset: 12
-              indent: 0
+fst = pretty(DefaultStyle(), cst, state)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi"><span class="sgr34"><span class="sgr1">TopLevel 1</span> lines=1-1 indent=0 len=12</span>
+<span class="sgr34">nest_behavior=AllowNest extra_margin=0</span>
+<span class="sgr34">└── </span><span class="sgr32"><span class="sgr1">[1] Binary 6</span> lines=1-1 indent=0 len=12</span>
+<span class="sgr34">    </span><span class="sgr32">nest_behavior=AllowNest extra_margin=0</span>
+<span class="sgr34">    </span><span class="sgr32">├── </span><span class="sgr31"><span class="sgr1">[1] IDENTIFIER</span> val=&quot;x&quot;</span>
+<span class="sgr34">    </span><span class="sgr32">│   </span><span class="sgr31">    line_offset=1 indent=0</span>
+<span class="sgr34">    </span><span class="sgr32">├── </span><span class="sgr31"><span class="sgr1">[2] WHITESPACE</span> val=&quot; &quot;</span>
+<span class="sgr34">    </span><span class="sgr32">│   </span><span class="sgr31">    line_offset=-1 indent=0</span>
+<span class="sgr34">    </span><span class="sgr32">├── </span><span class="sgr31"><span class="sgr1">[3] OPERATOR</span> val=&quot;=&quot;</span>
+<span class="sgr34">    </span><span class="sgr32">│   </span><span class="sgr31">    line_offset=3 indent=0</span>
+<span class="sgr34">    </span><span class="sgr32">├── </span><span class="sgr31"><span class="sgr1">[4] PLACEHOLDER</span> val=&quot; &quot;</span>
+<span class="sgr34">    </span><span class="sgr32">│   </span><span class="sgr31">    line_offset=-1 indent=0</span>
+<span class="sgr34">    </span><span class="sgr32">├── </span><span class="sgr31"><span class="sgr1">[5] PLACEHOLDER</span> val=&quot;&quot;</span>
+<span class="sgr34">    </span><span class="sgr32">│   </span><span class="sgr31">    line_offset=-1 indent=0</span>
+<span class="sgr34">    </span><span class="sgr32">└── </span><span class="sgr31"><span class="sgr1">[6] Call 7</span> lines=1-1 indent=0 len=8</span>
+<span class="sgr34">    </span><span class="sgr32">    </span><span class="sgr31">nest_behavior=AllowNest extra_margin=0</span>
+<span class="sgr34">    </span><span class="sgr32">    </span><span class="sgr31">├── </span><span class="sgr36"><span class="sgr1">[1] IDENTIFIER</span> val=&quot;f&quot;</span>
+<span class="sgr34">    </span><span class="sgr32">    </span><span class="sgr31">│   </span><span class="sgr36">    line_offset=5 indent=0</span>
+<span class="sgr34">    </span><span class="sgr32">    </span><span class="sgr31">├── </span><span class="sgr36"><span class="sgr1">[2] PUNCTUATION</span> val=&quot;(&quot;</span>
+<span class="sgr34">    </span><span class="sgr32">    </span><span class="sgr31">│   </span><span class="sgr36">    line_offset=6 indent=0</span>
+<span class="sgr34">    </span><span class="sgr32">    </span><span class="sgr31">├── </span><span class="sgr36"><span class="sgr1">[3] PLACEHOLDER</span> val=&quot;&quot;</span>
+<span class="sgr34">    </span><span class="sgr32">    </span><span class="sgr31">│   </span><span class="sgr36">    line_offset=-1 indent=0</span>
+<span class="sgr34">    </span><span class="sgr32">    </span><span class="sgr31">├── </span><span class="sgr36"><span class="sgr1">[4] Binary 6</span> lines=1-1 indent=0 len=5</span>
+<span class="sgr34">    </span><span class="sgr32">    </span><span class="sgr31">│   </span><span class="sgr36">nest_behavior=AllowNest extra_margin=0</span>
+<span class="sgr34">    </span><span class="sgr32">    </span><span class="sgr31">│   </span><span class="sgr36">├── </span><span class="sgr35"><span class="sgr1">[1] IDENTIFIER</span> val=&quot;y&quot;</span>
+<span class="sgr34">    </span><span class="sgr32">    </span><span class="sgr31">│   </span><span class="sgr36">│   </span><span class="sgr35">    line_offset=7 indent=0</span>
+<span class="sgr34">    </span><span class="sgr32">    </span><span class="sgr31">│   </span><span class="sgr36">├── </span><span class="sgr35"><span class="sgr1">[2] WHITESPACE</span> val=&quot; &quot;</span>
+<span class="sgr34">    </span><span class="sgr32">    </span><span class="sgr31">│   </span><span class="sgr36">│   </span><span class="sgr35">    line_offset=-1 indent=0</span>
+<span class="sgr34">    </span><span class="sgr32">    </span><span class="sgr31">│   </span><span class="sgr36">├── </span><span class="sgr35"><span class="sgr1">[3] OPERATOR</span> val=&quot;+&quot;</span>
+<span class="sgr34">    </span><span class="sgr32">    </span><span class="sgr31">│   </span><span class="sgr36">│   </span><span class="sgr35">    line_offset=9 indent=0</span>
+<span class="sgr34">    </span><span class="sgr32">    </span><span class="sgr31">│   </span><span class="sgr36">├── </span><span class="sgr35"><span class="sgr1">[4] PLACEHOLDER</span> val=&quot; &quot;</span>
+<span class="sgr34">    </span><span class="sgr32">    </span><span class="sgr31">│   </span><span class="sgr36">│   </span><span class="sgr35">    line_offset=-1 indent=0</span>
+<span class="sgr34">    </span><span class="sgr32">    </span><span class="sgr31">│   </span><span class="sgr36">├── </span><span class="sgr35"><span class="sgr1">[5] PLACEHOLDER</span> val=&quot;&quot;</span>
+<span class="sgr34">    </span><span class="sgr32">    </span><span class="sgr31">│   </span><span class="sgr36">│   </span><span class="sgr35">    line_offset=-1 indent=0</span>
+<span class="sgr34">    </span><span class="sgr32">    </span><span class="sgr31">│   </span><span class="sgr36">└── </span><span class="sgr35"><span class="sgr1">[6] IDENTIFIER</span> val=&quot;z&quot;</span>
+<span class="sgr34">    </span><span class="sgr32">    </span><span class="sgr31">│   </span><span class="sgr36">    </span><span class="sgr35">    line_offset=11 indent=0</span>
+<span class="sgr34">    </span><span class="sgr32">    </span><span class="sgr31">├── </span><span class="sgr36"><span class="sgr1">[5] TRAILINGCOMMA</span> val=&quot;&quot;</span>
+<span class="sgr34">    </span><span class="sgr32">    </span><span class="sgr31">│   </span><span class="sgr36">    line_offset=-1 indent=0</span>
+<span class="sgr34">    </span><span class="sgr32">    </span><span class="sgr31">├── </span><span class="sgr36"><span class="sgr1">[6] PLACEHOLDER</span> val=&quot;&quot;</span>
+<span class="sgr34">    </span><span class="sgr32">    </span><span class="sgr31">│   </span><span class="sgr36">    line_offset=-1 indent=0</span>
+<span class="sgr34">    </span><span class="sgr32">    </span><span class="sgr31">└── </span><span class="sgr36"><span class="sgr1">[7] PUNCTUATION</span> val=&quot;)&quot;</span>
+<span class="sgr34">    </span><span class="sgr32">    </span><span class="sgr31">    </span><span class="sgr36">    line_offset=12 indent=0</span>
 </code></pre><p>In this very simple example here, <code>margin=10</code> does not actually affect the FST. However, in general, the style as well as the options passed in here will affect the structure of the generated FST, either via multiple dispatch, or via the <code>state.opts</code> field.</p><p>Notice that each node in this tree contains a <code>val</code> field, which is the string corresponding to that node in the CST. On top of that, there are some mysterious <code>PLACEHOLDER</code> nodes, which are not present in the CST. These indicate potential locations where we can insert newlines when we later <em>nest</em> the FST. For example, in the string <code>x = f(y + z)</code> we can insert a newline in several places:</p><pre><code class="nohighlight hljs">x = f( y + z )
    ^  ^   ^ ^</code></pre><p>Each of these potential newline locations is represented by a <code>PLACEHOLDER</code> node in the FST.</p><p>Several other transformations happen at this stage:</p><ul><li>Code and comments are indented to match surrounding code blocks.</li><li>Unnecessary whitespace is removed (although newlines in between code blocks are untouched).</li><li>Code is flattened as much as possible. For example, if an expression can be put on a single line, it will be: it doesn&#39;t matter if it&#39;s over the margin or not at this stage. However, if the expression has a block-like structure to it, such as a <code>try</code>, <code>if</code>, or a <code>struct</code> definition, it will be spread across multiple lines appropriately:</li></ul><p>The important invariant underpinning a FST is any two strings that are syntactically the same (ignoring whitespace) will produce an identical <code>FST</code>. For example:</p><pre><code class="language-julia hljs">a = 
        foo(a,                     b,           
@@ -136,100 +90,52 @@ format_text(text; margin=40) |&gt; print</code></pre><pre class="documenter-exam
 ) # comment</code></pre><p>The decision on where to insert newlines is made in the nesting stage, which converts <code>PLACEHOLDER</code> nodes to <code>NEWLINE</code> nodes as needed. Recall that above we specified <code>margin=10</code>. This will cause the <code>nest!</code> function to insert newlines such that no line exceeds 10 characters. Just as before, the style and options passed in here will affect the decisions made inside <code>nest!</code>.</p><pre><code class="language-julia hljs">using JuliaFormatter: nest!
 
 nest!(DefaultStyle(), fst, state)
-fst</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">FST: TopLevel 1
-  (1, 1, 0, 12)
-  nest_behavior: AllowNest
-  extra_margin: 0
-  nodes:
-    [1]     FST: Binary 6
-      (1, 1, 0, 12)
-      nest_behavior: AllowNest
-      extra_margin: 0
-      nodes:
-        [1]         FST: IDENTIFIER
-          val: &quot;x&quot;
-          line_offset: 1
-          indent: 0
-        [2]         FST: WHITESPACE
-          val: &quot; &quot;
-          line_offset: -1
-          indent: 0
-        [3]         FST: OPERATOR
-          val: &quot;=&quot;
-          line_offset: 3
-          indent: 0
-        [4]         FST: WHITESPACE
-          val: &quot; &quot;
-          line_offset: -1
-          indent: 0
-        [5]         FST: WHITESPACE
-          val: &quot;&quot;
-          line_offset: -1
-          indent: 0
-        [6]         FST: Call 7
-          (1, 1, 4, 8)
-          nest_behavior: AllowNest
-          extra_margin: 0
-          nodes:
-            [1]             FST: IDENTIFIER
-              val: &quot;f&quot;
-              line_offset: 5
-              indent: 4
-            [2]             FST: PUNCTUATION
-              val: &quot;(&quot;
-              line_offset: 6
-              indent: 8
-            [3]             FST: NEWLINE
-              val: &quot;
-&quot;
-              line_offset: -1
-              indent: 0
-            [4]             FST: Binary 6
-              (1, 1, 4, 5)
-              nest_behavior: AllowNest
-              extra_margin: 1
-              nodes:
-                [1]                 FST: IDENTIFIER
-                  val: &quot;y&quot;
-                  line_offset: 7
-                  indent: 8
-                [2]                 FST: WHITESPACE
-                  val: &quot; &quot;
-                  line_offset: -1
-                  indent: 8
-                [3]                 FST: OPERATOR
-                  val: &quot;+&quot;
-                  line_offset: 9
-                  indent: 8
-                [4]                 FST: WHITESPACE
-                  val: &quot; &quot;
-                  line_offset: -1
-                  indent: 0
-                [5]                 FST: PLACEHOLDER
-                  val: &quot;&quot;
-                  line_offset: -1
-                  indent: 8
-                [6]                 FST: IDENTIFIER
-                  val: &quot;z&quot;
-                  line_offset: 11
-                  indent: 8
-            [5]             FST: TRAILINGCOMMA
-              val: &quot;,&quot;
-              line_offset: -1
-              indent: 4
-            [6]             FST: NEWLINE
-              val: &quot;
-&quot;
-              line_offset: -1
-              indent: 0
-            [7]             FST: PUNCTUATION
-              val: &quot;)&quot;
-              line_offset: 12
-              indent: 0
+fst</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi"><span class="sgr34"><span class="sgr1">TopLevel 1</span> lines=1-1 indent=0 len=12</span>
+<span class="sgr34">nest_behavior=AllowNest extra_margin=0</span>
+<span class="sgr34">└── </span><span class="sgr32"><span class="sgr1">[1] Binary 6</span> lines=1-1 indent=0 len=12</span>
+<span class="sgr34">    </span><span class="sgr32">nest_behavior=AllowNest extra_margin=0</span>
+<span class="sgr34">    </span><span class="sgr32">├── </span><span class="sgr31"><span class="sgr1">[1] IDENTIFIER</span> val=&quot;x&quot;</span>
+<span class="sgr34">    </span><span class="sgr32">│   </span><span class="sgr31">    line_offset=1 indent=0</span>
+<span class="sgr34">    </span><span class="sgr32">├── </span><span class="sgr31"><span class="sgr1">[2] WHITESPACE</span> val=&quot; &quot;</span>
+<span class="sgr34">    </span><span class="sgr32">│   </span><span class="sgr31">    line_offset=-1 indent=0</span>
+<span class="sgr34">    </span><span class="sgr32">├── </span><span class="sgr31"><span class="sgr1">[3] OPERATOR</span> val=&quot;=&quot;</span>
+<span class="sgr34">    </span><span class="sgr32">│   </span><span class="sgr31">    line_offset=3 indent=0</span>
+<span class="sgr34">    </span><span class="sgr32">├── </span><span class="sgr31"><span class="sgr1">[4] WHITESPACE</span> val=&quot; &quot;</span>
+<span class="sgr34">    </span><span class="sgr32">│   </span><span class="sgr31">    line_offset=-1 indent=0</span>
+<span class="sgr34">    </span><span class="sgr32">├── </span><span class="sgr31"><span class="sgr1">[5] WHITESPACE</span> val=&quot;&quot;</span>
+<span class="sgr34">    </span><span class="sgr32">│   </span><span class="sgr31">    line_offset=-1 indent=0</span>
+<span class="sgr34">    </span><span class="sgr32">└── </span><span class="sgr31"><span class="sgr1">[6] Call 7</span> lines=1-1 indent=4 len=8</span>
+<span class="sgr34">    </span><span class="sgr32">    </span><span class="sgr31">nest_behavior=AllowNest extra_margin=0</span>
+<span class="sgr34">    </span><span class="sgr32">    </span><span class="sgr31">├── </span><span class="sgr36"><span class="sgr1">[1] IDENTIFIER</span> val=&quot;f&quot;</span>
+<span class="sgr34">    </span><span class="sgr32">    </span><span class="sgr31">│   </span><span class="sgr36">    line_offset=5 indent=4</span>
+<span class="sgr34">    </span><span class="sgr32">    </span><span class="sgr31">├── </span><span class="sgr36"><span class="sgr1">[2] PUNCTUATION</span> val=&quot;(&quot;</span>
+<span class="sgr34">    </span><span class="sgr32">    </span><span class="sgr31">│   </span><span class="sgr36">    line_offset=6 indent=8</span>
+<span class="sgr34">    </span><span class="sgr32">    </span><span class="sgr31">├── </span><span class="sgr36"><span class="sgr1">[3] NEWLINE</span> val=&quot;\n&quot;</span>
+<span class="sgr34">    </span><span class="sgr32">    </span><span class="sgr31">│   </span><span class="sgr36">    line_offset=-1 indent=0</span>
+<span class="sgr34">    </span><span class="sgr32">    </span><span class="sgr31">├── </span><span class="sgr36"><span class="sgr1">[4] Binary 6</span> lines=1-1 indent=4 len=5</span>
+<span class="sgr34">    </span><span class="sgr32">    </span><span class="sgr31">│   </span><span class="sgr36">nest_behavior=AllowNest extra_margin=1</span>
+<span class="sgr34">    </span><span class="sgr32">    </span><span class="sgr31">│   </span><span class="sgr36">├── </span><span class="sgr35"><span class="sgr1">[1] IDENTIFIER</span> val=&quot;y&quot;</span>
+<span class="sgr34">    </span><span class="sgr32">    </span><span class="sgr31">│   </span><span class="sgr36">│   </span><span class="sgr35">    line_offset=7 indent=8</span>
+<span class="sgr34">    </span><span class="sgr32">    </span><span class="sgr31">│   </span><span class="sgr36">├── </span><span class="sgr35"><span class="sgr1">[2] WHITESPACE</span> val=&quot; &quot;</span>
+<span class="sgr34">    </span><span class="sgr32">    </span><span class="sgr31">│   </span><span class="sgr36">│   </span><span class="sgr35">    line_offset=-1 indent=8</span>
+<span class="sgr34">    </span><span class="sgr32">    </span><span class="sgr31">│   </span><span class="sgr36">├── </span><span class="sgr35"><span class="sgr1">[3] OPERATOR</span> val=&quot;+&quot;</span>
+<span class="sgr34">    </span><span class="sgr32">    </span><span class="sgr31">│   </span><span class="sgr36">│   </span><span class="sgr35">    line_offset=9 indent=8</span>
+<span class="sgr34">    </span><span class="sgr32">    </span><span class="sgr31">│   </span><span class="sgr36">├── </span><span class="sgr35"><span class="sgr1">[4] WHITESPACE</span> val=&quot; &quot;</span>
+<span class="sgr34">    </span><span class="sgr32">    </span><span class="sgr31">│   </span><span class="sgr36">│   </span><span class="sgr35">    line_offset=-1 indent=0</span>
+<span class="sgr34">    </span><span class="sgr32">    </span><span class="sgr31">│   </span><span class="sgr36">├── </span><span class="sgr35"><span class="sgr1">[5] PLACEHOLDER</span> val=&quot;&quot;</span>
+<span class="sgr34">    </span><span class="sgr32">    </span><span class="sgr31">│   </span><span class="sgr36">│   </span><span class="sgr35">    line_offset=-1 indent=8</span>
+<span class="sgr34">    </span><span class="sgr32">    </span><span class="sgr31">│   </span><span class="sgr36">└── </span><span class="sgr35"><span class="sgr1">[6] IDENTIFIER</span> val=&quot;z&quot;</span>
+<span class="sgr34">    </span><span class="sgr32">    </span><span class="sgr31">│   </span><span class="sgr36">    </span><span class="sgr35">    line_offset=11 indent=8</span>
+<span class="sgr34">    </span><span class="sgr32">    </span><span class="sgr31">├── </span><span class="sgr36"><span class="sgr1">[5] TRAILINGCOMMA</span> val=&quot;,&quot;</span>
+<span class="sgr34">    </span><span class="sgr32">    </span><span class="sgr31">│   </span><span class="sgr36">    line_offset=-1 indent=4</span>
+<span class="sgr34">    </span><span class="sgr32">    </span><span class="sgr31">├── </span><span class="sgr36"><span class="sgr1">[6] NEWLINE</span> val=&quot;\n&quot;</span>
+<span class="sgr34">    </span><span class="sgr32">    </span><span class="sgr31">│   </span><span class="sgr36">    line_offset=-1 indent=0</span>
+<span class="sgr34">    </span><span class="sgr32">    </span><span class="sgr31">└── </span><span class="sgr36"><span class="sgr1">[7] PUNCTUATION</span> val=&quot;)&quot;</span>
+<span class="sgr34">    </span><span class="sgr32">    </span><span class="sgr31">    </span><span class="sgr36">    line_offset=12 indent=0</span>
 </code></pre><h2 id="Printing-the-FST"><a class="docs-heading-anchor" href="#Printing-the-FST">Printing the FST</a><a id="Printing-the-FST-1"></a><a class="docs-heading-anchor-permalink" href="#Printing-the-FST" title="Permalink"></a></h2><p>Once the FST has been nested the rest is straightforward: traverse the tree and print it out into a string!</p><pre><code class="language-julia hljs">using JuliaFormatter: print_tree
 
 io = IOBuffer()
 print_tree(io, fst, state)
 String(take!(io)) |&gt; print</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">x = f(
     y + z,
-)</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../packagecompiler/">« PackageCompiler</a><a class="docs-footer-nextpage" href="../api/">API Reference »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.17.0 on <span class="colophon-date" title="Monday 8 June 2026 01:09">Monday 8 June 2026</span>. Using Julia version 1.12.6.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+)</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../packagecompiler/">« PackageCompiler</a><a class="docs-footer-nextpage" href="../api/">API Reference »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.17.0 on <span class="colophon-date" title="Monday 8 June 2026 11:32">Monday 8 June 2026</span>. Using Julia version 1.12.6.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
