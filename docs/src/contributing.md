@@ -14,7 +14,58 @@ However, the complexity comes from the fact that:
 
 I'm happy to help with any questions about how best to implement stuff, although please note I'm also finding my way around the codebase myself, so I might not always have the best answer.
 
-## Issue triage
+## The `JuliaFormatter.Internal` module
+
+JuliaFormatter contains some useful utilities which are explicitly marked as internal (i.e., not semver-compliant), inside the `JuliaFormatter.Internal` module.
+
+There are currently two functions.
+`format_to_stage` is more of a helper function for investigating what goes on during the formatting process.
+However, `test_format` is used extensively in the test suite.
+**Please note that all new tests that check the output of formatting should be written using `test_format`.**
+
+```@docs
+JuliaFormatter.Internal.format_to_stage
+JuliaFormatter.Internal.test_format
+```
+
+## GitHub-specific things
+
+### FormatBot
+
+JuliaFormatter has a small GitHub workflow, called FormatBot, which can be invoked on PRs with the following syntax:
+
+```
+!formatbot
+    owner/repo[@REV]
+    [against=basefmt|nofmt]   (default: basefmt)
+    [use_config=true|false]   (default: false)
+    [subdir=SUBDIR]           (default: top-level dir of repo)
+    [style=STYLE]
+    [arg1=val1 arg2=val2...]
+```
+
+where `STYLE` is `default|yas|sciml|blue|minimal` (or omitted to use `DefaultStyle`), and remaining keyword arguments are directly interpolated (**as text**) into `JuliaFormatter.format()`.
+
+`use_config` is a special argument, which indicates whether the `.JuliaFormatter.toml` file in the target repository should be used.
+By default this is `false`, i.e., the formatter will *ignore* any existing configuration file in the target repository.
+
+!!! note "Security"
+    Because the keyword arguments are interpolated directly, this allows for arbitrary code execution, including printing the contents of environment variables.
+    Thus, this command can only be invoked by users with write access to the repository.
+
+When invoked on a JuliaFormatter PR, FormatBot will:
+
+1. Clone the target repository at the specified revision (or the default branch if no revision is specified). Let's call this branch `nofmt`, i.e., no formatting.
+1. Check out the base of the JuliaFormatter PR (i.e., usually the current release of JuliaFormatter).
+   - Run the formatter on the target repository, with the specified style options, and save those changes to a branch (let's call it `basefmt`).
+1. Reset the target repository to `nofmt`.
+1. Check out the head of the JuliaFormatter PR (i.e., the proposed changes).
+   - Run the formatter on the target repository again, with the same style options, and save *those* changes to a different branch (let's call it `headfmt`);
+1. If `against=basefmt`, diff the `basefmt` and `headfmt` branches and post the results as a comment on the PR. If `against=nofmt`, diff the `nofmt` and `headfmt` branches instead.
+
+FormatBot will also include a warning if formatting is not idempotent, or fails.
+
+### Issue triage
 
 Issues (and sometimes PRs) will be assigned a priority label, with a larger number indicating more important.
 The exact label for an issue is left to my discretion, but generally these are the categories that they will fall into:
