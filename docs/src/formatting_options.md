@@ -100,9 +100,17 @@ format_text(s, align_matrix=true) |> print
 
 Default: `false`
 
-If true, `=` is always replaced with `in` if part of a `for` loop condition.
-For example, `for i = 1:10` will be transformed to `for i in 1:10`. Set
-this to `nothing` to leave the choice to the user.
+If `true`, iterators e.g. in `for` loops will always be formatted with `in` instead of `=`.
+The default replacement is `in`, but this can be changed with the [`for_in_replacement`](@ref options-for-in-replacement) option.
+For example, to replace all `=` and `in` with `∈` in iterators, set `for_in_replacement` to `"∈"`.
+
+If `false`, JuliaFormatter still performs a very specific normalisation: for *range iterators*, e.g. `for i = 1:10`, JuliaFormatter uses `=`.
+For all other iterators, `in` is used.
+
+If `nothing`, the choice between `in` and `=` is left to the user, and no normalisation is performed.
+
+!!! Setting an option to `nothing` in .JuliaFormatter.toml
+    TOML does not have a null value. To specify a `nothing` value in a `.JuliaFormatter.toml` file, set the option to the string `"nothing"`, e.g. `always_for_in = "nothing"`.
 
 ## [`always_use_return`](@id options-always-use-return)
 
@@ -582,6 +590,9 @@ funccall(
 * When set to `true`, the trailing comma is always added during nesting.
 * When set to `false`, the trailing comma is always removed during nesting.
 * When set to `nothing`, the trailing comma appears as it does in the original source.
+
+!!! Setting an option to `nothing` in .JuliaFormatter.toml
+    TOML does not have a null value. To specify a `nothing` value in a `.JuliaFormatter.toml` file, set the option to the string `"nothing"`, e.g. `always_for_in = "nothing"`.
 
 ## [`trailing_zero`](@id options-trailing-zero)
 

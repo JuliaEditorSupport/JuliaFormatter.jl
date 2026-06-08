@@ -438,14 +438,24 @@ function prepend_return!(fst::FST, s::State)
     if fst.typ !== Block || length(fst.nodes::Vector{FST}) == 0
         return
     end
-    ln = fst[end]
+
+    # Skip trailing inline block comments (`#= … =#`) and whitespace to find the
+    # actual last expression.  Inline line comments are already placed outside the
+    # Block by `add_node!`, but block comments live inside it as siblings.
+    nodes = fst.nodes::Vector{FST}
+    last_idx = findlast(
+        n -> n.typ !== HASHEQCOMMENT && n.typ !== WHITESPACE && n.typ !== PLACEHOLDER,
+        nodes,
+    )
+    if last_idx === nothing
+        return
+    end
+
+    ln = fst[last_idx]
     if is_block(ln) || ln.typ in (Return, MacroCall, MacroBlock, MacroStr)
         return
     end
-    if length(fst.nodes::Vector{FST}) > 2 &&
-       (fst[end-2].typ === MacroStr || is_macrodoc(fst[end-2]))
-        # The last node is has a docstring prior to it so a return should not be prepended
-        # fst[end-1] is a newline
+    if last_idx > 2 && (fst[last_idx-2].typ === MacroStr || is_macrodoc(fst[last_idx-2]))
         return
     end
     # fix #426
@@ -475,7 +485,7 @@ function prepend_return!(fst::FST, s::State)
     add_node!(ret, kw, s; join_lines = true)
     add_node!(ret, Whitespace(1), s)
     add_node!(ret, ln, s; join_lines = true)
-    fst[end] = ret
+    fst[last_idx] = ret
     return
 end
 

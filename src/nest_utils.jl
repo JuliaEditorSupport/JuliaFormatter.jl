@@ -191,9 +191,14 @@ function nest_if_over_margin!(
         margin += sum(length.(fst[idx:(stop_idx-1)]))
     end
 
+    # Force nesting next to line comments (INLINECOMMENT / NOTCODE) because they
+    # extend to end-of-line and anything after them *must* go on a new line.
+    # Inline block comments (#= … =#) are truly inline and should only trigger
+    # nesting when the margin is actually exceeded.
+    _is_line_comment(n) = is_comment(n) && n.typ !== HASHEQCOMMENT
     if margin > s.opts.margin ||
-       (idx < length(fst.nodes::Vector) && is_comment(fst[idx+1])) ||
-       (idx > 1 && is_comment(fst[idx-1]))
+       (idx < length(fst.nodes::Vector) && _is_line_comment(fst[idx+1])) ||
+       (idx > 1 && _is_line_comment(fst[idx-1]))
         fst[idx] = Newline(; length = fst[idx].len)
         s.line_offset = fst.indent
         return true

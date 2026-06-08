@@ -285,7 +285,7 @@ function do_block_index(childs::Vector{JuliaSyntax.GreenNode{T}}) where {T}
 end
 
 function has_do_block_call(cst::JuliaSyntax.GreenNode)
-    kind(cst) in KSet"call dotcall" && haschildren(cst) || return nothing
+    kind(cst) in KSet"call dotcall macrocall" && haschildren(cst) || return nothing
     do_block_index(children(cst))
 end
 
@@ -417,7 +417,11 @@ function pretty(
     elseif k === K"doc"
         p_globalrefdoc(style, node, s, ctx, lineage)
     elseif k === K"macrocall"
-        p_macrocall(style, node, s, ctx, lineage)
+        if !isnothing(do_block_idx)
+            p_do_call(style, node, s, ctx, lineage, do_block_idx)
+        else
+            p_macrocall(style, node, s, ctx, lineage)
+        end
     elseif k === K"where"
         p_whereopcall(style, node, s, ctx, lineage)
     elseif k === K"?" && haschildren(node)
@@ -917,7 +921,8 @@ function p_macrocall(
     cst::JuliaSyntax.GreenNode,
     s::State,
     ctx::PrettyContext,
-    lineage::Vector{Tuple{JuliaSyntax.Kind,Bool,Bool}},
+    lineage::Vector{Tuple{JuliaSyntax.Kind,Bool,Bool}};
+    do_block_idx::Union{Int,Nothing} = nothing,
 )
     style = getstyle(ds)
     t = FST(MacroCall, nspaces(s))
@@ -929,6 +934,20 @@ function p_macrocall(
     args = get_args(cst)
     nest = should_nest_call_args(args, s.opts.disallow_single_arg_nesting)
     childs = children(cst)
+
+    # A macrocall may be followed by a do-block, e.g. `@modify(x) do y ... end`.
+    # `p_do_call` formats the head here (truncating the do-block) and wraps the
+    # result in a `Do` node. Without this the do-block's closer is mistaken for
+    # the macrocall closer, the args are treated as a macroblock, and extraneous
+    # whitespace is emitted (e.g. `@modify(x)  do`).
+    if !isnothing(do_block_idx)
+        if !checkbounds(Bool, childs, do_block_idx) ||
+           kind(childs[do_block_idx]) !== K"do" ||
+           !haschildren(childs[do_block_idx])
+            error("p_macrocall called with an invalid do block index")
+        end
+        childs = childs[1:(do_block_idx-1)]
+    end
 
     has_closer = is_closer(childs[end])
     is_macroblock = !has_closer
@@ -993,6 +1012,26 @@ function p_macrocall(
     t
 end
 
+# `#= ... =#` comments are reported as whitespace by JuliaSyntax, so block
+# handlers that skip whitespace would otherwise drop them. Append the comment
+# (keeping it on the current line when it trails code) instead of losing it.
+function add_hasheq_comment!(t::FST, n::FST, s::State)
+    n.typ === HASHEQCOMMENT || return false
+    tnodes = t.nodes::Vector{FST}
+    if isempty(tnodes)
+        # A leading comment establishes the block's line tracking. Without this
+        # the custom-leaf path in `add_node!` copies `t.endline` (still 0), and
+        # the next code node computes a bogus NOTCODE range spanning the whole
+        # preceding source, duplicating unrelated comments.
+        t.startline = n.startline
+        t.endline = n.endline
+    elseif !(tnodes[end].typ in (NEWLINE, WHITESPACE, PLACEHOLDER, NOTCODE))
+        add_node!(t, Whitespace(1), s)
+    end
+    add_node!(t, n, s; join_lines = true)
+    return true
+end
+
 # Block
 # length Block is the length of the longest expr
 function p_block(
@@ -1028,7 +1067,10 @@ function p_block(
     ctx = newctx(ctx; ignore_single_line = false, join_body = false, from_quote = false)
 
     for (i, a) in enumerate(childs)
-        if is_ws(a)
+        if kind(a) === K"Comment"
+            add_hasheq_comment!(t, pretty(style, a, s, ctx, lineage), s)
+            continue
+        elseif is_ws(a)
             s.offset += span(a)
             continue
         end
@@ -1090,7 +1132,10 @@ function p_block(
 
     ctx = newctx(ctx; ignore_single_line = false, join_body = false, from_quote = false)
     for (i, a) in enumerate(nodes)
-        if is_ws(a)
+        if kind(a) === K"Comment"
+            add_hasheq_comment!(t, pretty(style, a, s, ctx, lineage), s)
+            continue
+        elseif is_ws(a)
             s.offset += span(a)
             continue
         end
@@ -1908,12 +1953,12 @@ function p_do_call(
         error("p_do_call called without a do block")
     end
 
-    add_node!(
-        t,
-        p_call(ds, cst, s, ctx, lineage; do_block_idx = do_block_idx),
-        s;
-        join_lines = true,
-    )
+    head = if kind(cst) === K"macrocall"
+        p_macrocall(ds, cst, s, ctx, lineage; do_block_idx = do_block_idx)
+    else
+        p_call(ds, cst, s, ctx, lineage; do_block_idx = do_block_idx)
+    end
+    add_node!(t, head, s; join_lines = true)
 
     do_node = childs[do_block_idx]
     push!(lineage, (kind(do_node), is_iterable(do_node), is_assignment(do_node)))
@@ -3877,7 +3922,6 @@ function p_generator(
     has_for_kw = findfirst(n -> kind(n) === K"for", childs) !== nothing
     from_for = has_for_kw || ctx.from_for
 
-    past_if = false
     for (i, a) in enumerate(childs)
         n = pretty(style, a, s, newctx(ctx; from_for = from_for), lineage)
         if JuliaSyntax.is_keyword(a) && !haschildren(a)
@@ -3900,11 +3944,8 @@ function p_generator(
             add_node!(t, n, s; join_lines = true)
         end
 
-        if from_for && !past_if
+        if from_for && kind(a) === K"iteration"
             eq_to_in_normalization!(n, s.opts.always_for_in, s.opts.for_in_replacement)
-        end
-        if kind(a) === K"if" && JuliaSyntax.is_keyword(a) && !haschildren(a)
-            past_if = true
         end
     end
     t

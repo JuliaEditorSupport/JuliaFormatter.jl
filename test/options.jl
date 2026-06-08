@@ -220,73 +220,6 @@ end
         test_format(str, str; import_to_using = true)
     end
 
-    @testset "always convert `=` to `in` (for loops)" begin
-        str_ = """
-        for i = 1:n
-            println(i)
-        end"""
-        str = """
-        for i in 1:n
-            println(i)
-        end"""
-        test_format(str_, str; always_for_in = true)
-        test_format(str, str; always_for_in = true)
-
-        str_ = """
-        for i = I1, j in I2
-            println(i, j)
-        end"""
-        str = """
-        for i in I1, j in I2
-            println(i, j)
-        end"""
-        test_format(str_, str; always_for_in = true)
-        test_format(str, str; always_for_in = true)
-
-        str_ = """
-        for i = 1:30, j = 100:-2:1
-            println(i, j)
-        end"""
-        str = """
-        for i in 1:30, j in 100:-2:1
-            println(i, j)
-        end"""
-        test_format(str_, str; always_for_in = true)
-        test_format(str, str; always_for_in = true)
-        test_format(str_, str_; always_for_in = nothing)
-        test_format(str, str; always_for_in = nothing)
-
-        str_ = "[(i,j) for i=I1,j=I2]"
-        str = "[(i, j) for i in I1, j in I2]"
-        test_format(str_, str; always_for_in = true)
-        test_format(str, str; always_for_in = true)
-
-        str_ = "((i,j) for i=I1,j=I2)"
-        str = "((i, j) for i in I1, j in I2)"
-        test_format(str_, str; always_for_in = true)
-        test_format(str, str; always_for_in = true)
-
-        str_ = "[(i, j) for i = 1:2:10, j = 100:-1:10]"
-        str = "[(i, j) for i in 1:2:10, j in 100:-1:10]"
-        test_format(str_, str; always_for_in = true)
-        test_format(str, str; always_for_in = true)
-
-        str_ = "[i for i = 1:10 if i == 2]"
-        str = "[i for i in 1:10 if i == 2]"
-        test_format(str_, str; always_for_in = true)
-        test_format(str, str; always_for_in = true)
-
-        str_ = "[(i, j) for i = 1:2:10, j = 100:-1:10]"
-        str = "[(i, j) for i in 1:2:10, j in 100:-1:10]"
-        test_format(str_, str, YASStyle(); always_for_in = true)
-        test_format(str, str, YASStyle(); always_for_in = true)
-
-        str_ = "[i for i = 1:10 if i == 2]"
-        str = "[i for i in 1:10 if i == 2]"
-        test_format(str_, str, YASStyle(); always_for_in = true)
-        test_format(str, str, YASStyle(); always_for_in = true)
-    end
-
     @testset "rewrite x |> f to f(x)" begin
         @testset "basic cases" begin
             for dot in ("", ".")
@@ -2412,41 +2345,6 @@ end
         NotificationType(method::AbstractString, ::Type{TPARAM})::R where TPARAM = foo
         """
         test_format(s, s; surround_whereop_typeparameters = false)
-    end
-
-    @testset "for_in_replacement" begin
-        str_ = """
-        for a = b
-        end
-        """
-        str = """
-        for a ∈ b
-        end
-        """
-        test_format(str_, str; always_for_in = true, for_in_replacement = "∈")
-
-        # generator
-        str_ = "[(i, j) for i = 1:2:10, j = 100:-1:10]"
-        str = "[(i, j) for i ∈ 1:2:10, j ∈ 100:-1:10]"
-        test_format(str_, str; always_for_in = true, for_in_replacement = "∈")
-
-        str_ = "[i for i = 1:10 if i == 2]"
-        str = "[i for i ∈ 1:10 if i == 2]"
-        test_format(str_, str; always_for_in = true, for_in_replacement = "∈")
-
-        str_ = "[(i, j) for i = 1:2:10, j = 100:-1:10]"
-        str = "[(i, j) for i ∈ 1:2:10, j ∈ 100:-1:10]"
-        test_format(str_, str, YASStyle(); always_for_in = true, for_in_replacement = "∈")
-
-        str_ = "[i for i = 1:10 if i == 2]"
-        str = "[i for i ∈ 1:10 if i == 2]"
-        test_format(str_, str, YASStyle(); always_for_in = true, for_in_replacement = "∈")
-
-        @test_throws AssertionError format_text(
-            str_;
-            always_for_in = true,
-            for_in_replacement = "ni!",
-        )
     end
 
     @testset "trailing zero" begin

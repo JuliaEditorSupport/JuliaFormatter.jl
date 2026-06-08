@@ -135,17 +135,20 @@ end
     JuliaFormatter.Internal.test_format(
         input::AbstractString,
         expected::AbstractString,
-        [style=DefaultStyle();]
+        [style::AbstractStyle=DefaultStyle();]
+        ast::Bool=false,
         options...
     )
 
 Test that formatting `input` produces `expected`, and that `expected` is idempotent under
-formatting.
+formatting. If `ast=true` additionally tests that the input text and formatted text parse
+to the same AST.
 """
 function test_format(
     input::AbstractString,
     expected::AbstractString,
     style::JF.AbstractStyle = JF.DefaultStyle();
+    ast::Bool = false,
     options...,
 )
     out = JF.format_text(input, style; options...)
@@ -165,6 +168,18 @@ function test_format(
         printstyled("Repro:\n$(_repro_hint(out, style, options))\n"; color = :cyan)
     end
     @test out2 == out
+
+    if ast
+        ast_in = Meta.parse(input)
+        ast_out = Meta.parse(out)
+        if ast_in != ast_out
+            printstyled("AST of input and output did not match.\n\n"; color = :cyan)
+            printstyled("Input AST:\n$ast_in\n\n"; color = :green)
+            printstyled("Output AST:\n$ast_out\n\n"; color = :red)
+            printstyled("Repro:\n$(_repro_hint(input, style, options))\n"; color = :cyan)
+        end
+        @test ast_in == ast_out
+    end
 end
 
 end # module

@@ -1,3 +1,13 @@
+# v2.6.6
+
+Fixed a bug where inline comments (e.g. `#= comment =#`) were being removed from source code. (#946, #1061)
+
+Fixed a bug where `always_for_in` would convert tokens that were outside of its scope, silently changing the meaning of the code. (#905, #944, #1061)
+
+Fixed a bug where macro invocations with do-blocks were formatted incorrectly. (#1018, #1061)
+
+Improved documentation for the `always_for_in` and `trailing_comma` options, specifically around how to specify a value of `nothing` in `.JuliaFormatter.toml`. (#1061)
+
 # v2.6.5
 
 Fixed a bug where short-form function definitions which had string literals on the RHS were being incorrectly indented. (#1062, #1063)
