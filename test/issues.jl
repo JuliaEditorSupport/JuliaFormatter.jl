@@ -1778,6 +1778,41 @@ end
         )
         """
         test_format(s_, s, SciMLStyle())
+
+        s_ = """
+        if (# opening inline
+            some_exceedingly_long_variable_name > some_other_fairly_long_variable_name # another inline
+            # stand-alone
+            || some_additional_long_variable_name > some_other_fairly_long_variable_name # closing inline
+        )
+            print("something")
+        end
+        """
+        s = """
+        if (# opening inline
+            some_exceedingly_long_variable_name > some_other_fairly_long_variable_name # another inline
+            # stand-alone
+            ||
+            some_additional_long_variable_name > some_other_fairly_long_variable_name # closing inline
+            )
+            print("something")
+        end
+        """
+        test_format(s_, s, YASStyle(); margin=120)
+
+        s60 = """
+        if (# opening inline
+            some_exceedingly_long_variable_name >
+            some_other_fairly_long_variable_name # another inline
+            # stand-alone
+            ||
+            some_additional_long_variable_name >
+            some_other_fairly_long_variable_name # closing inline
+            )
+            print("something")
+        end
+        """
+        test_format(s_, s60, YASStyle(); margin=60)
     end
 
     @testset "698" begin
