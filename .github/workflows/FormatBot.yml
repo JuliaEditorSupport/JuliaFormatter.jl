@@ -7,10 +7,9 @@ on:
 jobs:
   format:
     name: FormatBot
-    # TODO: Let other people trigger the bot as well. It's restricted for now so that I can test.
     if: >-
       github.event.issue.pull_request
-      && github.actor == 'penelopeysm'
+      && contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)
       && startsWith(github.event.comment.body, '!formatbot')
     runs-on: ubuntu-latest
     permissions:
@@ -98,11 +97,17 @@ jobs:
           target_dir = "target"
           subdir = None
           use_config = False
+          against = "basefmt"
           for token in opts:
               if token.startswith("subdir="):
                   subdir = token.split("=", 1)[1]
               elif token.startswith("use_config="):
                   use_config = token.split("=", 1)[1].lower() == "true"
+              elif token.startswith("against="):
+                  against = token.split("=", 1)[1]
+          if against not in ("basefmt", "nofmt"):
+              print(f"::error::Unknown against value: {against}. Valid: basefmt, nofmt.")
+              sys.exit(1)
           uid = uuid.uuid4().hex[:8]
           branch_clean = f"formatbot-clean-{uid}"
           branch_base = f"formatbot-base-{uid}"
@@ -181,7 +186,7 @@ jobs:
                           post_comment(f"{header}\n**Error:** Unknown style `{val}`. Valid: {', '.join(style_shortcuts)}.")
                           sys.exit(1)
                       style = style_shortcuts[val]
-                  elif token.startswith("subdir=") or token.startswith("use_config="):
+                  elif token.startswith("subdir=") or token.startswith("use_config=") or token.startswith("against="):
                       pass
                   else:
                       kwargs.append(token)
@@ -202,18 +207,27 @@ jobs:
               )
 
               # --- Format with base, commit to branch ---
-              git("checkout", "-b", branch_base)
-              base_result = subprocess.run(
-                  ["julia", "--project=formatter-base", "format.jl", format_path],
-              )
-              if base_result.returncode != 0:
-                  post_comment(
-                      f"{header}\n**Error:** Formatting with base failed. "
-                      f"See [workflow run]({run_url})."
+              if against == "basefmt":
+                  git("checkout", "-b", branch_base)
+                  base_result = subprocess.run(
+                      ["julia", "--project=formatter-base", "format.jl", format_path],
                   )
-                  sys.exit(1)
-              git("add", "-A")
-              git("commit", "--allow-empty", "-m", "formatted with base")
+                  if base_result.returncode != 0:
+                      post_comment(
+                          f"{header}\n**Error:** Formatting with base failed. "
+                          f"See [workflow run]({run_url})."
+                      )
+                      sys.exit(1)
+                  git("add", "-A")
+                  git("commit", "--allow-empty", "-m", "formatted with base")
+                  subprocess.run(
+                      ["julia", "--project=formatter-base", "format.jl", format_path],
+                      check=True,
+                  )
+                  base_idempotent = subprocess.run(
+                      ["git", "-C", target_dir, "diff", "--exit-code"],
+                  ).returncode == 0
+                  git("checkout", "--", ".")
 
               # --- Format with PR, commit to branch ---
               git("checkout", branch_clean)
@@ -230,16 +244,43 @@ jobs:
               git("add", "-A")
               git("commit", "--allow-empty", "-m", "formatted with pr")
 
+              # --- Check idempotence ---
+              subprocess.run(
+                  ["julia", "--project=formatter-pr", "format.jl", format_path],
+                  check=True,
+              )
+              pr_idempotent = subprocess.run(
+                  ["git", "-C", target_dir, "diff", "--exit-code"],
+              ).returncode == 0
+              git("checkout", "--", ".")
+
               # --- Compute diff ---
               diff_result = subprocess.run(
-                  ["git", "-C", target_dir, "diff", "--diff-algorithm=histogram", branch_base, branch_pr],
+                  ["git", "-C", target_dir, "diff", "--diff-algorithm=histogram",
+                   branch_base if against == "basefmt" else branch_clean, branch_pr],
                   capture_output=True,
                   text=True,
               )
               diff_text = diff_result.stdout
 
+              Path(os.environ["RUNNER_TEMP"], "diff.patch").write_text(diff_text)
+
+              # --- Build idempotence warning ---
+              non_idempotent = []
+              if against == "basefmt" and not base_idempotent:
+                  non_idempotent.append("base")
+              if not pr_idempotent:
+                  non_idempotent.append("PR")
+              if non_idempotent:
+                  idempotency_warning = (
+                      f"\n\n> [!CAUTION]\n"
+                      f"> Formatting with **{' and '.join(non_idempotent)}** is not idempotent!\n"
+                  )
+              else:
+                  idempotency_warning = ""
+
               if not diff_text:
-                  post_comment(f"{header}\nNo formatting differences.")
+                  post_comment(f"{header}{idempotency_warning}\nNo formatting differences.")
               else:
                   diff_bytes = len(diff_text.encode())
                   if diff_bytes > 50000:
@@ -249,7 +290,7 @@ jobs:
                       diff_display = diff_text
                       warning = ""
                   post_comment(
-                      f"{header}{warning}\n<details>\n<summary>Diff ({diff_bytes} bytes)</summary>"
+                      f"{header}{idempotency_warning}{warning}\n<details>\n<summary>Diff ({diff_bytes} bytes)</summary>"
                       f"\n\n```````diff\n{diff_display}\n```````\n\n</details>"
                   )
 
@@ -269,6 +310,15 @@ jobs:
               except Exception:
                   pass
               sys.exit(1)
+
+      - name: Print diff
+        if: always()
+        run: |
+          if [ -f "$RUNNER_TEMP/diff.patch" ]; then
+            cat "$RUNNER_TEMP/diff.patch"
+          else
+            echo "Diff not found (script may have errored before computing diff)"
+          fi
 
       - name: Add completion reaction
         env:
