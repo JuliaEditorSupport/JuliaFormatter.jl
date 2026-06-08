@@ -1,3 +1,7 @@
+# v2.6.8
+
+Fixed a bug where end-of-line comments were being silently dropped in YASStyle. (#690, #1046, #1068)
+
 # v2.6.7
 
 Improve separation of inline comments from code. (#1064, #1065)
