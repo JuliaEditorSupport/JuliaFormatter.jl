@@ -2392,11 +2392,23 @@ end
 
     @testset "946" begin
         s = "function f()\n    #==Pairs Tuple or ValidationResult==#\n    #=\n    So far\n    =#\nend\n"
-        test_format(s, s)
-        s = "function g()\n    y #=c=#\nend"
-        test_format(s, s)
-        # There are a litany of bugs with other styles.
-        @test_broken false
+        for style in ALL_STYLES
+            test_format(s, s, style)
+        end
+
+        s2 = "function g()\n    y #=c=#\nend"
+        for style in (DefaultStyle(), SciMLStyle(), MinimalStyle())
+            test_format(s2, s2, style)
+        end
+        # these have always_use_return=true so test separately
+        s2_return = """
+        function g()
+            return y #=c=#
+        end""" |> strip
+        for style in (BlueStyle(), YASStyle())
+            test_format(s2, s2_return, style)
+        end
+        test_format(s2, s2_return; always_use_return = true)
     end
 
     @testset "1025" begin
