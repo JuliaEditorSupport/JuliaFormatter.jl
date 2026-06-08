@@ -14,6 +14,20 @@ However, the complexity comes from the fact that:
 
 I'm happy to help with any questions about how best to implement stuff, although please note I'm also finding my way around the codebase myself, so I might not always have the best answer.
 
+## The `JuliaFormatter.Internal` module
+
+JuliaFormatter contains some useful utilities which are explicitly marked as internal (i.e., not semver-compliant), inside the `JuliaFormatter.Internal` module.
+
+There are currently two functions.
+`format_to_stage` is more of a helper function for investigating what goes on during the formatting process.
+However, `test_format` is used extensively in the test suite.
+**Please note that all new tests that check the output of formatting should be written using `test_format`.**
+
+```@docs
+JuliaFormatter.Internal.format_to_stage
+JuliaFormatter.Internal.test_format
+```
+
 ## Issue triage
 
 Issues (and sometimes PRs) will be assigned a priority label, with a larger number indicating more important.
