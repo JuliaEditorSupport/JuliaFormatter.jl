@@ -3922,13 +3922,6 @@ function p_generator(
     has_for_kw = findfirst(n -> kind(n) === K"for", childs) !== nothing
     from_for = has_for_kw || ctx.from_for
 
-    past_if = false
-    # Only iteration specifications (between the `for` and `if` keywords) are
-    # subject to `=`/`in` normalization. The comprehension body precedes the
-    # `for` keyword and must be left untouched, e.g. `[x = f() for i in xs]`
-    # must not become `[x in f() for i in xs]`. When `for` is inherited from an
-    # enclosing iterable (no local `for` keyword) every child is an iteration spec.
-    seen_for = !has_for_kw
     for (i, a) in enumerate(childs)
         n = pretty(style, a, s, newctx(ctx; from_for = from_for), lineage)
         if JuliaSyntax.is_keyword(a) && !haschildren(a)
@@ -3951,15 +3944,8 @@ function p_generator(
             add_node!(t, n, s; join_lines = true)
         end
 
-        if from_for && seen_for && !past_if
+        if from_for && kind(a) === K"iteration"
             eq_to_in_normalization!(n, s.opts.always_for_in, s.opts.for_in_replacement)
-        end
-        if JuliaSyntax.is_keyword(a) && !haschildren(a)
-            if kind(a) === K"for"
-                seen_for = true
-            elseif kind(a) === K"if"
-                past_if = true
-            end
         end
     end
     t
