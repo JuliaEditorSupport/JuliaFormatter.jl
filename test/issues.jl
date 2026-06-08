@@ -2435,6 +2435,16 @@ end
         # macroblocks without a closer are unaffected
         test_format("@testset \"x\" begin\n    a\nend", "@testset \"x\" begin\n    a\nend")
     end
+
+    @testset "562" begin
+        # An inline `#= =#` comment in a call must keep a space from the following
+        # argument (it must not be glued to it or moved to the end of the call).
+        test_format("f(x, #= y,=# z)\n", "f(x, #= y,=# z)\n")
+        test_format(
+            "g(op_data, #= ::OpData =# entry)\n",
+            "g(op_data, #= ::OpData =# entry)\n",
+        )
+    end
 end
 
 end

@@ -1014,10 +1014,6 @@ function add_node!(
         push!(tnodes::Vector{FST}, n)
         return
     elseif is_custom_leaf(n)
-        # TODO: not sure about this
-        # if n.typ === HASHEQCOMMENT && length(tnodes) > 0 && !(tnodes[end].typ in (PLACEHOLDER, WHITESPACE, NEWLINE))
-        #     add_node!(t, Whitespace(1), s)
-        # end
         t.len += length(n)
         n.startline = t.endline
         n.endline = t.endline
@@ -1068,6 +1064,16 @@ function add_node!(
        )
         # join based on position in original file
         join_lines = t.endline == n.startline
+    end
+
+    # Keep a space after an inline `#= =#` comment when the following code stays on the
+    # same line (e.g. `f(x, #= c =# z)`), instead of gluing them together.
+    if join_lines &&
+       (tnodes[end]::FST).typ === HASHEQCOMMENT &&
+       !is_closer(n) &&
+       !is_comma(n) &&
+       n.typ !== SEMICOLON
+        add_node!(t, Whitespace(1), s)
     end
 
     if !is_prev_newline(tnodes[end]::FST)
