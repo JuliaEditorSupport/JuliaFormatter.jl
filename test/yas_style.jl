@@ -731,7 +731,8 @@ using JuliaFormatter: format_text
         """
 
         formatted_str1 = raw"""
-        Dict{Int,Int}(1 => 2,
+        Dict{Int,Int}(# Comment
+                      1 => 2,
                       3 => 4)
         """
 
@@ -742,8 +743,6 @@ using JuliaFormatter: format_text
         """
 
         # Test `variable_call_indent` with an inline comment after the opening parenthesis
-        # With `variable_call_indent = false`, the comment will be eaten,
-        # see https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/609
         @test format_text(str, YASStyle()) == formatted_str1
         @test format_text(str, YASStyle(); variable_call_indent = ["Dict"]) ==
               formatted_str2

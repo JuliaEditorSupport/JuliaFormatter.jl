@@ -1445,6 +1445,13 @@ end
         test_format(str, str_, SciMLStyle())
     end
 
+    @testset "609 comments being swallowed" begin
+        s = "f(\n    q = 2  # this comment will not be removed\n)"
+        test_format(s, s, SciMLStyle())
+        s2 = "f(; q=2  # this comment will not be removed\n  )"
+        test_format(s, s2, YASStyle())
+    end
+
     @testset "613" begin
         s = """
         x = ```
@@ -2451,6 +2458,23 @@ end
         )
         # macroblocks without a closer are unaffected
         test_format("@testset \"x\" begin\n    a\nend", "@testset \"x\" begin\n    a\nend")
+    end
+
+    @testset "1046 comments being swallowed" begin
+        s = """
+        if (# opening inline
+            a # another inline
+            # stand-alone
+            &&
+            c # closing inline
+            )
+            foo
+        end
+        """ |> strip
+        test_format(s, s, YASStyle())
+
+        s2 = """f(# hi\n  a)"""
+        test_format(s2, s2, YASStyle())
     end
 
     @testset "1062 docstring indent on rhs of short function def" begin

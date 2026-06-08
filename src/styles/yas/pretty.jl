@@ -351,7 +351,6 @@ function p_tuple(
     t
 end
 
-# Brackets
 function p_parens(
     ys::YASStyle,
     cst::JuliaSyntax.GreenNode,
