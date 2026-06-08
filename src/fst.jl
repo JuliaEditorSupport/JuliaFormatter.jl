@@ -152,31 +152,50 @@ function show(io::IO, fst::FST)
 end
 
 COLORS = (:blue, :green, :red, :cyan, :magenta, :yellow)
-function show(io::IO, ::MIME"text/plain", fst::FST, level::Int = 1)
-    indent = " " ^ ((level - 1) * 4)
+
+function _print_prefix(io::IO, prefix::Vector{String})
+    for (k, seg) in enumerate(prefix)
+        printstyled(io, seg; color=COLORS[mod1(k, length(COLORS))])
+    end
+end
+
+function show(
+    io::IO, ::MIME"text/plain", fst::FST;
+    prefix::Vector{String} = String[],
+    level::Int = 1,
+)
     color = COLORS[mod1(level, length(COLORS))]
     if !is_leaf(fst)
-        printstyled(io, "FST: $(fst.typ) $(length(fst.nodes::Vector{FST}))\n"; color=color, bold=true)
-        printstyled(
-            io,
-            indent,
-            "  ($(fst.startline), $(fst.endline), $(fst.indent), $(fst.len))\n";
-            color=color
-        )
-        printstyled(io, indent, "  nest_behavior: $(fst.nest_behavior)\n"; color=color)
-        printstyled(io, indent, "  extra_margin: $(fst.extra_margin)\n"; color=color)
+        nodes = fst.nodes::Vector{FST}
+        n = length(nodes)
+        printstyled(io, "FST: $(fst.typ) $n\n"; color=color, bold=true)
+        _print_prefix(io, prefix)
+        printstyled(io, "($(fst.startline), $(fst.endline), $(fst.indent), $(fst.len))\n"; color=color)
+        _print_prefix(io, prefix)
+        printstyled(io, "nest_behavior: $(fst.nest_behavior)\n"; color=color)
+        _print_prefix(io, prefix)
+        printstyled(io, "extra_margin: $(fst.extra_margin)\n"; color=color)
 
-        printstyled(io, indent, "  nodes:\n"; color=color)
-        for (i, node) in enumerate(fst.nodes)
+        for (i, node) in enumerate(nodes)
+            is_last = i == n
+            connector = is_last ? "└── " : "├── "
+            continuation = is_last ? "    " : "│   "
             next_color = COLORS[mod1(level + 1, length(COLORS))]
-            printstyled(io, indent, "    [$i] "; color=next_color, bold=true)
-            show(io, MIME("text/plain"), node, level + 1)
+            child_prefix = [prefix; continuation]
+
+            _print_prefix(io, prefix)
+            printstyled(io, connector; color=color)
+            printstyled(io, "[$i] "; color=next_color, bold=true)
+            show(io, MIME("text/plain"), node; prefix=child_prefix, level=level + 1)
         end
     else
         printstyled(io, "FST: $(fst.typ)\n"; color=color, bold=true)
-        printstyled(io, indent, "  val: $(repr(fst.val))\n"; color=color)
-        printstyled(io, indent, "  line_offset: $(fst.line_offset)\n"; color=color)
-        printstyled(io, indent, "  indent: $(fst.indent)\n"; color=color)
+        _print_prefix(io, prefix)
+        printstyled(io, "val: $(repr(fst.val))\n"; color=color)
+        _print_prefix(io, prefix)
+        printstyled(io, "line_offset: $(fst.line_offset)\n"; color=color)
+        _print_prefix(io, prefix)
+        printstyled(io, "indent: $(fst.indent)\n"; color=color)
     end
 end
 
