@@ -165,16 +165,16 @@ function show(
     level::Int = 1,
 )
     color = COLORS[mod1(level, length(COLORS))]
+    extra_indent = level > 1 ? "    " : "" # to account for [N] prefix
+
     if !is_leaf(fst)
         nodes = fst.nodes::Vector{FST}
         n = length(nodes)
-        printstyled(io, "FST: $(fst.typ) $n\n"; color=color, bold=true)
+        printstyled(io, "$(fst.typ) $n"; color=color, bold=true)
+        printstyled(io, " lines=$(fst.startline)-$(fst.endline) indent=$(fst.indent) len=$(fst.len)\n"; color=color)
         _print_prefix(io, prefix)
-        printstyled(io, "($(fst.startline), $(fst.endline), $(fst.indent), $(fst.len))\n"; color=color)
-        _print_prefix(io, prefix)
-        printstyled(io, "nest_behavior: $(fst.nest_behavior)\n"; color=color)
-        _print_prefix(io, prefix)
-        printstyled(io, "extra_margin: $(fst.extra_margin)\n"; color=color)
+        printstyled(io, "nest_behavior=$(fst.nest_behavior)"; color=color)
+        printstyled(io, " extra_margin=$(fst.extra_margin)\n"; color=color)
 
         for (i, node) in enumerate(nodes)
             is_last = i == n
@@ -189,13 +189,11 @@ function show(
             show(io, MIME("text/plain"), node; prefix=child_prefix, level=level + 1)
         end
     else
-        printstyled(io, "FST: $(fst.typ)\n"; color=color, bold=true)
+        printstyled(io, "$(fst.typ)"; color=color, bold=true)
+        printstyled(io, " val=$(repr(fst.val))\n"; color=color)
         _print_prefix(io, prefix)
-        printstyled(io, "val: $(repr(fst.val))\n"; color=color)
-        _print_prefix(io, prefix)
-        printstyled(io, "line_offset: $(fst.line_offset)\n"; color=color)
-        _print_prefix(io, prefix)
-        printstyled(io, "indent: $(fst.indent)\n"; color=color)
+        printstyled(io, "$(extra_indent)line_offset=$(fst.line_offset)"; color=color)
+        printstyled(io, " indent=$(fst.indent)\n"; color=color)
     end
 end
 
