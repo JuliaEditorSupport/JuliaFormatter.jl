@@ -455,8 +455,7 @@ function prepend_return!(fst::FST, s::State)
     if is_block(ln) || ln.typ in (Return, MacroCall, MacroBlock, MacroStr)
         return
     end
-    if last_idx > 2 &&
-       (fst[last_idx-2].typ === MacroStr || is_macrodoc(fst[last_idx-2]))
+    if last_idx > 2 && (fst[last_idx-2].typ === MacroStr || is_macrodoc(fst[last_idx-2]))
         return
     end
     # fix #426
