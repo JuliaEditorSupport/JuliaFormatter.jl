@@ -2366,6 +2366,48 @@ end
         """
         test_format(s, s)
     end
+
+    @testset "macrocall with do-block" begin
+        # A macrocall followed by a do-block (`@modify(x) do ... end`) must not gain a
+        # double space before `do`, and its parenthesized args must not be treated as a
+        # macroblock and pick up extra whitespace.
+        test_format("@modify(x) do y\n    y\nend", "@modify(x) do y\n    y\nend")
+        test_format(
+            "Makie.@recipe(A, B) do scene\n    t\nend",
+            "Makie.@recipe(A, B) do scene\n    t\nend",
+        )
+        # macroblocks without a closer are unaffected
+        test_format("@testset \"x\" begin\n    a\nend", "@testset \"x\" begin\n    a\nend")
+    end
+
+    @testset "comprehension body assignment with always_for_in" begin
+        # `always_for_in` must only normalize iteration specs (after `for`), never the
+        # comprehension body. `[y = f(p) for p in ps]` must not become `[y in f(p) ...]`.
+        test_format(
+            "xs = [y = f(p) for p in ps]",
+            "xs = [y = f(p) for p in ps]";
+            always_for_in = true,
+        )
+        # iteration specs are still normalized to `in`
+        test_format("xs = [y for y = 1:10]", "xs = [y for y in 1:10]"; always_for_in = true)
+        test_format(
+            "xs = [y for y = 1:10, z = 1:5]",
+            "xs = [y for y in 1:10, z in 1:5]";
+            always_for_in = true,
+        )
+    end
+
+    @testset "block #= =# comments are preserved" begin
+        # `#= =#` comments are reported as whitespace by JuliaSyntax; block handlers must
+        # not drop them.
+        test_format("function g()\n    y #=c=#\nend", "function g()\n    y #=c=#\nend")
+        # a comment trailing a header is preserved (relocated onto its own line) rather
+        # than deleted, and must not corrupt the surrounding source.
+        test_format(
+            "function f(x) #=c=#\n    y\nend",
+            "function f(x)\n    #=c=#\n    y\nend",
+        )
+    end
 end
 
 end
