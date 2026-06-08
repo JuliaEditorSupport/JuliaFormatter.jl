@@ -1408,7 +1408,7 @@ end
         return nothing
         """
         s_ = """
-        arraycopy_common(false#=fwd=#, LLVM.Builder(B), orig, origops[1], gutils)
+        arraycopy_common(false #=fwd=#, LLVM.Builder(B), orig, origops[1], gutils)
         return nothing
         """
         test_format(s, s_)
@@ -1419,7 +1419,7 @@ end
         s2 = """
         foo(
             a,
-            b,#=c=#
+            b, #=c=#
         )
         """
         test_format(s1, s2; indent=4, margin=1)
@@ -2132,9 +2132,8 @@ end
     @testset "862" begin
         # Block comments should not be stripped entirely.
         # Previously `T <: Tuple #=...=# && ...` lost the first block comment.
-        s_ = "T <: Tuple #=comment1=# && !(T isa Union) #=comment2=#\n"
-        s = "T <: Tuple#=comment1=# && !(T isa Union)#=comment2=#\n"
-        test_format(s_, s)
+        s = "T <: Tuple #=comment1=# && !(T isa Union) #=comment2=#\n"
+        test_format(s, s)
     end
 
     @testset "876" begin
@@ -2465,6 +2464,13 @@ end
                 test_format(str, str)
                 test_format(str, str; margin=4)
             end
+        end
+    end
+
+    @testset "1064 space before hasheq-comment" begin
+        s = "combine(x, 3 #= this is the magic number =#)"
+        for style in ALL_STYLES
+            test_format(s, s, style)
         end
     end
 end

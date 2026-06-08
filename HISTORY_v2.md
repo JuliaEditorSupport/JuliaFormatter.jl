@@ -1,3 +1,7 @@
+# v2.6.7
+
+Improve separation of inline comments from code. (#1064, #1065)
+
 # v2.6.6
 
 Fixed a bug where inline comments (e.g. `#= comment =#`) were being removed from source code. (#946, #1061)
