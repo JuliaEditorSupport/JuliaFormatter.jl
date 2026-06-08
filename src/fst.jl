@@ -196,7 +196,11 @@ function show(
         end
     else
         printstyled(io, "$(fst.typ)"; color = color, bold = true)
-        printstyled(io, " lines=$(fst.startline)-$(fst.endline) val=$(repr(fst.val))\n"; color = color)
+        printstyled(
+            io,
+            " lines=$(fst.startline)-$(fst.endline) val=$(repr(fst.val))\n";
+            color = color,
+        )
         _print_prefix(io, prefix)
         printstyled(io, "$(extra_indent)line_offset=$(fst.line_offset)"; color = color)
         printstyled(io, " indent=$(fst.indent)\n"; color = color)
@@ -1184,8 +1188,7 @@ function add_node!(
             # swap PLACEHOLDER (will be NEWLINE) with INLINECOMMENT node
             idx = length(tnodes)
             tnodes[idx-1], tnodes[idx] = tnodes[idx], tnodes[idx-1]
-        elseif hascomment(s.doc, current_line) &&
-               current_line != n.startline
+        elseif hascomment(s.doc, current_line) && current_line != n.startline
             if nt === WHITESPACE
                 # Avoid printing excess whitespace before the comment, since
                 # print_inlinecomment will handle the spacing before the comment.
