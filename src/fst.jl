@@ -155,12 +155,14 @@ COLORS = (:blue, :green, :red, :cyan, :magenta, :yellow)
 
 function _print_prefix(io::IO, prefix::Vector{String})
     for (k, seg) in enumerate(prefix)
-        printstyled(io, seg; color=COLORS[mod1(k, length(COLORS))])
+        printstyled(io, seg; color = COLORS[mod1(k, length(COLORS))])
     end
 end
 
 function show(
-    io::IO, ::MIME"text/plain", fst::FST;
+    io::IO,
+    ::MIME"text/plain",
+    fst::FST;
     prefix::Vector{String} = String[],
     level::Int = 1,
 )
@@ -170,11 +172,15 @@ function show(
     if !is_leaf(fst)
         nodes = fst.nodes::Vector{FST}
         n = length(nodes)
-        printstyled(io, "$(fst.typ) $n"; color=color, bold=true)
-        printstyled(io, " lines=$(fst.startline)-$(fst.endline) indent=$(fst.indent) len=$(fst.len)\n"; color=color)
+        printstyled(io, "$(fst.typ) $n"; color = color, bold = true)
+        printstyled(
+            io,
+            " lines=$(fst.startline)-$(fst.endline) indent=$(fst.indent) len=$(fst.len)\n";
+            color = color,
+        )
         _print_prefix(io, prefix)
-        printstyled(io, "nest_behavior=$(fst.nest_behavior)"; color=color)
-        printstyled(io, " extra_margin=$(fst.extra_margin)\n"; color=color)
+        printstyled(io, "nest_behavior=$(fst.nest_behavior)"; color = color)
+        printstyled(io, " extra_margin=$(fst.extra_margin)\n"; color = color)
 
         for (i, node) in enumerate(nodes)
             is_last = i == n
@@ -184,16 +190,16 @@ function show(
             child_prefix = [prefix; continuation]
 
             _print_prefix(io, prefix)
-            printstyled(io, connector; color=color)
-            printstyled(io, "[$i] "; color=next_color, bold=true)
-            show(io, MIME("text/plain"), node; prefix=child_prefix, level=level + 1)
+            printstyled(io, connector; color = color)
+            printstyled(io, "[$i] "; color = next_color, bold = true)
+            show(io, MIME("text/plain"), node; prefix = child_prefix, level = level + 1)
         end
     else
-        printstyled(io, "$(fst.typ)"; color=color, bold=true)
-        printstyled(io, " val=$(repr(fst.val))\n"; color=color)
+        printstyled(io, "$(fst.typ)"; color = color, bold = true)
+        printstyled(io, " val=$(repr(fst.val))\n"; color = color)
         _print_prefix(io, prefix)
-        printstyled(io, "$(extra_indent)line_offset=$(fst.line_offset)"; color=color)
-        printstyled(io, " indent=$(fst.indent)\n"; color=color)
+        printstyled(io, "$(extra_indent)line_offset=$(fst.line_offset)"; color = color)
+        printstyled(io, " indent=$(fst.indent)\n"; color = color)
     end
 end
 
@@ -741,7 +747,8 @@ function should_nest_call_args(args, disallow_single_arg_nesting::Bool)
 end
 
 function is_binaryop_nestable(::AbstractStyle, cst::JuliaSyntax.GreenNode)
-    if (is_assignment(cst) || is_pairarrow(cst) || defines_function(cst)) && haschildren(cst)
+    if (is_assignment(cst) || is_pairarrow(cst) || defines_function(cst)) &&
+       haschildren(cst)
         childs = children(cst)
         idx = findlast(n -> !JuliaSyntax.is_whitespace(n), childs)::Int
         return !is_str_or_cmd(childs[idx])
