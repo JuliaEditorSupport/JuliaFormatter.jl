@@ -2466,6 +2466,13 @@ end
             end
         end
     end
+
+    @testset "1064 space before hasheq-comment" begin
+        s = "combine(x, 3 #= this is the magic number =#)"
+        for style in ALL_STYLES
+            test_format(s, s, style)
+        end
+    end
 end
 
 end
