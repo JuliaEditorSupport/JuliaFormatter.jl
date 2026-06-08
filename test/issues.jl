@@ -95,7 +95,7 @@ end
         test_format(str, str)
     end
 
-    @testset "multiline / issue 139" begin
+    @testset "139" begin
         str_ = """
         m = match(r\"""
                   (
@@ -265,7 +265,7 @@ end
         @test s.line_offset == 1
     end
 
-    @testset "issue 183 & 525" begin
+    @testset "183 & 525" begin
         # fixing 525 caused the previous test to fail since it
         # exchanged the semicolon to a trailing comma, which isn't exactly
         # what we wanted and it turns out sometimes the comma was
@@ -291,7 +291,7 @@ end
         test_format(str_, str)
     end
 
-    @testset "issue #189" begin
+    @testset "189" begin
         str_ = """
     D2 = [
             (b_hat * y - delta_hat[i] * y) * gamma[i] + (b * y_hat - delta[i] * y_hat) *
@@ -310,7 +310,7 @@ end
         test_format(str_, str)
     end
 
-    @testset "issue #193" begin
+    @testset "193" begin
         str = """
         module Module
         # comment
@@ -326,7 +326,7 @@ end
         test_format(str, str)
     end
 
-    @testset "issue #194" begin
+    @testset "194" begin
         str_ = """
         function mystr( str::String )
         return SubString( str, 1:
@@ -339,7 +339,7 @@ end
         test_format(str_, str)
     end
 
-    @testset "issue #200" begin
+    @testset "200" begin
         str_ = """
         begin
             f() do
@@ -361,7 +361,7 @@ end
         test_format(str, str_; margin = 82)
     end
 
-    @testset "issue #202" begin
+    @testset "202" begin
         str_ = """
         @inline function _make_zop_getvalues(iterators)
             types = map(iterators) do itr
@@ -419,7 +419,7 @@ end
         test_format(str_, str; margin = 92)
     end
 
-    @testset "issue #207" begin
+    @testset "207" begin
         str_ = """
         @traitfn function predict_ar(m::TGP, p::Int = 3, n::Int = 1; y_past = get_y(m)) where {T,TGP<:AbstractGP{T};IsMultiOutput{TGP}}
         end"""
@@ -465,7 +465,7 @@ end
         test_format(str_, str; margin = 92, whitespace_typedefs = true)
     end
 
-    @testset "issue #218" begin
+    @testset "218" begin
         str_ = raw"""
         for MT in GROUP_MANIFOLD_BASIS_DISAMBIGUATION
             eval(quote
@@ -489,7 +489,7 @@ end
         test_format(str_, str)
     end
 
-    @testset "issue 248" begin
+    @testset "248" begin
         str_ = """
         var = call(a, @macrocall b)"""
         str = """
@@ -501,7 +501,7 @@ end
         test_format(str_, str; indent=4, margin=1)
     end
 
-    @testset "issue 260 - BracesCat" begin
+    @testset "260 - BracesCat" begin
         str = "{1; 2; 3}"
         test_format(str, str; indent=4, margin=length(str))
 
@@ -520,7 +520,7 @@ end
         test_format(str_, str; indent=2, margin=90)
     end
 
-    @testset "issue 262 - removal of @ in nested macrocall" begin
+    @testset "262 - removal of @ in nested macrocall" begin
         str = raw":($(@__MODULE__).@macro)"
         test_format(str, str)
 
@@ -541,7 +541,7 @@ end
         test_format(str, str)
     end
 
-    @testset "issue 264 - `let` empty block body" begin
+    @testset "264 - `let` empty block body" begin
         str_ = "let; end"
         str = """
         let;
@@ -549,7 +549,7 @@ end
         test_format(str_, str)
     end
 
-    @testset "issue 268 - whitespace around dot op if LHS is number literal" begin
+    @testset "268 - whitespace around dot op if LHS is number literal" begin
         str = "xs[-5 .<= xs .& xs .<= 5]"
         test_format(str, str)
         str_ = "xs[(-5 .<= xs).&(xs.<=5)]"
@@ -557,7 +557,7 @@ end
         test_format(str_, str)
     end
 
-    @testset "issue 277 - flatten ops when no whitespace is allowed" begin
+    @testset "277 - flatten ops when no whitespace is allowed" begin
         # previously this would remove |>
         str_ = "get_actions(env)[env |> π.learner |> π.explorer]"
         str = "get_actions(env)[env|>π.learner|>π.explorer]"
@@ -565,7 +565,7 @@ end
         test_format(str, str_; whitespace_ops_in_indices = true)
     end
 
-    @testset "issue 286 - Float32 leading/trailing zeros" begin
+    @testset "286 - Float32 leading/trailing zeros" begin
         str_ = """
         a = 3.f0
         b = 3f0
@@ -583,41 +583,9 @@ end
         f = 0.123f0
         """
         test_format(str_, str)
-
-        @testset "500 - leading zeros with '-.'" begin
-            s0 = """
-            a = -.2
-            b = - .2
-            """
-            s1 = """
-            a = -0.2
-            b = - 0.2
-            """
-            test_format(s0, s1)
-
-            s0 = """
-            a = -.2f32
-            b = - .2f32
-            """
-            s1 = """
-            a = -0.2f32
-            b = - 0.2f32
-            """
-            test_format(s0, s1)
-
-            s0 = """
-            a = -.2f-5
-            b = - .2f-5
-            """
-            s1 = """
-            a = -0.2f-5
-            b = - 0.2f-5
-            """
-            test_format(s0, s1)
-        end
     end
 
-    @testset "issue 289 - no spaces/nesting for matrix elements" begin
+    @testset "289 - no spaces/nesting for matrix elements" begin
         str_ = """
         A =  [0. 1 0 0
            -k/Jm -c/Jm k/Jm c/Jm
@@ -637,15 +605,15 @@ end
         test_format(str_, str; indent=4, margin=1)
     end
 
-    @testset "issue 317 - infinite recursion" begin
+    @testset "317 - infinite recursion" begin
         str = raw"""
         SUITE["manifolds"][name]["tv = 2 * tv1 + 3 * tv2"] = @benchmarkable $tv =
             2 * $tv1 + 3 * $tv2
         """
-        @test format_text(str, BlueStyle()) == str
+        test_format(str, str, BlueStyle())
     end
 
-    @testset "issue 324 - bounds error when aligning binary op calls" begin
+    @testset "324 - bounds error when aligning binary op calls" begin
         # caused by the star operator
         str_ = """
         θ = eigvals(Matrix([0I(n^2) -I(n^2); P0 P1]), -Matrix([I(n^2) 0I(n^2); 0I(n^2) P2]))
@@ -655,10 +623,10 @@ end
         θ = eigvals(Matrix([0I(n^2) -I(n^2); P0 P1]), -Matrix([I(n^2) 0I(n^2); 0I(n^2) P2]))
         c = maximum(abs.(θ[(imag.(θ) .== 0) .* (real.(θ) .> 0)]))
         """
-        @test format_text(str_; align_assignment = true) == str
+        test_format(str_, str; align_assignment = true)
     end
 
-    @testset "issue 332" begin
+    @testset "332" begin
         # this string has a nbsp after 'c'
         # so it should have an additional byte because
         # it's unicode
@@ -666,10 +634,10 @@ end
                f("A")"""
         str = """a = b || c;
                f("A")"""
-        @test format_text(str_) == str
+        test_format(str_, str)
     end
 
-    @testset "issue 336" begin
+    @testset "336" begin
         str_ = """
         nzthis = _hessian_slice(d, ex, x, H, obj_factor, nzcount, recovery_tmp_storage, Val{1})::Int
         """
@@ -688,7 +656,7 @@ end
         test_format(str_, str; indent=4, margin=80)
     end
 
-    @testset "issue 375" begin
+    @testset "375" begin
         s = raw"conflictstatus = @jimport ilog.cp.IloCP$ConflictStatus"
         test_format(s, s)
 
@@ -696,7 +664,7 @@ end
         test_format(s, s, BlueStyle())
     end
 
-    @testset "issue 352" begin
+    @testset "352" begin
         str_ = """
                       @inbounds for f in 1:n_freqs, m in 1:n_channels, l in 1:n_channels, k in 1:length(weighted_evals)
                          a = f + m + l + k
@@ -728,7 +696,7 @@ end
         test_format(str_, str, BlueStyle(); always_for_in = true)
     end
 
-    @testset "issue 387" begin
+    @testset "387" begin
         str_ = """new{T1,T2}(arg1,arg2)"""
         str = """
         new{T1,
@@ -737,16 +705,14 @@ end
         test_format(str_, str, YASStyle(); margin = 1)
     end
 
-    if VERSION >= v"1.6.0"
-        @testset "issue 396 (import as)" begin
-            str = """import Base.threads as th"""
-            test_format(str, str)
-            test_format(str, str; margin = 1)
-            test_format(str, str; margin = 1, import_to_using = true)
-        end
+    @testset "396 (import as)" begin
+        str = """import Base.threads as th"""
+        test_format(str, str)
+        test_format(str, str; margin = 1)
+        test_format(str, str; margin = 1, import_to_using = true)
     end
 
-    @testset "issue 405" begin
+    @testset "405" begin
         str = """
         function __init__()
             raw\""" Doc string.\"""f
@@ -775,7 +741,7 @@ end
         test_format(str, str; always_use_return = true)
     end
 
-    @testset "issue 417" begin
+    @testset "417" begin
         str = """
         formαt"JPEG"
         """
@@ -792,7 +758,7 @@ end
         test_format(str, str)
     end
 
-    @testset "issue 419" begin
+    @testset "419" begin
         str = """
         [z for y in x for z in y]
         """
@@ -815,7 +781,7 @@ end
         test_format(str, str_, YASStyle(); margin = 1)
     end
 
-    @testset "issue 427" begin
+    @testset "427" begin
         str = "var\"##iv#469\" = (@variables(t))[1]"
         test_format(str, str)
 
@@ -825,7 +791,7 @@ end
         test_format(str, str_; margin = length(str) - 1)
     end
 
-    @testset "issue 429" begin
+    @testset "429" begin
         str = """
         find_derivatives!(vars, expr::Equation, f=identity) = (find_derivatives!(vars, expr.lhs, f); find_derivatives!(vars, expr.rhs, f); vars)
         """
@@ -835,6 +801,21 @@ end
         end
         """
         test_format(str, str_; margin = 92, short_to_long_function_def = true)
+    end
+
+    @testset "431" begin
+        str = """
+        local Jcx_rows, Jcx_cols, Jcx_vals, Jct_val
+        """
+        test_format(str, str)
+
+        str_ = "global a=2,b"
+        str = "global a=2, b"
+        test_format(str_, str)
+
+        str_ = "global a = 2,b"
+        str = "global a = 2, b"
+        test_format(str_, str)
     end
 
     @testset "440" begin
@@ -870,29 +851,14 @@ end
         test_format(str_, str, BlueStyle(); margin = 1)
     end
 
-    @testset "issue 431" begin
-        str = """
-        local Jcx_rows, Jcx_cols, Jcx_vals, Jct_val
-        """
-        test_format(str, str)
-
-        str_ = "global a=2,b"
-        str = "global a=2, b"
-        test_format(str_, str)
-
-        str_ = "global a = 2,b"
-        str = "global a = 2, b"
-        test_format(str_, str)
-    end
-
-    @testset "issue 449" begin
+    @testset "449" begin
         str = """
         (var"x" = 1.0,)
         """
         test_format(str, str)
     end
 
-    @testset "issue 451" begin
+    @testset "451" begin
         str_ = raw"""
         function _initialize_backend(pkg::AbstractBackend)
             sym = backend_package_name(pkg)
@@ -914,7 +880,7 @@ end
         test_format(str_, str; import_to_using = true)
     end
 
-    @testset "issue 456" begin
+    @testset "456" begin
         str = """
         function update()
             @debug "isfull" dist = 3
@@ -941,7 +907,7 @@ end
         test_format(str, str_aligned; align_assignment = true)
     end
 
-    @testset "issue 460" begin
+    @testset "460" begin
         # Do not allow import to using conversion when in a macroblock context such as:
         #
         #   @everywhere import A, B
@@ -965,7 +931,7 @@ end
         test_format(str, str; import_to_using = true)
     end
 
-    @testset "issue 463" begin
+    @testset "463" begin
         str = """
         using Test
 
@@ -979,14 +945,14 @@ end
             align_struct_field = true)
     end
 
-    @testset "issue 467" begin
+    @testset "467" begin
         str_ = "-3.. -2"
         str = "-3 .. -2"
         test_format(str_, str)
         test_format(str_, str, BlueStyle())
     end
 
-    @testset "issue 473" begin
+    @testset "473" begin
         str_ = "[1.0, 2.0, 3.0] .|> Int"
         str = "Int.([1.0, 2.0, 3.0])"
         test_format(str_, str; pipe_to_function_call = true)
@@ -994,7 +960,7 @@ end
         @test st.line_offset == length(str)
     end
 
-    @testset "issue 475" begin
+    @testset "475" begin
         # with the fix for #494 the keyword arguments transform is no longer applied
         # to macro calls.
         str = """
@@ -1029,6 +995,28 @@ end
         test_format(str, str, YASStyle(); margin = 100,
             whitespace_in_kwargs = false,
             separate_kwargs_with_semicolon = true)
+    end
+
+    @testset "480" begin
+        str = "@show (1,)"
+        test_format(str, str)
+
+        str = "@show(1,)"
+        test_format(str, str)
+
+        str = """
+        @NamedTuple{a::Int, b::Int}[]
+
+        @SVector[@SVector[1, 2], @SVector[1, 2]]
+        """
+        test_format(str, str)
+
+        str = """
+        @NamedTuple {a::Int, b::Int}[]
+
+        @SVector[@SVector[1, 2], @SVector [1, 2]]
+        """
+        test_format(str, str)
     end
 
     @testset "485 - blue style binary/chain op nesting" begin
@@ -1093,6 +1081,38 @@ end
 
         str = "Base.@deprecate f(x, y) g(x, y=y)\n"
         test_format(str, str, BlueStyle())
+    end
+
+    @testset "500 - leading zeros with '-.'" begin
+        s0 = """
+        a = -.2
+        b = - .2
+        """
+        s1 = """
+        a = -0.2
+        b = - 0.2
+        """
+        test_format(s0, s1)
+
+        s0 = """
+        a = -.2f32
+        b = - .2f32
+        """
+        s1 = """
+        a = -0.2f32
+        b = - 0.2f32
+        """
+        test_format(s0, s1)
+
+        s0 = """
+        a = -.2f-5
+        b = - .2f-5
+        """
+        s1 = """
+        a = -0.2f-5
+        b = - 0.2f-5
+        """
+        test_format(s0, s1)
     end
 
     @testset "509" begin
@@ -1223,28 +1243,6 @@ end
     @testset "526" begin
         str = "Base.:(|>)(r::AbstractRegister, blk::AbstractBlock) = apply!(r, blk)"
         test_format(str, str; pipe_to_function_call = true)
-    end
-
-    @testset "480" begin
-        str = "@show (1,)"
-        test_format(str, str)
-
-        str = "@show(1,)"
-        test_format(str, str)
-
-        str = """
-        @NamedTuple{a::Int, b::Int}[]
-
-        @SVector[@SVector[1, 2], @SVector[1, 2]]
-        """
-        test_format(str, str)
-
-        str = """
-        @NamedTuple {a::Int, b::Int}[]
-
-        @SVector[@SVector[1, 2], @SVector [1, 2]]
-        """
-        test_format(str, str)
     end
 
     @testset "530" begin
@@ -1423,7 +1421,7 @@ end
             @foo a
         end
         """
-        @test format_text(str, SciMLStyle()) == str_
+        test_format(str, str_, SciMLStyle())
 
         str = raw"""
         begin @foo(a) end
@@ -1433,7 +1431,7 @@ end
             @foo(a)
         end
         """
-        @test format_text(str, SciMLStyle()) == str_
+        test_format(str, str_, SciMLStyle())
     end
 
     @testset "613" begin
@@ -1442,7 +1440,109 @@ end
         my_cmd very_long command that really should be multi-line but isn't, and exceeds the character limit, will be indented forever by repeated calls to format
         ```
         """
-        @test format_text(s) == s
+        test_format(s, s)
+    end
+
+    @testset "618" begin
+        s = """
+        2 |> x -> 2x
+        """
+        s_ = """
+        (x -> 2x)(2)
+        """
+        test_format(s, s_; indent=4, margin=92, pipe_to_function_call = true)
+    end
+
+    @testset "619" begin
+        # Semicolons in vector literals must be preserved (they denote vcat, not hcat).
+        # Previously SciMLStyle dropped semicolons when reformatting.
+        eq_str = raw"eqs = [0 ~ -1x_f + (ModelingToolkitComponents.inputsf)(t, dt, x_f_input); 0 ~ -1dm_f1 + (ModelingToolkitComponents.inputsf)(t, dt, dm_f1_input); 0 ~ -1dm_f2 + (ModelingToolkitComponents.inputsf)(t, dt, dm_f2_input); 0 ~ -1csled₊F_brake + (ModelingToolkitComponents.inputsf)(t, csled₊dt, csled₊F_brake_input); 0 ~ -1 * csled₊sled₊k_sled * (-1csled₊sled₊a + csled₊sled₊u) + csled₊sled₊F_sled; 0 ~ -1 * csled₊sled₊k_car * (-1csled₊sled₊w + csled₊sled₊a) + csled₊sled₊F_car; 0 ~ -1csled₊sled₊F_car + csled₊sled₊m_car * csled₊sled₊ddw; 0 ~ -1 * (ifelse)(c4₊f₊vSA₊x > 0, (c4₊f₊vSA₊k1 * (abs)(-1c4₊piston₊v1₊p + c4₊accum_m₊v₊p) * (abs)(c4₊f₊vSA₊x / c4₊f₊vSA₊x_m) + c4₊f₊vSA₊k2 * (abs)(c4₊f₊vSA₊x / c4₊f₊vSA₊x_m) * (sqrt)((abs)(-1c4₊piston₊v1₊p + c4₊accum_m₊v₊p)) + c4₊f₊vSA₊k3 * (c4₊f₊vSA₊x / c4₊f₊vSA₊x_m) ^ 2 * (abs)(-1c4₊piston₊v1₊p + c4₊accum_m₊v₊p)) * (sign)(-1c4₊piston₊v1₊p + c4₊accum_m₊v₊p), 0) + c4₊f₊vSA₊HA₊dm; 0 ~ (-1c4₊accum_m₊v₊y + (ModelingToolkitComponents.delayf)(c4₊accum_m₊v₊y, t, c4₊accum_m₊v₊dt, c4₊accum_m₊v₊dt, c4₊accum_m₊v₊yo)) / c4₊accum_m₊v₊dt + c4₊accum_m₊v₊dy; 0 ~ (-1 * c4₊accum_m₊v₊area * c4₊accum_m₊v₊rho_0 * (c4₊accum_m₊v₊l_int + c4₊accum_m₊v₊y) * c4₊accum_m₊v₊dp) / c4₊accum_m₊v₊bulk + -1 * c4₊accum_m₊v₊area * c4₊accum_m₊v₊rho_0 * (1.0 + c4₊accum_m₊v₊p / c4₊accum_m₊v₊bulk) * c4₊accum_m₊v₊dy + c4₊accum_m₊v₊H₊dm; 0 ~ (-1c4₊piston₊v1₊y + (ModelingToolkitComponents.delayf)(c4₊piston₊v1₊y, t, c4₊piston₊v1₊dt, c4₊piston₊v1₊dt, c4₊piston₊v1₊yo)) / c4₊piston₊v1₊dt + c4₊piston₊ms₊dy; 0 ~ (-1c4₊piston₊v2₊y + (ModelingToolkitComponents.delayf)(c4₊piston₊v2₊y, t, c4₊piston₊v2₊dt, c4₊piston₊v2₊dt, c4₊piston₊v2₊yo)) / c4₊piston₊v2₊dt + -1c4₊piston₊ms₊dy; 0 ~ (-1c4₊piston₊ms₊y + (ModelingToolkitComponents.delayf)(c4₊piston₊ms₊y, t, c4₊piston₊ms₊dt, c4₊piston₊ms₊dt, c4₊piston₊ms₊yo)) / c4₊piston₊ms₊dt + c4₊piston₊ms₊dy; 0 ~ (ifelse)(c4₊piston₊ms₊y < c4₊piston₊ms₊ubnd, (ifelse)(c4₊piston₊ms₊y > c4₊piston₊ms₊lbnd, -1c4₊piston₊ms₊T₊f + c4₊piston₊ms₊m * c4₊piston₊ms₊ddy + -1 * c4₊piston₊ms₊g * c4₊piston₊ms₊m, -1c4₊piston₊ms₊T₊f + -1.0e9c4₊piston₊ms₊lbnd + c4₊piston₊ms₊m * c4₊piston₊ms₊ddy + 1.0e6c4₊piston₊ms₊dy + 1.0e9c4₊piston₊ms₊y + -1 * c4₊piston₊ms₊g * c4₊piston₊ms₊m), -1c4₊piston₊ms₊T₊f + -1.0e9c4₊piston₊ms₊ubnd + c4₊piston₊ms₊m * c4₊piston₊ms₊ddy + 1.0e6c4₊piston₊ms₊dy + 1.0e9c4₊piston₊ms₊y + -1 * c4₊piston₊ms₊g * c4₊piston₊ms₊m); 0 ~ (-1 * c4₊fp₊area * c4₊fp₊length * c4₊fp₊rho_0 * c4₊fp₊dp) / c4₊fp₊bulk + c4₊fp₊H₊dm]"
+        output = """
+        eqs = [0 ~ -1x_f + (ModelingToolkitComponents.inputsf)(t, dt, x_f_input);
+               0 ~ -1dm_f1 + (ModelingToolkitComponents.inputsf)(t, dt, dm_f1_input);
+               0 ~ -1dm_f2 + (ModelingToolkitComponents.inputsf)(t, dt, dm_f2_input);
+               0 ~
+               -1csled₊F_brake +
+               (ModelingToolkitComponents.inputsf)(t, csled₊dt, csled₊F_brake_input);
+               0 ~ -1 * csled₊sled₊k_sled * (-1csled₊sled₊a + csled₊sled₊u) + csled₊sled₊F_sled;
+               0 ~ -1 * csled₊sled₊k_car * (-1csled₊sled₊w + csled₊sled₊a) + csled₊sled₊F_car;
+               0 ~ -1csled₊sled₊F_car + csled₊sled₊m_car * csled₊sled₊ddw;
+               0 ~
+               -1 * (ifelse)(c4₊f₊vSA₊x > 0,
+                   (c4₊f₊vSA₊k1 * (abs)(-1c4₊piston₊v1₊p + c4₊accum_m₊v₊p) *
+                    (abs)(c4₊f₊vSA₊x / c4₊f₊vSA₊x_m) +
+                    c4₊f₊vSA₊k2 * (abs)(c4₊f₊vSA₊x / c4₊f₊vSA₊x_m) *
+                    (sqrt)((abs)(-1c4₊piston₊v1₊p + c4₊accum_m₊v₊p)) +
+                    c4₊f₊vSA₊k3 * (c4₊f₊vSA₊x / c4₊f₊vSA₊x_m) ^ 2 *
+                    (abs)(-1c4₊piston₊v1₊p + c4₊accum_m₊v₊p)) *
+                   (sign)(-1c4₊piston₊v1₊p + c4₊accum_m₊v₊p),
+                   0) + c4₊f₊vSA₊HA₊dm;
+               0 ~
+               (-1c4₊accum_m₊v₊y + (ModelingToolkitComponents.delayf)(
+                   c4₊accum_m₊v₊y, t, c4₊accum_m₊v₊dt, c4₊accum_m₊v₊dt, c4₊accum_m₊v₊yo)) /
+               c4₊accum_m₊v₊dt + c4₊accum_m₊v₊dy;
+               0 ~
+               (-1 * c4₊accum_m₊v₊area * c4₊accum_m₊v₊rho_0 *
+                (c4₊accum_m₊v₊l_int + c4₊accum_m₊v₊y) * c4₊accum_m₊v₊dp) / c4₊accum_m₊v₊bulk +
+               -1 * c4₊accum_m₊v₊area * c4₊accum_m₊v₊rho_0 *
+               (1.0 + c4₊accum_m₊v₊p / c4₊accum_m₊v₊bulk) * c4₊accum_m₊v₊dy + c4₊accum_m₊v₊H₊dm;
+               0 ~
+               (-1c4₊piston₊v1₊y + (ModelingToolkitComponents.delayf)(
+                   c4₊piston₊v1₊y, t, c4₊piston₊v1₊dt, c4₊piston₊v1₊dt, c4₊piston₊v1₊yo)) /
+               c4₊piston₊v1₊dt + c4₊piston₊ms₊dy;
+               0 ~
+               (-1c4₊piston₊v2₊y + (ModelingToolkitComponents.delayf)(
+                   c4₊piston₊v2₊y, t, c4₊piston₊v2₊dt, c4₊piston₊v2₊dt, c4₊piston₊v2₊yo)) /
+               c4₊piston₊v2₊dt + -1c4₊piston₊ms₊dy;
+               0 ~
+               (-1c4₊piston₊ms₊y + (ModelingToolkitComponents.delayf)(
+                   c4₊piston₊ms₊y, t, c4₊piston₊ms₊dt, c4₊piston₊ms₊dt, c4₊piston₊ms₊yo)) /
+               c4₊piston₊ms₊dt + c4₊piston₊ms₊dy;
+               0 ~ (ifelse)(c4₊piston₊ms₊y < c4₊piston₊ms₊ubnd,
+                   (ifelse)(c4₊piston₊ms₊y > c4₊piston₊ms₊lbnd,
+                       -1c4₊piston₊ms₊T₊f + c4₊piston₊ms₊m * c4₊piston₊ms₊ddy +
+                       -1 * c4₊piston₊ms₊g * c4₊piston₊ms₊m,
+                       -1c4₊piston₊ms₊T₊f + -1.0e9c4₊piston₊ms₊lbnd +
+                       c4₊piston₊ms₊m * c4₊piston₊ms₊ddy + 1.0e6c4₊piston₊ms₊dy +
+                       1.0e9c4₊piston₊ms₊y + -1 * c4₊piston₊ms₊g * c4₊piston₊ms₊m),
+                   -1c4₊piston₊ms₊T₊f + -1.0e9c4₊piston₊ms₊ubnd +
+                   c4₊piston₊ms₊m * c4₊piston₊ms₊ddy + 1.0e6c4₊piston₊ms₊dy + 1.0e9c4₊piston₊ms₊y +
+                   -1 * c4₊piston₊ms₊g * c4₊piston₊ms₊m);
+               0 ~
+               (-1 * c4₊fp₊area * c4₊fp₊length * c4₊fp₊rho_0 * c4₊fp₊dp) / c4₊fp₊bulk + c4₊fp₊H₊dm]
+        """ |> strip
+        test_format(eq_str, output, SciMLStyle())
+        @test Meta.parse(eq_str) == Meta.parse(output)
+    end
+
+    @testset "622" begin
+        # Array indexing with colon should not produce invalid syntax when nested.
+        # Previously, `to_eval[\n    performance_accept, :\n]` had a bare `:` after a
+        # newline, which Julia interpreted as the quoting operator.
+        s = "chainsamples[α_accept_indices[performance_accept], :] = to_eval[performance_accept, :]\n"
+        s_ = """
+        chainsamples[α_accept_indices[performance_accept], :] = to_eval[
+            performance_accept, :,
+        ]
+        """
+        test_format(s, s_, BlueStyle(); margin = 60)
+    end
+
+    @testset "624" begin
+        s = """
+        deploydocs(;
+            repo="github.com/julia-vscode/CSTParser.jl",
+        )
+        """
+        test_format(s, s, MinimalStyle())
+    end
+
+    @testset "630" begin
+        s = raw"""
+        rn = @reaction_network begin
+            k/$V, A + B --> C
+        end k"""
+        test_format(s, s, SciMLStyle())
     end
 
     @testset "636" begin
@@ -1484,14 +1584,50 @@ end
         test_format(s, s_; indent=4, margin=92, pipe_to_function_call = true)
     end
 
-    @testset "618" begin
-        s = """
-        2 |> x -> 2x
-        """
+    @testset "642" begin
+        # Unary plus in macro call should not break the formatter.
+        s = "@constraint(Lower(model), +x[1] + x[2] <= 2)\n"
+        test_format(s, s)
+
+        # Unary plus at the start of a chain of multiplications inside `sum()`.
         s_ = """
-        (x -> 2x)(2)
+        sum(
+                + _shutdown_margin(u, ng, d, s, t0, t, case, part)
+                * _unit_flow_capacity(u, ng, d, s, t0, t)
+                * _switch(
+                    d; from_node=nonspin_units_started_up, to_node=nonspin_units_shut_down
+                )[u, n, s, t_over]
+                * overlap_duration(t_over, t)
+                for (u, n, s, t_over) in _switch(
+                    d; from_node=nonspin_units_started_up_indices, to_node=nonspin_units_shut_down_indices
+                )(m; unit=u, stochastic_scenario=s, t=t_overlaps_t(m; t=t));
+                init=0
+            )
         """
-        test_format(s, s_; indent=4, margin=92, pipe_to_function_call = true)
+        s = """
+        sum(
+            + _shutdown_margin(u, ng, d, s, t0, t, case, part) *
+            _unit_flow_capacity(u, ng, d, s, t0, t) *
+            _switch(d; from_node = nonspin_units_started_up, to_node = nonspin_units_shut_down)[
+                u,
+                n,
+                s,
+                t_over,
+            ] *
+            overlap_duration(t_over, t) for (u, n, s, t_over) in _switch(
+                d;
+                from_node = nonspin_units_started_up_indices,
+                to_node = nonspin_units_shut_down_indices,
+            )(
+                m;
+                unit = u,
+                stochastic_scenario = s,
+                t = t_overlaps_t(m; t = t),
+            );
+            init = 0,
+        )
+        """
+        test_format(s_, s)
     end
 
     @testset "644" begin
@@ -1538,6 +1674,13 @@ end
         test_format(s, s; indent=4, margin=92)
     end
 
+    @testset "664" begin
+        # `import ..x` should not be converted to `using ..x: x` with `import_to_using`,
+        # because `using ..x: x` is invalid when `x` is not a module.
+        s = "module M\nimport ..x\ny = x\nend\n"
+        test_format(s, s; import_to_using = true)
+    end
+
     @testset "667" begin
         s = raw"""
         \"""
@@ -1552,6 +1695,17 @@ end
         @dimension 𝐀 "𝐀" Angle true
         """
         test_format(s, s; format_docstrings = true)
+    end
+
+    @testset "669" begin
+        # Macro call arguments like `xd(t)=xd_start` should not be rewritten to
+        # `function xd(t) ... end` when `short_to_long_function_def = true`.
+        s = """
+        sts = @variables x(t) = x_start [description = "State of filter"] xd(t) = xd_start [
+            description = "Derivative state of filter",
+        ]
+        """
+        test_format(s, s; short_to_long_function_def = true)
     end
 
     @testset "682" begin
@@ -1578,6 +1732,34 @@ end
         end
         """
         test_format(s1, s2; indent=2, margin=5, short_to_long_function_def = true)
+    end
+
+    @testset "688" begin
+        s = """
+        vector_to_concatenate = [
+            repeat([foo], foo_times);
+            repeat([bar], bar_times)
+        ]
+        """ |> strip
+        test_format(s, s; margin=30)
+        test_format(s, s, MinimalStyle())
+    end
+
+    @testset "690" begin
+        # Inline comments after trailing comma should not be deleted by SciMLStyle.
+        s_ = """
+        var_to_diff = DiffGraph(
+            [2, 3, nothing, 5, 6, nothing], # primal_to_diff
+            [nothing, 1, 2, nothing, 4, 5], # diff_to_primal
+        )
+        """
+        s = """
+        var_to_diff = DiffGraph(
+            [2, 3, nothing, 5, 6, nothing], # primal_to_diff
+            [nothing, 1, 2, nothing, 4, 5] # diff_to_primal
+        )
+        """
+        test_format(s_, s, SciMLStyle())
     end
 
     @testset "698" begin
@@ -1628,16 +1810,14 @@ end
         test_format(s1, s2, BlueStyle(); indent=4, margin=92)
     end
 
-    if VERSION >= v"1.8"
-        @testset "703" begin
-            s = """
-            mutable struct A
-                const a :: Int
-                bcd     :: String
-            end
-            """
-            test_format(s, s; indent=4, margin=92, align_struct_field = true)
+    @testset "703" begin
+        s = """
+        mutable struct A
+            const a :: Int
+            bcd     :: String
         end
+        """
+        test_format(s, s; indent=4, margin=92, align_struct_field = true)
     end
 
     @testset "713" begin
@@ -1691,20 +1871,26 @@ end
         test_format(s, s; indent=4, margin=92)
     end
 
+    @testset "736" begin
+        # should not get spaces around `in`.
+        s = "!in(x, y)"
+        for style in ALL_STYLES
+            test_format(s, s, style)
+        end
+    end
+
     @testset "743" begin
         s = """
         foo(ᶜa) = - ᶜa
         """
         test_format(s, s; indent=4, margin=92)
-        @test format_text(s, SciMLStyle()) == s
+        test_format(s, s, SciMLStyle())
     end
 
-    if VERSION >= v"1.8"
-        @testset "745" begin
-            s = "[;;;]"
-            test_format(s, s; indent=4, margin=92)
-            test_format(s, s; indent=4, margin=1)
-        end
+    @testset "745" begin
+        s = "[;;;]"
+        test_format(s, s; indent=4, margin=92)
+        test_format(s, s; indent=4, margin=1)
     end
 
     @testset "748" begin
@@ -1741,24 +1927,27 @@ end
             end
         end
         """
-        @test format_text(str_, SciMLStyle()) == str
-    end
-
-    @testset "624" begin
-        s = """
-        deploydocs(;
-            repo="github.com/julia-vscode/CSTParser.jl",
-        )
-        """
-        s1 = format_text(s, MinimalStyle())
-        @test format_text(s1, MinimalStyle()) == s
+        test_format(str_, str, SciMLStyle())
     end
 
     @testset "769" begin
         s = raw"""
         @assert x isa Tuple \"msg\"
         """
-        @test format_text(s, SciMLStyle()) == s
+        test_format(s, s, SciMLStyle())
+    end
+
+    @testset "774" begin
+        str = """
+        getdata() = rand() < 0.5 ? rand() : missing
+
+        function dowork()
+            while !ismissing((val = getdata();))
+                println(val^2)
+            end
+        end
+        """
+        test_format(str, str)
     end
 
     @testset "779" begin
@@ -1766,22 +1955,85 @@ end
         test_format(s, s)
     end
 
-    if VERSION >= v"1.8"
-        @testset "802" begin
-            s = """
-            mutable struct Foo
-                const a
-            end
-            """
-            test_format(s, s; indent=4, margin=92, align_struct_field = true)
+    @testset "781" begin
+        # Previously failed with "hasn't reached fixpoint in 4 iterations".
+        s = "f([a b\n            c d])"
+        test_format(s, s, SciMLStyle(); align_matrix = true)
+    end
+
+    @testset "782" begin
+        # `catch (e)` should be preserved as-is, not moved into the catch body.
+        # Previously the formatter produced `catch\n    (e)\n    ...` which changes
+        # semantics: `e` would no longer be bound to the exception.
+        s = """
+        try
+            error("Whoops")
+        catch (e)
+            println("Found \$e")
         end
+        """
+        test_format(s, s)
+    end
+
+    @testset "795" begin
+        s = "a[1 .+ 1 .+ 1]"
+        for style in ALL_STYLES
+            test_format(s, s, style)
+        end
+    end
+
+    @testset "802" begin
+        s = """
+        mutable struct Foo
+            const a
+        end
+        """
+        test_format(s, s; indent=4, margin=92, align_struct_field = true)
     end
 
     @testset "810" begin
         s = """
         @f(a, b, c)
         """
-        @test format_text(s, SciMLStyle()) == s
+        test_format(s, s, SciMLStyle())
+    end
+
+    @testset "815" begin
+        s1 = """
+        X = (
+            xxxxx=["xxxx", "xxxx", "xxxx"],
+            xxxxx=["xxxx", "xxxx", "xxxx"]
+        )
+        """
+        s2 = """
+        X = (
+            xxxxx=["xxxx", "xxxx", "xxxx"],
+            xxxxx=["xxxx", "xxxx", "xxxx"],
+        )
+        """
+        test_format(
+            s1, s2, BlueStyle();
+            trailing_comma = true,
+            join_lines_based_on_source = true,
+        )
+
+        s1 = """
+        XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX = (
+            xxxxx=["xxxx", "xxxx", "xxxx"],
+            xxxxx=["xxxx", "xxxx", "xxxx"]
+        )
+        """
+        s2 = """
+        XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX = (
+            xxxxx=["xxxx", "xxxx", "xxxx"],
+            xxxxx=["xxxx", "xxxx", "xxxx"],
+        )
+        """
+        test_format(
+            s1, s2, BlueStyle(),
+            trailing_comma = true,
+            join_lines_based_on_source = true,
+        )
     end
 
     @testset "817" begin
@@ -1802,7 +2054,12 @@ end
             "Southern Europe" => SubRegion.Southern_Europe,
             "Central Asia" => SubRegion.Central_Asia]
         """
-        @test format_text(s, SciMLStyle()) == s2
+        test_format(s, s2, SciMLStyle())
+    end
+
+    @testset "820" begin
+        s = "this_func(::Tuple{<:(some_func())}) = nothing"
+        test_format(s, s)
     end
 
     @testset "822" begin
@@ -1810,7 +2067,7 @@ end
         ℯ #=
         =#
         """
-        @test format_text(s) == s
+        test_format(s, s)
 
         s = """
         begin
@@ -1818,97 +2075,80 @@ end
             comment =#
         end
         """
-        @test format_text(s) == s
+        test_format(s, s)
     end
 
-    @testset "820" begin
-        s = "this_func(::Tuple{<:(some_func())}) = nothing"
-        @test format_text(s) == s
+    @testset "833" begin
+        # spaces around .+ were removed previously
+        s = "x[n^2 .+ I]"
+        for style in (DefaultStyle(), YASStyle(), MinimalStyle())
+            test_format(s, s, style)
+        end
+        for style in (SciMLStyle(), BlueStyle())
+            # spaces around binop in indexing expr
+            s2 = "x[n ^ 2 .+ I]"
+            test_format(s, s2, style)
+        end
     end
 
-    @testset "820" begin
-        s1 = """
-        X = (
-            xxxxx=["xxxx", "xxxx", "xxxx"],
-            xxxxx=["xxxx", "xxxx", "xxxx"]
-        )
-        """
-        s2 = """
-        X = (
-            xxxxx=["xxxx", "xxxx", "xxxx"],
-            xxxxx=["xxxx", "xxxx", "xxxx"],
-        )
-        """
-        @test format_text(
-            s1;
-            style = BlueStyle(),
-            trailing_comma = true,
-            join_lines_based_on_source = true,
-        ) == s2
-
-        s1 = """
-        XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX = (
-            xxxxx=["xxxx", "xxxx", "xxxx"],
-            xxxxx=["xxxx", "xxxx", "xxxx"]
-        )
-        """
-        s2 = """
-        XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX = (
-            xxxxx=["xxxx", "xxxx", "xxxx"],
-            xxxxx=["xxxx", "xxxx", "xxxx"],
-        )
-        """
-        @test format_text(
-            s1;
-            style = BlueStyle(),
-            trailing_comma = true,
-            join_lines_based_on_source = true,
-        ) == s2
+    @testset "837" begin
+        s = "Bool[;;]"
+        for style in ALL_STYLES
+            test_format(s, s)
+        end
     end
 
-    @testset "774" begin
+    @testset "850" begin
+        s = raw"""println("$x"[1:end-2])"""
+        for style in ALL_STYLES
+            # output depends on style but we can check AST is unchanged
+            out = format_text(s, style)
+            @test Meta.parse(s) == Meta.parse(out)
+            # test idempotence
+            @test format_text(out, style) == out
+        end
+    end
+
+    @testset "860" begin
+        # Integer literals and broadcasting inside `[]` should not cause a parse error.
+        s = "a[x+1 .+ 1]"
+        test_format(s, s)
+        test_format(s, "a[x + 1 .+ 1]"; whitespace_ops_in_indices = true)
+    end
+
+    @testset "862" begin
+        # Block comments should not be stripped entirely.
+        # Previously `T <: Tuple #=...=# && ...` lost the first block comment.
+        s_ = "T <: Tuple #=comment1=# && !(T isa Union) #=comment2=#\n"
+        s = "T <: Tuple#=comment1=# && !(T isa Union)#=comment2=#\n"
+        test_format(s_, s)
+    end
+
+    @testset "876" begin
+        str_ = """
+        function find_horizontal(geom::GIWrap.Polygon)::Vector{Tuple{Float64,Float64}}
+            coords = collect(GI.coordinates(geom)...)
+            first_coord = first(coords)
+            second_coord = coords[
+                (getindex.(coords, 2) .∈ first_coord[2]) .&&
+                (getindex.(coords, 1) .∉ first_coord[1])
+            ]
+
+            return [tuple(first_coord...), tuple(first(second_coord)...)]
+        end
+        """
         str = """
-        getdata() = rand() < 0.5 ? rand() : missing
+        function find_horizontal(geom::GIWrap.Polygon)::Vector{Tuple{Float64,Float64}}
+            coords = collect(GI.coordinates(geom)...)
+            first_coord = first(coords)
+            second_coord = coords[
+                (getindex.(coords, 2) .∈ first_coord[2]) .&& (getindex.(coords, 1) .∉ first_coord[1])
+            ]
 
-        function dowork()
-            while !ismissing((val = getdata();))
-                println(val^2)
-            end
+            return [tuple(first_coord...), tuple(first(second_coord)...)]
         end
         """
-        test_format(str, str)
-    end
-
-    if VERSION >= v"1.7"
-        @testset "876" begin
-            str_ = """
-            function find_horizontal(geom::GIWrap.Polygon)::Vector{Tuple{Float64,Float64}}
-                coords = collect(GI.coordinates(geom)...)
-                first_coord = first(coords)
-                second_coord = coords[
-                    (getindex.(coords, 2) .∈ first_coord[2]) .&&
-                    (getindex.(coords, 1) .∉ first_coord[1])
-                ]
-
-                return [tuple(first_coord...), tuple(first(second_coord)...)]
-            end
-            """
-            str = """
-            function find_horizontal(geom::GIWrap.Polygon)::Vector{Tuple{Float64,Float64}}
-                coords = collect(GI.coordinates(geom)...)
-                first_coord = first(coords)
-                second_coord = coords[
-                    (getindex.(coords, 2) .∈ first_coord[2]) .&& (getindex.(coords, 1) .∉ first_coord[1])
-                ]
-
-                return [tuple(first_coord...), tuple(first(second_coord)...)]
-            end
-            """
-            f1 = format_text(str_, BlueStyle(); join_lines_based_on_source = true)
-            @test f1 == str
-            f1 = format_text(f1, BlueStyle(); join_lines_based_on_source = true)
-            @test f1 == str
-        end
+        test_format(str_, str, BlueStyle(); join_lines_based_on_source = true)
     end
 
     @testset "880" begin
@@ -1922,189 +2162,6 @@ end
 
         s = ".!purge"
         test_format(s, s; indent=4, margin=100)
-    end
-
-    @testset "912" begin
-        s = """
-        try
-            nothing
-        catch e
-            nothing
-        else
-            nothing
-        end
-        """
-        test_format(s, s; indent=4, margin=100)
-
-        str_ = """
-        try
-         # comment
-         catch e
-         # comment
-        body
-         # comment
-         else
-         # comment
-         end
-        """
-        s = """
-        try
-            # comment
-        catch e
-            # comment
-            body
-            # comment
-        else
-            # comment
-        end
-        """
-        test_format(str_, s; indent=4, margin=100)
-    end
-
-    @testset "917" begin
-        s = "using Foo: ( .. )"
-        sf = "using Foo: (..)"
-        test_format(s, sf; indent=4, margin=100)
-    end
-
-    @testset "921" begin
-        # These are floating point literals with hexadecimal significands. E.g. 0x1p1 is the
-        # float with with 0x1 as the significant and 1 as the exponent.
-        s = "0x1p1"
-        test_format(s, s)
-        s = "+0x1p1"
-        test_format(s, s)
-        s = "-0x1p1"
-        test_format(s, s)
-    end
-
-    @testset "1025" begin
-        # from julia@1.12.6 Compiler/src/typelimits.jl
-        s = """
-        if is_lattice_equal(𝕃, ai, bi) || is_lattice_equal(𝕃, ai, ft)
-            tyi = ai
-        elseif is_lattice_equal(𝕃, bi, ft)
-            tyi = bi
-        elseif (tyi′ = tmerge_field(𝕃, ai, bi); tyi′ !== nothing)
-            tyi = tyi′
-        else
-            tni = _typename(widenconst(ai))
-            if tni isa Const && tni === _typename(widenconst(bi))
-                tyi = typeintersect(ft, (tni.val::Core.TypeName).wrapper)
-            else
-                tyi = ft
-            end
-        end
-        """
-        test_format(s, s)
-    end
-
-    @testset "622" begin
-        # Array indexing with colon should not produce invalid syntax when nested.
-        # Previously, `to_eval[\n    performance_accept, :\n]` had a bare `:` after a
-        # newline, which Julia interpreted as the quoting operator.
-        s = "chainsamples[α_accept_indices[performance_accept], :] = to_eval[performance_accept, :]\n"
-        s_ = """
-        chainsamples[α_accept_indices[performance_accept], :] = to_eval[
-            performance_accept, :,
-        ]
-        """
-        test_format(s, s_, BlueStyle(); margin = 60)
-    end
-
-    @testset "642" begin
-        # Unary plus in macro call should not break the formatter.
-        s = "@constraint(Lower(model), +x[1] + x[2] <= 2)\n"
-        test_format(s, s)
-
-        # Unary plus at the start of a chain of multiplications inside `sum()`.
-        s_ = """
-        sum(
-                + _shutdown_margin(u, ng, d, s, t0, t, case, part)
-                * _unit_flow_capacity(u, ng, d, s, t0, t)
-                * _switch(
-                    d; from_node=nonspin_units_started_up, to_node=nonspin_units_shut_down
-                )[u, n, s, t_over]
-                * overlap_duration(t_over, t)
-                for (u, n, s, t_over) in _switch(
-                    d; from_node=nonspin_units_started_up_indices, to_node=nonspin_units_shut_down_indices
-                )(m; unit=u, stochastic_scenario=s, t=t_overlaps_t(m; t=t));
-                init=0
-            )
-        """
-        s = """
-        sum(
-            + _shutdown_margin(u, ng, d, s, t0, t, case, part) *
-            _unit_flow_capacity(u, ng, d, s, t0, t) *
-            _switch(d; from_node = nonspin_units_started_up, to_node = nonspin_units_shut_down)[
-                u,
-                n,
-                s,
-                t_over,
-            ] *
-            overlap_duration(t_over, t) for (u, n, s, t_over) in _switch(
-                d;
-                from_node = nonspin_units_started_up_indices,
-                to_node = nonspin_units_shut_down_indices,
-            )(
-                m;
-                unit = u,
-                stochastic_scenario = s,
-                t = t_overlaps_t(m; t = t),
-            );
-            init = 0,
-        )
-        """
-        test_format(s_, s)
-    end
-
-    @testset "669" begin
-        # Macro call arguments like `xd(t)=xd_start` should not be rewritten to
-        # `function xd(t) ... end` when `short_to_long_function_def = true`.
-        s = """
-        sts = @variables x(t) = x_start [description = "State of filter"] xd(t) = xd_start [
-            description = "Derivative state of filter",
-        ]
-        """
-        test_format(s, s; short_to_long_function_def = true)
-    end
-
-    @testset "690" begin
-        # Inline comments after trailing comma should not be deleted by SciMLStyle.
-        s_ = """
-        var_to_diff = DiffGraph(
-            [2, 3, nothing, 5, 6, nothing], # primal_to_diff
-            [nothing, 1, 2, nothing, 4, 5], # diff_to_primal
-        )
-        """
-        s = """
-        var_to_diff = DiffGraph(
-            [2, 3, nothing, 5, 6, nothing], # primal_to_diff
-            [nothing, 1, 2, nothing, 4, 5] # diff_to_primal
-        )
-        """
-        test_format(s_, s, SciMLStyle())
-    end
-
-    @testset "782" begin
-        # `catch (e)` should be preserved as-is, not moved into the catch body.
-        # Previously the formatter produced `catch\n    (e)\n    ...` which changes
-        # semantics: `e` would no longer be bound to the exception.
-        s = """
-        try
-            error("Whoops")
-        catch (e)
-            println("Found \$e")
-        end
-        """
-        test_format(s, s)
-    end
-
-    @testset "860" begin
-        # Integer literals and broadcasting inside `[]` should not cause a parse error.
-        s = "a[x+1 .+ 1]"
-        test_format(s, s)
-        test_format(s, "a[x + 1 .+ 1]"; whitespace_ops_in_indices = true)
     end
 
     @testset "885" begin
@@ -2186,6 +2243,43 @@ end
         test_format(s_, s, BlueStyle())
     end
 
+    @testset "912" begin
+        s = """
+        try
+            nothing
+        catch e
+            nothing
+        else
+            nothing
+        end
+        """
+        test_format(s, s; indent=4, margin=100)
+
+        str_ = """
+        try
+         # comment
+         catch e
+         # comment
+        body
+         # comment
+         else
+         # comment
+         end
+        """
+        s = """
+        try
+            # comment
+        catch e
+            # comment
+            body
+            # comment
+        else
+            # comment
+        end
+        """
+        test_format(str_, s; indent=4, margin=100)
+    end
+
     @testset "914" begin
         # SciMLStyle with `yas_style_nesting` should produce consistent indentation
         # regardless of argument length.
@@ -2228,11 +2322,49 @@ end
         test_format(s, s)
     end
 
+    @testset "917" begin
+        s = "using Foo: ( .. )"
+        sf = "using Foo: (..)"
+        test_format(s, sf; indent=4, margin=100)
+    end
+
+    @testset "921" begin
+        # These are floating point literals with hexadecimal significands. E.g. 0x1p1 is the
+        # float with with 0x1 as the significant and 1 as the exponent.
+        s = "0x1p1"
+        test_format(s, s)
+        s = "+0x1p1"
+        test_format(s, s)
+        s = "-0x1p1"
+        test_format(s, s)
+    end
+
     @testset "926" begin
         # Function calls with binary operators as arguments should preserve whitespace.
         # Previously `f(*, +, a, b)` was formatted as `f(*,+,a,b)`.
         test_format("f(*, +, a, b)", "f(*, +, a, b)")
         test_format("f(*, +, a, b, c)", "f(*, +, a, b, c)")
+    end
+
+    @testset "1025" begin
+        # from julia@1.12.6 Compiler/src/typelimits.jl
+        s = """
+        if is_lattice_equal(𝕃, ai, bi) || is_lattice_equal(𝕃, ai, ft)
+            tyi = ai
+        elseif is_lattice_equal(𝕃, bi, ft)
+            tyi = bi
+        elseif (tyi′ = tmerge_field(𝕃, ai, bi); tyi′ !== nothing)
+            tyi = tyi′
+        else
+            tni = _typename(widenconst(ai))
+            if tni isa Const && tni === _typename(widenconst(bi))
+                tyi = typeintersect(ft, (tni.val::Core.TypeName).wrapper)
+            else
+                tyi = ft
+            end
+        end
+        """
+        test_format(s, s)
     end
 end
 

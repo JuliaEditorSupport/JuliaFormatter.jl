@@ -39,6 +39,10 @@ ALL_STYLES = (DefaultStyle(), YASStyle(), BlueStyle(), MinimalStyle(), SciMLStyl
             "$(T)[1\n2;;\n3\n4]",
             "$(T)[f(a)\n f(a);;\n f(a)\n f(a)]",
             "$(T)[\n1\n2;;\n3\n4\n]", # extra newlines
+            "$(T)[]",
+            "$(T)[;]",
+            "$(T)[;;]",
+            "$(T)[;;;]",
         )
             for style in ALL_STYLES
                 @testset let style = style
