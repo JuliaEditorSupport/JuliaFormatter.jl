@@ -50,6 +50,19 @@ function n_call!(
             fst.indent = s.line_offset + 1
         end
 
+        if n.typ === TRAILINGCOMMA
+            # Unconditionally materialise the trailing comma. If we don't need it
+            # we'll get rid of it.
+            n.val = ","
+            n.len = 1
+        elseif is_closer(n) && n.startline == fst[end].startline
+            # Get rid of trailing comma if it's just before the closing paren.
+            if fst[i-1].typ === TRAILINGCOMMA
+                fst[i-1].val = ""
+                fst[i-1].len = 0
+            end
+        end
+
         if n.typ === NEWLINE
             s.line_offset = fst.indent
         elseif n.typ === PLACEHOLDER

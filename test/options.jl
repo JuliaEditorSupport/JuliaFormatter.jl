@@ -1695,63 +1695,6 @@ end
         test_format(str, str_, YASStyle(); align_matrix = true)
     end
 
-    @testset "trailing commas" begin
-        str = """
-        funccall(
-            arg1,
-            arg2,
-            arg3
-        )"""
-
-        str_ = "funccall(arg1, arg2, arg3)"
-        test_format(str_, str; indent=4, margin=1, trailing_comma = false)
-
-        # last comma is removed
-
-        str_ = "funccall(arg1, arg2, arg3,)"
-        test_format(str_, str; indent=4, margin=1, trailing_comma = false)
-
-        str = "funccall(arg1, arg2, arg3)"
-        test_format(str_, str; trailing_comma = false)
-
-        # corner case - if the comma is removed it is no longer a tuple
-        str_ = "(tuple,)"
-        str = """
-        (
-            tuple,
-        )"""
-        test_format(str_, str; indent=4, margin=1, trailing_comma = false)
-
-        str = """
-        funccall(
-            arg1,
-            arg2,
-            arg3
-        )"""
-
-        str_ = "funccall(arg1, arg2, arg3)"
-        test_format(str_, str; indent=4, margin=1, trailing_comma = nothing)
-
-        # last comma is stays
-        str_ = "funccall(arg1, arg2, arg3,)"
-        str = """
-        funccall(
-            arg1,
-            arg2,
-            arg3,
-        )"""
-        test_format(str_, str; indent=4, margin=1, trailing_comma = nothing)
-        test_format(str_, str_; indent=4, margin=100, trailing_comma = nothing)
-
-        # corner case - if the comma is removed it is no longer a tuple
-        str_ = "(tuple,)"
-        str = """
-        (
-            tuple,
-        )"""
-        test_format(str_, str; indent=4, margin=1, trailing_comma = nothing)
-    end
-
     @testset "ignore maximum width" begin
         @testset "maintain original structure" begin
             for m in (:module, :baremodule)

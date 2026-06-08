@@ -167,7 +167,7 @@ function p_macrocall(
             add_node!(t, n, s; join_lines = true)
         elseif kind(a) === K","
             add_node!(t, n, s; join_lines = true)
-            if needs_placeholder(childs, i + 1, K")")
+            if has_more_args_to_come(childs, i + 1, K")")
                 add_node!(t, Placeholder(1), s)
             end
         elseif JuliaSyntax.is_whitespace(a)

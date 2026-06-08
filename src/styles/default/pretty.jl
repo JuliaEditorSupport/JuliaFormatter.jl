@@ -977,7 +977,7 @@ function p_macrocall(
             add_node!(t, n, s; join_lines = true)
         elseif kind(a) === K","
             add_node!(t, n, s; join_lines = true)
-            if needs_placeholder(childs, i + 1, K")")
+            if has_more_args_to_come(childs, i + 1, K")")
                 add_node!(t, Placeholder(1), s)
             end
         elseif JuliaSyntax.is_whitespace(a)
@@ -1081,7 +1081,7 @@ function p_block(
                 add_node!(t, n, s; join_lines = true)
             elseif kind(a) === K","
                 add_node!(t, n, s; join_lines = true)
-                if needs_placeholder(childs, i + 1, K")")
+                if has_more_args_to_come(childs, i + 1, K")")
                     add_node!(t, Whitespace(1), s)
                 end
             elseif JuliaSyntax.is_whitespace(a)
@@ -1095,7 +1095,7 @@ function p_block(
         elseif single_line
             if kind(a) in KSet", ;"
                 add_node!(t, n, s; join_lines = true)
-                if needs_placeholder(childs, i + 1, K")")
+                if has_more_args_to_come(childs, i + 1, K")")
                     add_node!(t, Placeholder(1), s)
                 end
             else
@@ -1104,7 +1104,7 @@ function p_block(
         else
             if kind(a) === K","
                 add_node!(t, n, s; join_lines = true)
-                if join_body && needs_placeholder(childs, i + 1, K")")
+                if join_body && has_more_args_to_come(childs, i + 1, K")")
                     add_node!(t, Placeholder(1), s)
                 end
             elseif kind(a) === K";"
@@ -1858,7 +1858,7 @@ function p_iteration(
         n = pretty(style, c, s, ctx, lineage)
         if kind(c) === K","
             add_node!(t, n, s; join_lines = true)
-            if needs_placeholder(childs, i + 1, K")")
+            if has_more_args_to_come(childs, i + 1, K")")
                 add_node!(t, Placeholder(1), s)
             end
         elseif !JuliaSyntax.is_whitespace(c)
@@ -2717,7 +2717,7 @@ function p_whereopcall(
             s.indent -= s.opts.indent
         elseif kind(a) === K","
             add_node!(t, pretty(style, a, s, ctx, lineage), s; join_lines = true)
-            if needs_placeholder(childs, i + 1, K"}")
+            if has_more_args_to_come(childs, i + 1, K"}")
                 add_node!(t, Placeholder(nws), s)
             end
         elseif JuliaSyntax.is_whitespace(a)
@@ -2845,7 +2845,7 @@ function p_curly(
             add_node!(t, n, s; join_lines = true)
         elseif kind(a) === K","
             add_node!(t, n, s; join_lines = true)
-            if needs_placeholder(childs, i + 1, K"}")
+            if has_more_args_to_come(childs, i + 1, K"}")
                 add_node!(t, Placeholder(nws), s)
             end
         else
@@ -2905,7 +2905,7 @@ function p_call(
             add_node!(t, n, s; join_lines = true)
 
             # figure out if we need to put a placeholder
-            if needs_placeholder(childs, i + 1, K")")
+            if has_more_args_to_come(childs, i + 1, K")")
                 add_node!(t, Placeholder(1), s)
             end
         else
@@ -3016,7 +3016,7 @@ function p_tupleblock(
             add_node!(t, n, s; join_lines = true)
         elseif kind(a) in KSet", ;"
             add_node!(t, n, s; join_lines = true)
-            if needs_placeholder(childs, i + 1, K")")
+            if has_more_args_to_come(childs, i + 1, K")")
                 add_node!(t, Placeholder(1), s)
             end
         else
@@ -3069,7 +3069,7 @@ function p_tuple(
             add_node!(t, n, s; join_lines = true)
         elseif kind(a) in KSet", ;"
             add_node!(t, n, s; join_lines = true)
-            if needs_placeholder(childs, i + 1, K")")
+            if has_more_args_to_come(childs, i + 1, K")")
                 add_node!(t, Placeholder(1), s)
             end
         else
@@ -3114,7 +3114,7 @@ function p_braces(
             add_node!(t, n, s; join_lines = true)
         elseif kind(a) === K","
             add_node!(t, n, s; join_lines = true)
-            if needs_placeholder(childs, i + 1, K"}")
+            if has_more_args_to_come(childs, i + 1, K"}")
                 add_node!(t, Placeholder(nws), s)
             end
         else
@@ -3159,7 +3159,7 @@ function p_bracescat(
             end
             add_node!(t, n, s; join_lines = true)
         elseif kind(a) === K";"
-            if needs_placeholder(childs, i + 1, K"}")
+            if has_more_args_to_come(childs, i + 1, K"}")
                 add_node!(t, n, s; join_lines = true)
                 add_node!(t, Placeholder(nws), s)
             end
@@ -3205,7 +3205,7 @@ function p_vect(
             add_node!(t, n, s; join_lines = true)
         elseif kind(a) === K","
             add_node!(t, n, s; join_lines = true)
-            if needs_placeholder(childs, i + 1, K"]")
+            if has_more_args_to_come(childs, i + 1, K"]")
                 add_node!(t, Placeholder(1), s)
             end
         else
@@ -3297,7 +3297,7 @@ function p_parameters(
 
         if kind(a) in KSet", ;"
             add_node!(t, n, s; join_lines = true)
-            if needs_placeholder(childs, i + 1, K")")
+            if has_more_args_to_come(childs, i + 1, K")")
                 add_node!(t, Placeholder(nws), s)
             end
         else
@@ -3460,7 +3460,7 @@ function p_ref(
             end
         elseif kind(a) === K","
             add_node!(t, pretty(style, a, s, ctx, lineage), s; join_lines = true)
-            if needs_placeholder(childs, i + 1, K"]")
+            if has_more_args_to_come(childs, i + 1, K"]")
                 add_node!(t, Placeholder(1), s)
             end
         elseif is_opcall(a)
@@ -3937,7 +3937,7 @@ function p_generator(
             add_node!(t, Placeholder(1), s)
         elseif kind(a) === K","
             add_node!(t, n, s; join_lines = true)
-            if needs_placeholder(childs, i + 1, K")")
+            if has_more_args_to_come(childs, i + 1, K")")
                 add_node!(t, Placeholder(1), s)
             end
         else

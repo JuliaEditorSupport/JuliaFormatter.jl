@@ -938,11 +938,20 @@ function is_lazy_op(t::Union{JuliaSyntax.GreenNode,JuliaSyntax.Kind})
     kind(t) in KSet"|| &&"
 end
 
-function needs_placeholder(::Tuple{}, _, _)
+function has_more_args_to_come(::Tuple{}, _, _)
     return false
 end
 
-function needs_placeholder(
+"""
+    has_more_args_to_come
+
+Searches `childs[start_index:end]` for the first non-whitespace node and returns whether it
+is not of kind `stop_kind`.
+
+If the first non-whitespace node is of kind `stop_kind`, that implies that there are no more
+arguments to process in the current argument list / indexing expression / etc.
+"""
+function has_more_args_to_come(
     childs::Vector{JuliaSyntax.GreenNode{T}},
     start_index::Int,
     stop_kind::JuliaSyntax.Kind,
