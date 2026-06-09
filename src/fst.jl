@@ -196,7 +196,11 @@ function show(
         end
     else
         printstyled(io, "$(fst.typ)"; color = color, bold = true)
-        printstyled(io, " val=$(repr(fst.val))\n"; color = color)
+        printstyled(
+            io,
+            " lines=$(fst.startline)-$(fst.endline) val=$(repr(fst.val))\n";
+            color = color,
+        )
         _print_prefix(io, prefix)
         printstyled(io, "$(extra_indent)line_offset=$(fst.line_offset)"; color = color)
         printstyled(io, " indent=$(fst.indent)\n"; color = color)
@@ -934,11 +938,20 @@ function is_lazy_op(t::Union{JuliaSyntax.GreenNode,JuliaSyntax.Kind})
     kind(t) in KSet"|| &&"
 end
 
-function needs_placeholder(::Tuple{}, _, _)
+function has_more_args_to_come(::Tuple{}, _, _)
     return false
 end
 
-function needs_placeholder(
+"""
+    has_more_args_to_come
+
+Searches `childs[start_index:end]` for the first non-whitespace node and returns whether it
+is not of kind `stop_kind`.
+
+If the first non-whitespace node is of kind `stop_kind`, that implies that there are no more
+arguments to process in the current argument list / indexing expression / etc.
+"""
+function has_more_args_to_come(
     childs::Vector{JuliaSyntax.GreenNode{T}},
     start_index::Int,
     stop_kind::JuliaSyntax.Kind,
@@ -1184,11 +1197,12 @@ function add_node!(
             # swap PLACEHOLDER (will be NEWLINE) with INLINECOMMENT node
             idx = length(tnodes)
             tnodes[idx-1], tnodes[idx] = tnodes[idx], tnodes[idx-1]
-        elseif nt === WHITESPACE &&
-               hascomment(s.doc, current_line) &&
-               current_line != n.startline
-            # rely on the whitespace tracked for the inline comment
-            tnodes[end] = Whitespace(0)
+        elseif hascomment(s.doc, current_line) && current_line != n.startline
+            if nt === WHITESPACE
+                # Avoid printing excess whitespace before the comment, since
+                # print_inlinecomment will handle the spacing before the comment.
+                tnodes[end] = Whitespace(0)
+            end
             add_node!(t, InlineComment(current_line), s)
             add_node!(t, Newline(; nest_behavior = AlwaysNest), s)
         end

@@ -42,11 +42,26 @@ I'd like to add some of these checks into CI.
 However, this of course means that I have to hardcode some combinations of repositories + formatting options.
 **Nominations for codebases are very welcome.**
 
-## Long-term goals
+## The road ahead
 
-I would very much like for JuliaFormatter v3 to start offering some stability guarantees.
-I'm yet unsure of the exact form of this: there has to be some balance between stability, and the ability to make improvements to the codebase.
+For v2, my immediate plan is to fix extremely high-priority bugs: essentially anything labelled as P5 or P4 on the issue tracker.
+(See the [contributing docs](@ref issue-triage) for more details on the priority labels.)
+I might try to fix P3 bugs as well, but it's very likely that P3 bugs will be prioritised only for DefaultStyle.
+(Of course, contributions are more than welcome.)
 
-I also would not recommend holding your breath for a v3 release.
-This is a project I work on in my spare time, and although I think I'm a pretty decent software engineer, this is naturally a difficult codebase because of the combinatorial nature of source code.
+*However, as stated above, I also believe that some refactoring will make JuliaFormatter easier to maintain and easier to improve.*
+In particular, JuliaSyntax's CST is an extremely thin layer on top of the original source code.
+It does contain all the information that JuliaFormatter needs, but it's not always in the right shape or form, and that means that downstream code is quite complex.
+It would be much easier to work with an augmented form of the CST that baked in some of this information.
+(I believe that the FST data structure is mostly fine: there is probably some general code cleanup to be done there, but conceptually it's good.)
+
+I think that this is work that is just as important: it's quite tricky to really make improvements to the codebase without making it worse in some other sense.
+Consequently, I believe that once the most critical bugs are fixed I will start working on some of that refactoring.
+
+## What to look forward to in v3?
+
+[You can see this issue for more info about what I'd generally like to have in v3.](https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/1033)
+
+I would not recommend holding your breath for a v3 release, though.
+This is a project I work on in my spare time, and although I think I'm a pretty decent software engineer, this is naturally a difficult codebase.
 I really do recognise that this is an important project for the Julia ecosystem, and I will indeed try my best(!), but I *cannot* over-promise things: note that I want to protect myself against open-source burnout as well.

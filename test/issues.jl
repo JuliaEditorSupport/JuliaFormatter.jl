@@ -1390,8 +1390,6 @@ end
         end
         """
         # no trailing comma since (arg) is semantically different from (arg,) !!!
-        # NOTE: as of CSTParser 3.4.0 this is no longe parsed as a tuple but as invisbrackets
-        # so we don't need to worry about it
         s_ = """
         function (func(
             arg,
@@ -1445,6 +1443,13 @@ end
         end
         """
         test_format(str, str_, SciMLStyle())
+    end
+
+    @testset "609 comments being swallowed" begin
+        s = "f(\n    q = 2  # this comment will not be removed\n)"
+        test_format(s, s, SciMLStyle())
+        s2 = "f(; q=2,  # this comment will not be removed\n  )"
+        test_format(s, s2, YASStyle())
     end
 
     @testset "613" begin
@@ -1773,6 +1778,41 @@ end
         )
         """
         test_format(s_, s, SciMLStyle())
+
+        s_ = """
+        if (# opening inline
+            some_exceedingly_long_variable_name > some_other_fairly_long_variable_name # another inline
+            # stand-alone
+            || some_additional_long_variable_name > some_other_fairly_long_variable_name # closing inline
+        )
+            print("something")
+        end
+        """
+        s = """
+        if (# opening inline
+            some_exceedingly_long_variable_name > some_other_fairly_long_variable_name # another inline
+            # stand-alone
+            ||
+            some_additional_long_variable_name > some_other_fairly_long_variable_name # closing inline
+            )
+            print("something")
+        end
+        """
+        test_format(s_, s, YASStyle(); margin=120)
+
+        s60 = """
+        if (# opening inline
+            some_exceedingly_long_variable_name >
+            some_other_fairly_long_variable_name # another inline
+            # stand-alone
+            ||
+            some_additional_long_variable_name >
+            some_other_fairly_long_variable_name # closing inline
+            )
+            print("something")
+        end
+        """
+        test_format(s_, s60, YASStyle(); margin=60)
     end
 
     @testset "698" begin
@@ -2453,6 +2493,31 @@ end
         )
         # macroblocks without a closer are unaffected
         test_format("@testset \"x\" begin\n    a\nend", "@testset \"x\" begin\n    a\nend")
+    end
+
+    @testset "1046 YAS comments being swallowed" begin
+        s = """
+        if (# opening inline
+            a # another inline
+            # stand-alone
+            &&
+            c # closing inline
+            )
+            foo
+        end
+        """ |> strip
+        test_format(s, s, YASStyle())
+
+        s2 = """f(# hi\n  a)"""
+        test_format(s2, s2, YASStyle())
+
+        # test some hash-eq comments for good measure
+        s = """
+        f( #= hi =# aaa,
+          bbb,
+          ccc #= hi =#)
+        """
+        test_format(s, s, YASStyle())
     end
 
     @testset "1062 docstring indent on rhs of short function def" begin

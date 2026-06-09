@@ -190,7 +190,7 @@ function n_parameters!(
 )
     n_tuple!(bs, fst, s, lineage)
 end
-function n_invisbrackets!(
+function n_parens!(
     bs::BlueStyle,
     fst::FST,
     s::State,

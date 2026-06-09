@@ -232,7 +232,7 @@ for f in [
     :n_macrocall!,
     :n_braces!,
     :n_parameters!,
-    :n_invisbrackets!,
+    :n_parens!,
     :n_bracescat!,
 ]
     @eval function $f(

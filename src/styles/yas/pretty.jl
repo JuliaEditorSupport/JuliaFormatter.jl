@@ -152,7 +152,7 @@ function p_curly(
         override = (i == first_arg_idx) || kind(a) === K"}"
 
         if kind(a) === K","
-            if needs_placeholder(childs, i + 1, K"}")
+            if has_more_args_to_come(childs, i + 1, K"}")
                 add_node!(t, n, s; join_lines = true)
                 add_node!(t, Placeholder(nws), s)
             end
@@ -195,7 +195,7 @@ function p_braces(
         override = (i == first_arg_idx) || kind(a) === K"}"
 
         if kind(a) === K","
-            if needs_placeholder(childs, i + 1, K"}")
+            if has_more_args_to_come(childs, i + 1, K"}")
                 add_node!(t, n, s; join_lines = true)
                 add_node!(t, Placeholder(nws), s)
             end
@@ -238,7 +238,7 @@ function p_bracescat(
         override = (i == first_arg_idx) || kind(a) === K"}"
 
         if kind(a) === K";"
-            if needs_placeholder(childs, i + 1, K"}")
+            if has_more_args_to_come(childs, i + 1, K"}")
                 add_node!(t, n, s; join_lines = true)
                 add_node!(t, Placeholder(nws), s)
             end
@@ -286,7 +286,7 @@ function p_tupleblock(
         if kind(a) in KSet"; ,"
             if nargs == 1
                 add_node!(t, n, s; join_lines = true)
-            elseif needs_placeholder(childs, i + 1, K")")
+            elseif has_more_args_to_come(childs, i + 1, K")")
                 add_node!(t, n, s; join_lines = true)
                 add_node!(t, Placeholder(1), s)
             end
@@ -334,7 +334,7 @@ function p_tuple(
         if kind(a) === K","
             if nargs == 1
                 add_node!(t, n, s; join_lines = true)
-            elseif needs_placeholder(childs, i + 1, K")")
+            elseif has_more_args_to_come(childs, i + 1, K")")
                 add_node!(t, n, s; join_lines = true)
                 add_node!(t, Placeholder(1), s)
             end
@@ -351,8 +351,7 @@ function p_tuple(
     t
 end
 
-# Brackets
-function p_invisbrackets(
+function p_parens(
     ys::YASStyle,
     cst::JuliaSyntax.GreenNode,
     s::State,
@@ -406,19 +405,14 @@ function p_call(
     # and use `p_call` from `DefaultStyle` instead to allow both
     # `caller(something,...)` and `caller(\n,...)`.
     if length(s.opts.variable_call_indent) > 0
-        offset = if kind(childs[1]) === K"curly" && haschildren(childs[1])
-            childs2 = children(childs[1])::Vector{JuliaSyntax.GreenNode{JuliaSyntax.SyntaxHead}}
-            if length(childs2) > 0
-                span(childs2[1]) + span(childs[2]) - 2
-            else
-                0
-            end
-        elseif length(childs) > 1
-            span(childs[1]) + span(childs[2]) - 2
+        # Need to check whether the caller is of the form f(...) or f{T}(...). In both
+        # cases, we need to extract only `f`, and not `f{T}` in the latter case.
+        caller_span = if kind(childs[1]) === K"curly"
+            span(childs[1][1])
         else
-            0
+            span(childs[1])
         end
-        val = getsrcval(s.doc, (s.offset):(s.offset+offset))
+        val = getsrcval(s.doc, (s.offset):(s.offset+caller_span-1))
         if val in s.opts.variable_call_indent
             return p_call(DefaultStyle(style), cst, s, ctx, lineage)
         end
@@ -438,12 +432,17 @@ function p_call(
         override = (i == first_arg_idx) || k === K")"
 
         if k === K","
-            # figure out if we need to put a placeholder
-            if needs_placeholder(childs, i + 1, K")")
+            if has_more_args_to_come(childs, i + 1, K")")
                 add_node!(t, n, s; join_lines = true)
                 add_node!(t, Placeholder(1), s)
             end
         else
+            # For YAS style, the trailing comma usually won't be seen, because the closing
+            # paren should be placed on the same line as the last argument. However, in the
+            # case where the last argument is followed by a comment, the closing paren will
+            # be placed on the next line, and in that case we want to allow a trailing
+            # comma.
+            k === K")" && add_node!(t, TrailingComma(), s)
             add_node!(
                 t,
                 n,
@@ -485,7 +484,7 @@ function p_vect(
         override = (i == first_arg_idx) || k === K"]"
 
         if kind(a) === K","
-            if needs_placeholder(childs, i + 1, K"]")
+            if has_more_args_to_come(childs, i + 1, K"]")
                 add_node!(t, n, s; join_lines = true)
                 add_node!(t, Placeholder(1), s)
             end
@@ -617,7 +616,7 @@ function p_ref(
         override = (i == first_arg_idx) || kind(a) === K"]"
 
         if kind(a) === K","
-            if needs_placeholder(childs, i + 1, K"]")
+            if has_more_args_to_come(childs, i + 1, K"]")
                 add_node!(t, n, s; join_lines = true)
                 add_node!(t, Placeholder(1), s)
             end
@@ -722,7 +721,7 @@ function p_macrocall(
             add_node!(t, n, s; join_lines = true)
         elseif kind(a) === K","
             add_node!(t, n, s; join_lines = true)
-            if needs_placeholder(childs, i + 1, K")")
+            if has_more_args_to_come(childs, i + 1, K")")
                 add_node!(t, Placeholder(1), s)
             end
         elseif JuliaSyntax.is_whitespace(a)
@@ -811,7 +810,7 @@ function p_whereopcall(
             )
             s.indent -= s.opts.indent
         elseif kind(a) === K","
-            if needs_placeholder(childs, i + 1, K"}")
+            if has_more_args_to_come(childs, i + 1, K"}")
                 add_node!(t, pretty(style, a, s, ctx, lineage), s; join_lines = true)
                 add_node!(t, Placeholder(nws), s)
             end
@@ -888,7 +887,7 @@ function p_generator(
             add_node!(t, n, s; join_lines = true)
             add_node!(t, Whitespace(1), s)
         elseif kind(a) === K","
-            if needs_placeholder(childs, i + 1, K")")
+            if has_more_args_to_come(childs, i + 1, K")")
                 add_node!(t, n, s; join_lines = true)
                 add_node!(t, Placeholder(1), s)
             end

@@ -9,18 +9,21 @@ function n_call!(
     # With `variable_call_indent`, check if the caller is in the list
     if caller_in_list(fst, s.opts.variable_call_indent) &&
        length(fst.nodes::Vector{FST}) > 5
-        # Check if the call is of the form `caller(something,...)`
-        # or of the form `caller(\n...)`.
-        # There may be a comment or both an inline comment and a comment in a separate line
-        # before the first argument, so check for that as well.
+        # Determine whether the call has the form `caller(something,...)` or
+        # `caller(\n...)`. There may be a comment or both an inline comment and a comment in
+        # a separate line before the first argument, so check for that as well.
         notcode(n) = n.typ === NOTCODE || n.typ === INLINECOMMENT || n.typ === PLACEHOLDER
-        linebreak_definition =
+        # The first three nodes must be the caller, the opening paren, and a placeholder.
+        # TODO(penelopeysm): Can we make this cleaner, e.g. checking the source line of the
+        # opening paren and the first argument (if it exists)...?
+        has_linebreak_after_parens =
             fst[4].typ === NEWLINE ||
             notcode(fst[4]) && fst[5].typ === NEWLINE ||
             notcode(fst[4]) && notcode(fst[5]) && fst[6].typ === NEWLINE
 
-        if linebreak_definition
-            # With a line break in the definition, don't align with the opening parenthesis
+        # If it's the latter, we can defer to DefaultStyle -- no need to align with the
+        # opening parenthesis
+        if has_linebreak_after_parens
             return n_call!(DefaultStyle(ys), fst, s, lineage)
         end
     end
@@ -67,6 +70,28 @@ function n_call!(
             nested |= nest!(style, n, s, lineage)
         end
     end
+
+    # Now that we've performed nesting, we can check if the trailing comma needs to be
+    # materialised. Note that by doing this after nesting, we ensure that the length of the
+    # comma is not taken into account when calculating whether the (un-nested) line would go
+    # over the margin or not.
+    trailing_comma_idx = findlast(n -> n.typ === TRAILINGCOMMA, nodes)
+    if trailing_comma_idx !== nothing
+        for idx in (trailing_comma_idx+1):length(nodes)
+            if nodes[idx].typ === NEWLINE
+                # The closing paren will be on a new line, so we need to materialise the
+                # trailing comma.
+                nodes[trailing_comma_idx].val = ","
+                nodes[trailing_comma_idx].len = 1
+                break
+            elseif is_closer(nodes[idx])
+                # The closing paren is right after the trailing comma, so no need to
+                # materialise it.
+                break
+            end
+        end
+    end
+
     return nested
 end
 
@@ -194,7 +219,7 @@ function n_parameters!(
 )
     n_tuple!(ys, fst, s, lineage)
 end
-function n_invisbrackets!(
+function n_parens!(
     ys::YASStyle,
     fst::FST,
     s::State,

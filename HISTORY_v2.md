@@ -1,3 +1,12 @@
+# v2.6.8
+
+Fixed a bug where end-of-line comments were being silently dropped in YASStyle. (#690, #1046, #1068)
+
+Fixed a bug where the `trailing_comma` option was being ignored with YASStyle.
+Prior to #1068 there was never a need for trailing commas at the end of a function argument list, since the closing parenthesis would always follow the final argument (and silently delete any comments in the way).
+However, if the last argument has a comment after it, the closing parenthesis is forced to the next line.
+This fix ensures that a trailing comma is inserted. (#1068)
+
 # v2.6.7
 
 Improve separation of inline comments from code. (#1064, #1065)

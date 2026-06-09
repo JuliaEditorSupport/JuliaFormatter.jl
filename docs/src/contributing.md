@@ -65,7 +65,7 @@ When invoked on a JuliaFormatter PR, FormatBot will:
 
 FormatBot will also include a warning if formatting is not idempotent, or fails.
 
-### Issue triage
+### [Issue triage](@id issue-triage)
 
 Issues (and sometimes PRs) will be assigned a priority label, with a larger number indicating more important.
 The exact label for an issue is left to my discretion, but generally these are the categories that they will fall into:
