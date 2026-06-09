@@ -405,19 +405,14 @@ function p_call(
     # and use `p_call` from `DefaultStyle` instead to allow both
     # `caller(something,...)` and `caller(\n,...)`.
     if length(s.opts.variable_call_indent) > 0
-        offset = if kind(childs[1]) === K"curly" && haschildren(childs[1])
-            childs2 = children(childs[1])::Vector{JuliaSyntax.GreenNode{JuliaSyntax.SyntaxHead}}
-            if length(childs2) > 0
-                span(childs2[1]) + span(childs[2]) - 2
-            else
-                0
-            end
-        elseif length(childs) > 1
-            span(childs[1]) + span(childs[2]) - 2
+        # Need to check whether the caller is of the form f(...) or f{T}(...). In both
+        # cases, we need to extract only `f`, and not `f{T}` in the latter case.
+        caller_span = if kind(childs[1]) === K"curly"
+            span(childs[1][1])
         else
-            0
+            span(childs[1])
         end
-        val = getsrcval(s.doc, (s.offset):(s.offset+offset))
+        val = getsrcval(s.doc, (s.offset):(s.offset+caller_span-1))
         if val in s.opts.variable_call_indent
             return p_call(DefaultStyle(style), cst, s, ctx, lineage)
         end

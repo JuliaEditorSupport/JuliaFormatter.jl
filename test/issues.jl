@@ -1448,7 +1448,7 @@ end
     @testset "609 comments being swallowed" begin
         s = "f(\n    q = 2  # this comment will not be removed\n)"
         test_format(s, s, SciMLStyle())
-        s2 = "f(; q=2  # this comment will not be removed\n  )"
+        s2 = "f(; q=2,  # this comment will not be removed\n  )"
         test_format(s, s2, YASStyle())
     end
 

@@ -586,63 +586,51 @@ using JuliaFormatter: format_text
         """
 
         # This should be valid with and without `Dict` in `variable_call_indent`
-        @test format_text(str, YASStyle()) == str
-        @test format_text(str, YASStyle(); variable_call_indent = ["Dict"]) == str
+        test_format(str, str, YASStyle())
+        test_format(str, str, YASStyle(); variable_call_indent = ["Dict"])
 
         str = raw"""
         SVector(1.0,
                 2.0)
         """
-
-        # Test the same with different callers
-        @test format_text(str, YASStyle(); variable_call_indent = ["Dict"]) == str
-        @test format_text(str, YASStyle(); variable_call_indent = ["SVector", "test2"]) ==
-              str
+        test_format(str, str, YASStyle())
+        test_format(str, str, YASStyle(); variable_call_indent = ["SVector", "test2"])
+        test_format(str, str, YASStyle(); variable_call_indent = ["Dict"])
 
         str = raw"""
         Dict{Int,Int}(
         1 => 2,
                 3 => 4)
         """
-
         formatted_str1 = raw"""
         Dict{Int,Int}(1 => 2,
                       3 => 4)
         """
-
         formatted_str2 = raw"""
         Dict{Int,Int}(
             1 => 2,
             3 => 4)
         """
-
         # `variable_call_indent` keeps the line break and doesn't align
-        @test format_text(str, YASStyle()) == formatted_str1
-        @test format_text(str, YASStyle(); variable_call_indent = ["Dict"]) ==
-              formatted_str2
+        test_format(str, formatted_str1, YASStyle())
+        test_format(str, formatted_str2, YASStyle(); variable_call_indent = ["Dict"])
 
         str = raw"""
         SVector(
         1.0,
                 2.0)
         """
-
         formatted_str1 = raw"""
         SVector(1.0,
                 2.0)
         """
-
         formatted_str2 = raw"""
         SVector(
             1.0,
             2.0)
         """
-
-        # Test the same with different callers
-        @test format_text(str, YASStyle(); variable_call_indent = ["Dict"]) ==
-              formatted_str1
-        @test format_text(str, YASStyle(); variable_call_indent = ["test", "SVector"]) ==
-              formatted_str2
+        test_format(str, formatted_str1, YASStyle(); variable_call_indent = ["Dict"])
+        test_format(str, formatted_str2, YASStyle(); variable_call_indent = ["test", "SVector"])
 
         str = raw"""
         Dict{Int,Int}(
@@ -650,15 +638,12 @@ using JuliaFormatter: format_text
             3 => 4,
         )
         """
-
         formatted_str = raw"""
         Dict{Int,Int}(1 => 2,
                       3 => 4)
         """
-
-        # This is already valid with `variable_call_indent`
-        @test format_text(str, YASStyle()) == formatted_str
-        @test format_text(str, YASStyle(); variable_call_indent = ["Dict"]) == str
+        test_format(str, formatted_str, YASStyle())
+        test_format(str, str, YASStyle(); variable_call_indent = ["Dict"])
 
         str = raw"""
         SomeLongerTypeThanJustString = String
@@ -682,6 +667,8 @@ using JuliaFormatter: format_text
 
         # Here, `variable_call_indent` forces the line break because the line is too long.
         # For some reason, this has to be formatted twice.
+        # (TODO penelopeysm -- isn't this an idempotence bug?)
+        @test_broken false
         @test format_text(str, YASStyle()) == formatted_str1
         intermediate_str = format_text(str, YASStyle(); variable_call_indent = ["Dict"])
         @test format_text(intermediate_str, YASStyle(); variable_call_indent = ["Dict"]) ==
@@ -693,17 +680,15 @@ using JuliaFormatter: format_text
                       1 => 2,
                       3 => 4)
         """
-
         formatted_str = raw"""
         Dict{Int,Int}(
             # Comment
             1 => 2,
             3 => 4)
         """
-
         # Test `variable_call_indent` with a comment in a separate line
-        @test format_text(str, YASStyle()) == str
-        @test format_text(str, YASStyle(); variable_call_indent = ["Dict"]) == formatted_str
+        test_format(str, str, YASStyle())
+        test_format(str, formatted_str, YASStyle(); variable_call_indent = ["Dict"])
 
         str = raw"""
         SVector(
@@ -711,41 +696,34 @@ using JuliaFormatter: format_text
                 1.0,
                 2.0)
         """
-
         formatted_str = raw"""
         SVector(
             # Comment
             1.0,
             2.0)
         """
-
         # Test the same with different callers
-        @test format_text(str, YASStyle()) == str
-        @test format_text(str, YASStyle(); variable_call_indent = ["SVector"]) ==
-              formatted_str
+        test_format(str, str, YASStyle())
+        test_format(str, formatted_str, YASStyle(); variable_call_indent = ["SVector"])
 
         str = raw"""
         Dict{Int,Int}(# Comment
                     1 => 2,
                     3 => 4)
         """
-
         formatted_str1 = raw"""
         Dict{Int,Int}(# Comment
                       1 => 2,
                       3 => 4)
         """
-
         formatted_str2 = raw"""
         Dict{Int,Int}(# Comment
             1 => 2,
             3 => 4)
         """
-
         # Test `variable_call_indent` with an inline comment after the opening parenthesis
-        @test format_text(str, YASStyle()) == formatted_str1
-        @test format_text(str, YASStyle(); variable_call_indent = ["Dict"]) ==
-              formatted_str2
+        test_format(str, formatted_str1, YASStyle())
+        test_format(str, formatted_str2, YASStyle(); variable_call_indent = ["Dict"])
 
         str = raw"""
         Dict{Int,Int}( # Comment
@@ -754,7 +732,6 @@ using JuliaFormatter: format_text
                 # Another comment
                 3 => 4)
         """
-
         formatted_str1 = raw"""
         Dict{Int,Int}( # Comment
                       # Comment
@@ -762,7 +739,6 @@ using JuliaFormatter: format_text
                       # Another comment
                       3 => 4)
         """
-
         formatted_str2 = raw"""
         Dict{Int,Int}( # Comment
             # Comment
@@ -770,12 +746,10 @@ using JuliaFormatter: format_text
             # Another comment
             3 => 4)
         """
-
         # Test `variable_call_indent` with both an inline comment after the opening parenthesis
         # and a comment in a separate line.
-        @test format_text(str, YASStyle()) == formatted_str1
-        @test format_text(str, YASStyle(); variable_call_indent = ["Dict"]) ==
-              formatted_str2
+        test_format(str, formatted_str1, YASStyle())
+        test_format(str, formatted_str2, YASStyle(); variable_call_indent = ["Dict"])
 
         str = raw"""
         SVector( # Comment
@@ -784,7 +758,6 @@ using JuliaFormatter: format_text
                     # Another comment
                     2.0)
         """
-
         formatted_str1 = raw"""
         SVector( # Comment
                 # Comment
@@ -792,7 +765,6 @@ using JuliaFormatter: format_text
                 # Another comment
                 2.0)
         """
-
         formatted_str2 = raw"""
         SVector( # Comment
             # Comment
@@ -800,12 +772,9 @@ using JuliaFormatter: format_text
             # Another comment
             2.0)
         """
-
         # Test the same with different callers
-        @test format_text(str, YASStyle(); variable_call_indent = ["test"]) ==
-              formatted_str1
-        @test format_text(str, YASStyle(); variable_call_indent = ["SVector", "test"]) ==
-              formatted_str2
+        test_format(str, formatted_str1, YASStyle(); variable_call_indent = ["test"])
+        test_format(str, formatted_str2, YASStyle(); variable_call_indent = ["SVector", "test"])
     end
 end
 
