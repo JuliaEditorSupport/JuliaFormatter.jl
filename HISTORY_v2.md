@@ -1,3 +1,9 @@
+# v2.6.9
+
+Fixed a bug where formatting inline comments on their own line caused extra blank lines to be added. (#1070, #1071)
+
+Slightly improved the separation of inline comments from code. (#1071)
+
 # v2.6.8
 
 Fixed a bug where end-of-line comments were being silently dropped in YASStyle. (#690, #1046, #1068)

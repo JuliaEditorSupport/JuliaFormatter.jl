@@ -1055,20 +1055,9 @@ function add_node!(
     elseif n.typ === INLINECOMMENT
         push!(tnodes::Vector{FST}, n)
         return
-    elseif is_custom_leaf(n)
-        # Add a space before a `#= =#` comment to avoid it being
-        # glued to the previous node when printed.
-        if n.typ === HASHEQCOMMENT && !isempty(tnodes)
-            nt = (tnodes[end]::FST).typ
-            # TODO(penelopeysm): The PLACEHOLDER check catches cases where there is a
-            # Placeholder(1) before the comment, which can be turned into a Whitespace(1).
-            # I'm not sure if this check is therefore overly broad since it also catches
-            # Placeholder(0) nodes.
-            if nt !== WHITESPACE && nt !== NEWLINE && nt !== PLACEHOLDER
-                add_node!(t, Whitespace(1), s)
-            end
-        end
+    elseif is_custom_leaf(n) && n.typ !== HASHEQCOMMENT
         t.len += length(n)
+        # Treat the node as extending the line of the previous node (...?)
         n.startline = t.endline
         n.endline = t.endline
         push!(tnodes::Vector{FST}, n)
@@ -1089,6 +1078,25 @@ function add_node!(
     elseif n.typ === Binary && n[1].typ === Binary && n[1][end].typ === Where
         # normalize FST representation for Where
         binaryop_to_whereop!(n, s)
+    end
+
+    # Handle whitespace around HASHEQCOMMENT nodes.
+    if n.typ === HASHEQCOMMENT && !isempty(tnodes)
+        # If join_lines = false, then a newline will be inserted before the HASHEQCOMMENT
+        # node. This will cause (for example) `a #= hi =#` to be formatted to `a \n #= hi
+        # =#`, which is undesirable. So we manually set join_lines = true.
+        join_lines = true
+        # Add a space before a `#= =#` comment to avoid it being
+        # glued to the previous node when printed.
+        #
+        # TODO(penelopeysm): The PLACEHOLDER check catches cases where there is a
+        # Placeholder(1) before the comment, which can be turned into a Whitespace(1).
+        # I'm not sure if this check is therefore overly broad since it also catches
+        # Placeholder(0) nodes.
+        nt = (tnodes[end]::FST).typ
+        if nt !== WHITESPACE && nt !== NEWLINE && nt !== PLACEHOLDER && !is_opener(tnodes[end])
+            add_node!(t, Whitespace(1), s)
+        end
     end
 
     if length(tnodes::Vector{FST}) == 0
