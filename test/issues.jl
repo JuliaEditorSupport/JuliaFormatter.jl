@@ -2495,7 +2495,7 @@ end
         test_format("@testset \"x\" begin\n    a\nend", "@testset \"x\" begin\n    a\nend")
     end
 
-    @testset "1046 comments being swallowed" begin
+    @testset "1046 YAS comments being swallowed" begin
         s = """
         if (# opening inline
             a # another inline
@@ -2510,6 +2510,14 @@ end
 
         s2 = """f(# hi\n  a)"""
         test_format(s2, s2, YASStyle())
+
+        # test some hash-eq comments for good measure
+        s = """
+        f( #= hi =# aaa,
+          bbb,
+          ccc #= hi =#)
+        """
+        test_format(s, s, YASStyle())
     end
 
     @testset "1062 docstring indent on rhs of short function def" begin

@@ -571,12 +571,10 @@ using JuliaFormatter: format_text
         test_format(str, str, YASStyle())
     end
 
-    if VERSION >= v"1.7"
-        @testset "issue 582 - vcat" begin
-            test_format("[sts...;]", "[sts...;]", YASStyle())
-            test_format("[a;b;]", "[a; b;]", YASStyle())
-            test_format("[a;b;;]", "[a; b;;]", YASStyle())
-        end
+    @testset "issue 582 - vcat" begin
+        test_format("[sts...;]", "[sts...;]", YASStyle())
+        test_format("[a;b;]", "[a; b;]", YASStyle())
+        test_format("[a;b;;]", "[a; b;;]", YASStyle())
     end
 
     @testset "variable_call_indent" begin
