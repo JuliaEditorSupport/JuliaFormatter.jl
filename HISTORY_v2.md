@@ -1,3 +1,7 @@
+# v2.6.10
+
+Fixed a bug where formatting `export` or `public` colon operators (e.g., `export +, :, -`) failed (DefaultStyle) or yielded incorrect indentation (YASStyle/SciMLStyle). (#1072, #1073)
+
 # v2.6.9
 
 Fixed a bug where formatting inline comments on their own line caused extra blank lines to be added. (#1070, #1071)
