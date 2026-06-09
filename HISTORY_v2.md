@@ -1,3 +1,7 @@
+# v2.6.12
+
+Fixed a bug where a `;;` line continuation inside a space-separated row of a `vcat` or `ncat` expression (e.g. `[1 2 ;;\n 3 4 ; 2 3 4 5]`) had its newline removed, producing invalid code that mixed `;;` with space separators.
+
 # v2.6.11
 
 Fixed a bug where linebreaks were not preserved in the middle of a chain of binary operators when a comment was present (e.g. `a + # comment\n b + c`), causing any part of the chain after the comment to be lost. (#1076, #1077)

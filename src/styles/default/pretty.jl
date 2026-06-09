@@ -3573,17 +3573,26 @@ end
 """
     is_newline_after_2semicolons(cst::JuliaSyntax.GreenNode, i::Int)
 
-Detect if child node `i` of `cst` is a newline that follows two semicolons. For example,
-this will detect the newline in constructs such as
+Detect if child node `i` of `cst` is a newline that follows exactly two semicolons. For
+example, this will detect the newline in constructs such as
 
     [a b;;
      c d]
+
+In an array expression that contains space separators, `;;` followed by a newline is a
+line continuation (the example above is the same as `[a b c d]`), and the newline must
+not be removed because `;;` cannot otherwise be mixed with space separators.
+
+Note that this requires *exactly* two semicolons: runs of three or more semicolons, e.g.
+`[a b ;;;\\n c d]`, are dimension separators which *may* legally be mixed with space
+separators on a single line, so their trailing newline can be safely removed.
 """
 function is_newline_after_2semicolons(cst::JuliaSyntax.GreenNode, i::Int)
     return i >= 3 &&
            kind(cst[i]) === K"NewlineWs" &&
            kind(cst[i-1]) === K";" &&
-           kind(cst[i-2]) === K";"
+           kind(cst[i-2]) === K";" &&
+           (i == 3 || kind(cst[i-3]) !== K";")
 end
 
 function p_hcat(
@@ -3816,8 +3825,21 @@ end
 #  - Those that are semantically *unnecessary*. These could be:
 #
 #    (3) Newlines at the start of the row, e.g. [\n1 2;; 3 4].
-#    (4) Newlines at the end of the row but preceded by a semicolon, e.g. [1 2;;\n 3 4].
+#    (4) Newlines at the end of the row but preceded by a semicolon, e.g.
+#        [1; 2;;;\n 3; 4], which is the same as [1; 2;;; 3; 4].
 #    (5) Newlines at the end of the row but before the closing brace, e.g. [1 2;; 3 4\n].
+#
+# There is one important exception to the rule that newlines in `row` nodes can be
+# collapsed: a run of exactly two semicolons followed by a newline. In a space-separated
+# row this is a line continuation, e.g.
+#
+#     [1 2 ;;
+#      3 4 ; 5 6 7 8]
+#
+# is the same as [1 2 3 4; 5 6 7 8]. Here JuliaSyntax places the `;;` and the newline
+# inside the first `row` node. The newline cannot be removed, because `;;` cannot be
+# mixed with space separators on a single line ([1 2;; 3 4] is a parse error). See also
+# the corresponding comment in `p_hcat`, which has to deal with the same construct.
 #
 # The annoying thing about JuliaSyntax's parser is that all the newlines are placed inside
 # the child nodes rather than the parent nodes. For example, in the last example
@@ -3875,9 +3897,15 @@ function p_row(
         if kind(a) === K";"
             add_node!(t, n, s; join_lines = true)
         elseif JuliaSyntax.is_whitespace(a)
-            # is_semantically_important_newline handles case (a)
-            if ctx.from_nrow &&
-               is_semantically_important_newline(cst, i, is_last_arg_of_parent)
+            if kind(cst) === K"row" && is_newline_after_2semicolons(cst, i)
+                # `;;` followed by a newline in a space-separated row is a line
+                # continuation, and the newline must be kept; see the comment above this
+                # function.
+                add_node!(t, Newline(; nest_behavior = AlwaysNest), s)
+                forced_newline = true
+            elseif ctx.from_nrow &&
+                   is_semantically_important_newline(cst, i, is_last_arg_of_parent)
+                # is_semantically_important_newline handles case (a)
                 # Must force this newline!
                 add_node!(t, Newline(; nest_behavior = AlwaysNest), s)
                 forced_newline = true

@@ -31,6 +31,8 @@ ALL_STYLES = (DefaultStyle(), YASStyle(), BlueStyle(), MinimalStyle(), SciMLStyl
             "$(T)[1 2;;; 3 4;;;; 5 6;;; 7 8]",
             "$(T)[[1 2;;; 3 4];;;; [5 6];;; [7 8]]",
             "$(T)[1 2 ;;\n 3 4]",
+            "$(T)[1 2 ;;\n 3 4 ; 2 3 4 5]",
+            "$(T)[1 2 ;;\n 3 4 ;;; 5 6 ;;\n 7 8]",
             "$(T)[1;;]",
             "$(T)[2; 3;;;]",
             "$(T)[[1 2] [3 4]]",
@@ -124,6 +126,28 @@ end
                 end
             end
         end
+    end
+end
+
+@testset "line continuation ;;\\n inside vcat/ncat rows" begin
+    # A `;;` followed by a newline inside a space-separated row is a line continuation,
+    # e.g. `[1 2 ;;\n 3 4 ; 2 3 4 5]` is the same as `[1 2 3 4; 2 3 4 5]`. The newline
+    # must not be removed, because `;;` cannot otherwise be mixed with space separators
+    # (`[1 2;; 3 4]` is a parse error).
+    for T in ("", "T")
+        # Continuation in a row inside a vcat
+        test_format(
+            "$(T)[1 2 ;;\n 3 4 ; 2 3 4 5]",
+            "$(T)[\n    1 2;;\n    3 4;\n    2 3 4 5\n]",
+        )
+        # Continuations in rows inside an ncat
+        test_format(
+            "$(T)[1 2 ;;\n 3 4 ;;; 5 6 ;;\n 7 8]",
+            "$(T)[\n    1 2;;\n    3 4;;;\n    5 6;;\n    7 8\n]",
+        )
+        # A run of three or more semicolons is a dimension separator, not a line
+        # continuation; it may legally be mixed with space separators on a single line.
+        test_format("$(T)[1 2 ;;; 3 4]", "$(T)[1 2;;; 3 4]")
     end
 end
 
