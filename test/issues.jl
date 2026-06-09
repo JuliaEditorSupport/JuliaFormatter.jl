@@ -2604,6 +2604,21 @@ end
             test_format(s_, syas, style)
         end
     end
+
+    @testset "1078 <: and >: as function calls" begin
+        for s in (
+            "<:(A, B)",
+            ">:(A, B)",
+            "f(<:(A, B))",
+            "f(>:(A, B))",
+            "@m <:(A, B)",
+            "@m >:(A, B)",
+        )
+            for style in ALL_STYLES
+                test_format(s, s, style)
+            end
+        end
+    end
 end
 
 end
