@@ -46,8 +46,10 @@ function is_function_call(cst::JS.GreenNode)
         # -- no `(`) and `<:x` / `<:(a)` (unary -- if the argument is parenthesised, then
         # it's a K"parens" node rather than K"(").
         #
-        # The first child will be `<:` and if there is a paren, it must be the second child.
-        length(JS.children(cst)) >= 2 && kind(cst[2]) == K"("
+        # We can't rely on the exact position of the K"(" child -- for example, inside
+        # `<:(a, b)` it is the second child, but if we do `f( <:(a, b))` then it is the
+        # third child.
+        any(c -> kind(c) == K"(", JS.children(cst))
     elseif kind(cst) in KSet"call dotcall"
         # For K"call" nodes the flags can be reliably used.
         !JS.is_prefix_op_call(cst) && !JS.is_infix_op_call(cst)
