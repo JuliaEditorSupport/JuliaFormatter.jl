@@ -327,8 +327,18 @@ end
 
 function is_func_call(t::JuliaSyntax.GreenNode)::Bool
     if kind(t) in KSet"call dotcall"
+        # e.g. `f(...)` or `<=(...)` -- these are ordinary functions
+        return JuliaSyntax.is_prefix_call(t)
+    elseif JuliaSyntax.is_type_operator(t) && haschildren(t)
+        # e.g. `<:(...)` or `>:(...)` -- these have the same syntax as function calls
+        # but JuliaSyntax parses them into [<:] or [>:] nodes rather than [call]
+        #
+        # Note that the dotted versions `.<:(...)` are parsed into [call] so go into
+        # the first branch 
         return JuliaSyntax.is_prefix_call(t)
     elseif kind(t) in KSet":: where parens" && haschildren(t)
+        # `f(...)::T` or `f(...) where T` or `(f(...))`
+        # TODO(penelopeysm): Why?
         childs = children(t)
         idx =
             findfirst(n -> !JuliaSyntax.is_whitespace(n) && !(kind(n) in KSet"( )"), childs)

@@ -434,17 +434,14 @@ function pretty(
         # it's a prefix/postfix.
         p_unaryopcall(style, node, s, ctx, lineage, _unaryinfo)
     elseif is_binary(node)
+        # nodes of the exact form `a OP b`
         p_binaryopcall(style, node, s, ctx, lineage)
     elseif is_chain(node)
         p_chainopcall(style, node, s, ctx, lineage)
-    elseif is_func_call(node)
+    elseif Shims.is_function_call(node)
         p_call(style, node, s, ctx, lineage)
     elseif k === K"comparison"
         p_comparison(style, node, s, ctx, lineage)
-    elseif JuliaSyntax.is_operator(node) && haschildren(node)
-        # TODO(penelopeysm) What does this catch that is_binary didn't? Should run test
-        # suite with a print statement here to find out
-        p_binaryopcall(style, node, s, ctx, lineage)
     elseif k in KSet"dotcall call"
         p_binaryopcall(style, node, s, ctx, lineage)
     elseif k === K"parameters"
