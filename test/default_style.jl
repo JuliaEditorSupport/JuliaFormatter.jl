@@ -30,7 +30,9 @@ run_nest(text::String, margin::Int) = run_nest(text, opts = Options(margin = mar
         test_format("a", "a")
         test_format("a  #foo", "a  #foo")
         test_format("#foo", "#foo")
+    end
 
+    @testset "hasheq comments" begin
         str = """
         begin
             #=
@@ -46,6 +48,15 @@ run_nest(text::String, margin::Int) = run_nest(text, opts = Options(margin = mar
         =#
         a"""
         test_format(str, str)
+
+        for str in (
+            "a #= hi =#",
+            "a, #= hi =# b",
+            "a #= hi =#, b",
+            "a(#= hi =#)",
+        )
+            test_format(str, str)
+        end
     end
 
     @testset "format toggle" begin
@@ -4974,23 +4985,21 @@ some_function(
         test_format(str_, str; indent=4, margin=15, join_lines_based_on_source = true)
     end
 
-    if VERSION >= v"1.11.0"
-        @testset "public keyword support" begin
-            str_ = """
-            public    a,b,
-             c
-            """
-            str = """
-            public a, b, c
-            """
-            test_format(str_, str; indent=4, margin=14)
-            str = """
-            public a,
-                b,
-                c
-            """
-            test_format(str_, str; indent=4, margin=1)
-        end
+    @testset "public keyword support" begin
+        str_ = """
+        public    a,b,
+         c
+        """
+        str = """
+        public a, b, c
+        """
+        test_format(str_, str; indent=4, margin=14)
+        str = """
+        public a,
+            b,
+            c
+        """
+        test_format(str_, str; indent=4, margin=1)
     end
 end
 

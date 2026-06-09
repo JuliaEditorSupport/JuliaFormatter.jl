@@ -2513,7 +2513,7 @@ end
 
         # test some hash-eq comments for good measure
         s = """
-        f( #= hi =# aaa,
+        f(#= hi =# aaa,
           bbb,
           ccc #= hi =#)
         """
