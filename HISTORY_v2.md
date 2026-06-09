@@ -2,7 +2,7 @@
 
 Fixed a bug where linebreaks were not preserved in the middle of a chain of binary operators when a comment was present (e.g. `a + # comment\n b + c`), causing any part of the chain after the comment to be lost. (#1076, #1077)
 
-Fixed a bug where formatting `<:(X, Y)` or `>:(X, Y)` would fail. (#1078, #1077)
+Fixed a bug where formatting `<:(X, Y)`, `<:(args...)`, or the equivalent with `>:` would fail. (#1078, #1079, #1077)
 
 # v2.6.10
 
