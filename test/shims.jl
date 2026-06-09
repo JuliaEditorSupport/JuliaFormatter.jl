@@ -31,9 +31,13 @@ cst(s::String) = JuliaSyntax.parseall(JuliaSyntax.GreenNode, s)[1]
         @test !S.is_function_call(cst("a $(op) b"))
     end
 
-    # Check that it's robust towards whitespace
+    # Check that it's robust towards whitespace and comments
     @test S.is_function_call(cst("f( <:(x, y))")[3])
     @test S.is_function_call(cst("@m <:(x, y)")[3])
+    @test S.is_function_call(cst("<:(#=hi=# x, y)"))
+    @test S.is_function_call(cst("<:(x #=hi=#, y)"))
+    @test S.is_function_call(cst("<:(x, #=hi=# y)"))
+    @test S.is_function_call(cst("<:(x, y#=hi=#)"))
 end
 
 end
