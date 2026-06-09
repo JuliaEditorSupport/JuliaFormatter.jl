@@ -360,12 +360,15 @@ function n_using!(
 )
     style = getstyle(ys)
     nodes = fst.nodes::Vector
+    # Determine the indent based on whether there is a `:` in the import / using statement.
     idx = findfirst(n -> n.val == ":", nodes)
     fst.indent = s.line_offset
     if idx === nothing
-        fst.indent += sum(length.(fst[1:2]))
+        # If there isn't, then align to past the `using ` or `import `.
+        fst.indent += sum(length, fst[1:2])
     else
-        fst.indent += sum(length.(fst[1:(idx+1)]))
+        # If there is, then align to past the space after the colon.
+        fst.indent += sum(length, fst[1:(idx+1)])
     end
     nested = false
     for (i, n) in enumerate(nodes)
@@ -380,22 +383,7 @@ function n_using!(
     end
     return nested
 end
-function n_export!(
-    ys::YASStyle,
-    fst::FST,
-    s::State,
-    lineage::Vector{Tuple{FNode,Union{Nothing,Metadata}}},
-)
-    n_using!(ys, fst, s, lineage)
-end
-function n_public!(
-    ys::YASStyle,
-    fst::FST,
-    s::State,
-    lineage::Vector{Tuple{FNode,Union{Nothing,Metadata}}},
-)
-    n_using!(ys, fst, s, lineage)
-end
+
 function n_import!(
     ys::YASStyle,
     fst::FST,
@@ -403,6 +391,39 @@ function n_import!(
     lineage::Vector{Tuple{FNode,Union{Nothing,Metadata}}},
 )
     n_using!(ys, fst, s, lineage)
+end
+
+function n_export!(
+    ys::YASStyle,
+    fst::FST,
+    s::State,
+    lineage::Vector{Tuple{FNode,Union{Nothing,Metadata}}},
+)
+    style = getstyle(ys)
+    nodes = fst.nodes::Vector
+    # Always indent to past the `export ` or `public `. Technically this is always
+    # seven characters...
+    fst.indent = s.line_offset + sum(length, fst[1:2])
+    nested = false
+    for (i, n) in enumerate(nodes)
+        if n.typ === PLACEHOLDER
+            si = findnext(n -> n.typ === PLACEHOLDER, nodes, i + 1)
+            nested |= nest_if_over_margin!(style, fst, s, i, lineage; stop_idx = si)
+        elseif n.typ === NEWLINE
+            s.line_offset = fst.indent
+        else
+            nested |= nest!(style, n, s, lineage)
+        end
+    end
+    return nested
+end
+function n_public!(
+    ys::YASStyle,
+    fst::FST,
+    s::State,
+    lineage::Vector{Tuple{FNode,Union{Nothing,Metadata}}},
+)
+    n_export!(ys, fst, s, lineage)
 end
 
 function n_chainopcall!(

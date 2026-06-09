@@ -2557,13 +2557,15 @@ end
     end
 
     @testset "1072 exporting colon" begin
-        s_ = "export +, :, -"
-        test_format(s_, s_; margin=length(s_))
-        test_format(s_, s_, YASStyle(); margin=length(s_))
-        s = "export +,\n    :,\n    -"
-        test_format(s_, s; margin=5)
-        # s = "export +,\n       :,\n       -"
-        # test_format(s_, s, YASStyle(); margin=5)
+        for keyword in ("export", "public")
+            s_ = "$(keyword) +, :, -"
+            test_format(s_, s_; margin=length(s_))
+            test_format(s_, s_, YASStyle(); margin=length(s_))
+            s = "$(keyword) +,\n    :,\n    -"
+            test_format(s_, s; margin=5)
+            s = "$(keyword) +,\n       :,\n       -"
+            test_format(s_, s, YASStyle(); margin=5)
+        end
     end
 end
 
