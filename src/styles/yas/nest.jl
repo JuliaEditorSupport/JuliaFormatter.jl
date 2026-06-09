@@ -72,7 +72,9 @@ function n_call!(
     end
 
     # Now that we've performed nesting, we can check if the trailing comma needs to be
-    # materialised.
+    # materialised. Note that by doing this after nesting, we ensure that the length of the
+    # comma is not taken into account when calculating whether the (un-nested) line would go
+    # over the margin or not.
     trailing_comma_idx = findlast(n -> n.typ === TRAILINGCOMMA, nodes)
     if trailing_comma_idx !== nothing
         for idx in (trailing_comma_idx+1):length(nodes)
