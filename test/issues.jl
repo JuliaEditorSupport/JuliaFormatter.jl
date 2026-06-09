@@ -2572,6 +2572,38 @@ end
             end
         end
     end
+
+    @testset "1076 avoid un-nesting chain" begin
+        s_ = """
+        if curs_row >= 0 && cur_row + 1 >= rows &&             # when too many lines,
+                            cur_row - curs_row + 1 >= rows ÷ 2 # center the cursor
+            lastline = true
+        end"""
+        s = """
+        if curs_row >= 0 &&
+           cur_row + 1 >= rows &&             # when too many lines,
+           cur_row - curs_row + 1 >= rows ÷ 2 # center the cursor
+            lastline = true
+        end"""
+        test_format(s_, s)
+
+        sblue = """
+        if curs_row >= 0 &&
+            cur_row + 1 >= rows &&             # when too many lines,
+            cur_row - curs_row + 1 >= rows ÷ 2 # center the cursor
+            lastline = true
+        end"""
+        test_format(s_, sblue, BlueStyle())
+
+        syas = """
+        if curs_row >= 0 && cur_row + 1 >= rows &&             # when too many lines,
+           cur_row - curs_row + 1 >= rows ÷ 2 # center the cursor
+            lastline = true
+        end"""
+        for style in (YASStyle(), SciMLStyle(), MinimalStyle())
+            test_format(s_, syas, style)
+        end
+    end
 end
 
 end
