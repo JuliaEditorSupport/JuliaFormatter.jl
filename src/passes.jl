@@ -8,6 +8,7 @@ Flattens a binary operation call tree if the operation repeats 2 or more times.
 function flatten_binaryopcall(fst::FST; top = true)
     nodes = FST[]
     kind = op_kind(fst)
+    always_nest = must_nest(fst)
 
     lhs = fst[1]
     rhs = fst[end]
@@ -18,11 +19,13 @@ function flatten_binaryopcall(fst::FST; top = true)
     idx = findlast(n -> n.typ === PLACEHOLDER, fst.nodes::Vector{FST})
 
     if (top && !lhs_same_op && !rhs_same_op) || idx === nothing
-        return nodes
+        return nodes, always_nest
     end
 
     if lhs_same_op
-        append!(nodes, flatten_binaryopcall(lhs; top = false))
+        lhs_nodes, lhs_always_nest = flatten_binaryopcall(lhs; top = false)
+        append!(nodes, lhs_nodes)
+        always_nest |= lhs_always_nest
     else
         flatten_fst!(lhs)
         push!(nodes, lhs)
@@ -31,13 +34,15 @@ function flatten_binaryopcall(fst::FST; top = true)
     append!(nodes, fst[2:(idx-1)])
 
     if rhs_same_op
-        append!(nodes, flatten_binaryopcall(rhs; top = false))
+        rhs_nodes, rhs_always_nest = flatten_binaryopcall(rhs; top = false)
+        append!(nodes, rhs_nodes)
+        always_nest |= rhs_always_nest
     else
         flatten_fst!(rhs)
         push!(nodes, rhs)
     end
 
-    return nodes
+    return nodes, always_nest
 end
 
 function flatten_conditionalopcall(fst::FST)
@@ -61,10 +66,15 @@ function flatten_fst!(fst::FST)
             continue
         elseif n.typ === Binary && flattenable(op_kind(n))
             # possibly convert Binary to Chain
-            nnodes = flatten_binaryopcall(n)
+            nnodes, always_nest = flatten_binaryopcall(n)
             if length(nnodes) > 0
                 n.typ = Chain
                 n.nodes = nnodes
+                # if any of the child nodes needed to be nested, then this node also needs
+                # to be nested to preserve the original nesting structure
+                if always_nest
+                    n.nest_behavior = AlwaysNest
+                end
             else
                 flatten_fst!(n)
             end

@@ -123,6 +123,7 @@ include("state.jl")
 include("fst.jl")
 include("passes.jl")
 include("align.jl")
+include("shims.jl")
 
 function list_different_defaults(style)
     options_style = pairs(options(style))
