@@ -3307,6 +3307,7 @@ function p_parameters(
     t
 end
 
+_maybe_linebreak_after_import_colon(::AbstractStyle) = true
 function p_import(
     ds::AbstractStyle,
     cst::JuliaSyntax.GreenNode,
@@ -3321,17 +3322,24 @@ function p_import(
     end
 
     for a in children(cst)
-        if kind(a) in KSet"import export public using"
+        if kind(a) in KSet"import using"
             add_node!(t, pretty(style, a, s, ctx, lineage), s; join_lines = true)
             add_node!(t, Whitespace(1), s)
         elseif kind(a) === K":" && haschildren(a)
             nodes = children(a)
             for n in nodes
                 add_node!(t, pretty(style, n, s, ctx, lineage), s; join_lines = true)
-                if kind(n) in KSet"import export public using"
+                if kind(n) in KSet"import using"
                     add_node!(t, Whitespace(1), s)
-                elseif kind(n) in KSet", :"
+                elseif kind(n) === K","
                     add_node!(t, Placeholder(1), s)
+                elseif kind(n) === K":"
+                    if _maybe_linebreak_after_import_colon(style)
+                        # true for most but false for YAS
+                        add_node!(t, Placeholder(1), s)
+                    else
+                        add_node!(t, Whitespace(1), s)
+                    end
                 end
             end
         elseif kind(a) in KSet", :"
@@ -3351,8 +3359,20 @@ function p_export(
     ctx::PrettyContext,
     lineage::Vector{Tuple{JuliaSyntax.Kind,Bool,Bool}},
 )
-    t = p_import(ds, cst, s, ctx, lineage)
-    t.typ = Export
+    style = getstyle(ds)
+    t = FST(Export, nspaces(s))
+    if !haschildren(cst)
+        return t
+    end
+
+    for a in children(cst)
+        add_node!(t, pretty(style, a, s, ctx, lineage), s; join_lines = true)
+        if kind(a) in KSet"export public"
+            add_node!(t, Whitespace(1), s)
+        elseif kind(a) === K","
+            add_node!(t, Placeholder(1), s)
+        end
+    end
     t
 end
 
@@ -3363,7 +3383,7 @@ function p_public(
     ctx::PrettyContext,
     lineage::Vector{Tuple{JuliaSyntax.Kind,Bool,Bool}},
 )
-    t = p_import(ds, cst, s, ctx, lineage)
+    t = p_export(ds, cst, s, ctx, lineage)
     t.typ = Public
     t
 end

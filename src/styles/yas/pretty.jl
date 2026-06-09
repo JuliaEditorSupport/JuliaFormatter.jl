@@ -52,81 +52,9 @@ $(list_different_defaults(YASStyle()))
 """
 YASStyle
 
-function p_import(
-    ds::YASStyle,
-    cst::JuliaSyntax.GreenNode,
-    s::State,
-    ctx::PrettyContext,
-    lineage::Vector{Tuple{JuliaSyntax.Kind,Bool,Bool}},
-)
-    style = getstyle(ds)
-    t = FST(Import, nspaces(s))
-    if !haschildren(cst)
-        return t
-    end
-
-    for a in children(cst)
-        if kind(a) in KSet"import export using public"
-            add_node!(t, pretty(style, a, s, ctx, lineage), s; join_lines = true)
-            add_node!(t, Whitespace(1), s)
-        elseif kind(a) === K":" && haschildren(a)
-            nodes = children(a)
-            for n in nodes
-                add_node!(t, pretty(style, n, s, ctx, lineage), s; join_lines = true)
-                if kind(n) in KSet"import export using public :"
-                    add_node!(t, Whitespace(1), s)
-                elseif kind(n) in KSet","
-                    add_node!(t, Placeholder(1), s)
-                end
-            end
-        elseif kind(a) === K","
-            add_node!(t, pretty(style, a, s, ctx, lineage), s; join_lines = true)
-            add_node!(t, Placeholder(1), s)
-        elseif kind(a) === K":"
-            add_node!(t, pretty(style, a, s, ctx, lineage), s; join_lines = true)
-            add_node!(t, Whitespace(1), s)
-        else
-            add_node!(t, pretty(style, a, s, ctx, lineage), s; join_lines = true)
-        end
-    end
-    t
-end
-
-function p_using(
-    ys::YASStyle,
-    cst::JuliaSyntax.GreenNode,
-    s::State,
-    ctx::PrettyContext,
-    lineage::Vector{Tuple{JuliaSyntax.Kind,Bool,Bool}},
-)
-    t = p_import(ys, cst, s, ctx, lineage)
-    t.typ = Using
-    t
-end
-
-function p_export(
-    ys::YASStyle,
-    cst::JuliaSyntax.GreenNode,
-    s::State,
-    ctx::PrettyContext,
-    lineage::Vector{Tuple{JuliaSyntax.Kind,Bool,Bool}},
-)
-    t = p_import(ys, cst, s, ctx, lineage)
-    t.typ = Export
-    t
-end
-
-function p_public(
-    ys::YASStyle,
-    cst::JuliaSyntax.GreenNode,
-    s::State,
-    ctx::PrettyContext,
-    lineage::Vector{Tuple{JuliaSyntax.Kind,Bool,Bool}},
-)
-    t = p_import(ys, cst, s, ctx, lineage)
-    t.typ = Public
-    t
-end
+# Implementation of p_import for YAS is the same as for DefaultStyle, except that we don't
+# add a linebreak after the colon in `import Foo: X, Y, Z`.
+_maybe_linebreak_after_import_colon(::YASStyle) = false
 
 function p_curly(
     ys::YASStyle,

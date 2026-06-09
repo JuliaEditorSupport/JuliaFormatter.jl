@@ -1094,7 +1094,10 @@ function add_node!(
         # I'm not sure if this check is therefore overly broad since it also catches
         # Placeholder(0) nodes.
         nt = (tnodes[end]::FST).typ
-        if nt !== WHITESPACE && nt !== NEWLINE && nt !== PLACEHOLDER && !is_opener(tnodes[end])
+        if nt !== WHITESPACE &&
+           nt !== NEWLINE &&
+           nt !== PLACEHOLDER &&
+           !is_opener(tnodes[end])
             add_node!(t, Whitespace(1), s)
         end
     end
