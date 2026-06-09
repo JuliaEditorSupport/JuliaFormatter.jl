@@ -2619,6 +2619,24 @@ end
             end
         end
     end
+
+    @testset "1079 operator calls with (args...)" begin
+        for s in (
+            "<:(args...)",
+            ">:(args...)",
+            "+(args...)",
+            "f(<:(args...))",
+            "f(>:(args...))",
+            "f(+(args...))",
+            "@m <:(args...)",
+            "@m >:(args...)",
+            "@m +(args...)",
+        )
+            for style in ALL_STYLES
+                test_format(s, s, style)
+            end
+        end
+    end
 end
 
 end

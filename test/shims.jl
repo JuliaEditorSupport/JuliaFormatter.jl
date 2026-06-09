@@ -8,7 +8,7 @@ cst(s::String) = JuliaSyntax.parseall(JuliaSyntax.GreenNode, s)[1]
 
 @testset "is_function_call" begin
     # True function calls
-    @testset "$(func)$(args)" for func in ("f", "f.", "g!", "g!.", "+", ".+", "<:", ".<:"), args in ("()", "(x, y)", "(x, y; kw=1)", "(; kw=1)")
+    @testset "$(func)$(args)" for func in ("f", "f.", "g!", "g!.", "+", ".+", "<:", ".<:"), args in ("()", "(x, y)", "(x, y; kw=1)", "(; kw=1)", "(args...)")
         @test S.is_function_call(cst("$(func)$(args)"))
     end
 
