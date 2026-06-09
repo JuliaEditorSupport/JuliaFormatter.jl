@@ -3334,8 +3334,8 @@ function p_import(
                 elseif kind(n) === K","
                     add_node!(t, Placeholder(1), s)
                 elseif kind(n) === K":"
-                    # true for most but false for YAS
                     if _maybe_linebreak_after_import_colon(style)
+                        # true for most but false for YAS
                         add_node!(t, Placeholder(1), s)
                     else
                         add_node!(t, Whitespace(1), s)
@@ -3366,14 +3366,11 @@ function p_export(
     end
 
     for a in children(cst)
+        add_node!(t, pretty(style, a, s, ctx, lineage), s; join_lines = true)
         if kind(a) in KSet"export public"
-            add_node!(t, pretty(style, a, s, ctx, lineage), s; join_lines = true)
             add_node!(t, Whitespace(1), s)
-        elseif kind(a) in KSet","
-            add_node!(t, pretty(style, a, s, ctx, lineage), s; join_lines = true)
+        elseif kind(a) === K","
             add_node!(t, Placeholder(1), s)
-        else
-            add_node!(t, pretty(style, a, s, ctx, lineage), s; join_lines = true)
         end
     end
     t

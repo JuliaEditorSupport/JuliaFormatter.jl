@@ -2555,6 +2555,13 @@ end
         """
         test_format(s, s)
     end
+
+    @testset "1072 exporting colon" begin
+        s_ = "export +, :, -"
+        test_format(s_, s_; margin=length(s_))
+        s = "export +,\n    :,\n    -"
+        test_format(s_, s; margin=length(s_)-1)
+    end
 end
 
 end
