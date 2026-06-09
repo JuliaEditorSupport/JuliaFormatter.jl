@@ -1069,8 +1069,19 @@ function add_node!(
             end
         end
         t.len += length(n)
-        n.startline = t.endline
-        n.endline = t.endline
+        if n.typ === HASHEQCOMMENT
+            # Preserve the comment's true source line. Overwriting it with `t.endline`
+            # makes the NOTCODE range computed for the *following* node treat the
+            # comment's line as uncovered, inserting a spurious blank line on every
+            # reformat (non-idempotent). See issue #1070.
+            if t.startline == 0
+                t.startline = n.startline
+            end
+            t.endline = max(t.endline, n.endline)
+        else
+            n.startline = t.endline
+            n.endline = t.endline
+        end
         push!(tnodes::Vector{FST}, n)
         return
     end

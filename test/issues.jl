@@ -2538,6 +2538,23 @@ end
             test_format(s, s, style)
         end
     end
+
+    @testset "1070 idempotent hasheq-comment in parameter list" begin
+        # A `#= =#` comment on its own line in a nested parameter list must not gain a
+        # spurious blank line on reformat. The signature is long enough to stay nested.
+        s = """
+        function f(
+            obj;
+            #=c=#
+            keyword_argument_one::SomeLongTypeName,
+            keyword_argument_two::AnotherLongType,
+            keyword_argument_three::OneMoreType,
+        )
+            return obj
+        end
+        """
+        test_format(s, s)
+    end
 end
 
 end
