@@ -2559,8 +2559,11 @@ end
     @testset "1072 exporting colon" begin
         s_ = "export +, :, -"
         test_format(s_, s_; margin=length(s_))
+        test_format(s_, s_, YASStyle(); margin=length(s_))
         s = "export +,\n    :,\n    -"
-        test_format(s_, s; margin=length(s_)-1)
+        test_format(s_, s; margin=5)
+        # s = "export +,\n       :,\n       -"
+        # test_format(s_, s, YASStyle(); margin=5)
     end
 end
 
