@@ -1,6 +1,6 @@
 # v2.6.10
 
-Fixed a bug where formatting `export` or `public` colon operators (e.g., `export +, :, -`) failed (DefaultStyle) or yielded incorrect indentation (YASStyle/SciMLStyle). (#1072, #1073)
+Fixed a bug where formatting `export` or `public` colon operators (e.g., `export +, :, -`) failed (DefaultStyle) or yielded incorrect indentation (YASStyle/SciMLStyle). (#1072, #1073, #1074)
 
 # v2.6.9
 
