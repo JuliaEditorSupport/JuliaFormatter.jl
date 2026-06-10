@@ -36,6 +36,7 @@ ALL_STYLES = (DefaultStyle(), YASStyle(), BlueStyle(), MinimalStyle(), SciMLStyl
             "$(T)[[1 2] [3 4]]",
 
             # These are supplements, not from the docs
+            "$(T)[1\n2\n3\n4]",
             "$(T)[1\n2;;\n3\n4]",
             "$(T)[f(a)\n f(a);;\n f(a)\n f(a)]",
             "$(T)[\n1\n2;;\n3\n4\n]", # extra newlines
@@ -43,6 +44,8 @@ ALL_STYLES = (DefaultStyle(), YASStyle(), BlueStyle(), MinimalStyle(), SciMLStyl
             "$(T)[;]",
             "$(T)[;;]",
             "$(T)[;;;]",
+            "$(T)[1 2 ;;\n 3 4 ; 2 3 4 5]", # 1080
+            "$(T)[1 2 ;;\n 3 4 ;;; 5 6 ;;\n 7 8]", #1080
         )
             for style in ALL_STYLES
                 @testset let style = style
@@ -123,6 +126,14 @@ end
                     @test Meta.parse(out1) == Meta.parse(s)
                 end
             end
+        end
+
+        @testset "comments are not lost" begin
+            s_ = """[a b;; # comment\nc d]"""
+            s = "[a b;;  # comment\n    c d]"
+            test_format(s_, s, DefaultStyle(); ast=true)
+            s = "[a b;;  # comment\n c d]"
+            test_format(s_, s, YASStyle(); ast=true)
         end
     end
 end

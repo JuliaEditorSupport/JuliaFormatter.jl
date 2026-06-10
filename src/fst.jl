@@ -428,12 +428,25 @@ function n_args(fst::FST)
 end
 
 function is_prev_newline(fst::FST)
-    if fst.typ === NEWLINE
-        return true
+    return if fst.typ === NEWLINE
+        true
     elseif is_leaf(fst) || length(fst.nodes::Vector) == 0
-        return false
+        false
+    else
+        is_prev_newline(fst[end])
     end
-    is_prev_newline(fst[end])
+end
+function remove_prev_newline!(fst::FST)
+    if is_leaf(fst) || length(fst.nodes::Vector) == 0
+        error("Cannot remove previous newline from a leaf node or empty FST")
+    elseif fst[end].typ === NEWLINE
+        pop!(fst.nodes::Vector{FST})
+        # no need to decrement fst.len because Newline nodes have len 0
+    else
+        remove_prev_newline!(fst[end])
+        # likewise no need to decrement fst.len
+    end
+    return nothing
 end
 
 """

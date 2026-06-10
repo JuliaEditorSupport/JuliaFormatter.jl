@@ -448,27 +448,41 @@ function p_vcat(
 
     for (i, a) in enumerate(childs)
         n = pretty(style, a, s, ctx, lineage)
-        override = i == first_arg_idx || kind(a) === K"]"
 
         if kind(a) === K"["
             add_node!(t, n, s; join_lines = true)
         elseif kind(a) === K"]"
+            if is_prev_newline(t)
+                # newline before closing bracket is not semantically important
+                remove_prev_newline!(t)
+            end
             add_node!(
                 t,
                 n,
                 s;
                 join_lines = true,
-                override_join_lines_based_on_source = override,
+                override_join_lines_based_on_source = true
             )
         elseif JuliaSyntax.is_whitespace(a)
             add_node!(t, n, s; join_lines = true)
         elseif kind(a) === K";"
             add_node!(t, n, s; join_lines = true)
         else
-            join_lines = i == first_arg_idx ? true : t.endline == n.startline
+            join_lines = i == first_arg_idx || t.endline == n.startline
+            override = i == first_arg_idx
 
-            if !isnothing(first_arg_idx) && i > first_arg_idx && join_lines
-                add_node!(t, Placeholder(1), s)
+            if !isnothing(first_arg_idx) && i > first_arg_idx
+                if is_prev_newline(t)
+                    # This is a hack, see default/pretty for explanation -- but tldr if the
+                    # previous argument ends with a newline, we want to move the newline out
+                    # of that inner argument up into the current level of the FST.
+                    remove_prev_newline!(t)
+                end
+                if join_lines
+                    add_node!(t, Placeholder(1), s)
+                end
+                # if !join_lines, then the call to add_node! below will add a newline at the
+                # top level of the vcat FST so we won't be losing the newline.
             end
 
             add_node!(

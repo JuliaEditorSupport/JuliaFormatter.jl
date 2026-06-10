@@ -3540,15 +3540,24 @@ function p_vcat(
         elseif kind(a) === K";"
             add_node!(t, n, s; join_lines = true)
         else
-            # TODO: maybe we need to do something here?
-            # [a b c d e f] is semantically different from [a b c; d e f]
-            # child_has_semicolon = any(c -> kind(c) === K";", children(a))
-            # if !child_has_semicolon
-            #     add_node!(t, n, s, join_lines = false)
-            # else
-            #     add_node!(t, n, s, join_lines = true)
-            # end
             if !isnothing(first_arg_idx) && i > first_arg_idx
+                # Remove newline from **inside** the last argument if present. That newline
+                # might be semantically significant, so this seems dangerous.
+                #
+                # However, we are going to add a Placeholder back right after this, and
+                # because the presence of a newline indicates that there was one in the
+                # source, `diff_line` above will be true, and we can guarantee that the
+                # Placeholder will eventually be converted into a newline.
+                #
+                # Using the Placeholder over the Newline ensures that subsequent nodes in
+                # the FST will be indented correctly.
+                #
+                # This is 100% a hack, but undoing this requires rewriting the structure of
+                # the CST so that the newlines between arguments are part of the top-level
+                # structure rather than being buried inside the arguments themselves.
+                if is_prev_newline(t)
+                    remove_prev_newline!(t)
+                end
                 add_node!(t, Placeholder(1), s)
             end
 
@@ -3652,7 +3661,9 @@ function p_hcat(
         elseif kind(a) === K";"
             add_node!(t, n, s; join_lines = true)
         elseif JuliaSyntax.is_whitespace(a)
-            if is_newline_after_2semicolons(cst, i)
+            if kind(a) === K"Comment"
+                add_node!(t, n, s; join_lines = true)
+            elseif is_newline_after_2semicolons(cst, i)
                 # See above: we cannot convert ';;\n' to ';;'
                 add_node!(t, Newline(; nest_behavior = AlwaysNest), s)
                 # Additionally, because the contents of the hcat will be on different lines
@@ -3760,22 +3771,6 @@ function p_typedncat(
 end
 
 """
-    last_row_ends_with_newline
-
-Checks whether the last nrow or row element (recursively) ends in a newline.
-"""
-function last_row_ends_with_newline(cst::JuliaSyntax.GreenNode)
-    haschildren(cst) || return false
-
-    last_child = children(cst)[end]
-    if kind(last_child) in KSet"row nrow"
-        return last_row_ends_with_newline(last_child)
-    else
-        return kind(last_child) === K"NewlineWs"
-    end
-end
-
-"""
     is_semantically_important_newline
 
 Checks whether the `i`-th child of `row_cst` is a newline that is semantically important.
@@ -3800,11 +3795,7 @@ end
 # same, but newlines need to be handled differently, which motivates the `ctx.from_nrow`
 # and `ctx.is_last_ncat_or_nrow_arg` flags.
 #
-# In general for `row` nodes, newlines are unnecessary so can be collapsed to ordinary
-# whitespace.
-#
-# However, for `nrow` nodes AND `row` children of `nrow` nodes, there are two kinds of
-# newlines:
+# There are two kinds of newlines:
 #
 #  - Those that are semantically *necessary*, because they are used to indicate vertical
 #    concatenation. These can be:
@@ -3812,12 +3803,15 @@ end
 #    (1) Newlines in the middle of the row: [1\n2;; 3\n4]
 #    (2) Newlines at the end of a row: [1 2 3\n4 5 6]. In general, all newlines at the end
 #        of a row are considered semantically important, with the exceptions listed below.
+#    (3) `hcat` or `row` node that contains at least one space separator. For example:
+#        [1 2 ;;\n 3 4] (which is a hcat) or [1 2 ;;\n 3 4 ;;; 5 6 7 8] (which is a row
+#        inside an ncat).
 #
 #  - Those that are semantically *unnecessary*. These could be:
 #
-#    (3) Newlines at the start of the row, e.g. [\n1 2;; 3 4].
-#    (4) Newlines at the end of the row but preceded by a semicolon, e.g. [1 2;;\n 3 4].
-#    (5) Newlines at the end of the row but before the closing brace, e.g. [1 2;; 3 4\n].
+#    (4) Newlines at the start of the row, e.g. [\n1 2;; 3 4].
+#    (5) Newlines at the end of the row but preceded by a semicolon, e.g. [1; 2;;;\n 3; 4].
+#    (6) Newlines at the end of the row but before the closing brace, e.g. [1 2;; 3 4\n].
 #
 # The annoying thing about JuliaSyntax's parser is that all the newlines are placed inside
 # the child nodes rather than the parent nodes. For example, in the last example
@@ -3848,15 +3842,13 @@ function p_row(
     first_arg_idx = findfirst(n -> !JuliaSyntax.is_whitespace(n), childs)
     last_arg_idx = findlast(n -> !JuliaSyntax.is_whitespace(n), childs)
 
-    # To detect the final newline i.e. (5) above, we need to handle two cases:
+    # To detect the final newline i.e. (6) above, we need to handle two cases:
     #
     # (a) Either the newline is part of this node, in which case it will be the last child
     #     of this node.
     # (b) Or this node will have an nrow/row child that ends with a newline.
 
-    last_node_ended_with_newline = false
     for (i, a) in enumerate(childs)
-        forced_newline = false
         nonest = is_opcall(a)
         # Threading is_last_ncat_or_nrow_arg through here handles case (b).
         is_last_ncat_or_nrow_arg =
@@ -3876,24 +3868,21 @@ function p_row(
             add_node!(t, n, s; join_lines = true)
         elseif JuliaSyntax.is_whitespace(a)
             # is_semantically_important_newline handles case (a)
-            if ctx.from_nrow &&
-               is_semantically_important_newline(cst, i, is_last_arg_of_parent)
+            if is_semantically_important_newline(cst, i, is_last_arg_of_parent)
                 # Must force this newline!
                 add_node!(t, Newline(; nest_behavior = AlwaysNest), s)
-                forced_newline = true
             else
                 add_node!(t, n, s; join_lines = true)
             end
         else
-            if !isnothing(first_arg_idx) &&
-               i > first_arg_idx &&
-               !last_node_ended_with_newline
+            if !isnothing(first_arg_idx) && i > first_arg_idx && !is_prev_newline(t)
+                # Insert whitespace before starting a new argument
                 add_node!(t, Whitespace(1), s; join_lines = true)
             end
             add_node!(t, n, s; join_lines = true)
         end
-        last_node_ended_with_newline = forced_newline || is_prev_newline(n)
     end
+
     t.nest_behavior = NeverNest
     t
 end
