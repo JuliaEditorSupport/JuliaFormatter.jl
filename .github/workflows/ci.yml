@@ -47,20 +47,18 @@ jobs:
             arch: aarch64
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # 6.0.3
         with:
           persist-credentials: false
 
-      - uses: julia-actions/setup-julia@v3
+      - uses: julia-actions/setup-julia@fa02766e078afaaf09b14210362cee14137e6a32 # 3.0.2
         with:
           show-versioninfo: true
           version: ${{ matrix.version }}
           arch: ${{ matrix.arch }}
 
-      - uses: julia-actions/cache@v3
-        with:
-          delete-old-caches: false # avoids extra permissions
+      - uses: julia-actions/cache@a45e8fa8be21c18a06b7177052533149e61e9b38 # 3.1.0
 
-      - uses: julia-actions/julia-buildpkg@v1
+      - uses: julia-actions/julia-buildpkg@e3eb439fad4f9aba7da2667e7510e4a46ebc46e1 # 1.7.0
 
-      - uses: julia-actions/julia-runtest@latest
+      - uses: julia-actions/julia-runtest@d60b785c6f2bdf4ebfb18b2b6f7d93b7dfb0efe3 # 1.11.4

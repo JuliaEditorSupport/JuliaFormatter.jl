@@ -2673,6 +2673,25 @@ end
             end
         end
     end
+
+    @testset "1088 comment after do" begin
+        for comment_and_do_arg in (
+            "# comment",
+            "x # comment",
+            "(x, y) # comment",
+            "#= comment =# x",
+        )
+            for maybe_macro in ("@test ", "")
+                s = """
+                $(maybe_macro)f() do $(comment_and_do_arg)
+                    return g
+                end"""
+                for style in ALL_STYLES
+                    test_format(s, s, style)
+                end
+            end
+        end
+    end
 end
 
 end

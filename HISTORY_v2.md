@@ -1,3 +1,7 @@
+# v2.6.14
+
+Fixed a bug where placing a comment after a `do` keyword would cause non-idempotent formatting. (#1088, #1090)
+
 # v2.6.13
 
 Fixed a bug where JuliaFormatter would insert trailing commas after expressions that had macros or `global` keywords, leading to syntactically invalid Julia code. (#1017, #1086)

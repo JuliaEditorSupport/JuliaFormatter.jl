@@ -1,0 +1,79 @@
+name: Regression
+
+on:
+  push:
+    branches:
+      - 'master'
+  pull_request:
+    branches:
+      - 'master'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
+
+jobs:
+  regression:
+    name: ${{ matrix.repo }}@${{ matrix.rev }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    strategy:
+      fail-fast: false
+      matrix:
+        # Permitted fields:
+        #  - repo (required): GitHub repo in the form "owner/name"
+        #  - rev (required): Git ref to checkout
+        #  - subdir (optional): Subdirectory to format (defaults to "")
+        #  - args (optional): Additional arguments to pass to `jlfmt` (defaults to "")
+        #  - remove_config (optional): Whether to remove any existing formatter
+        #                              config in the target repo (defaults to false)
+        include:
+          - repo: JuliaLang/julia
+            rev: v1.12.6
+            remove_config: true
+
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # 6.0.3
+        with:
+          path: formatter
+      - uses: julia-actions/setup-julia@fa02766e078afaaf09b14210362cee14137e6a32 # 3.0.2
+      - uses: julia-actions/cache@a45e8fa8be21c18a06b7177052533149e61e9b38 # 3.1.0
+
+      - name: Instantiate JuliaFormatter
+        run: julia --project=formatter -e 'using Pkg; Pkg.instantiate()'
+
+      - name: Clone target repo
+        run: git clone --depth 1 --branch "${{ matrix.rev }}" "https://github.com/${{ matrix.repo }}.git" target
+
+      - name: Remove target formatter config
+        if: matrix.remove_config
+        run: find target -name ".JuliaFormatter.toml" -o -name "JuliaFormatter.toml" | xargs rm -f
+
+      - name: Format (pass 1)
+        run: |
+          julia --project=formatter -m JuliaFormatter \
+            --inplace --verbose ${{ matrix.args }} \
+            target/${{ matrix.subdir }}
+
+      - name: Commit pass 1 changes
+        run: |
+          cd target
+          git add -A
+          git -c user.name=CI -c user.email=ci@ci commit --allow-empty -m "pass 1"
+
+      - name: Check idempotence (pass 2)
+        id: idempotence
+        run: |
+          julia --project=formatter -m JuliaFormatter \
+            --inplace --verbose ${{ matrix.args }} \
+            target/${{ matrix.subdir }}
+          cd target
+          if ! git diff --exit-code --quiet; then
+            echo "::error::Formatting is not idempotent for ${{ matrix.repo }}@${{ matrix.rev }}"
+            exit 1
+          fi
+
+      - name: Print idempotence diff
+        if: failure() && steps.idempotence.outcome == 'failure'
+        run: git -C target diff --diff-algorithm=histogram --color=always
