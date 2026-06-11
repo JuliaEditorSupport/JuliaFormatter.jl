@@ -58,6 +58,7 @@ jobs:
           python-version: '3.13'
 
       - name: Run FormatBot
+        id: formatbot
         env:
           GH_TOKEN: ${{ github.token }}
           COMMENT_BODY: ${{ github.event.comment.body }}
@@ -112,6 +113,12 @@ jobs:
           branch_clean = f"formatbot-clean-{uid}"
           branch_base = f"formatbot-base-{uid}"
           branch_pr = f"formatbot-pr-{uid}"
+
+          with open(os.environ["GITHUB_OUTPUT"], "a") as fh:
+              fh.write(f"against={against}\n")
+              fh.write(f"branch_clean={branch_clean}\n")
+              fh.write(f"branch_base={branch_base}\n")
+              fh.write(f"branch_pr={branch_pr}\n")
 
           # --- Comment helpers ---
           def post_comment(body):
@@ -312,10 +319,11 @@ jobs:
               sys.exit(1)
 
       - name: Print diff
-        if: always()
+        if: always() && steps.formatbot.outcome == 'success'
         run: |
-          if [ ! -f "$RUNNER_TEMP/diff.patch" ]; then
-            echo "Diff not found (script may have errored before computing diff)"
-            exit 0
+          if [ "${{ steps.formatbot.outputs.against }}" = "basefmt" ]; then
+            base="${{ steps.formatbot.outputs.branch_base }}"
+          else
+            base="${{ steps.formatbot.outputs.branch_clean }}"
           fi
-          cat "$RUNNER_TEMP/diff.patch"
+          git -C target diff --diff-algorithm=histogram --color=always "$base" "${{ steps.formatbot.outputs.branch_pr }}"

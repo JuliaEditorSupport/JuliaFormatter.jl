@@ -73,12 +73,11 @@ jobs:
             --inplace --verbose ${{ matrix.args }} \
             target/${{ matrix.subdir }}
           cd target
-          git diff --diff-algorithm=histogram > "$RUNNER_TEMP/idempotence.patch"
-          if [ -s "$RUNNER_TEMP/idempotence.patch" ]; then
+          if ! git diff --exit-code --quiet; then
             echo "::error::Formatting is not idempotent for ${{ matrix.repo }}@${{ matrix.rev }}"
             exit 1
           fi
 
       - name: Print idempotence diff
         if: failure() && steps.idempotence.outcome == 'failure'
-        run: cat "$RUNNER_TEMP/idempotence.patch"
+        run: git -C target diff --diff-algorithm=histogram --color=always
