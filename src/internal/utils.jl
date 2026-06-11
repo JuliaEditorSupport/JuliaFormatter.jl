@@ -126,39 +126,46 @@ function _repro_hint(input, style, options)
     style_str = if style isa JF.DefaultStyle
         ""
     else
-        ", $(typeof(style))()"
+        ", $(nameof(typeof(style)))()"
     end
-    return "format_text($(repr(input))$(style_str)$(opts_str))"
+    return "s = $(repr(input))\nformat_text(s$(style_str)$(opts_str))"
 end
 
 """
     JuliaFormatter.Internal.test_format(
         input::AbstractString,
-        expected::AbstractString,
+        expected::Union{Nothing,AbstractString},
         [style::AbstractStyle=DefaultStyle();]
         ast::Bool=false,
         options...
     )
 
 Test that formatting `input` produces `expected`, and that `expected` is idempotent under
-formatting. If `ast=true` additionally tests that the input text and formatted text parse
-to the same AST.
+formatting.
+
+If `ast=true` additionally tests that the input text and formatted text parse to the same
+AST.
+
+If `expected` is `nothing`, doesn't test for an exact output, but still checks idempotence
+(and also semantic invariance if `ast=true`).
 """
 function test_format(
     input::AbstractString,
-    expected::AbstractString,
+    expected::Union{Nothing,AbstractString},
     style::JF.AbstractStyle = JF.DefaultStyle();
     ast::Bool = false,
     options...,
 )
     out = JF.format_text(input, style; options...)
-    if out != expected
-        printstyled("Formatting output did not match expected value.\n\n"; color = :cyan)
-        printstyled("Expected:\n$expected\n\n"; color = :green)
-        printstyled("Got:\n$out\n\n"; color = :red)
-        printstyled("Repro:\n$(_repro_hint(input, style, options))\n"; color = :cyan)
+    if !isnothing(expected)
+        if out != expected
+            printstyled("Formatting output did not match expected value.\n\n"; color = :cyan)
+            printstyled("Expected:\n$expected\n\n"; color = :green)
+            printstyled("Got:\n$out\n\n"; color = :red)
+            printstyled("Repro:\n$(_repro_hint(input, style, options))\n"; color = :cyan)
+        end
+        @test out == expected
     end
-    @test out == expected
 
     out2 = JF.format_text(out, style; options...)
     if out2 != out
