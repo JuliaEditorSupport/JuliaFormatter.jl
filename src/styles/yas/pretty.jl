@@ -497,17 +497,7 @@ function p_vcat(
     t
 end
 
-function p_hcat(
-    ys::YASStyle,
-    cst::JuliaSyntax.GreenNode,
-    s::State,
-    ctx::PrettyContext,
-    lineage::Vector{Tuple{JuliaSyntax.Kind,Bool,Bool}},
-)
-    t = p_vcat(ys, cst, s, ctx, lineage)
-    t.typ = Hcat
-    t
-end
+hcat_allow_boundary_newlines(::YASStyle) = false
 
 function p_ref(
     ys::YASStyle,

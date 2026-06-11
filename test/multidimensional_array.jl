@@ -129,12 +129,15 @@ end
             end
             target = "[a b;; # comment\n c d]"
             for st in (SciMLStyle(), YASStyle())
-                test_format(s_, target, st; ast=true)
+                test_format(s, target, st; ast=true)
             end
 
             s = "[#=1=# a #=2=# b #=3=# ;;\n#=4=# c #=5=# d #=6=#]"
             for st in ALL_STYLES
-                test_format(s, nothing; ast=true)
+                # Idempotence & semantic invariance
+                test_format(s, nothing, st; ast=true)
+                # Check that the comment is still there
+                out = format_text(s, st)
                 for i in 1:6
                     @test occursin("#=$(i)=#", out)
                 end

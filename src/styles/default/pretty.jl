@@ -3598,6 +3598,18 @@ function is_newline_after_2semicolons(cst::JuliaSyntax.GreenNode, i::Int)
            kind(cst[i-2]) === K";"
 end
 
+"""
+    hcat_allow_boundary_newlines(style::AbstractStyle)
+
+Determine whether newlines are allowed immediately after the opening `[` and immediately
+before the closing `]` of an hcat node.
+
+Most styles allow this, but YAS doesn't (and SciML too, since it dispatches to YAS).
+
+In principle this can be generalised to vcat and ncat as well; I just haven't done so.
+"""
+hcat_allow_boundary_newlines(::AbstractStyle) = true
+
 function p_hcat(
     ds::AbstractStyle,
     cst::JuliaSyntax.GreenNode,
@@ -3611,6 +3623,10 @@ function p_hcat(
         return t
     end
     childs = children(cst)
+
+    # Identify the first argument inside the square brackets
+    idx = findfirst(n -> kind(n) === K"[", childs)::Int
+    first_arg_idx = findnext(n -> !JuliaSyntax.is_whitespace(n), childs, idx + 1)
 
     # Handling newlines in hcat nodes
     # -------------------------------
@@ -3657,10 +3673,22 @@ function p_hcat(
         n = pretty(style, a, s, ctx, lineage)
         if kind(a) === K"["
             add_node!(t, n, s; join_lines = true)
-            add_node!(t, Placeholder(0), s)
+            if hcat_allow_boundary_newlines(style)
+                add_node!(t, Placeholder(0), s)
+            end
         elseif kind(a) === K"]"
-            add_node!(t, Placeholder(0), s)
-            add_node!(t, n, s; join_lines = true)
+            if !hcat_allow_boundary_newlines(style)
+                # Always join ] to the last argument: remove the newline from the last
+                # argument if it exists
+                if is_prev_newline(t)
+                    remove_prev_newline!(t)
+                end
+                add_node!(t, n, s; join_lines = true, override_join_lines_based_on_source = true)
+            else
+                # Let the nesting algo decide whether to insert a newline
+                add_node!(t, Placeholder(0), s)
+                add_node!(t, n, s; join_lines = true)
+            end
         elseif kind(a) === K";"
             add_node!(t, n, s; join_lines = true)
         elseif JuliaSyntax.is_whitespace(a)
@@ -3687,14 +3715,24 @@ function p_hcat(
             # Type preceding the `[`, e.g. `T` in `T[1 2 3]`.
             add_node!(t, n, s; join_lines = true)
         else
-            # Argument that is being hcatted. Annoyingly, there isn't always whitespace
-            # between hcat arguments (see e.g. `[1:2 3:4 5:6]`), so sometimes we have to
-            # manually add some ourselves.
+            # Argument that is being hcatted. Annoyingly, the CST doesn't always place
+            # whitespace between hcat arguments (see e.g. `[1:2 3:4 5:6]`), so sometimes we
+            # have to manually add some ourselves.
             # https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/1038
             if !JuliaSyntax.is_whitespace(childs[i-1]) && kind(childs[i-1]) !== K"["
                 add_node!(t, Whitespace(1), s)
             end
-            add_node!(t, n, s; join_lines = true)
+            # If this is the first argument, and we don't want to allow boundary newlines,
+            # then we have to force-join it to the opening [, even if the source had a
+            # newline after it.
+            override_join_lines = (i == first_arg_idx) && !hcat_allow_boundary_newlines(style)
+            add_node!(
+                t,
+                n,
+                s;
+                join_lines = true,
+                override_join_lines_based_on_source = override_join_lines,
+            )
         end
     end
     t

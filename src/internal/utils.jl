@@ -175,7 +175,7 @@ function test_format(
         printstyled("Formatting was not idempotent.\n\n"; color = :cyan)
         printstyled("First pass:\n$out\n\n"; color = :green)
         printstyled("Second pass:\n$out2\n\n"; color = :red)
-        printstyled("Repro:\n$(_repro_hint(out, style, options))\n"; color = :cyan)
+        printstyled("Repro:\n$(_repro_hint(input, style, options))\n"; color = :cyan)
     end
     @test out2 == out
 
