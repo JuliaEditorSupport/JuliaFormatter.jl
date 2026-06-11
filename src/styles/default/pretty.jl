@@ -3683,7 +3683,13 @@ function p_hcat(
                 if is_prev_newline(t)
                     remove_prev_newline!(t)
                 end
-                add_node!(t, n, s; join_lines = true, override_join_lines_based_on_source = true)
+                add_node!(
+                    t,
+                    n,
+                    s;
+                    join_lines = true,
+                    override_join_lines_based_on_source = true,
+                )
             else
                 # Let the nesting algo decide whether to insert a newline
                 add_node!(t, Placeholder(0), s)
@@ -3725,7 +3731,8 @@ function p_hcat(
             # If this is the first argument, and we don't want to allow boundary newlines,
             # then we have to force-join it to the opening [, even if the source had a
             # newline after it.
-            override_join_lines = (i == first_arg_idx) && !hcat_allow_boundary_newlines(style)
+            override_join_lines =
+                (i == first_arg_idx) && !hcat_allow_boundary_newlines(style)
             add_node!(
                 t,
                 n,
