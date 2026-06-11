@@ -1,3 +1,9 @@
+# v2.6.12
+
+Fixed a bug where `;;\n` separators in rows of array literals were being converted to `;;`, leading to invalid Julia code. (#1080, #1083)
+
+Fixed a bug where comments inside array literals caused non-idempotent formatting with SciML and YAS styles. (#1082, #1083)
+
 # v2.6.11
 
 Fixed a bug where linebreaks were not preserved in the middle of a chain of binary operators when a comment was present (e.g. `a + # comment\n b + c`), causing any part of the chain after the comment to be lost. (#1076, #1077)
