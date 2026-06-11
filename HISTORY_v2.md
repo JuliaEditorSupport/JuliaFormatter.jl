@@ -1,3 +1,7 @@
+# v2.6.13
+
+Fixed a bug where JuliaFormatter would insert trailing commas after expressions that had macros or `global` keywords, leading to syntactically invalid Julia code. (#1017, #1086)
+
 # v2.6.12
 
 Fixed a bug where `;;\n` separators in rows of array literals were being converted to `;;`, leading to invalid Julia code. (#1080, #1083)

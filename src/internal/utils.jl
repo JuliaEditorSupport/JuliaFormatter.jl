@@ -117,6 +117,12 @@ function format_to_stage(
     throw(ArgumentError("unknown stage: $stage"))
 end
 
+"""
+    _repro_hint(input, style, options)
+
+Generate a hint for how to reproduce a failure in `test_format`, given the input string,
+style, and options.
+"""
 function _repro_hint(input, style, options)
     opts_str = if isempty(options)
         ""
@@ -129,6 +135,33 @@ function _repro_hint(input, style, options)
         ", $(nameof(typeof(style)))()"
     end
     return "s = $(repr(input))\nformat_text(s$(style_str)$(opts_str))"
+end
+
+"""
+    _normalise_ast!(ex)
+
+Normalise ASTs (mostly by removing line number nodes, which are not relevant for semantics).
+"""
+_normalise_ast!(ex) = ex
+function _normalise_ast!(ex::Expr)
+    if ex.head === :block || ex.head === :quote || ex.head === :toplevel
+        filter!(ex.args) do x
+            !(isa(x, Expr) && x.head === :line || isa(x, LineNumberNode))
+        end
+    end
+    # macrocall's apparently _need_ to have a line number node or something in that
+    # position, so we can't remove it altogether -- but we can replace all such nodes with
+    # `nothing` so that they compare equal. See: https://stackoverflow.com/a/53285644
+    if ex.head === :macrocall
+        new_args = map(ex.args) do x
+            x isa LineNumberNode ? nothing : x
+        end
+        ex.args = new_args
+    end
+    for subex in ex.args
+        subex isa Expr && _normalise_ast!(subex)
+    end
+    return ex
 end
 
 """
@@ -182,6 +215,8 @@ function test_format(
     if ast
         ast_in = Meta.parse(input)
         ast_out = Meta.parse(out)
+        _normalise_ast!(ast_in)
+        _normalise_ast!(ast_out)
         if ast_in != ast_out
             printstyled("AST of input and output did not match.\n\n"; color = :cyan)
             printstyled("Input AST:\n$ast_in\n\n"; color = :green)

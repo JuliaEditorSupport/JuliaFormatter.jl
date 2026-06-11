@@ -34,6 +34,7 @@ makedocs(;
         "Contributing" => "contributing.md",
         "Project Status" => "status.md",
     ],
+    checkdocs = :export,
 )
 
 deploydocs(;
