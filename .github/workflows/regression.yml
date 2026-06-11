@@ -81,11 +81,4 @@ jobs:
 
       - name: Print idempotence diff
         if: failure() && steps.idempotence.outcome == 'failure'
-        run: |
-          if [ ! -f "$RUNNER_TEMP/idempotence.patch" ]; then
-            echo "No diff file (formatting may have errored)"
-            exit 0
-          fi
-          curl -sL https://github.com/dandavison/delta/releases/download/0.19.2/delta-0.19.2-x86_64-unknown-linux-gnu.tar.gz \
-            | tar xz --strip-components=1 -C "$RUNNER_TEMP" delta-0.19.2-x86_64-unknown-linux-gnu/delta
-          "$RUNNER_TEMP/delta" < "$RUNNER_TEMP/idempotence.patch"
+        run: cat "$RUNNER_TEMP/idempotence.patch"
