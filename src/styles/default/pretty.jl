@@ -3675,10 +3675,10 @@ function p_hcat(
                 # later on, `n_tuple!` will insert newlines after the `[` and before the
                 # `].`
                 t.nest_behavior = AlwaysNest
-            elseif !(kind(cst[i+1]) in KSet"; ]") && kind(cst[i-1]) !== K"["
+            elseif !(kind(cst[i+1]) in KSet"; ]") && !(kind(cst[i-1]) in KSet"; ]")
                 # Whitespace is generally important to retain, because it can be a separator
                 # -- but we should omit it in a few cases:
-                # 1. If it's followed by a ';;' separator, since it's not needed.
+                # 1. If it's followed by / before a ';;' separator, since it's not needed.
                 # 2. Directly after the opening bracket.
                 # 3. Directly before the closing bracket.
                 add_node!(t, Whitespace(1), s)

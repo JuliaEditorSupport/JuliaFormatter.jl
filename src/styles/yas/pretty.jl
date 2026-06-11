@@ -496,19 +496,8 @@ function p_vcat(
     end
     t
 end
-function p_typedvcat(
-    ys::YASStyle,
-    cst::JuliaSyntax.GreenNode,
-    s::State,
-    ctx::PrettyContext,
-    lineage::Vector{Tuple{JuliaSyntax.Kind,Bool,Bool}},
-)
-    t = p_vcat(ys, cst, s, ctx, lineage)
-    t.typ = TypedVcat
-    t
-end
 
-function p_ncat(
+function p_hcat(
     ys::YASStyle,
     cst::JuliaSyntax.GreenNode,
     s::State,
@@ -516,18 +505,7 @@ function p_ncat(
     lineage::Vector{Tuple{JuliaSyntax.Kind,Bool,Bool}},
 )
     t = p_vcat(ys, cst, s, ctx, lineage)
-    t.typ = Ncat
-    t
-end
-function p_typedncat(
-    ys::YASStyle,
-    cst::JuliaSyntax.GreenNode,
-    s::State,
-    ctx::PrettyContext,
-    lineage::Vector{Tuple{JuliaSyntax.Kind,Bool,Bool}},
-)
-    t = p_ncat(ys, cst, s, ctx, lineage)
-    t.typ = TypedNcat
+    t.typ = Hcat
     t
 end
 

@@ -129,11 +129,15 @@ end
         end
 
         @testset "comments are not lost" begin
-            s_ = """[a b;; # comment\nc d]"""
-            s = "[a b;;  # comment\n    c d]"
-            test_format(s_, s, DefaultStyle(); ast=true)
-            s = "[a b;;  # comment\n c d]"
-            test_format(s_, s, YASStyle(); ast=true)
+            s = """[a b;; # comment\nc d]"""
+            for st in (DefaultStyle(), BlueStyle(), MinimalStyle())
+                target = "[a b;; # comment\n    c d]"
+                test_format(s_, target, st; ast=true)
+            end
+            target = "[a b;; # comment\n c d]"
+            for st in (SciMLStyle(), YASStyle())
+                test_format(s_, target, st; ast=true)
+            end
         end
     end
 end
