@@ -28,6 +28,20 @@ JuliaFormatter.Internal.format_to_stage
 JuliaFormatter.Internal.test_format
 ```
 
+## Disabling precompilation for development
+
+JuliaFormatter contains a nontrivial precompilation workload, which can be quite annoying to run locally when iterating on changes.
+To disable it, consider adding the following to `LocalPreferences.toml`.
+The file belongs in the directory corresponding to your Julia environment.
+For example, if you use `julia --project=/path/to/JuliaFormatter`, then the file should be located at `/path/to/JuliaFormatter/LocalPreferences.toml`:
+
+```toml
+[JuliaFormatter]
+precompile_workload = false
+```
+
+(This suggestion is taken from [the PrecompileTools.jl docs](https://julialang.github.io/PrecompileTools.jl/stable/#Package-developers:-reducing-the-cost-of-precompilation-during-development).)
+
 ## GitHub-specific things
 
 ### FormatBot

@@ -133,6 +133,10 @@ mutable struct FST
     # It should really use textwidth.
     len::Int
     val::String
+    # Note that nodes = () indicates a leaf node, whereas nodes = [] indicates a tree node
+    # with no leaves (yet).
+    #
+    # TODO(penelopeysm): The former case should probably be `nothing`.
     nodes::Union{Tuple{},Vector{FST}}
     nest_behavior::NestBehavior
 
@@ -428,12 +432,25 @@ function n_args(fst::FST)
 end
 
 function is_prev_newline(fst::FST)
-    if fst.typ === NEWLINE
-        return true
+    return if fst.typ === NEWLINE
+        true
     elseif is_leaf(fst) || length(fst.nodes::Vector) == 0
-        return false
+        false
+    else
+        is_prev_newline(fst[end])
     end
-    is_prev_newline(fst[end])
+end
+function remove_prev_newline!(fst::FST)
+    if is_leaf(fst) || length(fst.nodes::Vector) == 0
+        error("Cannot remove previous newline from a leaf node or empty FST")
+    elseif fst[end].typ === NEWLINE
+        pop!(fst.nodes::Vector{FST})
+        # no need to decrement fst.len because Newline nodes have len 0
+    else
+        remove_prev_newline!(fst[end])
+        # likewise no need to decrement fst.len
+    end
+    return nothing
 end
 
 """
@@ -1042,11 +1059,16 @@ function add_node!(
            # arg => @macro foo
            en.typ === Binary && (en[end].typ === MacroCall || en[end].typ === MacroBlock)
 
-            # don't add trailing comma in these cases
+            # adding a trailing comma causes a syntax error
+            false
         elseif is_comma(en) && t.typ === TupleN && n_args(t) == 1
-            # preserve comma
+            # e.g. `(x,)` -- removing the comma changes the meaning
+            false
         elseif s.opts.trailing_comma === nothing
+            # preserve original source code
+            false
         elseif !s.opts.trailing_comma::Bool
+            # remove trailing comma
             if is_comma(en)
                 t[end] = Whitespace(0)
             end

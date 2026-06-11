@@ -36,6 +36,7 @@ ALL_STYLES = (DefaultStyle(), YASStyle(), BlueStyle(), MinimalStyle(), SciMLStyl
             "$(T)[[1 2] [3 4]]",
 
             # These are supplements, not from the docs
+            "$(T)[1\n2\n3\n4]",
             "$(T)[1\n2;;\n3\n4]",
             "$(T)[f(a)\n f(a);;\n f(a)\n f(a)]",
             "$(T)[\n1\n2;;\n3\n4\n]", # extra newlines
@@ -43,13 +44,12 @@ ALL_STYLES = (DefaultStyle(), YASStyle(), BlueStyle(), MinimalStyle(), SciMLStyl
             "$(T)[;]",
             "$(T)[;;]",
             "$(T)[;;;]",
+            "$(T)[1 2 ;;\n 3 4 ; 2 3 4 5]", # 1080
+            "$(T)[1 2 ;;\n 3 4 ;;; 5 6 ;;\n 7 8]", #1080
         )
             for style in ALL_STYLES
                 @testset let style = style
-                    out1 = format_text(s, style)
-                    out2 = format_text(out1, style)
-                    @test out1 == out2
-                    @test Meta.parse(out1) == Meta.parse(s)
+                    test_format(s, nothing, style)
                 end
             end
         end
@@ -76,10 +76,7 @@ end
                     kwargs in
                     ((;), (; margin = 5+length(T)), (; join_lines_based_on_source = false))
 
-                    out1 = format_text(s, style; kwargs...)
-                    out2 = format_text(out1, style; kwargs...)
-                    @test out1 == out2
-                    @test Meta.parse(out1) == Meta.parse(s)
+                    test_format(s, nothing, style; kwargs...)
                 end
             end
         end
@@ -113,14 +110,36 @@ end
                 # place. But we can at least check for now that it parses to the same
                 # AST (meaning that at worst, it's ugly, but not wrong), and that it's
                 # idempotent.
-                for style in ALL_STYLES,
-                    kwargs in
-                    ((;), (; margin = 5+length(T)), (; join_lines_based_on_source = false))
+                kwargs_combos = (
+                    (;),
+                    (; margin = 5+length(T)),
+                    (; join_lines_based_on_source = false)
+                )
+                for style in ALL_STYLES, kwargs in kwargs_combos
+                    test_format(s, nothing, style; kwargs...)
+                end
+            end
+        end
 
-                    out1 = format_text(s, style; kwargs...)
-                    out2 = format_text(out1, style; kwargs...)
-                    @test out1 == out2
-                    @test Meta.parse(out1) == Meta.parse(s)
+        @testset "comments are not lost" begin
+            s = "[a b;; # comment\nc d]"
+            for st in (DefaultStyle(), BlueStyle(), MinimalStyle())
+                target = "[a b;; # comment\n    c d]"
+                test_format(s, target, st; ast=true)
+            end
+            target = "[a b;; # comment\n c d]"
+            for st in (SciMLStyle(), YASStyle())
+                test_format(s, target, st; ast=true)
+            end
+
+            s = "[#=1=# a #=2=# b #=3=# ;;\n#=4=# c #=5=# d #=6=#]"
+            for st in ALL_STYLES
+                # Idempotence & semantic invariance
+                test_format(s, nothing, st; ast=true)
+                # Check that the comment is still there
+                out = format_text(s, st)
+                for i in 1:6
+                    @test occursin("#=$(i)=#", out)
                 end
             end
         end
