@@ -21,11 +21,16 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # Permitted fields:
+        #  - repo (required): GitHub repo in the form "owner/name"
+        #  - rev (required): Git ref to checkout
+        #  - subdir (optional): Subdirectory to format (defaults to "")
+        #  - args (optional): Additional arguments to pass to `jlfmt` (defaults to "")
+        #  - remove_config (optional): Whether to remove any existing formatter
+        #                              config in the target repo (defaults to false)
         include:
           - repo: JuliaLang/julia
             rev: v1.12.6
-            subdir: base
-            args: ''
             remove_config: true
 
     steps:
