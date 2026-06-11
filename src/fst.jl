@@ -1028,16 +1028,17 @@ function skip_trailing_comma(fst::FST)
     return if is_comma(prev_node) && fst.typ === TupleN && n_args(fst) == 1
         # e.g. `(x,)` -- removing the comma changes the meaning
         true
-    elseif (prev_node.typ === Generator ||
-            prev_node.typ === Filter ||
-            prev_node.typ === Flatten ||
-            prev_node.typ === SEMICOLON ||
-            prev_node.typ === HASHEQCOMMENT ||
-            # Things that end with macros can't have a trailing comma inserted after them
-            # as that causes Julia to fail to parse.
-            # https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/1017
-            ends_with_macro_or_global(prev_node)
-        )
+    elseif (
+        prev_node.typ === Generator ||
+        prev_node.typ === Filter ||
+        prev_node.typ === Flatten ||
+        prev_node.typ === SEMICOLON ||
+        prev_node.typ === HASHEQCOMMENT ||
+        # Things that end with macros can't have a trailing comma inserted after them
+        # as that causes Julia to fail to parse.
+        # https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/1017
+        ends_with_macro_or_global(prev_node)
+    )
         true
     else
         false
