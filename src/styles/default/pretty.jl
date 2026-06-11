@@ -564,12 +564,15 @@ function p_comment(
     loc = cursor_loc(s)
     same_line = on_same_line(s, s.offset, s.offset + span(cst) - 1)
     val = getsrcval(s.doc, (s.offset):(s.offset+span(cst)-1))
-    if same_line && startswith(val, "#=") && endswith(val, "=#")
-        s.offset += span(cst)
-        return FST(HASHEQCOMMENT, loc[2], loc[1], loc[1], val)
-    end
     s.offset += span(cst)
-    FST(NONE, loc[2], loc[1], loc[1], "")
+    return if same_line && startswith(val, "#=") && endswith(val, "=#")
+        FST(HASHEQCOMMENT, loc[2], loc[1], loc[1], val)
+    else
+        # Could be `#= ... =#` over multiple lines, or `# ...`
+        # These are ignored for now but will be added back later inside
+        # `add_node!`.
+        FST(NONE, loc[2], loc[1], loc[1], "")
+    end
 end
 
 function p_semicolon(

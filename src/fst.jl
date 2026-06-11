@@ -133,6 +133,10 @@ mutable struct FST
     # It should really use textwidth.
     len::Int
     val::String
+    # Note that nodes = () indicates a leaf node, whereas nodes = [] indicates a tree node
+    # with no leaves (yet).
+    #
+    # TODO(penelopeysm): The former case should probably be `nothing`.
     nodes::Union{Tuple{},Vector{FST}}
     nest_behavior::NestBehavior
 
@@ -1055,11 +1059,16 @@ function add_node!(
            # arg => @macro foo
            en.typ === Binary && (en[end].typ === MacroCall || en[end].typ === MacroBlock)
 
-            # don't add trailing comma in these cases
+            # adding a trailing comma causes a syntax error
+            false
         elseif is_comma(en) && t.typ === TupleN && n_args(t) == 1
-            # preserve comma
+            # e.g. `(x,)` -- removing the comma changes the meaning
+            false
         elseif s.opts.trailing_comma === nothing
+            # preserve original source code
+            false
         elseif !s.opts.trailing_comma::Bool
+            # remove trailing comma
             if is_comma(en)
                 t[end] = Whitespace(0)
             end
