@@ -2681,12 +2681,14 @@ end
             "(x, y) # comment",
             "#= comment =# x",
         )
-            s = """
-            f() do $(comment_and_do_arg)
-                return g
-            end"""
-            for style in ALL_STYLES
-                test_format(s, s, style)
+            for maybe_macro in ("@test ", "")
+                s = """
+                $(maybe_macro)f() do $(comment_and_do_arg)
+                    return g
+                end"""
+                for style in ALL_STYLES
+                    test_format(s, s, style)
+                end
             end
         end
     end
