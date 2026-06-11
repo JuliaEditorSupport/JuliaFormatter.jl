@@ -2471,7 +2471,43 @@ end
         test_format(s, s)
     end
 
-    @testset "1018" begin
+    @testset "1017 trailing commas after macros/global" begin
+        # macro
+        s_ = "f(a = u -> @. u0)"
+        s = "f(\n    a = u ->\n        @. u0\n)"
+        for trailing_comma in (true, false, nothing)
+            test_format(s_, s_; trailing_comma = trailing_comma)
+            test_format(s_, s; margin = 10, trailing_comma = trailing_comma)
+            for style in (SciMLStyle(), BlueStyle(), YASStyle(), MinimalStyle())
+                test_format(s_, nothing; margin=10, ast=true)
+            end
+        end
+
+        # global
+        s_ = raw"""
+        let libccalllazyfoo = LazyLibrary(lclf_path; on_load_callback=() -> global lclf_loaded = true),
+            libccalllazybar = LazyLibrary(lclb_path; dependencies=[libccalllazyfoo], on_load_callback=() -> global lclb_loaded = true)
+            eval(:(const libccalllazyfoo = $libccalllazyfoo))
+            eval(:(const libccalllazybar = $libccalllazybar))
+        end"""
+        s = raw"""
+        let libccalllazyfoo =
+                LazyLibrary(lclf_path; on_load_callback = () -> global lclf_loaded = true),
+            libccalllazybar = LazyLibrary(
+                lclb_path;
+                dependencies = [libccalllazyfoo],
+                on_load_callback = () -> global lclb_loaded = true
+            )
+
+            eval(:(const libccalllazyfoo = $libccalllazyfoo))
+            eval(:(const libccalllazybar = $libccalllazybar))
+        end"""
+        for trailing_comma in (true, false, nothing)
+            test_format(s_, s; trailing_comma = trailing_comma)
+        end
+    end
+
+    @testset "1018 macro do-block" begin
         # A macro call using `do` with keyword-style args must be formatted like the
         # function-call form, not left partially unformatted with extra spaces and
         # unindented multiline `do` arguments.

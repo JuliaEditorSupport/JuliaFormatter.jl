@@ -1006,6 +1006,45 @@ function next_node_is(f::Function, nn::JuliaSyntax.GreenNode)
     f(nn) || (haschildren(nn) && next_node_is(f, nn[1]))
 end
 
+function ends_with_macro_or_global(fst::FST)
+    # Detects constructs such as
+    #    @macro foo
+    #    arg = @macro foo
+    #    arg => @macro foo
+    #    () -> global x = true
+    # which cause parse errors if a comma is inserted after them.
+    return if fst.typ === MacroCall || fst.typ === MacroBlock || fst.typ === Global
+        true
+    elseif is_leaf(fst)
+        false
+    elseif fst.typ === Kw || fst.typ === Binary
+        length(fst.nodes) > 0 && ends_with_macro_or_global(fst[end])
+    else
+        false
+    end
+end
+function skip_trailing_comma(fst::FST)
+    prev_node = fst[end]
+    return if is_comma(prev_node) && fst.typ === TupleN && n_args(fst) == 1
+        # e.g. `(x,)` -- removing the comma changes the meaning
+        true
+    elseif (
+        prev_node.typ === Generator ||
+        prev_node.typ === Filter ||
+        prev_node.typ === Flatten ||
+        prev_node.typ === SEMICOLON ||
+        prev_node.typ === HASHEQCOMMENT ||
+        # Things that end with macros can't have a trailing comma inserted after them
+        # as that causes Julia to fail to parse.
+        # https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/1017
+        ends_with_macro_or_global(prev_node)
+    )
+        true
+    else
+        false
+    end
+end
+
 """
     add_node!(
         t::FST,
@@ -1047,28 +1086,14 @@ function add_node!(
 
     if n.typ === TRAILINGCOMMA
         en = (tnodes::Vector{FST})[end]
-        if en.typ === Generator ||
-           en.typ === Filter ||
-           en.typ === Flatten ||
-           en.typ === MacroCall ||
-           en.typ === MacroBlock ||
-           en.typ === SEMICOLON ||
-           en.typ === HASHEQCOMMENT ||
-           # arg = @macro foo
-           en.typ === Kw && (en[end].typ === MacroCall || en[end].typ === MacroBlock) ||
-           # arg => @macro foo
-           en.typ === Binary && (en[end].typ === MacroCall || en[end].typ === MacroBlock)
-
-            # adding a trailing comma causes a syntax error
-            false
-        elseif is_comma(en) && t.typ === TupleN && n_args(t) == 1
-            # e.g. `(x,)` -- removing the comma changes the meaning
+        if skip_trailing_comma(t)
+            # do not insert trailing comma
             false
         elseif s.opts.trailing_comma === nothing
             # preserve original source code
             false
         elseif !s.opts.trailing_comma::Bool
-            # remove trailing comma
+            # remove preexisting comma in FST
             if is_comma(en)
                 t[end] = Whitespace(0)
             end
