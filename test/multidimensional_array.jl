@@ -125,7 +125,7 @@ end
             s = "[a b;; # comment\nc d]"
             for st in (DefaultStyle(), BlueStyle(), MinimalStyle())
                 target = "[a b;; # comment\n    c d]"
-                test_format(s_, target, st; ast=true)
+                test_format(s, target, st; ast=true)
             end
             target = "[a b;; # comment\n c d]"
             for st in (SciMLStyle(), YASStyle())
