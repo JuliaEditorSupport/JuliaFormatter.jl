@@ -49,3 +49,9 @@ end
 
 format_text(s2; always_use_return = true) |> println
 ```
+
+## Inline comments
+
+JuliaFormatter is _quite buggy_ with inline comments of the form `#= ... =#`, especially because they aren't thoroughly tested.
+If you come across such problems please don't hesitate to [open an issue](https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues), but I wanted to document this because it is specifically known to be a bit of a pain point.
+`# ...` comments are likely to be much more reliable.
