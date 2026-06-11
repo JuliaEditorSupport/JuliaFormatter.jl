@@ -1904,9 +1904,6 @@ function append_do_nodes!(
         if kind(c) === K"do" && !haschildren(c)
             add_node!(t, Whitespace(1), s)
             add_node!(t, pretty(style, c, s, ctx, lineage), s; join_lines = true)
-            if !next_node_is(K"NewlineWs", childs[i+1])
-                add_node!(t, Whitespace(1), s)
-            end
         elseif kind(c) === K"end"
             add_node!(t, pretty(style, c, s, ctx, lineage), s)
         elseif kind(c) === K"block"
@@ -1917,6 +1914,14 @@ function append_do_nodes!(
             end
             add_node!(t, n, s; max_padding = s.opts.indent)
             s.indent -= s.opts.indent
+        elseif kind(c) === K"tuple"
+            # the thing immediately after the do.
+            n = pretty(style, c, s, ctx, lineage)
+            if !isempty(n.nodes)
+                # if it's a nontrivial tuple then we need to separate it from the do.
+                add_node!(t, Whitespace(1), s)
+            end
+            add_node!(t, n, s; join_lines = true)
         else
             add_node!(t, pretty(style, c, s, ctx, lineage), s; join_lines = true)
         end
