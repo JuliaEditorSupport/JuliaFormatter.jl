@@ -461,7 +461,7 @@ function p_vcat(
                 n,
                 s;
                 join_lines = true,
-                override_join_lines_based_on_source = true
+                override_join_lines_based_on_source = true,
             )
         elseif JuliaSyntax.is_whitespace(a)
             add_node!(t, n, s; join_lines = true)
