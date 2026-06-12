@@ -2463,6 +2463,20 @@ end
         test_format("f(*, +, a, b, c)", "f(*, +, a, b, c)")
     end
 
+    @testset "940 short_circuit_to_if in while cond" begin
+        s = """
+        function foo(i)
+            cond2 = true
+            while i < 42 && cond2
+                i += 1
+            end
+            return i
+        end"""
+        for style in ALL_STYLES
+            test_format(s, s, style; short_circuit_to_if = true)
+        end
+    end
+
     @testset "941 generator idempotence" begin
         kwargs = (indent=4, margin=120, always_for_in=true, for_in_replacement="∈", whitespace_typedefs=true, whitespace_ops_in_indices=true, remove_extra_newlines=true, whitespace_in_kwargs=false, annotate_untyped_fields_with_any=false, normalize_line_endings="unix")
         text = "idx = (\n    if refdim == 1\n        I\n    elseif refdim == 2\n        J\n    else\n        (:)\n    end for (vdim, refdim) ∈ T.parameters\n)"

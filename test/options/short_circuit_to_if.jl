@@ -207,6 +207,15 @@ using Test
         """
         test_format(s, output; short_circuit_to_if = true, always_use_return = true)
     end
+
+    @testset "while cond" begin
+        s = """
+        while a && b
+            c
+        end
+        """
+        test_format(s, s; short_circuit_to_if = true)
+    end
 end
 
 end # module
