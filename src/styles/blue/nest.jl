@@ -215,21 +215,6 @@ function n_cartesian_iterator!(
     n_tuple!(bs, fst, s, lineage)
 end
 
-function n_conditionalopcall!(
-    bs::BlueStyle,
-    fst::FST,
-    s::State,
-    lineage::Vector{Tuple{FNode,Union{Nothing,Metadata}}},
-)
-    style = getstyle(bs)
-    if fst[end].typ === Conditional
-        conditional_to_if_block!(fst, s, true)
-        nest!(style, fst, s, lineage)
-    else
-        n_conditionalopcall!(DefaultStyle(style), fst, s, lineage)
-    end
-end
-
 function n_binaryopcall!(
     bs::BlueStyle,
     fst::FST,

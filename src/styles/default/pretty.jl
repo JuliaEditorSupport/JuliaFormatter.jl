@@ -426,8 +426,8 @@ function pretty(
         p_whereopcall(style, node, s, ctx, lineage)
     elseif k === K"?" && haschildren(node)
         p_conditionalopcall(style, node, s, ctx, lineage)
-        # Example: `map(xs) do x; x + 1; end` is a call node with a do child.
     elseif !isnothing(do_block_idx)
+        # Example: `map(xs) do x; x + 1; end` is a call node with a do child.
         p_do_call(style, node, s, ctx, lineage, do_block_idx)
     elseif _unaryinfo !== nothing
         # _unaryinfo === nothing means that it's not unary; true/false indicates whether
@@ -932,7 +932,7 @@ function p_macrocall(
     end
 
     args = get_args(cst)
-    nest = should_nest_call_args(args, s.opts.disallow_single_arg_nesting)
+    nest = should_allow_nesting_call_args(args, s.opts.disallow_single_arg_nesting)
     childs = children(cst)
 
     # A macrocall may be followed by a do-block, e.g. `@modify(x) do y ... end`.
@@ -2350,7 +2350,8 @@ function p_pipe_to_call(
     end
 
     # Handle the callee.
-    nest = should_nest_call_args([cst[lhs_idx]], s.opts.disallow_single_arg_nesting)
+    nest =
+        should_allow_nesting_call_args([cst[lhs_idx]], s.opts.disallow_single_arg_nesting)
     add_node!(
         call_node,
         FST(PUNCTUATION, -1, rhs.startline, rhs.startline, "("),
@@ -2687,7 +2688,7 @@ function p_whereopcall(
     end
 
     args = get_args(cst)
-    nest = should_nest_call_args(args, s.opts.disallow_single_arg_nesting)
+    nest = should_allow_nesting_call_args(args, s.opts.disallow_single_arg_nesting)
 
     childs = children(cst)
     where_idx = findfirst(c -> kind(c) === K"where" && !haschildren(c), childs)
@@ -2829,7 +2830,7 @@ function p_curly(
     end
 
     args = get_args(cst)
-    nest = should_nest_call_args(args, s.opts.disallow_single_arg_nesting)
+    nest = should_allow_nesting_call_args(args, s.opts.disallow_single_arg_nesting)
 
     nws = s.opts.whitespace_typedefs ? 1 : 0
 
@@ -2885,7 +2886,7 @@ function p_call(
     end
 
     args = call_args(childs)
-    nest = should_nest_call_args(args, s.opts.disallow_single_arg_nesting)
+    nest = should_allow_nesting_call_args(args, s.opts.disallow_single_arg_nesting)
 
     for (i, a) in enumerate(childs)
         k = kind(a)
@@ -2941,8 +2942,11 @@ function p_parens(
     args = get_args(cst)
     nest = if length(args) > 0
         arg = args[1]
-        if is_block(arg) ||
-           (kind(arg) === K"generator" && haschildren(arg) && is_block(arg[1]))
+        if is_block(arg) || (
+            kind(arg) === K"generator" &&
+            haschildren(arg) &&
+            first_nontrivial_child_is_block(arg)
+        )
             t.nest_behavior = AlwaysNest
         end
         if !ctx.nonest && !s.opts.disallow_single_arg_nesting
@@ -3000,7 +3004,7 @@ function p_tupleblock(
     end
 
     args = get_args(cst)
-    nest = should_nest_call_args(args, s.opts.disallow_single_arg_nesting)
+    nest = should_allow_nesting_call_args(args, s.opts.disallow_single_arg_nesting)
 
     childs = children(cst)
     for (i, a) in enumerate(childs)
@@ -3045,7 +3049,7 @@ function p_tuple(
     end
 
     args = get_args(cst)
-    nest = should_nest_call_args(args, s.opts.disallow_single_arg_nesting)
+    allow_nest = should_allow_nesting_call_args(args, s.opts.disallow_single_arg_nesting)
 
     childs = children(cst)
     for (i, a) in enumerate(childs)
@@ -3057,7 +3061,7 @@ function p_tuple(
 
         if kind(a) === K"("
             add_node!(t, n, s; join_lines = true)
-            if nest
+            if allow_nest
                 add_node!(t, Placeholder(0), s)
             end
         elseif kind(a) === K")"
@@ -3065,7 +3069,7 @@ function p_tuple(
             # In which case ";," is invalid syntax.
             #
             # no trailing comma since (arg) is semantically different from (arg,) !!!
-            if nest
+            if allow_nest
                 if t[end].typ !== SEMICOLON && length(args) > 1
                     add_node!(t, TrailingComma(), s)
                 end
@@ -3098,7 +3102,7 @@ function p_braces(
     end
 
     args = get_args(cst)
-    nest = should_nest_call_args(args, s.opts.disallow_single_arg_nesting)
+    nest = should_allow_nesting_call_args(args, s.opts.disallow_single_arg_nesting)
 
     nws = ctx.from_typedef && !s.opts.whitespace_typedefs ? 0 : 1
 
@@ -3143,7 +3147,7 @@ function p_bracescat(
     end
 
     args = get_args(cst)
-    nest = should_nest_call_args(args, s.opts.disallow_single_arg_nesting)
+    nest = should_allow_nesting_call_args(args, s.opts.disallow_single_arg_nesting)
 
     nws = ctx.from_typedef && !s.opts.whitespace_typedefs ? 0 : 1
     childs = children(cst)
@@ -3189,7 +3193,7 @@ function p_vect(
     end
 
     args = get_args(cst)
-    nest = should_nest_call_args(args, s.opts.disallow_single_arg_nesting)
+    nest = should_allow_nesting_call_args(args, s.opts.disallow_single_arg_nesting)
 
     childs = children(cst)
     for (i, a) in enumerate(childs)
@@ -3240,13 +3244,12 @@ function p_comprehension(
     )
     arg = childs[idx]
 
-    if is_block(arg)
+    if is_block(arg) || (
+        kind(arg) === K"generator" &&
+        haschildren(arg) &&
+        first_nontrivial_child_is_block(arg)
+    )
         t.nest_behavior = AlwaysNest
-    elseif kind(arg) === K"generator" && haschildren(arg)
-        idx = findfirst(n -> !JuliaSyntax.is_whitespace(kind(n)), children(arg))
-        if !isnothing(idx) && is_block(arg[idx])
-            t.nest_behavior = AlwaysNest
-        end
     end
 
     for c in childs
@@ -3512,7 +3515,7 @@ function p_vcat(
     end
 
     args = get_args(cst)
-    nest = should_nest_call_args(args, s.opts.disallow_single_arg_nesting)
+    nest = should_allow_nesting_call_args(args, s.opts.disallow_single_arg_nesting)
     childs = children(cst)
     opening_idx = findfirst(n -> kind(n) === K"[", childs)::Int
     closing_idx = findlast(n -> kind(n) === K"]", childs)::Int

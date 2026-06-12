@@ -58,7 +58,6 @@ end
         )"""
         str_ = """
         (
-          let
               x = f() do
                   body
               end
@@ -2250,6 +2249,34 @@ end
         test_format(s, s, MinimalStyle())
     end
 
+    @testset "897 BlueStyle chained ternary to if idempotence" begin
+        text = "push!(attributes, operandsegmentsizes([1, 1, 1, (lhs_scale==nothing) ? 0 : 1(rhs_scale==nothing) ? 0 : 1]))"
+        for style in ALL_STYLES
+            if style isa BlueStyle
+                # BlueStyle converts the ternary into if/elseif/else so we manually test that
+                blue_out = "push!(attributes, operandsegmentsizes([\n    1,\n    1,\n    1,\n    if (lhs_scale==nothing)\n        0\n    elseif 1(rhs_scale==nothing)\n        0\n    else\n        1\n    end,\n]))"
+                test_format(text, blue_out, BlueStyle())
+            else
+                test_format(text, nothing, style)
+            end
+        end
+
+        # minimised case too
+        s = "foooooooo(foooooooo(a ? b : c ? d : e))"
+        for style in ALL_STYLES
+            test_format(s, nothing, style)
+            test_format(s, nothing, style; margin=40)
+        end
+
+        # check that comments aren't lost
+        s = "#=1=# a #=2=# ? #=3=# b #=4=# : #=5=# c #=6=# ? #=7=# d #=8=# : #=9=# e #=10=#"
+        test_format(s, nothing, BlueStyle())
+        out = format_text(s, BlueStyle())
+        for i in 1:10
+            @test occursin("#=$(i)=#", out)
+        end
+    end
+
     @testset "902" begin
         # `short_circuit_to_if` should not transform `&&` into `if` inside a closure
         # argument, because that changes the semantics of the code.
@@ -2418,6 +2445,14 @@ end
         test_format("f(*, +, a, b, c)", "f(*, +, a, b, c)")
     end
 
+    @testset "941 generator idempotence" begin
+        kwargs = (indent=4, margin=120, always_for_in=true, for_in_replacement="∈", whitespace_typedefs=true, whitespace_ops_in_indices=true, remove_extra_newlines=true, whitespace_in_kwargs=false, annotate_untyped_fields_with_any=false, normalize_line_endings="unix")
+        text = "idx = (\n    if refdim == 1\n        I\n    elseif refdim == 2\n        J\n    else\n        (:)\n    end for (vdim, refdim) ∈ T.parameters\n)"
+        for style in ALL_STYLES
+            test_format(text, nothing, style; ast=true, kwargs...)
+        end
+    end
+
     @testset "944 for-in scoping" begin
         test_format(
             "[x[i] = y[i] for i = 1:length(y)]",
@@ -2554,6 +2589,53 @@ end
           ccc #= hi =#)
         """
         test_format(s, s, YASStyle())
+    end
+
+    @testset "1048 generator idempotence" begin
+        s = """
+        (
+            let x = f() do
+                    return body
+                end
+                x
+            end for x in xs
+        )"""
+        for style in ALL_STYLES
+            if style isa YASStyle
+                # no boundary newlines inside parens.
+                target = "(let x = f() do\n         return body\n     end\n     x\n end\n for x in xs)"
+                test_format(s, target, style)
+            else
+                test_format(s, s, style)
+            end
+        end
+
+        s = """
+        ys = (
+            if p1(x)
+                f1(x)
+            elseif p2(x)
+                f2(x)
+            else
+                f3(x)
+            end for x in xs
+        )"""
+        for style in ALL_STYLES
+            if style isa YASStyle
+                target = """
+                ys = (if p1(x)
+                          f1(x)
+                      elseif p2(x)
+                          f2(x)
+                      else
+                          f3(x)
+                      end
+                      for x in xs)"""
+                test_format(s, target, style)
+            else
+                test_format(s, s, style)
+            end
+        end
     end
 
     @testset "1062 docstring indent on rhs of short function def" begin

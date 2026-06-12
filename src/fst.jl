@@ -537,6 +537,20 @@ function is_comprehension(x::FST)
     x.typ in (Comprehension, TypedComprehension)
 end
 
+function first_nontrivial_child_is_block(cst::JuliaSyntax.GreenNode)
+    if !haschildren(cst)
+        return false
+    end
+    for c in children(cst)
+        if JuliaSyntax.is_whitespace(c)
+            continue
+        else
+            return is_block(c)
+        end
+    end
+    return false
+end
+
 function is_block(x::JuliaSyntax.GreenNode)
     is_if(x) ||
         kind(x) in KSet"do try for while let" ||
@@ -775,7 +789,7 @@ function has_delimiters(cst::JuliaSyntax.GreenNode)
     kind(cst) in KSet"tuple vect braces bracescat comprehension parens"
 end
 
-function should_nest_call_args(args, disallow_single_arg_nesting::Bool)
+function should_allow_nesting_call_args(args, disallow_single_arg_nesting::Bool)
     return length(args) > 0 && !(length(args) == 1 &&
              # If the argument has delimiters, it can itself be nested, so we
              # don't need to nest the call expression.
@@ -1057,14 +1071,28 @@ end
 
 Appends `n` to `t`.
 
-- `join_lines` if `false` a NEWLINE node will be added and `n` will appear
-  on the next line, otherwise it will appear on the same line as the previous
-  node (when printing).
-- `max_padding` >= 0 indicates margin of `t` should be based on whether the margin
-  of `n` + `max_padding` is greater than the current margin of `t`. Otherwise the margin
-  `n` will be added to `t`.
-- `override_join_lines_based_on_source` is only used when `join_lines_based_on_source` option is `true`.
-  In which `n` is added to `t` as if `join_lines_based_on_source` was false.
+- `join_lines`: if `true`, `n` is placed on the same line as the previous node. If `false`
+  (the default), a NEWLINE is inserted before `n` so it appears on the next line.
+
+- `max_padding`: controls how `n`'s length contributes to `t.len`, if `n` is not the first
+  node being added.
+
+  - When negative (the default), `n`'s length is added: `t.len += length(n)`. This is
+    appropriate for nodes that continue the current line (e.g. an argument in a call).
+
+  - When non-negative, we calculate `npad = length(n) + max_padding` (i.e., the horizontal
+    extent of `n` plus some specified padding) and set `t.len = max(t.len, npad)`. For
+    example, in `p_if`, when adding the `if`/`elseif`/`else` keywords, we use `max_padding =
+    0`. This means that that `t.len` extends only up to the end of the keyword. That's
+    because the keyword starts a new line and we don't want it to inflate the length of the
+    parent.
+
+  For the first node that's added, it always contributes its full length to `t.len`
+  regardless of the value of `max_padding`.
+
+- `override_join_lines_based_on_source`: when the `join_lines_based_on_source` option is
+  `true`, this flag overrides it so that `n` is added as if `join_lines_based_on_source`
+  were `false`.
 """
 function add_node!(
     t::FST,

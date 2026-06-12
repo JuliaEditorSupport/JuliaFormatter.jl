@@ -1,3 +1,9 @@
+# v2.6.15
+
+Fixed lack of idempotence on generator expressions that contained block elements. (#897, #941, #1048, #1092)
+
+Fixed a bug where formatting generator expressions that contained block elements with SciMLStyle would cause the `for ... in ...` to be glued to the `end` of the block, leading to unparseable code. (#1092)
+
 # v2.6.14
 
 Fixed a bug where placing a comment after a `do` keyword would cause non-idempotent formatting. (#1088, #1090)
