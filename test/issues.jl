@@ -58,7 +58,6 @@ end
         )"""
         str_ = """
         (
-          let
               x = f() do
                   body
               end
@@ -2418,6 +2417,14 @@ end
         test_format("f(*, +, a, b, c)", "f(*, +, a, b, c)")
     end
 
+    @testset "941 generator idempotence" begin
+        kwargs = (indent=4, margin=120, always_for_in=true, for_in_replacement="∈", whitespace_typedefs=true, whitespace_ops_in_indices=true, remove_extra_newlines=true, whitespace_in_kwargs=false, annotate_untyped_fields_with_any=false, normalize_line_endings="unix")
+        text = "idx = (\n    if refdim == 1\n        I\n    elseif refdim == 2\n        J\n    else\n        (:)\n    end for (vdim, refdim) ∈ T.parameters\n)"
+        for style in ALL_STYLES
+            test_format(text, nothing, style; ast=true, kwargs...)
+        end
+    end
+
     @testset "944 for-in scoping" begin
         test_format(
             "[x[i] = y[i] for i = 1:length(y)]",
@@ -2554,6 +2561,53 @@ end
           ccc #= hi =#)
         """
         test_format(s, s, YASStyle())
+    end
+
+    @testset "1048 generator idempotence" begin
+        s = """
+        (
+            let x = f() do
+                    return body
+                end
+                x
+            end for x in xs
+        )"""
+        for style in ALL_STYLES
+            if style isa YASStyle
+                # no boundary newlines inside parens.
+                target = "(let x = f() do\n         return body\n     end\n     x\n end\n for x in xs)"
+                test_format(s, target, style)
+            else
+                test_format(s, s, style)
+            end
+        end
+
+        s = """
+        ys = (
+            if p1(x)
+                f1(x)
+            elseif p2(x)
+                f2(x)
+            else
+                f3(x)
+            end for x in xs
+        )"""
+        for style in ALL_STYLES
+            if style isa YASStyle
+                target = """
+                ys = (if p1(x)
+                          f1(x)
+                      elseif p2(x)
+                          f2(x)
+                      else
+                          f3(x)
+                      end
+                      for x in xs)"""
+                test_format(s, target, style)
+            else
+                test_format(s, s, style)
+            end
+        end
     end
 
     @testset "1062 docstring indent on rhs of short function def" begin

@@ -537,6 +537,20 @@ function is_comprehension(x::FST)
     x.typ in (Comprehension, TypedComprehension)
 end
 
+function first_nontrivial_child_is_block(cst::JuliaSyntax.GreenNode)
+    if !haschildren(cst)
+        return false
+    end
+    for c in children(cst)
+        if JuliaSyntax.is_whitespace(c)
+            continue
+        else
+            return is_block(c)
+        end
+    end
+    return false
+end
+
 function is_block(x::JuliaSyntax.GreenNode)
     is_if(x) ||
         kind(x) in KSet"do try for while let" ||

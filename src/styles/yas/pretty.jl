@@ -788,7 +788,7 @@ function p_generator(
         if JuliaSyntax.is_keyword(a) && !haschildren(a)
             idx = findprev(n -> !JuliaSyntax.is_whitespace(n), childs, i - 1)
             if !isnothing(idx) && is_block(childs[idx])
-                add_node!(t, Newline(), s)
+                add_node!(t, Newline(; length = 1), s)
             elseif from_iterable
                 add_node!(t, Placeholder(1), s)
             elseif !isnothing(idx)

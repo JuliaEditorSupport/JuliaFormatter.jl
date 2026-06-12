@@ -2941,8 +2941,11 @@ function p_parens(
     args = get_args(cst)
     nest = if length(args) > 0
         arg = args[1]
-        if is_block(arg) ||
-           (kind(arg) === K"generator" && haschildren(arg) && is_block(arg[1]))
+        if is_block(arg) || (
+            kind(arg) === K"generator" &&
+            haschildren(arg) &&
+            first_nontrivial_child_is_block(arg)
+        )
             t.nest_behavior = AlwaysNest
         end
         if !ctx.nonest && !s.opts.disallow_single_arg_nesting
@@ -3240,13 +3243,12 @@ function p_comprehension(
     )
     arg = childs[idx]
 
-    if is_block(arg)
+    if is_block(arg) || (
+        kind(arg) === K"generator" &&
+        haschildren(arg) &&
+        first_nontrivial_child_is_block(arg)
+    )
         t.nest_behavior = AlwaysNest
-    elseif kind(arg) === K"generator" && haschildren(arg)
-        idx = findfirst(n -> !JuliaSyntax.is_whitespace(kind(n)), children(arg))
-        if !isnothing(idx) && is_block(arg[idx])
-            t.nest_behavior = AlwaysNest
-        end
     end
 
     for c in childs
