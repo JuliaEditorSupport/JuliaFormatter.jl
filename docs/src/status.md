@@ -23,10 +23,19 @@ It is very hard to do this without breaking _some_ formatting _somewhere_.
 
 Another lesser point is that JuliaFormatter is designed to be customisable and it's not trivial at all to predict how the introduction of a new formatting option interacts with the rest of the codebase.
 
+### Pinning the JuliaFormatter version
+
 **If you want stability, you should pin the version of JuliaFormatter you use.
-In fact, I believe that even if JuliaFormatter *was* more stable, this is *still* a good idea.**
+In fact, I believe that even if JuliaFormatter *was* more stable, pinning the version is *still* a good idea.**
+It's common to just let CI use 'v2' of JuliaFormatter or something similar, which will naturally resolve to the most recent version each time CI is run.
+**In my opinion this is bad practice.**
+
 The reason for this is because formatting changes should be separate from other code changes, and should be only introduced as part of an intentional upgrade.
 This avoids noisy diffs, and also plays well with the `git blame --ignore-rev` option: if you have a commit that consists only of formatting changes, you can add that to `.git-blame-ignore-revs`, and GitHub/GitLab will ignore that commit when showing the history of a file (see e.g. [this post](https://andreynautilus.github.io/posts/2025-08-23-git-blame-ignore/)).
+
+On top of that, there's really no reason why one should ever want to upgrade to the *latest* version of JuliaFormatter *unless* you specifically want to take advantage of new features or bug fixes.
+If you are already happy with v2.p.q then v2.r.s is not going to offer you anything better than that.
+You should just pin that version and be done with it.
 
 ## Testing
 
