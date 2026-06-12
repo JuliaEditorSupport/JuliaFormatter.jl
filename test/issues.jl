@@ -2249,6 +2249,19 @@ end
         test_format(s, s, MinimalStyle())
     end
 
+    @testset "897 generator idempotence" begin
+        text = "push!(attributes, operandsegmentsizes([1, 1, 1, (lhs_scale==nothing) ? 0 : 1(rhs_scale==nothing) ? 0 : 1]))"
+        for style in ALL_STYLES
+            if style isa BlueStyle
+                # BlueStyle converts the ternary into if/elseif/else so we manually test that
+                blue_out = "push!(attributes, operandsegmentsizes([\n    1,\n    1,\n    1,\n    if (lhs_scale==nothing)\n        0\n    elseif 1(rhs_scale==nothing)\n        0\n    else\n        1\n    end,\n]))"
+                test_format(text, blue_out, BlueStyle())
+            else
+                test_format(text, nothing, style)
+            end
+        end
+    end
+
     @testset "902" begin
         # `short_circuit_to_if` should not transform `&&` into `if` inside a closure
         # argument, because that changes the semantics of the code.
