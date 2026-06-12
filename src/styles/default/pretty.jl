@@ -1838,7 +1838,14 @@ function p_for(
             if kind(cst) === K"while"
                 m = n.metadata
                 if !isnothing(m)
-                    newm = Metadata(m.op_kind, false, m.is_short_form_function, m.is_assignment, m.is_long_form_function, m.has_multiline_argument)
+                    newm = Metadata(
+                        m.op_kind,
+                        false,
+                        m.is_short_form_function,
+                        m.is_assignment,
+                        m.is_long_form_function,
+                        m.has_multiline_argument,
+                    )
                     n.metadata = newm
                 end
             end
