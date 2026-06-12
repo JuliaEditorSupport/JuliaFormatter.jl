@@ -102,10 +102,11 @@ function _ternary_to_ifelse!(
     cst::JuliaSyntax.GreenNode,
     s::State,
     ctx::PrettyContext,
-    lineage::Vector{Tuple{JuliaSyntax.Kind,Bool,Bool}};
+    lineage::Vector{Tuple{JuliaSyntax.Kind,Bool,Bool}},
     # The outermost call emits "if" and appends "end"; recursive calls emit "elseif" and
     # produce a nested If sub-tree (mirroring JuliaSyntax's output).
-    is_outermost::Bool = true,
+    is_outermost::Bool,
+    comment_nodes_from_parent::Vector{FST},
 )
     question_mark_idx = findfirst(c -> kind(c) === K"?" && !haschildren(c), children(cst))
     colon_idx = findfirst(c -> kind(c) === K":" && !haschildren(c), children(cst))
@@ -116,7 +117,7 @@ function _ternary_to_ifelse!(
     # JuliaSyntax's CST places #= inline comments =# as top-level children of the `?` node.
     # We want to move them into the relevant blocks. To do that, we'll need to capture them
     # as we go along.
-    comment_nodes = []
+    comment_nodes = FST[]
 
     for (i, c) in enumerate(children(cst))
         if kind(c) === K"Comment"
@@ -146,10 +147,10 @@ function _ternary_to_ifelse!(
             # True branch — wrap in a Block if not already one.
             s.indent += s.opts.indent
             if is_block(c)
-                for n in comment_nodes
+                for n in [comment_nodes_from_parent..., comment_nodes...]
                     add_node!(output_fst, n, s)
                 end
-                comment_nodes = []
+                comment_nodes = FST[]
                 add_node!(
                     output_fst,
                     pretty(style, c, s, newctx(ctx; ignore_single_line = true), lineage),
@@ -158,10 +159,10 @@ function _ternary_to_ifelse!(
                 )
             else
                 block_fst = FST(Block, nspaces(s))
-                for n in comment_nodes
+                for n in [comment_nodes_from_parent..., comment_nodes...]
                     add_node!(block_fst, n, s)
                 end
-                comment_nodes = []
+                comment_nodes = FST[]
                 add_node!(
                     block_fst,
                     pretty(style, c, s, newctx(ctx; ignore_single_line = true), lineage),
@@ -180,8 +181,9 @@ function _ternary_to_ifelse!(
                 # TODO(penelopeysm): Why does p_if generate a nested tree anyway??
                 inner_if = FST(If, nspaces(s))
                 _ternary_to_ifelse!(
-                    inner_if, style, c, s, ctx, lineage; is_outermost = false
+                    inner_if, style, c, s, ctx, lineage, false, comment_nodes
                 )
+                comment_nodes = FST[]
                 len_before = length(output_fst)
                 add_node!(output_fst, inner_if, s)
                 output_fst.len = max(len_before, length(inner_if))
@@ -199,7 +201,7 @@ function _ternary_to_ifelse!(
                     for n in comment_nodes
                         add_node!(output_fst, n, s)
                     end
-                    comment_nodes = []
+                    comment_nodes = FST[]
                     add_node!(
                         output_fst,
                         pretty(style, c, s, newctx(ctx; ignore_single_line = true), lineage),
@@ -211,7 +213,7 @@ function _ternary_to_ifelse!(
                     for n in comment_nodes
                         add_node!(block_fst, n, s)
                     end
-                    comment_nodes = []
+                    comment_nodes = FST[]
                     add_node!(
                         block_fst,
                         pretty(style, c, s, newctx(ctx; ignore_single_line = true), lineage),
@@ -254,7 +256,7 @@ function p_conditionalopcall(
     rhs = findlast(c -> !JuliaSyntax.is_whitespace(c), children(cst))
     return if rhs !== nothing && kind(cst[rhs]) == K"?" && haschildren(cst[rhs])
         output_fst = FST(If, nspaces(s))
-        _ternary_to_ifelse!(output_fst, style, cst, s, ctx, lineage)
+        _ternary_to_ifelse!(output_fst, style, cst, s, ctx, lineage, true, FST[])
         output_fst
     else
         p_conditionalopcall(DefaultStyle(bs), cst, s, ctx, lineage)

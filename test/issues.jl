@@ -2249,7 +2249,7 @@ end
         test_format(s, s, MinimalStyle())
     end
 
-    @testset "897 generator idempotence" begin
+    @testset "897 BlueStyle chained ternary to if idempotence" begin
         text = "push!(attributes, operandsegmentsizes([1, 1, 1, (lhs_scale==nothing) ? 0 : 1(rhs_scale==nothing) ? 0 : 1]))"
         for style in ALL_STYLES
             if style isa BlueStyle
@@ -2259,6 +2259,21 @@ end
             else
                 test_format(text, nothing, style)
             end
+        end
+
+        # minimised case too
+        s = "foooooooo(foooooooo(a ? b : c ? d : e))"
+        for style in ALL_STYLES
+            test_format(s, nothing, style)
+            test_format(s, nothing, style; margin=40)
+        end
+
+        # check that comments aren't lost
+        s = "#=1=# a #=2=# ? #=3=# b #=4=# : #=5=# c #=6=# ? #=7=# d #=8=# : #=9=# e #=10=#"
+        test_format(s, nothing, BlueStyle())
+        out = format_text(s, BlueStyle())
+        for i in 1:10
+            @test occursin("#=$(i)=#", out)
         end
     end
 
