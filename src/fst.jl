@@ -102,7 +102,11 @@
 
 struct Metadata
     op_kind::JuliaSyntax.Kind
+
+    # Indicates that the node is a shortcircuiting logical operator (`&&` or `||`) whose
+    # value is not used in any way, i.e., it exists solely for the side effects.
     is_standalone_shortcircuit::Bool
+
     is_short_form_function::Bool
     is_assignment::Bool
     is_long_form_function::Bool

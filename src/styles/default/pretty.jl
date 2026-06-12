@@ -1833,6 +1833,22 @@ function p_for(
             if kind(cst) === K"for"
                 eq_to_in_normalization!(n, s.opts.always_for_in, s.opts.for_in_replacement)
             end
+            # Disable is_standalone_shortcircuit so that while loop conditions aren't
+            # affected by short_circuit_to_if. See #940.
+            if kind(cst) === K"while"
+                m = n.metadata
+                if !isnothing(m)
+                    newm = Metadata(
+                        m.op_kind,
+                        false,
+                        m.is_short_form_function,
+                        m.is_assignment,
+                        m.is_long_form_function,
+                        m.has_multiline_argument,
+                    )
+                    n.metadata = newm
+                end
+            end
             add_node!(t, n, s; join_lines = true)
         end
     end

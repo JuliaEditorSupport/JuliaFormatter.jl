@@ -802,7 +802,11 @@ function short_circuit_to_if_pass!(fst::FST, s::State)
         elseif (n.typ === Binary || n.typ === Chain) &&
                !isnothing(n.metadata) &&
                (n.metadata::Metadata).is_standalone_shortcircuit
-            last_arg = i == length(fst.nodes) && fst.typ === Block
+            # if it's the last thing that occurs in a block, or a return statement, then we
+            # need to make sure that the short-circuiting is converted to an if statement
+            # that returns a value. Otherwise, we can just convert it to an if statement
+            # that executes the second argument.
+            last_arg = i == length(fst.nodes) && (fst.typ === Block || fst.typ === Return)
             _short_circuit_to_if!(n, s, last_arg)
         else
             short_circuit_to_if_pass!(n, s)
