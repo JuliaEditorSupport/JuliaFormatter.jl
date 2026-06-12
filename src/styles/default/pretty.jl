@@ -426,8 +426,8 @@ function pretty(
         p_whereopcall(style, node, s, ctx, lineage)
     elseif k === K"?" && haschildren(node)
         p_conditionalopcall(style, node, s, ctx, lineage)
-        # Example: `map(xs) do x; x + 1; end` is a call node with a do child.
     elseif !isnothing(do_block_idx)
+        # Example: `map(xs) do x; x + 1; end` is a call node with a do child.
         p_do_call(style, node, s, ctx, lineage, do_block_idx)
     elseif _unaryinfo !== nothing
         # _unaryinfo === nothing means that it's not unary; true/false indicates whether
