@@ -1071,14 +1071,28 @@ end
 
 Appends `n` to `t`.
 
-- `join_lines` if `false` a NEWLINE node will be added and `n` will appear
-  on the next line, otherwise it will appear on the same line as the previous
-  node (when printing).
-- `max_padding` >= 0 indicates margin of `t` should be based on whether the margin
-  of `n` + `max_padding` is greater than the current margin of `t`. Otherwise the margin
-  `n` will be added to `t`.
-- `override_join_lines_based_on_source` is only used when `join_lines_based_on_source` option is `true`.
-  In which `n` is added to `t` as if `join_lines_based_on_source` was false.
+- `join_lines`: if `true`, `n` is placed on the same line as the previous node. If `false`
+  (the default), a NEWLINE is inserted before `n` so it appears on the next line.
+
+- `max_padding`: controls how `n`'s length contributes to `t.len`, if `n` is not the first
+  node being added.
+
+  - When negative (the default), `n`'s length is added: `t.len += length(n)`. This is
+    appropriate for nodes that continue the current line (e.g. an argument in a call).
+
+  - When non-negative, we calculate `npad = length(n) + max_padding` (i.e., the horizontal
+    extent of `n` plus some specified padding) and set `t.len = max(t.len, npad)`. For
+    example, in `p_if`, when adding the `if`/`elseif`/`else` keywords, we use `max_padding =
+    0`. This means that that `t.len` extends only up to the end of the keyword. That's
+    because the keyword starts a new line and we don't want it to inflate the length of the
+    parent.
+
+  For the first node that's added, it always contributes its full length to `t.len`
+  regardless of the value of `max_padding`.
+
+- `override_join_lines_based_on_source`: when the `join_lines_based_on_source` option is
+  `true`, this flag overrides it so that `n` is added as if `join_lines_based_on_source`
+  were `false`.
 """
 function add_node!(
     t::FST,
