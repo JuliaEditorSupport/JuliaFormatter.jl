@@ -111,7 +111,9 @@ function _ternary_to_ifelse!(
     question_mark_idx = findfirst(c -> kind(c) === K"?" && !haschildren(c), children(cst))
     colon_idx = findfirst(c -> kind(c) === K":" && !haschildren(c), children(cst))
     if question_mark_idx === nothing || colon_idx === nothing
-        error("expected a ternary operator with a question mark and a colon, but couldn't find one or both")
+        error(
+            "expected a ternary operator with a question mark and a colon, but couldn't find one or both",
+        )
     end
 
     # JuliaSyntax's CST places #= inline comments =# as top-level children of the `?` node.
@@ -181,7 +183,14 @@ function _ternary_to_ifelse!(
                 # TODO(penelopeysm): Why does p_if generate a nested tree anyway??
                 inner_if = FST(If, nspaces(s))
                 _ternary_to_ifelse!(
-                    inner_if, style, c, s, ctx, lineage, false, comment_nodes
+                    inner_if,
+                    style,
+                    c,
+                    s,
+                    ctx,
+                    lineage,
+                    false,
+                    comment_nodes,
                 )
                 comment_nodes = FST[]
                 len_before = length(output_fst)
@@ -204,7 +213,13 @@ function _ternary_to_ifelse!(
                     comment_nodes = FST[]
                     add_node!(
                         output_fst,
-                        pretty(style, c, s, newctx(ctx; ignore_single_line = true), lineage),
+                        pretty(
+                            style,
+                            c,
+                            s,
+                            newctx(ctx; ignore_single_line = true),
+                            lineage,
+                        ),
                         s;
                         max_padding = s.opts.indent,
                     )
@@ -216,7 +231,13 @@ function _ternary_to_ifelse!(
                     comment_nodes = FST[]
                     add_node!(
                         block_fst,
-                        pretty(style, c, s, newctx(ctx; ignore_single_line = true), lineage),
+                        pretty(
+                            style,
+                            c,
+                            s,
+                            newctx(ctx; ignore_single_line = true),
+                            lineage,
+                        ),
                         s;
                         max_padding = s.opts.indent,
                     )
@@ -262,4 +283,3 @@ function p_conditionalopcall(
         p_conditionalopcall(DefaultStyle(bs), cst, s, ctx, lineage)
     end
 end
-

@@ -2350,7 +2350,8 @@ function p_pipe_to_call(
     end
 
     # Handle the callee.
-    nest = should_allow_nesting_call_args([cst[lhs_idx]], s.opts.disallow_single_arg_nesting)
+    nest =
+        should_allow_nesting_call_args([cst[lhs_idx]], s.opts.disallow_single_arg_nesting)
     add_node!(
         call_node,
         FST(PUNCTUATION, -1, rhs.startline, rhs.startline, "("),
