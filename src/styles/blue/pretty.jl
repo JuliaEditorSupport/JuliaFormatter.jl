@@ -143,7 +143,12 @@ function _ternary_to_ifelse!(
             # TODO: handle blocks....... see default/pretty p_if
             loc = cursor_loc(s)
             keyword = is_outermost_ternary ? "if" : "elseif"
-            add_node!(output_fst, FST(KEYWORD, loc[2], loc[1], loc[1], keyword), s)
+            add_node!(
+                output_fst,
+                FST(KEYWORD, loc[2], loc[1], loc[1], keyword),
+                s;
+                max_padding = 0,
+            )
             add_node!(output_fst, Whitespace(1), s)
             add_node!(output_fst, pretty(style, c, s, ctx, lineage), s; join_lines = true)
         elseif i > question_mark_idx && i < colon_idx
@@ -175,7 +180,7 @@ function _ternary_to_ifelse!(
                     s;
                     max_padding = s.opts.indent,
                 )
-                add_node!(output_fst, inner_fst, s)
+                add_node!(output_fst, inner_fst, s; max_padding = s.opts.indent)
             end
             s.indent -= s.opts.indent
         elseif i > colon_idx
@@ -186,7 +191,12 @@ function _ternary_to_ifelse!(
             else
                 # else branch -- we're done!
                 loc = cursor_loc(s)
-                add_node!(output_fst, FST(KEYWORD, loc[2], loc[1], loc[1], "else"), s)
+                add_node!(
+                    output_fst,
+                    FST(KEYWORD, loc[2], loc[1], loc[1], "else"),
+                    s;
+                    max_padding = 0,
+                )
                 s.indent += s.opts.indent
                 if is_block(c)
                     for n in comment_nodes
@@ -211,7 +221,7 @@ function _ternary_to_ifelse!(
                         s;
                         max_padding = s.opts.indent,
                     )
-                    add_node!(output_fst, inner_fst, s)
+                    add_node!(output_fst, inner_fst, s; max_padding = s.opts.indent)
                 end
                 s.indent -= s.opts.indent
                 add_node!(output_fst, FST(KEYWORD, loc[2], loc[1], loc[1], "end"), s)
