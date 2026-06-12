@@ -1,6 +1,6 @@
 name = "JuliaFormatter"
 uuid = "98e50ef6-434e-11e9-1051-2b60c6c9e899"
-version = "2.6.14"
+version = "2.6.15"
 authors = ["Dominique Luna <dluna132@gmail.com> and contributors"]
 
 [deps]

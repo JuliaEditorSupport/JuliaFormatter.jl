@@ -1,3 +1,7 @@
+# v2.6.15
+
+Fixed a bug where the combination of `always_use_return` and `short_circuit_to_if` would silently change the meaning of a programme. (#887, #1095)
+
 # v2.6.14
 
 Fixed a bug where placing a comment after a `do` keyword would cause non-idempotent formatting. (#1088, #1090)

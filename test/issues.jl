@@ -2229,6 +2229,24 @@ end
         end
     end
 
+    @testset "887 short_circuit_to_if + prepend_return" begin
+        s = raw"""
+        function exampleFunction()
+            LOGFILEHANDLE != "notset" && write(LOGFILEHANDLE, "examplestring")
+        end"""
+        expected = raw"""
+        function exampleFunction()
+            return if LOGFILEHANDLE != "notset"
+                write(LOGFILEHANDLE, "examplestring")
+            else
+                false
+            end
+        end"""
+        for style in ALL_STYLES
+            test_format(s, expected, style; short_circuit_to_if = true, always_use_return = true)
+        end
+    end
+
     @testset "890" begin
         # `public` keyword should not eat the following space.
         # Previously YASStyle turned `public Foo,Bar` into `publicFoo,Bar`.
