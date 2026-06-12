@@ -398,11 +398,10 @@ function n_tuple!(
             s.line_offset = fst[end].indent + 1
         end
     else
-        extra_margin = fst.extra_margin
-        if has_closer
-            (extra_margin += 1)
+        extra_margin = if has_closer
+            fst.extra_margin + 1
         else
-            false
+            fst.extra_margin
         end
         nested |= nest!(style, nodes, s, fst.indent, lineage; extra_margin = extra_margin)
     end

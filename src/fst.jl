@@ -789,7 +789,7 @@ function has_delimiters(cst::JuliaSyntax.GreenNode)
     kind(cst) in KSet"tuple vect braces bracescat comprehension parens"
 end
 
-function should_nest_call_args(args, disallow_single_arg_nesting::Bool)
+function should_allow_nesting_call_args(args, disallow_single_arg_nesting::Bool)
     return length(args) > 0 && !(length(args) == 1 &&
              # If the argument has delimiters, it can itself be nested, so we
              # don't need to nest the call expression.
