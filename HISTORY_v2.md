@@ -1,3 +1,7 @@
+# v2.7.1
+
+Fixed a bug causing lack of idempotence in typed comprehension expressions (i.e., things like `T[expr for x in y]`). (#1105, #1106)
+
 # v2.7.0
 
 Improved usage messages for the `jlfmt` command-line tool. (#1098)

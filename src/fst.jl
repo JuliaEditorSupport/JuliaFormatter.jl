@@ -542,9 +542,7 @@ function is_comprehension(x::FST)
 end
 
 function first_nontrivial_child_is_block(cst::JuliaSyntax.GreenNode)
-    if !haschildren(cst)
-        return false
-    end
+    JuliaSyntax.is_leaf(cst) && return false
     for c in children(cst)
         if JuliaSyntax.is_whitespace(c)
             continue

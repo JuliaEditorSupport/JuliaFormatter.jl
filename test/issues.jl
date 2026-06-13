@@ -2820,6 +2820,40 @@ end
             end
         end
     end
+
+    @testset "1105 typed comprehension idempotence" begin
+        s = """
+        function f()
+            initial_incoming_vals = Pair{Any, Any}[
+                if 0 in defuses[x].defs
+                    Pair{Any, Any}(Argument(x), true)
+                elseif !defuses[x].any_newvar
+                    Pair{Any, Any}(UNDEF_TOKEN, false)
+                else
+                    Pair{Any, Any}(SSAValue(-2), false)
+                end for x in 1:length(ci.slotflags)
+            ]
+        end"""
+        target = """
+        function f()
+            initial_incoming_vals = Pair{Any,Any}[
+                if 0 in defuses[x].defs
+                    Pair{Any,Any}(Argument(x), true)
+                elseif !defuses[x].any_newvar
+                    Pair{Any,Any}(UNDEF_TOKEN, false)
+                else
+                    Pair{Any,Any}(SSAValue(-2), false)
+                end for x = 1:length(ci.slotflags)
+            ]
+        end"""
+        for style in ALL_STYLES
+            if style isa DefaultStyle
+                test_format(s, target, style)
+            else
+                test_format(s, nothing, style)
+            end
+        end
+    end
 end
 
 end

@@ -3254,16 +3254,19 @@ function p_comprehension(
     end
 
     childs = children(cst)
-    idx = findfirst(
-        n -> !JuliaSyntax.is_whitespace(kind(n)) && !(kind(n) in KSet"[ ]"),
-        childs,
-    )
-    arg = childs[idx]
 
-    if is_block(arg) || (
-        kind(arg) === K"generator" &&
-        haschildren(arg) &&
-        first_nontrivial_child_is_block(arg)
+    opening_brace_idx = findfirst(n -> kind(n) === K"[", childs)
+    body_idx = findnext(
+        n -> !JuliaSyntax.is_whitespace(n),
+        childs,
+        opening_brace_idx + 1,
+    )
+    body_arg = childs[body_idx]
+
+    if is_block(body_arg) || (
+        # this branch covers something like [BLOCK for x in y]
+        kind(body_arg) === K"generator" &&
+        first_nontrivial_child_is_block(body_arg)
     )
         t.nest_behavior = AlwaysNest
     end
