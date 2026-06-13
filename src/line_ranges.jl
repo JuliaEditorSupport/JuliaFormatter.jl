@@ -25,6 +25,14 @@
 const LINE_RANGE_MARKER_BEGIN = "#! __JuliaFormatter_line_range_begin__"
 const LINE_RANGE_MARKER_END = "#! __JuliaFormatter_line_range_end__"
 
+# A line counts as a marker only when it consists of *nothing but* that marker (ignoring
+# surrounding whitespace). We match exactly rather than with `occursin` to guard against the
+# unlikely case where the formatter relocates a marker comment onto a line that also holds
+# real code: such a line is then left untouched instead of being silently dropped, and a
+# missing marker surfaces as an assertion failure in `remove_line_range_markers` rather than
+# as corrupted output.
+is_line_range_marker(line::AbstractString, marker::AbstractString) = strip(line) == marker
+
 _line_range(r::AbstractUnitRange) = Int(first(r)):Int(last(r))
 function _line_range(t)
     # Accept `(start, stop)` tuples (the documented form, `lines = [(1, 10), (42, 47)]`) and
@@ -145,8 +153,8 @@ function remove_line_range_markers(marked_src::AbstractString, formatted::Abstra
         # Emit source (out-of-range) lines until the next begin marker, dropping any marker
         # lines we pass (the leading line here may be an end marker left over from the
         # previous iteration).
-        while si <= nsrc && !occursin(LINE_RANGE_MARKER_BEGIN, src_lines[si])
-            if !occursin(LINE_RANGE_MARKER_END, src_lines[si])
+        while si <= nsrc && !is_line_range_marker(src_lines[si], LINE_RANGE_MARKER_BEGIN)
+            if !is_line_range_marker(src_lines[si], LINE_RANGE_MARKER_END)
                 write(io, src_lines[si])
             end
             si += 1
@@ -154,19 +162,19 @@ function remove_line_range_markers(marked_src::AbstractString, formatted::Abstra
         si > nsrc && break
         # `src_lines[si]` is a begin marker: skip the original in-range source up to its end
         # marker (we use the formatted version of those lines instead).
-        while si <= nsrc && !occursin(LINE_RANGE_MARKER_END, src_lines[si])
+        while si <= nsrc && !is_line_range_marker(src_lines[si], LINE_RANGE_MARKER_END)
             si += 1
         end
         @assert si <= nsrc "unbalanced line-range markers in source"
         # Advance the formatted stream to its matching begin marker, dropping the formatted
         # out-of-range lines (we already emitted those from the source).
-        while fi <= nfmt && !occursin(LINE_RANGE_MARKER_BEGIN, fmt_lines[fi])
+        while fi <= nfmt && !is_line_range_marker(fmt_lines[fi], LINE_RANGE_MARKER_BEGIN)
             fi += 1
         end
         @assert fi <= nfmt "begin marker did not survive formatting"
         # Emit formatted in-range lines until the end marker.
-        while fi <= nfmt && !occursin(LINE_RANGE_MARKER_END, fmt_lines[fi])
-            if !occursin(LINE_RANGE_MARKER_BEGIN, fmt_lines[fi])
+        while fi <= nfmt && !is_line_range_marker(fmt_lines[fi], LINE_RANGE_MARKER_END)
+            if !is_line_range_marker(fmt_lines[fi], LINE_RANGE_MARKER_BEGIN)
                 write(io, fmt_lines[fi])
             end
             fi += 1
