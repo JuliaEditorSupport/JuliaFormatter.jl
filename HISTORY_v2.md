@@ -4,6 +4,8 @@ Fixed a bug causing lack of idempotence in typed comprehension expressions (i.e.
 
 Fixed a bug causing lack of idempotence when using `surround_whereop_typeparameters=true` (when the `{` and `}` were inserted, line breaks were not initially being allowed next to them, but would be allowed on the second parse). (#1107, #1106)
 
+Fixed a bug causing lack of idempotence when `in` / `=` / `∈` were being converted inside a `for`-expression (the change in character length was not being accounted for in nesting decisions). (#1108, #1106)
+
 # v2.7.0
 
 Improved usage messages for the `jlfmt` command-line tool. (#1098)
