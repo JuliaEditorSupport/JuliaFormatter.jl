@@ -10,9 +10,8 @@ using Test
 
 @testset "line ranges (`lines` kwarg)" begin
     @testset "normalize_line_ranges" begin
-        # tuples and ranges both accepted, converted to sorted UnitRange{Int}
+        # `(start, stop)` tuples are converted to sorted UnitRange{Int}
         @test normalize_line_ranges([(1, 3)]) == [1:3]
-        @test normalize_line_ranges([3:5]) == [3:5]
         # sorting
         @test normalize_line_ranges([(5, 6), (1, 2)]) == [1:2, 5:6]
         # overlapping ranges merge

@@ -33,46 +33,31 @@ const LINE_RANGE_MARKER_END = "#! __JuliaFormatter_line_range_end__"
 # as corrupted output.
 is_line_range_marker(line::AbstractString, marker::AbstractString) = strip(line) == marker
 
-_line_range(r::AbstractUnitRange) = Int(first(r)):Int(last(r))
-function _line_range(t)
-    # Accept `(start, stop)` tuples (the documented form, `lines = [(1, 10), (42, 47)]`) and
-    # any other 2-element collection.
-    length(t) == 2 || throw(
-        ArgumentError(
-            "invalid `lines` entry $(repr(t)): expected a `(start, stop)` pair or a range",
-        ),
-    )
-    a, b = t
-    return Int(a):Int(b)
-end
-
 """
-    normalize_line_ranges(lines) -> Vector{UnitRange{Int}}
+    normalize_line_ranges(lines::Vector{Tuple{Int,Int}}) -> Vector{UnitRange{Int}}
 
-Convert the user-supplied `lines` (a collection of `(start, stop)` tuples and/or ranges,
-inclusive and 1-based) into a sorted vector of non-overlapping, non-adjacent
-`UnitRange{Int}`s.
+Convert the user-supplied `lines` (inclusive, 1-based `(start, stop)` line ranges) into a
+sorted vector of non-overlapping, non-adjacent `UnitRange{Int}`s.
 
 Overlapping and *adjacent* ranges are merged rather than rejected: this keeps the core API
 robust for callers such as LSP `rangesFormatting`, which may legitimately hand us touching
-or overlapping `Range`s. Bounds against the actual file length are checked later, in
+or overlapping ranges. Bounds against the actual file length are checked later, in
 [`add_line_range_markers`](@ref).
 """
-function normalize_line_ranges(lines)
+function normalize_line_ranges(lines::Vector{Tuple{Int,Int}})
     ranges = UnitRange{Int}[]
-    for x in lines
-        r = _line_range(x)
-        first(r) >= 1 || throw(
+    for (a, b) in lines
+        a >= 1 || throw(
             ArgumentError(
-                "invalid `lines` entry $(repr(x)): line numbers are 1-based, got start $(first(r))",
+                "invalid `lines` entry $((a, b)): line numbers are 1-based, got start $a",
             ),
         )
-        first(r) <= last(r) || throw(
+        a <= b || throw(
             ArgumentError(
-                "invalid `lines` entry $(repr(x)): empty range (start $(first(r)) > stop $(last(r)))",
+                "invalid `lines` entry $((a, b)): empty range (start $a > stop $b)",
             ),
         )
-        push!(ranges, r)
+        push!(ranges, a:b)
     end
     sort!(ranges; by = first)
     merged = UnitRange{Int}[]
@@ -90,7 +75,7 @@ function normalize_line_ranges(lines)
 end
 
 """
-    add_line_range_markers(text, ranges) -> String
+    add_line_range_markers(text::AbstractString, ranges::Vector{UnitRange{Int}}) -> String
 
 Return a copy of `text` with `LINE_RANGE_MARKER_BEGIN` / `LINE_RANGE_MARKER_END`
 comment lines inserted just before and just after each range in `ranges` (a normalized
@@ -130,7 +115,7 @@ function add_line_range_markers(text::AbstractString, ranges::Vector{UnitRange{I
 end
 
 """
-    remove_line_range_markers(marked_src, formatted) -> String
+    remove_line_range_markers(marked_src::AbstractString, formatted::AbstractString) -> String
 
 Splice the formatted in-range blocks back into the original source. `marked_src` is the
 marker-annotated source produced by [`add_line_range_markers`](@ref) and `formatted` is the
@@ -185,13 +170,23 @@ function remove_line_range_markers(marked_src::AbstractString, formatted::Abstra
 end
 
 """
-    format_line_ranges(text, style, lines; kwargs...) -> String
+    format_line_ranges(
+        text::AbstractString,
+        style::AbstractStyle,
+        lines::Vector{Tuple{Int,Int}};
+        kwargs...,
+    ) -> String
 
-Format only the lines of `text` covered by `lines` (a collection of inclusive, 1-based
-`(start, stop)` tuples and/or ranges), emitting all other lines verbatim. See the comment at
-the top of this file for the overall strategy.
+Format only the lines of `text` covered by `lines` (a vector of inclusive, 1-based
+`(start, stop)` line ranges), emitting all other lines verbatim. See the comment at the top
+of this file for the overall strategy.
 """
-function format_line_ranges(text::AbstractString, style::AbstractStyle, lines; kwargs...)
+function format_line_ranges(
+    text::AbstractString,
+    style::AbstractStyle,
+    lines::Vector{Tuple{Int,Int}};
+    kwargs...,
+)
     ranges = normalize_line_ranges(lines)
     isempty(ranges) && return text  # nothing requested -> nothing formatted
     marked = add_line_range_markers(text, ranges)

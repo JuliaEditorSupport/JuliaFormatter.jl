@@ -169,6 +169,7 @@ normalize_line_ending(s::AbstractString, replacer = WINDOWS_TO_UNIX) = replace(s
         style::AbstractStyle = DefaultStyle(),
         indent::Int = 4,
         margin::Int = 92,
+        lines::Union{Nothing,Vector{Tuple{Int,Int}}} = nothing,
         options...,
     )::String
 
@@ -180,7 +181,7 @@ See [Formatting Options](@ref formatting-options) for details on available optio
 # Line-range formatting
 
 Pass `lines` to restrict formatting to a set of line ranges, emitting everything else
-verbatim. `lines` is a collection of inclusive, 1-based `(start, stop)` tuples and/or
+verbatim. `lines` is a `Vector{Tuple{Int,Int}}` of inclusive, 1-based `(start, stop)` line
 ranges, e.g. `format_text(text; lines = [(1, 10), (42, 47)])`. Overlapping and adjacent
 ranges are merged. A range that begins or ends in the middle of a multi-line expression is
 formatted on a best-effort basis.
@@ -189,7 +190,12 @@ function format_text(text::AbstractString; style::AbstractStyle = DefaultStyle()
     return format_text(text, style; kwargs...)
 end
 
-function format_text(text::AbstractString, style::AbstractStyle; lines = nothing, kwargs...)
+function format_text(
+    text::AbstractString,
+    style::AbstractStyle;
+    lines::Union{Nothing,Vector{Tuple{Int,Int}}} = nothing,
+    kwargs...,
+)
     if isempty(text)
         return text
     end
@@ -206,7 +212,7 @@ function format_text(
     text::AbstractString,
     style::SciMLStyle;
     maxiters = 3,
-    lines = nothing,
+    lines::Union{Nothing,Vector{Tuple{Int,Int}}} = nothing,
     kwargs...,
 )
     if isempty(text)
