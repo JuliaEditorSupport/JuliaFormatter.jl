@@ -1,9 +1,20 @@
 function format_check(io::IOBuffer, fst::FST, s::State)
+    # TODO(penelopeysm) This function is REALLY confusing! The logic really needs to be
+    # simplified......
+
+    # `fst.typ` must be NOTCODE -- this means that any text in `fst.startline:fst.endline`
+    # doesn't need to be formatted and can just be printed verbatim.
+    if fst.typ !== NOTCODE
+        error("format_check called with node of type $(fst.typ)")
+    end
+
+    # Happy path -- no skipped ranges. Just an ordinary comment and/or blank lines.
     if length(s.doc.format_skips) == 0
         print_notcode(io, fst, s)
         return
     end
 
+    # Some skipped ranges. Check to see if the current lines we're printing overlap with it.
     line_range = (fst.startline):(fst.endline)
     skip = s.doc.format_skips[1]
     nlines = numlines(s.doc)
@@ -11,6 +22,14 @@ function format_check(io::IOBuffer, fst::FST, s::State)
     if s.on &&
        skip.startline in line_range &&
        (skip.endline in line_range || skip.endline == nlines)
+        # Either the skip is fully contained within the range of lines we're printing
+        # (skip.endline in line_range). In which case we print all the text up to
+        # the `#! format: on` tag.
+        #
+        # Or the skip is at the end of the file (skip.endline == nlines) in which case
+        # we just print everything from the current node to the end.
+
+        # Dump the text prior to the #! format: off tag.
         l1 = fst.startline
         l2 = skip.startline - 1
         if l1 <= l2
@@ -24,56 +43,94 @@ function format_check(io::IOBuffer, fst::FST, s::State)
         l2 = fst.endline
 
         if l1 <= l2
+            # In this branch, there's more stuff in this NOTCODE node after the #! format:
+            # on tag.
+
+            # Dump the text from the #! format: off tag to the #! format: on tag.
+            write(io, output)
+
+            # Then anything after the #! format: on tag.
             r1 = linerange(s, l1)
             r2 = linerange(s, l2)
-            write(io, output)
             output = JuliaSyntax.sourcetext(s.doc.srcfile)[first(r1):last(r2)]
             if l1 <= nlines && output[end] == '\n'
                 output = output[1:prevind(output, end)]
             end
             write(io, output)
         else
+            # In this branch, either the #! format: on tag is at the end of the file, or the
+            # #! format: on tag is the last line of this NOTCODE node. In either case, we
+            # just need to print the text from the #! format: off tag to the #! format: on
+            # tag.
             if l1 <= nlines && output[end] == '\n'
                 output = output[1:prevind(output, end)]
             end
             write(io, output)
         end
 
+        # If the skip goes to the end of the file, we disable output, otherwise later on
+        # format_text() will end up printing the formatted version of the text. All the
+        # output we care about has already been generated above.
         if nlines == skip.endline
+            popfirst!(s.doc.format_skips)
             s.on = false
         end
     elseif s.on && skip.startline in line_range
-        l1 = fst.startline
-        l2 = skip.startline - 1
+        # Formatting disabled midway through the range of lines. Essentially, this covers
+        # the case where formatting is being disabled.
+
+        # Print all text up until, but NOT including, the #! format: off tag.
+        l1 = fst.startline       # The start of the NOTCODE node we're looking at.
+        l2 = skip.startline - 1  # The line before the #! format: off tag.
         if l1 <= l2
             r1 = linerange(s, l1)
             r2 = linerange(s, l2)
             write(io, JuliaSyntax.sourcetext(s.doc.srcfile)[first(r1):last(r2)])
         end
+        # Disable printing of formatted output. Later on, when we hit #! format: on, we'll
+        # dump the verbatim source text.
         s.on = false
     elseif !s.on && skip.endline in line_range
+        # Formatting enabled midway through the range of lines. Essentially, this covers the
+        # case where formatting is being re-enabled.
+
+        # The verbatim source text for the range of lines that are skipped (which may
+        # include lines prior to line_range). This includes both the `#! format: off` and
+        # `#! format: on` tags.
         output = JuliaSyntax.sourcetext(s.doc.srcfile)[(skip.startoffset):(skip.endoffset)]
-        l1 = skip.endline + 1
-        l2 = fst.endline
+
+        l1 = skip.endline + 1  # The line after the #! format: on tag.
+        l2 = fst.endline       # The end of the NOTCODE node we're looking at.
 
         if l1 <= l2
+            # This branch covers the case where there's more text in this NOTCODE node after
+            # the #! format: on tag.
+
+            # Verbatim source text from the #! format: off tag to the #! format: on tag.
+            write(io, output)
+
+            # Then anything after the #! format: on tag.
             r1 = linerange(s, l1)
             r2 = linerange(s, l2)
-            write(io, output)
             output = JuliaSyntax.sourcetext(s.doc.srcfile)[first(r1):last(r2)]
             if l1 <= nlines && output[end] == '\n'
                 output = output[1:prevind(output, end)]
             end
             write(io, output)
         else
+            # Just the verbatim source text from the #! format: off tag to the #! format: on
+            # tag.
             if l1 <= nlines && output[end] == '\n'
                 output = output[1:prevind(output, end)]
             end
             write(io, output)
         end
+        # We're done with this skip.
         popfirst!(s.doc.format_skips)
+        # Re-enable printing of formatted output.
         s.on = true
     else
+        # There are skipped ranges, but not part of this NOTCODE node.
         print_notcode(io, fst, s)
     end
 end

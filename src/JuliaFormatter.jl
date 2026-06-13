@@ -267,8 +267,10 @@ function format_text(node::JuliaSyntax.GreenNode, style::AbstractStyle, s::State
     end
     print_tree(io, fst, s)
     nlines = numlines(s.doc)
-    if s.on && fst.endline < nlines
-        print_leaf(io, Newline(), s)
+    if fst.endline < nlines
+        if s.on
+            print_leaf(io, Newline(), s)
+        end
         format_check(io, Notcode(fst.endline + 1, nlines), s)
     end
     if s.doc.ends_on_nl

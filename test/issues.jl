@@ -2517,6 +2517,20 @@ end
         test_format(s2, s2_return; always_use_return = true)
     end
 
+    @testset "949 format:on after TopLevel FST end but before last line" begin
+        for s in (
+            "#! format: off\nfoo(   )\n#! format: on\n\n",
+            "#! format: off\nfoo(   )\n#! format: on\n",
+            "#! format: off\nfoo(   )\n#! format: on",
+            "#! format: off\nfoo(   )\n#! format: on\n#hi",
+            "#! format: off\nfoo(   )\n#! format: on\n#hi\n",
+        )
+            for style in ALL_STYLES
+                test_format(s, s, style)
+            end
+        end
+    end
+
     @testset "1025" begin
         # from julia@1.12.6 Compiler/src/typelimits.jl
         s = """
