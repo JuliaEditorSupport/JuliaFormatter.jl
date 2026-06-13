@@ -616,24 +616,28 @@ function main(argv::Vector{String})
     print_progress = verbose && !(input_is_stdin || output_is_stdout)
 
     nfiles_str = string(length(inputfiles))
-    options_list = [
-        ProcessFileArgs(
-            inputfile,
-            file_counter,
-            nfiles_str,
-            print_progress,
-            check,
-            inplace,
-            outputfile,
-            input_is_stdin,
-            stdin_filename,
-            config_dir,
-            format_options,
-            diff,
-            format_markdown,
-            config_priority,
-        ) for (file_counter, inputfile) in enumerate(inputfiles)
-    ]
+    options_list = ProcessFileArgs[]
+    for (file_counter, inputfile) in enumerate(inputfiles)
+        push!(
+            options_list,
+            ProcessFileArgs(
+                inputfile,
+                file_counter,
+                nfiles_str,
+                print_progress,
+                check,
+                inplace,
+                outputfile,
+                input_is_stdin,
+                stdin_filename,
+                config_dir,
+                format_options,
+                diff,
+                format_markdown,
+                config_priority,
+            ),
+        )
+    end
 
     # Use multithreading for multiple files (only if multiple threads available)
     # Single file or stdin or single thread: process sequentially
@@ -855,11 +859,12 @@ function process_file(args::ProcessFileArgs)
     end
 
     formatted_str = try
-        if is_markdown
+        local formatted_str = if is_markdown
             format_md(sourcetext; effective_options...)
         else
             format_text(sourcetext; effective_options...)
         end
+        replace(formatted_str, r"\n*$" => "\n")
     catch err
         if err isa JuliaSyntax.ParseError
             report_status() do io
@@ -886,8 +891,6 @@ function process_file(args::ProcessFileArgs)
         panic(msg, err, bt)
         return 1
     end
-
-    formatted_str = replace(formatted_str, r"\n*$" => "\n")
 
     changed = (formatted_str != sourcetext)
     if args.check
