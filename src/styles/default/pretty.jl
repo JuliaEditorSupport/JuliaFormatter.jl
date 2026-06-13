@@ -2752,7 +2752,8 @@ function p_whereopcall(
                 # where it would be really useful to have an IR where we can make such
                 # transformations prior to generating the FST.
                 brace_fst = FST(Braces, nspaces(s))
-                nest_braces = should_allow_nesting_call_args([a], s.opts.disallow_single_arg_nesting)
+                nest_braces =
+                    should_allow_nesting_call_args([a], s.opts.disallow_single_arg_nesting)
                 lbrace = FST(PUNCTUATION, -1, n.endline, n.endline, "{")
                 add_node!(brace_fst, lbrace, s; join_lines = true)
                 nest_braces && add_node!(brace_fst, Placeholder(0), s)
@@ -3263,17 +3264,12 @@ function p_comprehension(
     childs = children(cst)
 
     opening_brace_idx = findfirst(n -> kind(n) === K"[", childs)
-    body_idx = findnext(
-        n -> !JuliaSyntax.is_whitespace(n),
-        childs,
-        opening_brace_idx + 1,
-    )
+    body_idx = findnext(n -> !JuliaSyntax.is_whitespace(n), childs, opening_brace_idx + 1)
     body_arg = childs[body_idx]
 
     if is_block(body_arg) || (
         # this branch covers something like [BLOCK for x in y]
-        kind(body_arg) === K"generator" &&
-        first_nontrivial_child_is_block(body_arg)
+        kind(body_arg) === K"generator" && first_nontrivial_child_is_block(body_arg)
     )
         t.nest_behavior = AlwaysNest
     end
