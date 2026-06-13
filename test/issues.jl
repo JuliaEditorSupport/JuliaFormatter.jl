@@ -2862,6 +2862,25 @@ end
             test_format(s, nothing, style; ast=true, surround_whereop_typeparameters = true, margin=88)
         end
     end
+
+    @testset "1108 always_for_in idempotence" begin
+        # The bug was that without the `in` -> `=`, it's over margin, so lines were broken.
+        # But after converting to `=` it's within margin, so the formatter decided to join
+        # it back, leading to idempotence failure.
+        s_ = """
+        function f()
+            d = Dict([randstring(8) => [RainbowString(randstring(8)) for i in 1:10] for j in 1:5]...)
+        end"""
+        s = """
+        function f()
+            d = Dict([randstring(8) => [RainbowString(randstring(8)) for i = 1:10] for j = 1:5]...)
+        end"""
+        test_format(s_, s)
+        # Check that other style decisions don't mess with it
+        for style in ALL_STYLES
+            test_format(s_, s, style; margin=92, always_use_return=false, always_for_in=true, for_in_replacement="=")
+        end
+    end
 end
 
 end

@@ -923,6 +923,7 @@ function eq_to_in_normalization!(fst::FST, always_for_in::Bool, for_in_replaceme
             insert!(fst, idx + 2, Whitespace(1))
         end
 
+        old_op_len = op.len
         if always_for_in
             op.val = for_in_replacement
             op.len = length(op.val)
@@ -933,6 +934,7 @@ function eq_to_in_normalization!(fst::FST, always_for_in::Bool, for_in_replaceme
             op.val = "="
             op.len = length(op.val)
         end
+        fst.len += op.len - old_op_len
         if !isnothing(fst.metadata)
             metadata = fst.metadata::Metadata
             opkind = JuliaSyntax.Kind(op.val)
