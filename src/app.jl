@@ -717,6 +717,20 @@ function process_file(args::ProcessFileArgs)
         ""
     end
 
+    # Emit a single progress line -- the dotted prefix followed by whatever `f` writes to its
+    # `io` argument -- to stderr under the print lock. A no-op unless progress printing is on.
+    report_status = function (f)
+        args.print_progress || return
+        @lock print_lock begin
+            buf = IOBuffer()
+            io = IOContext(buf, :color => supports_color(stderr))
+            printstyled(io, progress_prefix; color = :blue)
+            f(io)
+            print(stderr, String(take!(buf)))
+        end
+        return
+    end
+
     # Check if we should skip markdown files
     inputfile_pretty = args.inputfile == "-" ? args.stdin_filename : args.inputfile
     _, ext = splitext(inputfile_pretty)
@@ -727,14 +741,8 @@ function process_file(args::ProcessFileArgs)
         return 1
     end
     if is_markdown && !args.format_markdown
-        if args.print_progress
-            @lock print_lock begin
-                buf = IOBuffer()
-                io = IOContext(buf, :color => supports_color(stderr))
-                printstyled(io, progress_prefix; color = :blue)
-                okln(io, "skipped (markdown)")
-                print(stderr, String(take!(buf)))
-            end
+        report_status() do io
+            okln(io, "skipped (markdown)")
         end
         return 0
     end
@@ -745,14 +753,8 @@ function process_file(args::ProcessFileArgs)
         try
             read(stdin, String)
         catch err
-            if args.print_progress
-                @lock print_lock begin
-                    buf = IOBuffer()
-                    io = IOContext(buf, :color => supports_color(stderr))
-                    printstyled(io, progress_prefix; color = :blue)
-                    errln(io, "✗ read failed")
-                    print(stderr, String(take!(buf)))
-                end
+            report_status() do io
+                errln(io, "✗ read failed")
             end
             panic("could not read input from stdin: ", err)
             return 1
@@ -762,27 +764,15 @@ function process_file(args::ProcessFileArgs)
         try
             read(args.inputfile, String)
         catch err
-            if args.print_progress
-                @lock print_lock begin
-                    buf = IOBuffer()
-                    io = IOContext(buf, :color => supports_color(stderr))
-                    printstyled(io, progress_prefix; color = :blue)
-                    errln(io, "✗ read failed")
-                    print(stderr, String(take!(buf)))
-                end
+            report_status() do io
+                errln(io, "✗ read failed")
             end
             panic("could not read input from file `$(args.inputfile)`: ", err)
             return 1
         end
     else
-        if args.print_progress
-            @lock print_lock begin
-                buf = IOBuffer()
-                io = IOContext(buf, :color => supports_color(stderr))
-                printstyled(io, progress_prefix; color = :blue)
-                errln(io, "✗ not found")
-                print(stderr, String(take!(buf)))
-            end
+        report_status() do io
+            errln(io, "✗ not found")
         end
         panic("input path is not a file or directory: `$(args.inputfile)`")
         return 1
@@ -802,14 +792,8 @@ function process_file(args::ProcessFileArgs)
         elseif isfile(args.outputfile) &&
                !args.input_is_stdin &&
                samefile(args.outputfile, args.inputfile)
-            if args.print_progress
-                @lock print_lock begin
-                    buf = IOBuffer()
-                    io = IOContext(buf, :color => supports_color(stderr))
-                    printstyled(io, progress_prefix; color = :blue)
-                    errln(io, "✗ invalid output")
-                    print(stderr, String(take!(buf)))
-                end
+            report_status() do io
+                errln(io, "✗ invalid output")
             end
             panic(
                 "cannot use same file for input and output, use `-i` to modify a file in place",
@@ -863,14 +847,8 @@ function process_file(args::ProcessFileArgs)
             ignore_patterns,
         )
             # Skip ignored files
-            if args.print_progress
-                @lock print_lock begin
-                    buf = IOBuffer()
-                    io = IOContext(buf, :color => supports_color(stderr))
-                    printstyled(io, progress_prefix; color = :blue)
-                    okln(io, "skipped (ignored)")
-                    print(stderr, String(take!(buf)))
-                end
+            report_status() do io
+                okln(io, "skipped (ignored)")
             end
             return 0
         end
@@ -884,14 +862,8 @@ function process_file(args::ProcessFileArgs)
         end
     catch err
         if err isa JuliaSyntax.ParseError
-            if args.print_progress
-                @lock print_lock begin
-                    buf = IOBuffer()
-                    io = IOContext(buf, :color => supports_color(stderr))
-                    printstyled(io, progress_prefix; color = :blue)
-                    errln(io, "✗ parse error")
-                    print(stderr, String(take!(buf)))
-                end
+            report_status() do io
+                errln(io, "✗ parse error")
             end
             panic(string("failed to parse input from ", inputfile_pretty, ": "), err)
             return 1
@@ -899,26 +871,14 @@ function process_file(args::ProcessFileArgs)
         if err isa ArgumentError
             # User input error (e.g. an out-of-bounds `--lines` range). Report it cleanly,
             # without a backtrace, just like a parse error.
-            if args.print_progress
-                @lock print_lock begin
-                    buf = IOBuffer()
-                    io = IOContext(buf, :color => supports_color(stderr))
-                    printstyled(io, progress_prefix; color = :blue)
-                    errln(io, "✗ invalid input")
-                    print(stderr, String(take!(buf)))
-                end
+            report_status() do io
+                errln(io, "✗ invalid input")
             end
             panic(string("failed to format input from ", inputfile_pretty, ": "), err)
             return 1
         end
-        if args.print_progress
-            @lock print_lock begin
-                buf = IOBuffer()
-                io = IOContext(buf, :color => supports_color(stderr))
-                printstyled(io, progress_prefix; color = :blue)
-                errln(io, "✗ format failed")
-                print(stderr, String(take!(buf)))
-            end
+        report_status() do io
+            errln(io, "✗ format failed")
         end
         msg = string("failed to format input from ", inputfile_pretty, ": ")
         bt = stacktrace(catch_backtrace())
@@ -932,25 +892,13 @@ function process_file(args::ProcessFileArgs)
     changed = (formatted_str != sourcetext)
     if args.check
         if changed
-            if args.print_progress
-                @lock print_lock begin
-                    buf = IOBuffer()
-                    io = IOContext(buf, :color => supports_color(stderr))
-                    printstyled(io, progress_prefix; color = :blue)
-                    errln(io, "✗ needs formatting")
-                    print(stderr, String(take!(buf)))
-                end
+            report_status() do io
+                errln(io, "✗ needs formatting")
             end
             local_errno = 1
         else
-            if args.print_progress
-                @lock print_lock begin
-                    buf = IOBuffer()
-                    io = IOContext(buf, :color => supports_color(stderr))
-                    printstyled(io, progress_prefix; color = :blue)
-                    okln(io, "✓ already formatted")
-                    print(stderr, String(take!(buf)))
-                end
+            report_status() do io
+                okln(io, "✓ already formatted")
             end
         end
     elseif changed || !args.inplace
@@ -958,41 +906,23 @@ function process_file(args::ProcessFileArgs)
         try
             writeo(output, formatted_str)
         catch err
-            if args.print_progress
-                @lock print_lock begin
-                    buf = IOBuffer()
-                    io = IOContext(buf, :color => supports_color(stderr))
-                    printstyled(io, progress_prefix; color = :blue)
-                    errln(io, "✗ write failed")
-                    print(stderr, String(take!(buf)))
-                end
+            report_status() do io
+                errln(io, "✗ write failed")
             end
             panic("could not write to output file `$(output.file)`: ", err)
             return 1
         end
-        if args.print_progress
-            @lock print_lock begin
-                buf = IOBuffer()
-                io = IOContext(buf, :color => supports_color(stderr))
-                printstyled(io, progress_prefix; color = :blue)
-                if args.inplace
-                    okln(io, "✓ formatted")
-                else
-                    okln(io)
-                end
-                print(stderr, String(take!(buf)))
+        report_status() do io
+            if args.inplace
+                okln(io, "✓ formatted")
+            else
+                okln(io)
             end
         end
     else
         # inplace && !changed
-        if args.print_progress
-            @lock print_lock begin
-                buf = IOBuffer()
-                io = IOContext(buf, :color => supports_color(stderr))
-                printstyled(io, progress_prefix; color = :blue)
-                okln(io, "no changes")
-                print(stderr, String(take!(buf)))
-            end
+        report_status() do io
+            okln(io, "no changes")
         end
     end
 
