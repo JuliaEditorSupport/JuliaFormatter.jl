@@ -80,6 +80,22 @@ using Test
         )
     end
 
+    @testset "line count changes within the range" begin
+        # The splice synchronizes on the markers, not on line numbers, so the in-range block
+        # may grow or shrink. Out-of-range lines (here both before and after the range) are
+        # kept exactly -- note they are not reflowed even when they, too, exceed the margin.
+        # (`test_format` is not used here: re-applying the same line range to output whose
+        # line count changed would target different lines, so it is not idempotent.)
+
+        # in-range expands: a one-line call spread across several lines by a tiny margin
+        @test format_text("g(p, q)\nfoo(a, b, c)\nh(r, s)\n"; lines = [(2, 2)], margin = 5) ==
+              "g(p, q)\nfoo(\n    a,\n    b,\n    c,\n)\nh(r, s)\n"
+
+        # in-range collapses: a multi-line call merged back onto a single line
+        @test format_text("g(p, q)\nfoo(a,\n  b,\n  c\n)\nh(r, s)\n"; lines = [(2, 5)]) ==
+              "g(p, q)\nfoo(a, b, c)\nh(r, s)\n"
+    end
+
     @testset "inside a block" begin
         # only the inner statement's line is formatted; the signature stays verbatim
         test_format(
