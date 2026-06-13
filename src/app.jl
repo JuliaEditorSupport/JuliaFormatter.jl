@@ -536,7 +536,9 @@ function main(argv::Vector{String})
         return panic("option `--output` can not be used together with multiple input files")
     end
     if multiple_inputs && !(inplace || check)
-        return panic("option `--inplace` or `--check` required with multiple input files")
+        return panic(
+            "multiple input files require either `--inplace` to write changes or `--check` to verify formatting",
+        )
     end
 
     if diff
@@ -622,7 +624,7 @@ function main(argv::Vector{String})
     if check && errno != 0
         printstyled(
             stderr,
-            "Some files are not formatted correctly. Run without --check to format them.\n";
+            "Some files are not formatted correctly. Run again with `--inplace` instead of `--check` to format them.\n";
             color = :red,
         )
     end
