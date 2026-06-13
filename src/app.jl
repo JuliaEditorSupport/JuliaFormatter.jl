@@ -172,7 +172,7 @@ function print_help()
                    lines are emitted verbatim. Can be specified multiple times to format
                    several ranges (e.g., --lines=1:10 --lines=42:47). Overlapping and
                    adjacent ranges are merged. Requires a single input file (or stdin);
-                   it can not be combined with multiple input files or directories, nor
+                   it cannot be combined with multiple input files or directories, nor
                    with Markdown input. A range that begins or ends in the middle of a
                    multi-line expression is formatted on a best-effort basis.
 
@@ -526,7 +526,7 @@ function main(argv::Vector{String})
         if x == "-"
             # `-` is only allowed once and as the only input
             if length(paths) > 1
-                return panic("input `-` can not be combined with other input")
+                return panic("input `-` cannot be combined with other input")
             end
             push!(inputfiles, x)
             input_is_stdin = true
@@ -562,10 +562,10 @@ function main(argv::Vector{String})
         return panic("options `--check` and `--output` are mutually exclusive")
     end
     if inplace && input_is_stdin
-        return panic("option `--inplace` can not be used together with stdin input")
+        return panic("option `--inplace` cannot be used together with stdin input")
     end
     if outputfile != "" && multiple_inputs
-        return panic("option `--output` can not be used together with multiple input files")
+        return panic("option `--output` cannot be used together with multiple input files")
     end
     if multiple_inputs && !(inplace || check)
         return panic(
@@ -812,7 +812,7 @@ function process_file(args::ProcessFileArgs)
                 end
             end
             panic(
-                "can not use same file for input and output, use `-i` to modify a file in place",
+                "cannot use same file for input and output, use `-i` to modify a file in place",
             )
             return 1
         else

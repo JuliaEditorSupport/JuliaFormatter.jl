@@ -297,7 +297,7 @@ else
                     end
                     @test errno == 1
                     @test occursin(
-                        "option `--lines` can not be used together with multiple input files",
+                        "option `--lines` cannot be used together with multiple input files",
                         stderr,
                     )
 
