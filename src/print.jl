@@ -27,7 +27,7 @@ function format_check(io::IOBuffer, fst::FST, s::State)
         # the `#! format: on` tag.
         #
         # Or the skip is at the end of the file (skip.endline == nlines) in which case
-        # we just print the entire file.
+        # we just print everything from the current node to the end.
 
         # Dump the text prior to the #! format: off tag.
         l1 = fst.startline
