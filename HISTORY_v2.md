@@ -2,6 +2,8 @@
 
 Improved usage messages for the `jlfmt` command-line tool. (#1098)
 
+Added the ability to format only specific lines of a file, either via the `--lines` option to `jlfmt`, or the `lines` keyword argument to `format_text()`. (#191, #1099, #1100)
+
 # v2.6.15
 
 Fixed a bug where the combination of `always_use_return` and `short_circuit_to_if` would silently change the meaning of a programme. (#887, #1096)

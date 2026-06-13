@@ -167,6 +167,15 @@ function print_help()
                    Ignore files matching the given pattern. Can be specified multiple times.
                    Patterns use glob-style matching (e.g., "*/test/*", "*.tmp").
 
+               --lines=<start>:<stop>
+                   Only format the given range of lines (1-based, inclusive); all other
+                   lines are emitted verbatim. Can be specified multiple times to format
+                   several ranges (e.g., --lines=1:10 --lines=42:47). Overlapping and
+                   adjacent ranges are merged. Requires a single input file (or stdin);
+                   it cannot be combined with multiple input files or directories, nor
+                   with Markdown input. A range that begins or ends in the middle of a
+                   multi-line expression is formatted on a best-effort basis.
+
                --always_for_in / --no-always_for_in
                    Always use 'for x in' instead of 'for x =' or 'for x '.
                    Default: false
@@ -250,6 +259,9 @@ function print_help()
                Check if a file is formatted:
                    jlfmt --check src/file.jl
 
+               Format only lines 1-10 and 42-47 of a file:
+                   jlfmt --lines=1:10 --lines=42:47 src/file.jl
+
                Check if all files in a directory are formatted with multiple threads:
                    jlfmt --threads=4 -- --check src/
 
@@ -321,6 +333,7 @@ function main(argv::Vector{String})
     style_name = nothing
     format_options = Dict{Symbol,Any}()
     ignore_patterns = String[]
+    line_ranges = Tuple{Int,Int}[]
 
     paths = String[]
     i = 1
@@ -371,6 +384,25 @@ function main(argv::Vector{String})
         elseif startswith(x, "--ignore=")
             m = match(r"^--ignore=(.+)$", x)
             push!(ignore_patterns, String(m.captures[1]::AbstractString))
+            i += 1
+        elseif startswith(x, "--lines=")
+            # Repeatable: `--lines=1:10 --lines=42:47` restricts formatting to those line
+            # ranges (1-based, inclusive). Forwarded to the `lines` kwarg of `format_text`.
+            m = match(r"^--lines=(\d+):(\d+)$", x)
+            if m === nothing
+                return panic(
+                    "invalid `--lines` argument `$x`, expected `--lines=<start>:<stop>` with 1-based line numbers",
+                )
+            end
+            start_line = Base.parse(Int, m.captures[1]::AbstractString)
+            stop_line = Base.parse(Int, m.captures[2]::AbstractString)
+            # out-of-bounds line ranges are caught directly in `format_text`
+            if start_line > stop_line
+                return panic(
+                    "invalid `--lines` range `$start_line:$stop_line`: start is greater than stop",
+                )
+            end
+            push!(line_ranges, (start_line, stop_line))
             i += 1
         elseif startswith(x, "--style=")
             m = match(r"^--style=(.+)$", x)
@@ -494,7 +526,7 @@ function main(argv::Vector{String})
         if x == "-"
             # `-` is only allowed once and as the only input
             if length(paths) > 1
-                return panic("input `-` can not be combined with other input")
+                return panic("input `-` cannot be combined with other input")
             end
             push!(inputfiles, x)
             input_is_stdin = true
@@ -530,14 +562,19 @@ function main(argv::Vector{String})
         return panic("options `--check` and `--output` are mutually exclusive")
     end
     if inplace && input_is_stdin
-        return panic("option `--inplace` can not be used together with stdin input")
+        return panic("option `--inplace` cannot be used together with stdin input")
     end
     if outputfile != "" && multiple_inputs
-        return panic("option `--output` can not be used together with multiple input files")
+        return panic("option `--output` cannot be used together with multiple input files")
     end
     if multiple_inputs && !(inplace || check)
         return panic(
             "multiple input files require either `--inplace` to write changes or `--check` to verify formatting",
+        )
+    end
+    if !isempty(line_ranges) && multiple_inputs
+        return panic(
+            "option `--lines` cannot be used together with multiple input files or directories",
         )
     end
 
@@ -569,29 +606,38 @@ function main(argv::Vector{String})
         format_options[:ignore] = ignore_patterns
     end
 
+    # Add line ranges from command line
+    if !isempty(line_ranges)
+        format_options[:lines] = line_ranges
+    end
+
     # Disable verbose if piping from/to stdin/stdout
     output_is_stdout = !inplace && !check && (outputfile == "" || outputfile == "-")
     print_progress = verbose && !(input_is_stdin || output_is_stdout)
 
     nfiles_str = string(length(inputfiles))
-    options_list = [
-        ProcessFileArgs(
-            inputfile,
-            file_counter,
-            nfiles_str,
-            print_progress,
-            check,
-            inplace,
-            outputfile,
-            input_is_stdin,
-            stdin_filename,
-            config_dir,
-            format_options,
-            diff,
-            format_markdown,
-            config_priority,
-        ) for (file_counter, inputfile) in enumerate(inputfiles)
-    ]
+    options_list = ProcessFileArgs[]
+    for (file_counter, inputfile) in enumerate(inputfiles)
+        push!(
+            options_list,
+            ProcessFileArgs(
+                inputfile,
+                file_counter,
+                nfiles_str,
+                print_progress,
+                check,
+                inplace,
+                outputfile,
+                input_is_stdin,
+                stdin_filename,
+                config_dir,
+                format_options,
+                diff,
+                format_markdown,
+                config_priority,
+            ),
+        )
+    end
 
     # Use multithreading for multiple files (only if multiple threads available)
     # Single file or stdin or single thread: process sequentially
@@ -675,19 +721,32 @@ function process_file(args::ProcessFileArgs)
         ""
     end
 
+    # Emit a single progress line -- the dotted prefix followed by whatever `f` writes to its
+    # `io` argument -- to stderr under the print lock. A no-op unless progress printing is on.
+    report_status = function (f)
+        args.print_progress || return
+        @lock print_lock begin
+            buf = IOBuffer()
+            io = IOContext(buf, :color => supports_color(stderr))
+            printstyled(io, progress_prefix; color = :blue)
+            f(io)
+            print(stderr, String(take!(buf)))
+        end
+        return
+    end
+
     # Check if we should skip markdown files
     inputfile_pretty = args.inputfile == "-" ? args.stdin_filename : args.inputfile
     _, ext = splitext(inputfile_pretty)
     is_markdown = ext in (".md", ".jmd", ".qmd")
+    if is_markdown && haskey(args.format_options, :lines)
+        # Line-range formatting is not (yet) wired through the Markdown path.
+        panic("option `--lines` is not supported for Markdown input")
+        return 1
+    end
     if is_markdown && !args.format_markdown
-        if args.print_progress
-            @lock print_lock begin
-                buf = IOBuffer()
-                io = IOContext(buf, :color => supports_color(stderr))
-                printstyled(io, progress_prefix; color = :blue)
-                okln(io, "skipped (markdown)")
-                print(stderr, String(take!(buf)))
-            end
+        report_status() do io
+            okln(io, "skipped (markdown)")
         end
         return 0
     end
@@ -698,14 +757,8 @@ function process_file(args::ProcessFileArgs)
         try
             read(stdin, String)
         catch err
-            if args.print_progress
-                @lock print_lock begin
-                    buf = IOBuffer()
-                    io = IOContext(buf, :color => supports_color(stderr))
-                    printstyled(io, progress_prefix; color = :blue)
-                    errln(io, "✗ read failed")
-                    print(stderr, String(take!(buf)))
-                end
+            report_status() do io
+                errln(io, "✗ read failed")
             end
             panic("could not read input from stdin: ", err)
             return 1
@@ -715,27 +768,15 @@ function process_file(args::ProcessFileArgs)
         try
             read(args.inputfile, String)
         catch err
-            if args.print_progress
-                @lock print_lock begin
-                    buf = IOBuffer()
-                    io = IOContext(buf, :color => supports_color(stderr))
-                    printstyled(io, progress_prefix; color = :blue)
-                    errln(io, "✗ read failed")
-                    print(stderr, String(take!(buf)))
-                end
+            report_status() do io
+                errln(io, "✗ read failed")
             end
             panic("could not read input from file `$(args.inputfile)`: ", err)
             return 1
         end
     else
-        if args.print_progress
-            @lock print_lock begin
-                buf = IOBuffer()
-                io = IOContext(buf, :color => supports_color(stderr))
-                printstyled(io, progress_prefix; color = :blue)
-                errln(io, "✗ not found")
-                print(stderr, String(take!(buf)))
-            end
+        report_status() do io
+            errln(io, "✗ not found")
         end
         panic("input path is not a file or directory: `$(args.inputfile)`")
         return 1
@@ -755,17 +796,11 @@ function process_file(args::ProcessFileArgs)
         elseif isfile(args.outputfile) &&
                !args.input_is_stdin &&
                samefile(args.outputfile, args.inputfile)
-            if args.print_progress
-                @lock print_lock begin
-                    buf = IOBuffer()
-                    io = IOContext(buf, :color => supports_color(stderr))
-                    printstyled(io, progress_prefix; color = :blue)
-                    errln(io, "✗ invalid output")
-                    print(stderr, String(take!(buf)))
-                end
+            report_status() do io
+                errln(io, "✗ invalid output")
             end
             panic(
-                "can not use same file for input and output, use `-i` to modify a file in place",
+                "cannot use same file for input and output, use `-i` to modify a file in place",
             )
             return 1
         else
@@ -816,47 +851,39 @@ function process_file(args::ProcessFileArgs)
             ignore_patterns,
         )
             # Skip ignored files
-            if args.print_progress
-                @lock print_lock begin
-                    buf = IOBuffer()
-                    io = IOContext(buf, :color => supports_color(stderr))
-                    printstyled(io, progress_prefix; color = :blue)
-                    okln(io, "skipped (ignored)")
-                    print(stderr, String(take!(buf)))
-                end
+            report_status() do io
+                okln(io, "skipped (ignored)")
             end
             return 0
         end
     end
 
     formatted_str = try
-        if is_markdown
+        local formatted_str = if is_markdown
             format_md(sourcetext; effective_options...)
         else
             format_text(sourcetext; effective_options...)
         end
+        replace(formatted_str, r"\n*$" => "\n")
     catch err
         if err isa JuliaSyntax.ParseError
-            if args.print_progress
-                @lock print_lock begin
-                    buf = IOBuffer()
-                    io = IOContext(buf, :color => supports_color(stderr))
-                    printstyled(io, progress_prefix; color = :blue)
-                    errln(io, "✗ parse error")
-                    print(stderr, String(take!(buf)))
-                end
+            report_status() do io
+                errln(io, "✗ parse error")
             end
             panic(string("failed to parse input from ", inputfile_pretty, ": "), err)
             return 1
         end
-        if args.print_progress
-            @lock print_lock begin
-                buf = IOBuffer()
-                io = IOContext(buf, :color => supports_color(stderr))
-                printstyled(io, progress_prefix; color = :blue)
-                errln(io, "✗ format failed")
-                print(stderr, String(take!(buf)))
+        if err isa ArgumentError
+            # User input error (e.g. an out-of-bounds `--lines` range). Report it cleanly,
+            # without a backtrace, just like a parse error.
+            report_status() do io
+                errln(io, "✗ invalid input")
             end
+            panic(string("failed to format input from ", inputfile_pretty, ": "), err)
+            return 1
+        end
+        report_status() do io
+            errln(io, "✗ format failed")
         end
         msg = string("failed to format input from ", inputfile_pretty, ": ")
         bt = stacktrace(catch_backtrace())
@@ -865,30 +892,16 @@ function process_file(args::ProcessFileArgs)
         return 1
     end
 
-    formatted_str = replace(formatted_str, r"\n*$" => "\n")
-
     changed = (formatted_str != sourcetext)
     if args.check
         if changed
-            if args.print_progress
-                @lock print_lock begin
-                    buf = IOBuffer()
-                    io = IOContext(buf, :color => supports_color(stderr))
-                    printstyled(io, progress_prefix; color = :blue)
-                    errln(io, "✗ needs formatting")
-                    print(stderr, String(take!(buf)))
-                end
+            report_status() do io
+                errln(io, "✗ needs formatting")
             end
             local_errno = 1
         else
-            if args.print_progress
-                @lock print_lock begin
-                    buf = IOBuffer()
-                    io = IOContext(buf, :color => supports_color(stderr))
-                    printstyled(io, progress_prefix; color = :blue)
-                    okln(io, "✓ already formatted")
-                    print(stderr, String(take!(buf)))
-                end
+            report_status() do io
+                okln(io, "✓ already formatted")
             end
         end
     elseif changed || !args.inplace
@@ -896,41 +909,23 @@ function process_file(args::ProcessFileArgs)
         try
             writeo(output, formatted_str)
         catch err
-            if args.print_progress
-                @lock print_lock begin
-                    buf = IOBuffer()
-                    io = IOContext(buf, :color => supports_color(stderr))
-                    printstyled(io, progress_prefix; color = :blue)
-                    errln(io, "✗ write failed")
-                    print(stderr, String(take!(buf)))
-                end
+            report_status() do io
+                errln(io, "✗ write failed")
             end
             panic("could not write to output file `$(output.file)`: ", err)
             return 1
         end
-        if args.print_progress
-            @lock print_lock begin
-                buf = IOBuffer()
-                io = IOContext(buf, :color => supports_color(stderr))
-                printstyled(io, progress_prefix; color = :blue)
-                if args.inplace
-                    okln(io, "✓ formatted")
-                else
-                    okln(io)
-                end
-                print(stderr, String(take!(buf)))
+        report_status() do io
+            if args.inplace
+                okln(io, "✓ formatted")
+            else
+                okln(io)
             end
         end
     else
         # inplace && !changed
-        if args.print_progress
-            @lock print_lock begin
-                buf = IOBuffer()
-                io = IOContext(buf, :color => supports_color(stderr))
-                printstyled(io, progress_prefix; color = :blue)
-                okln(io, "no changes")
-                print(stderr, String(take!(buf)))
-            end
+        report_status() do io
+            okln(io, "no changes")
         end
     end
 

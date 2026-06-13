@@ -25,10 +25,7 @@ julia -m JuliaFormatter [<options>] <path>...
 ```
 
 !!! note "Runic Compatibility"
-    The CLI interface is designed to be compatible with [Runic.jl](https://github.com/fredrikekre/Runic.jl)'s CLI where possible, making it easier to switch between formatters.
-
-    !!! warning "Missing features"
-        Note that the `--lines` option is not yet implemented.
+    The CLI interface is designed to be compatible with [Runic.jl](https://github.com/fredrikekre/Runic.jl)'s CLI where possible, making it easier to switch between formatters. This includes the repeatable `--lines=<start>:<stop>` option for formatting only specific line ranges (e.g. `jlfmt --lines=1:10 --lines=42:47 src/file.jl`).
 
 ## Quick Start
 
