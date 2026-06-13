@@ -396,6 +396,7 @@ function main(argv::Vector{String})
             end
             start_line = Base.parse(Int, m.captures[1]::AbstractString)
             stop_line = Base.parse(Int, m.captures[2]::AbstractString)
+            # out-of-bounds line ranges are caught directly in `format_text`
             if start_line > stop_line
                 return panic(
                     "invalid `--lines` range `$start_line:$stop_line`: start is greater than stop",
@@ -573,7 +574,7 @@ function main(argv::Vector{String})
     end
     if !isempty(line_ranges) && multiple_inputs
         return panic(
-            "option `--lines` can not be used together with multiple input files or directories",
+            "option `--lines` cannot be used together with multiple input files or directories",
         )
     end
 

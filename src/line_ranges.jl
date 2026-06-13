@@ -22,8 +22,8 @@
 # which would break the line-based splice in `remove_line_range_markers`. A standalone line
 # comment is reliably kept on its own line. The names are intentionally obscure so they are
 # very unlikely to collide with anything a user actually wrote.
-const LINE_RANGE_MARKER_BEGIN = "# __JuliaFormatter_line_range_begin__"
-const LINE_RANGE_MARKER_END = "# __JuliaFormatter_line_range_end__"
+const LINE_RANGE_MARKER_BEGIN = "#! __JuliaFormatter_line_range_begin__"
+const LINE_RANGE_MARKER_END = "#! __JuliaFormatter_line_range_end__"
 
 _line_range(r::AbstractUnitRange) = Int(first(r)):Int(last(r))
 function _line_range(t)
