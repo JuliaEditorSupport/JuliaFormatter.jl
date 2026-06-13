@@ -152,6 +152,7 @@ include("nest_utils.jl")
 include("print.jl")
 include("markdown.jl")
 include("copied_from_documenter.jl")
+include("line_ranges.jl")
 
 const UNIX_TO_WINDOWS = r"\r?\n" => "\r\n"
 const WINDOWS_TO_UNIX = "\r\n" => "\n"
@@ -175,22 +176,44 @@ Formats a Julia source passed in as a string, returning the formatted
 code as another string.
 
 See [Formatting Options](@ref formatting-options) for details on available options.
+
+# Line-range formatting
+
+Pass `lines` to restrict formatting to a set of line ranges, emitting everything else
+verbatim. `lines` is a collection of inclusive, 1-based `(start, stop)` tuples and/or
+ranges, e.g. `format_text(text; lines = [(1, 10), (42, 47)])`. Overlapping and adjacent
+ranges are merged. A range that begins or ends in the middle of a multi-line expression is
+formatted on a best-effort basis.
 """
 function format_text(text::AbstractString; style::AbstractStyle = DefaultStyle(), kwargs...)
     return format_text(text, style; kwargs...)
 end
 
-function format_text(text::AbstractString, style::AbstractStyle; kwargs...)
+function format_text(text::AbstractString, style::AbstractStyle; lines = nothing, kwargs...)
     if isempty(text)
         return text
+    end
+    if lines !== nothing
+        # Restrict formatting to the given line ranges (see `line_ranges.jl`). This re-enters
+        # `format_text` without `lines` for the actual formatting, so it works for any style.
+        return format_line_ranges(text, style, lines; kwargs...)
     end
     opts = Options(; merge(options(style), kwargs)...)
     return format_text(text, style, opts)
 end
 
-function format_text(text::AbstractString, style::SciMLStyle; maxiters = 3, kwargs...)
+function format_text(
+    text::AbstractString,
+    style::SciMLStyle;
+    maxiters = 3,
+    lines = nothing,
+    kwargs...,
+)
     if isempty(text)
         return text
+    end
+    if lines !== nothing
+        return format_line_ranges(text, style, lines; maxiters, kwargs...)
     end
     opts = Options(; merge(options(style), kwargs)...)
     # We need to iterate to a fixpoint because the result of short to long
@@ -309,7 +332,7 @@ function _format_file(
     format_markdown::Bool = false,
     format_options...,
 )::Bool
-    path, ext = splitext(filename)
+    _, ext = splitext(filename)
     shebang_pattern = r"^#!\s*/.*\bjulia[0-9.-]*\b"
     formatted_str = if match(r"^\.[jq]*md$", ext) ≠ nothing
         if !(format_markdown)

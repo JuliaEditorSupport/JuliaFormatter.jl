@@ -167,6 +167,15 @@ function print_help()
                    Ignore files matching the given pattern. Can be specified multiple times.
                    Patterns use glob-style matching (e.g., "*/test/*", "*.tmp").
 
+               --lines=<start>:<stop>
+                   Only format the given range of lines (1-based, inclusive); all other
+                   lines are emitted verbatim. Can be specified multiple times to format
+                   several ranges (e.g., --lines=1:10 --lines=42:47). Overlapping and
+                   adjacent ranges are merged. Requires a single input file (or stdin);
+                   it can not be combined with multiple input files or directories, nor
+                   with Markdown input. A range that begins or ends in the middle of a
+                   multi-line expression is formatted on a best-effort basis.
+
                --always_for_in / --no-always_for_in
                    Always use 'for x in' instead of 'for x =' or 'for x '.
                    Default: false
@@ -250,6 +259,9 @@ function print_help()
                Check if a file is formatted:
                    jlfmt --check src/file.jl
 
+               Format only lines 1-10 and 42-47 of a file:
+                   jlfmt --lines=1:10 --lines=42:47 src/file.jl
+
                Check if all files in a directory are formatted with multiple threads:
                    jlfmt --threads=4 -- --check src/
 
@@ -321,6 +333,7 @@ function main(argv::Vector{String})
     style_name = nothing
     format_options = Dict{Symbol,Any}()
     ignore_patterns = String[]
+    line_ranges = Tuple{Int,Int}[]
 
     paths = String[]
     i = 1
@@ -371,6 +384,24 @@ function main(argv::Vector{String})
         elseif startswith(x, "--ignore=")
             m = match(r"^--ignore=(.+)$", x)
             push!(ignore_patterns, String(m.captures[1]::AbstractString))
+            i += 1
+        elseif startswith(x, "--lines=")
+            # Repeatable: `--lines=1:10 --lines=42:47` restricts formatting to those line
+            # ranges (1-based, inclusive). Forwarded to the `lines` kwarg of `format_text`.
+            m = match(r"^--lines=(\d+):(\d+)$", x)
+            if m === nothing
+                return panic(
+                    "invalid `--lines` argument `$x`, expected `--lines=<start>:<stop>` with 1-based line numbers",
+                )
+            end
+            start_line = Base.parse(Int, m.captures[1]::AbstractString)
+            stop_line = Base.parse(Int, m.captures[2]::AbstractString)
+            if start_line > stop_line
+                return panic(
+                    "invalid `--lines` range `$start_line:$stop_line`: start is greater than stop",
+                )
+            end
+            push!(line_ranges, (start_line, stop_line))
             i += 1
         elseif startswith(x, "--style=")
             m = match(r"^--style=(.+)$", x)
@@ -540,6 +571,11 @@ function main(argv::Vector{String})
             "multiple input files require either `--inplace` to write changes or `--check` to verify formatting",
         )
     end
+    if !isempty(line_ranges) && multiple_inputs
+        return panic(
+            "option `--lines` can not be used together with multiple input files or directories",
+        )
+    end
 
     if diff
         if Sys.which("git") === nothing
@@ -567,6 +603,11 @@ function main(argv::Vector{String})
     # Add ignore patterns from command line
     if !isempty(ignore_patterns)
         format_options[:ignore] = ignore_patterns
+    end
+
+    # Add line ranges from command line
+    if !isempty(line_ranges)
+        format_options[:lines] = line_ranges
     end
 
     # Disable verbose if piping from/to stdin/stdout
@@ -679,6 +720,11 @@ function process_file(args::ProcessFileArgs)
     inputfile_pretty = args.inputfile == "-" ? args.stdin_filename : args.inputfile
     _, ext = splitext(inputfile_pretty)
     is_markdown = ext in (".md", ".jmd", ".qmd")
+    if is_markdown && haskey(args.format_options, :lines)
+        # Line-range formatting is not (yet) wired through the Markdown path.
+        panic("option `--lines` is not supported for Markdown input")
+        return 1
+    end
     if is_markdown && !args.format_markdown
         if args.print_progress
             @lock print_lock begin
@@ -847,6 +893,21 @@ function process_file(args::ProcessFileArgs)
                 end
             end
             panic(string("failed to parse input from ", inputfile_pretty, ": "), err)
+            return 1
+        end
+        if err isa ArgumentError
+            # User input error (e.g. an out-of-bounds `--lines` range). Report it cleanly,
+            # without a backtrace, just like a parse error.
+            if args.print_progress
+                @lock print_lock begin
+                    buf = IOBuffer()
+                    io = IOContext(buf, :color => supports_color(stderr))
+                    printstyled(io, progress_prefix; color = :blue)
+                    errln(io, "✗ invalid input")
+                    print(stderr, String(take!(buf)))
+                end
+            end
+            panic(string("failed to format input from ", inputfile_pretty, ": "), err)
             return 1
         end
         if args.print_progress

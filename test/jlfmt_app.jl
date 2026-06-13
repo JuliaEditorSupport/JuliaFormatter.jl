@@ -239,6 +239,102 @@ else
                 @test readchomp(fname) == text
             end
         end
+
+        @testset "--lines" begin
+            @testset "single range formats only that line" begin
+                with_sandbox() do _
+                    fname = "a.jl"
+                    write(fname, "f(x,y)=1\ng( a ,b )=2\n")
+                    run(`$(jlfmt_cmd()) --inplace --lines=1:1 $fname`)
+                    # line 1 formatted, line 2 kept verbatim
+                    @test readchomp(fname) == "f(x, y) = 1\ng( a ,b )=2"
+                end
+            end
+
+            @testset "multiple ranges via repetition" begin
+                with_sandbox() do _
+                    fname = "a.jl"
+                    write(fname, "f(a,b)=1\ng( x ,y )=2\nh(c,d)=3\n")
+                    run(`$(jlfmt_cmd()) --inplace --lines=1:1 --lines=3:3 $fname`)
+                    @test readchomp(fname) == "f(a, b) = 1\ng( x ,y )=2\nh(c, d) = 3"
+                end
+            end
+
+            @testset "stdin" begin
+                out = read(
+                    pipeline(
+                        `$(jlfmt_cmd()) --lines=1:1`;
+                        stdin = IOBuffer("f(x,y)=1\ng( a ,b )=2\n"),
+                    ),
+                    String,
+                )
+                @test out == "f(x, y) = 1\ng( a ,b )=2\n"
+            end
+
+            @testset "--check only inspects the requested lines" begin
+                with_sandbox() do _
+                    fname = "a.jl"
+                    # line 1 already formatted, line 2 not
+                    write(fname, "f(x, y) = 1\ng( a ,b )=2\n")
+                    # checking only line 1 passes (it is already formatted)...
+                    @test success(`$(jlfmt_cmd()) --check --lines=1:1 $fname`)
+                    # ...but checking line 2 fails (it needs formatting)
+                    @test !success(`$(jlfmt_cmd()) --check --lines=2:2 $fname`)
+                    # --check must not modify the file
+                    @test readchomp(fname) == "f(x, y) = 1\ng( a ,b )=2"
+                end
+            end
+
+            @testset "errors" begin
+                with_sandbox() do _
+                    write("a.jl", "f(x,y)=1\ng(a,b)=2\n")
+                    write("b.jl", "h(x,y)=1\n")
+                    write("a.md", "x=1\n")
+
+                    # multiple input files
+                    errno, stderr = capture_stderr() do
+                        JuliaFormatter.main(["--check", "--lines=1:1", "a.jl", "b.jl"])
+                    end
+                    @test errno == 1
+                    @test occursin(
+                        "option `--lines` can not be used together with multiple input files",
+                        stderr,
+                    )
+
+                    # malformed argument
+                    errno, stderr = capture_stderr() do
+                        JuliaFormatter.main(["--lines=abc", "a.jl"])
+                    end
+                    @test errno == 1
+                    @test occursin("invalid `--lines` argument", stderr)
+
+                    # start greater than stop
+                    errno, stderr = capture_stderr() do
+                        JuliaFormatter.main(["--lines=5:2", "a.jl"])
+                    end
+                    @test errno == 1
+                    @test occursin("start is greater than stop", stderr)
+
+                    # out of bounds (reported cleanly, no backtrace)
+                    errno, stderr = capture_stderr() do
+                        JuliaFormatter.main(["--lines=1:99", "a.jl"])
+                    end
+                    @test errno == 1
+                    @test occursin("out of bounds", stderr)
+                    @test !occursin("Stacktrace", stderr)
+
+                    # Markdown input is not supported
+                    errno, stderr = capture_stderr() do
+                        JuliaFormatter.main(["--format_markdown", "--lines=1:1", "a.md"])
+                    end
+                    @test errno == 1
+                    @test occursin(
+                        "option `--lines` is not supported for Markdown input",
+                        stderr,
+                    )
+                end
+            end
+        end
     end
 end
 
