@@ -105,7 +105,7 @@ function format_check(io::IOBuffer, fst::FST, s::State)
         if l1 <= l2
             # This branch covers the case where there's more text in this NOTCODE node after
             # the #! format: on tag.
-            
+
             # Verbatim source text from the #! format: off tag to the #! format: on tag.
             write(io, output)
 
