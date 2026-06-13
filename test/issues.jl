@@ -2854,6 +2854,14 @@ end
             end
         end
     end
+
+    @testset "1107 surround_whereop_typeparameters idempotence" begin
+        s = "sig = Tuple{T, Val{T}} where T<:(Val{T} where T<:(Val{T} where T<:(Val{T} where T<:(Val{T} where T<:Val))))"
+        for style in ALL_STYLES
+            test_format(s, nothing, style; ast=true, margin=88)
+            test_format(s, nothing, style; ast=true, surround_whereop_typeparameters = true, margin=88)
+        end
+    end
 end
 
 end
