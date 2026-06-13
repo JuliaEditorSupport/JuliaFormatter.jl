@@ -7,14 +7,29 @@ using UUIDs: uuid4
 const PROJECT_DIR = dirname(abspath(Base.active_project()))
 const CONFIG_FILE_NAME = ".JuliaFormatter.toml"
 
-jlfmt_cmd(julia_flags::Cmd = ``) =
+function jlfmt_cmd(julia_flags::Cmd = ``)
     `$(Base.julia_cmd()) $julia_flags --project=$PROJECT_DIR -m JuliaFormatter`
+end
 
 function with_sandbox(f)
     mktempdir(; prefix = "jlfmt_test_$(uuid4())_") do dir
         cd(dir) do
             f(dir)
         end
+    end
+end
+
+function capture_stderr(f)
+    path = tempname()
+    try
+        return open(path, "w+") do io::IOStream
+            result = redirect_stderr(f, io)
+            flush(io)
+            seekstart(io)
+            return result, read(io, String)
+        end
+    finally
+        rm(path; force = true)
     end
 end
 
@@ -107,9 +122,32 @@ else
 
                 # --check should fail on unformatted file
                 write(fname, unformatted)
-                @test !success(`$(jlfmt_cmd()) --check $fname`)
+                errno, stderr = capture_stderr() do
+                    JuliaFormatter.main(["--check", fname])
+                end
+                @test errno == 1
+                @test occursin(
+                    "Some files are not formatted correctly. Run again with `--inplace` instead of `--check` to format them.",
+                    stderr,
+                )
                 # --check should not modify the file
                 @test readchomp(fname) == unformatted
+            end
+        end
+
+        @testset "multiple input diagnostics" begin
+            with_sandbox() do _
+                write("a.jl", "f( x,y )=x+y")
+                write("b.jl", "g( x,y )=x+y")
+
+                errno, stderr = capture_stderr() do
+                    JuliaFormatter.main(["."])
+                end
+                @test errno == 1
+                @test occursin(
+                    "multiple input files require either `--inplace` to write changes or `--check` to verify formatting",
+                    stderr,
+                )
             end
         end
 
@@ -156,7 +194,9 @@ else
                     @test readchomp(fname) == text
 
                     # With --prioritize-config-file, config wins over CLI
-                    run(`$(jlfmt_cmd()) --inplace --prioritize-config-file --style=default $fname`)
+                    run(
+                        `$(jlfmt_cmd()) --inplace --prioritize-config-file --style=default $fname`,
+                    )
                     @test readchomp(fname) == format_text(text, BlueStyle())
                 end
             end
@@ -173,8 +213,11 @@ else
                     @test readchomp(fname) == text
 
                     # With --prioritize-config-file, config wins over CLI
-                    run(`$(jlfmt_cmd()) --inplace --prioritize-config-file --whitespace_in_kwargs $fname`)
-                    @test readchomp(fname) == format_text(text; whitespace_in_kwargs = false)
+                    run(
+                        `$(jlfmt_cmd()) --inplace --prioritize-config-file --whitespace_in_kwargs $fname`,
+                    )
+                    @test readchomp(fname) ==
+                          format_text(text; whitespace_in_kwargs = false)
                 end
             end
         end

@@ -1,3 +1,7 @@
+# v2.7.0
+
+Improved usage messages for the `jlfmt` command-line tool. (#1098)
+
 # v2.6.15
 
 Fixed a bug where the combination of `always_use_return` and `short_circuit_to_if` would silently change the meaning of a programme. (#887, #1096)
