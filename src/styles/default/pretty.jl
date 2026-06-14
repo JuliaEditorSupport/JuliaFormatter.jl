@@ -2746,17 +2746,25 @@ function p_whereopcall(
             add_node!(t, pretty(style, a, s), s; join_lines = true)
         else
             n = pretty(style, a, s, newctx(ctx; from_typedef = after_where), lineage)
-
             if after_where && add_braces
-                brace = FST(PUNCTUATION, -1, n.endline, n.endline, "{")
-                add_node!(t, brace, s; join_lines = true)
-            end
-
-            add_node!(t, n, s; join_lines = true)
-
-            if after_where && add_braces
-                brace = FST(PUNCTUATION, -1, n.endline, n.endline, "}")
-                add_node!(t, brace, s; join_lines = true)
+                # Essentially, here we're doing the same thing as in p_braces, because we
+                # want to make sure that it generates the same FST. This is another case
+                # where it would be really useful to have an IR where we can make such
+                # transformations prior to generating the FST.
+                brace_fst = FST(Braces, nspaces(s))
+                nest_braces =
+                    should_allow_nesting_call_args([a], s.opts.disallow_single_arg_nesting)
+                lbrace = FST(PUNCTUATION, -1, n.endline, n.endline, "{")
+                add_node!(brace_fst, lbrace, s; join_lines = true)
+                nest_braces && add_node!(brace_fst, Placeholder(0), s)
+                add_node!(brace_fst, n, s; join_lines = true)
+                nest_braces && add_node!(brace_fst, TrailingComma(), s)
+                nest_braces && add_node!(brace_fst, Placeholder(0), s)
+                rbrace = FST(PUNCTUATION, -1, n.endline, n.endline, "}")
+                add_node!(brace_fst, rbrace, s; join_lines = true)
+                add_node!(t, brace_fst, s; join_lines = true)
+            else
+                add_node!(t, n, s; join_lines = true)
             end
         end
     end
@@ -3254,16 +3262,14 @@ function p_comprehension(
     end
 
     childs = children(cst)
-    idx = findfirst(
-        n -> !JuliaSyntax.is_whitespace(kind(n)) && !(kind(n) in KSet"[ ]"),
-        childs,
-    )
-    arg = childs[idx]
 
-    if is_block(arg) || (
-        kind(arg) === K"generator" &&
-        haschildren(arg) &&
-        first_nontrivial_child_is_block(arg)
+    opening_brace_idx = findfirst(n -> kind(n) === K"[", childs)
+    body_idx = findnext(n -> !JuliaSyntax.is_whitespace(n), childs, opening_brace_idx + 1)
+    body_arg = childs[body_idx]
+
+    if is_block(body_arg) || (
+        # this branch covers something like [BLOCK for x in y]
+        kind(body_arg) === K"generator" && first_nontrivial_child_is_block(body_arg)
     )
         t.nest_behavior = AlwaysNest
     end
