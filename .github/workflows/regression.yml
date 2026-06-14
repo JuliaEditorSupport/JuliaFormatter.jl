@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   regression:
-    name: ${{ matrix.repo }}@${{ matrix.rev }}
+    name: ${{ matrix.repo }}@${{ matrix.rev }}-${{ matrix.name_suffix }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
 
@@ -28,11 +28,51 @@ jobs:
         #  - args (optional): Additional arguments to pass to `jlfmt` (defaults to "")
         #  - remove_config (optional): Whether to remove any existing formatter
         #                              config in the target repo (defaults to false)
+        #  - name_suffix (optional): string to append to the job name (defaults to "",
+        #                            and is otherwise unused)
         include:
           - repo: JuliaLang/julia
             rev: v1.12.6
             remove_config: true
             args: "--v2_stable_multiline_strings"
+            name_suffix: "default"
+          - repo: SciML/OrdinaryDiffEq.jl
+            rev: v7.0.0
+            remove_config: true
+            args: "--v2_stable_multiline_strings"
+            name_suffix: "default"
+          - repo: MakieOrg/Makie.jl
+            rev: v0.24.11
+            remove_config: true
+            args: "--v2_stable_multiline_strings"
+            name_suffix: "default"
+          - repo: jump-dev/JuMP.jl
+            rev: v1.30.1
+            remove_config: true
+            args: "--v2_stable_multiline_strings"
+            name_suffix: "default"
+          - repo: EnzymeAD/Enzyme.jl
+            rev: v0.13.157
+            remove_config: true
+            args: "--v2_stable_multiline_strings"
+            name_suffix: "default"
+          - repo: trixi-framework/Trixi.jl
+            rev: v0.16.18
+            remove_config: true
+            args: "--v2_stable_multiline_strings"
+            name_suffix: "default"
+          - repo: oscar-system/Oscar.jl
+            rev: v1.7.3
+            remove_config: true
+            # that specific file defines 'expected output' for Documenter purposes,
+            # which is not valid Julia
+            args: "--v2_stable_multiline_strings --ignore=test/book/cornerstones/polyhedral-geometry/g-vectors.jl"
+            name_suffix: "default"
+          - repo: SciML/ModelingToolkit.jl
+            rev: v11.26.8
+            remove_config: true
+            args: "--v2_stable_multiline_strings"
+            name_suffix: "default"
 
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # 6.0.3
@@ -49,7 +89,12 @@ jobs:
 
       - name: Remove target formatter config
         if: matrix.remove_config
-        run: find target -name ".JuliaFormatter.toml" -o -name "JuliaFormatter.toml" | xargs rm -f
+        run: find target -name ".JuliaFormatter.toml" | xargs rm -f
+
+      - name: Count Julia lines
+        run: |
+          lines=$(find target/${{ matrix.subdir }} -name '*.jl' | xargs wc -l | tail -1 | awk '{print $1}')
+          echo "Formatting ${{ matrix.repo }}@${{ matrix.rev }} — $lines lines of Julia"
 
       - name: Format (pass 1)
         run: |
