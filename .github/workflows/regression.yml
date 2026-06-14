@@ -49,7 +49,7 @@ jobs:
             rev: v0.13.157
             remove_config: true
             args: "--v2_stable_multiline_strings"
-          - repo: trixi-particles/Trixi.jl
+          - repo: trixi-framework/Trixi.jl
             rev: v0.16.18
             remove_config: true
             args: "--v2_stable_multiline_strings"
