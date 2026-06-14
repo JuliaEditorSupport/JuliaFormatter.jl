@@ -654,6 +654,9 @@ In general, setting this option to `true` will cause multiline strings to be ind
 **However, note that this option is not intended to primarily be used as a way to control indentation of multiline strings.**
 Its primary purpose is to guarantee idempotence; the indentation differences are a side effect which are documented here for users' awareness.
 
+Here is an example of the different output that can be produced by the two settings.
+This is with the default value of `false`:
+
 ```@example stable-multiline
 s = """
 throw(ArgumentError(\"""
@@ -665,131 +668,135 @@ using JuliaFormatter: format_text
 format_text(s; margin=46, v2_stable_multiline_strings=false) |> println
 ```
 
-vs
+But when `v2_stable_multiline_strings` is set to `true`, the output is:
 
 ```@example stable-multiline
 format_text(s; margin=46, v2_stable_multiline_strings=true) |> println
 ```
 
 If that description is enough for you, feel free to not read on.
-However, a rather long explanation is included for the curious.
-(It is a complicated issue!)
-We begin by introducing an example of non-idempotence:
 
-```@example stable-multiline
-s = """
-foooo((\"""
-12345\""", g),
-    a, b)
-"""
-    
-s |> println
-```
+However, a rather long explanation (it is a complicated issue!) is included for the curious reader.
+Click on the "Show explanation" toggle below to read it.
 
-```@example stable-multiline
-using JuliaFormatter: format_text
-format_text(s; margin=21) |> println
-```
+!!! details "Show explanation for v2_stable_multiline_strings"
 
-```@example stable-multiline
-format_text(format_text(s; margin=21); margin=21) |> println
-```
+    We begin by introducing an example of non-idempotence:
 
-What on earth is going on here?!
-When JuliaFormatter decides ewhether or not to insert line breaks between arguments, it does so based on the _sum of the 'length's of the arguments_.
-That is, for example, `f(a, b, c)` is ten characters long.
-If `margin < 10`, then JuliaFormatter will opt to move `a`, `b`, and `c` onto their own lines.
+    ```@example stable-multiline
+    s = """
+    foooo((\"""
+    12345\""", g),
+        a, b)
+    """
+        
+    s |> println
+    ```
 
-'Length's of most arguments are calculated very straightforwardly by calling `length()`. (Note that this should **really** be `textwidth()`: this is a known issue with JuliaFormatter, which will be fixed in a future version.)
+    ```@example stable-multiline
+    using JuliaFormatter: format_text
+    format_text(s; margin=21) |> println
+    ```
 
-The 'length' of a multiline string, with `v2_stable_multiline_strings = false`, is the _greatest extent to which any line extends past the column before the opening quote of the string_.
-For example, in the string below, the opening `"""` begins at column 6, so the column before it is 5.
-The "length" of the string is the greatest extent to which any line extends past column 5.
-From the numbers below we can see that this is 7.
+    ```@example stable-multiline
+    format_text(format_text(s; margin=21); margin=21) |> println
+    ```
 
-```
-     """4
-000001234
-    01234567
-   """
-```
+    What on earth is going on here?!
+    When JuliaFormatter decides ewhether or not to insert line breaks between arguments, it does so based on the _sum of the 'length's of the arguments_.
+    That is, for example, `f(a, b, c)` is ten characters long.
+    If `margin < 10`, then JuliaFormatter will opt to move `a`, `b`, and `c` onto their own lines.
 
-Cool.
-Now returning to our input text
+    'Length's of most arguments are calculated very straightforwardly by calling `length()`. (Note that this should **really** be `textwidth()`: this is a known issue with JuliaFormatter, which will be fixed in a future version.)
 
-```@example stable-multiline
-s |> println
-```
+    The 'length' of a multiline string, with `v2_stable_multiline_strings = false`, is the _greatest extent to which any line extends past the column before the opening quote of the string_.
+    For example, in the string below, the opening `"""` begins at column 6, so the column before it is 5.
+    The "length" of the string is the greatest extent to which any line extends past column 5.
+    From the numbers below we can see that this is 7.
 
-the second line ends _before_ the end of the opening `"""`, so the 'length' of the multiline string is 3 (which corresponds to the triple quotes in the _first_ line).
-If you sum the lengths up you should find that the total length of the arguments is 21 — exactly equal to the margin we used.
-So when JuliaFormatter looks at the **outer** call to `foooo(...)`, it decides that it *doesn't* need to nest its arguments, in other words we can do `foooo((...), ...)` instead of `foooo(\n(...),\n...)`.
-Notice how `a` and `b` are also kept on the same line.
+    ```
+         """4
+    000001234
+        01234567
+       """
+    ```
 
-```@example stable-multiline
-format_text(s; margin=21) |> println
-```
+    Cool.
+    Now returning to our input text
 
-!!! note "Unprincipled"
-    To be honest, this code doesn't really make a lot of sense to me. The total 'length' being 21 here is not really a meaningful metric because the arguments to `foooo(...)` would never go on the same line anyway! The treatment of multiline strings may be reworked a future version.
+    ```@example stable-multiline
+    s |> println
+    ```
 
-The problem is that for the **inner** tuple, it sees that it has a multiline string as an argument, and because of this it will force line breaks *inside* the tuple.
-That's why the first output causes the multiline string and `g` to be moved onto separate lines.
+    the second line ends _before_ the end of the opening `"""`, so the 'length' of the multiline string is 3 (which corresponds to the triple quotes in the _first_ line).
+    If you sum the lengths up you should find that the total length of the arguments is 21 — exactly equal to the margin we used.
+    So when JuliaFormatter looks at the **outer** call to `foooo(...)`, it decides that it *doesn't* need to nest its arguments, in other words we can do `foooo((...), ...)` instead of `foooo(\n(...),\n...)`.
+    Notice how `a` and `b` are also kept on the same line.
 
-So far so good, but if we now look at that output, the opening triple quotes have been moved down into a new line.
-**The line below it, `12345"""`, now extends *beyond* the opening triple quote!**
-And so the 'length' of the multiline string is now 4, which causes the entire expression to be over the margin, and the next formatting pass will cause the outer `foooo(...)` call to also be nested.
+    ```@example stable-multiline
+    format_text(s; margin=21) |> println
+    ```
 
-```@example stable-multiline
-format_text(format_text(s; margin=21); margin=21) |> println
-```
+    !!! note "Unprincipled"
+        To be honest, this code doesn't really make a lot of sense to me. The total 'length' being 21 here is not really a meaningful metric because the arguments to `foooo(...)` would never go on the same line anyway! The treatment of multiline strings may be reworked a future version.
 
-`v2_stable_multiline_strings = true` fixes this by changing the way the 'length' of a multiline string is calculated.
-With this option enabled, the 'length' is always simply the length of the first line.
-In the example above, this is 3, i.e., just the triple quotes.
-Because of this, the outer call is never nested, and the output looks like:
+    The problem is that for the **inner** tuple, it sees that it has a multiline string as an argument, and because of this it will force line breaks *inside* the tuple.
+    That's why the first output causes the multiline string and `g` to be moved onto separate lines.
 
-```@example stable-multiline
-kw = (margin=21, v2_stable_multiline_strings=true)
-format_text(s; kw...) |> println
-```
+    So far so good, but if we now look at that output, the opening triple quotes have been moved down into a new line.
+    **The line below it, `12345"""`, now extends *beyond* the opening triple quote!**
+    And so the 'length' of the multiline string is now 4, which causes the entire expression to be over the margin, and the next formatting pass will cause the outer `foooo(...)` call to also be nested.
 
-Importantly, though, this option means that regardless of how the multiline string is indented, the 'length' will always be constant.
-So, the decision of whether or not to nest the arguments will be consistent across multiple formatting passes.
+    ```@example stable-multiline
+    format_text(format_text(s; margin=21); margin=21) |> println
+    ```
 
-```@example stable-multiline
-format_text(s; kw...) == format_text(format_text(s; kw...); kw...)
-```
+    `v2_stable_multiline_strings = true` fixes this by changing the way the 'length' of a multiline string is calculated.
+    With this option enabled, the 'length' is always simply the length of the first line.
+    In the example above, this is 3, i.e., just the triple quotes.
+    Because of this, the outer call is never nested, and the output looks like:
 
-From the description above, it follows that the 'length' of the multiline string with `v2_stable_multiline_strings = true` is always less than or equal to the 'length' with `v2_stable_multiline_strings = false` (since the former only inspects the first line, whereas the latter takes a maximum over all lines).
+    ```@example stable-multiline
+    kw = (margin=21, v2_stable_multiline_strings=true)
+    format_text(s; kw...) |> println
+    ```
 
-This means that `v2_stable_multiline_strings = true` will reduce the amount of line breaks, at the cost of subsequent lines of the multiline string potentially extending past the margin.
-Returning to the example at the start of this section:
+    Importantly, though, this option means that regardless of how the multiline string is indented, the 'length' will always be constant.
+    So, the decision of whether or not to nest the arguments will be consistent across multiple formatting passes.
 
-```@example stable-multiline
-s = """
-throw(ArgumentError(\"""
-                    ooohhhhhh a very long thing
-                    \"""))
-"""
+    ```@example stable-multiline
+    format_text(s; kw...) == format_text(format_text(s; kw...); kw...)
+    ```
 
-# multiline string's 'length' is 27, hence over margin
-format_text(s; margin=46, v2_stable_multiline_strings=false) |> println
-```
+    From the description above, it follows that the 'length' of the multiline string with `v2_stable_multiline_strings = true` is always less than or equal to the 'length' with `v2_stable_multiline_strings = false` (since the former only inspects the first line, whereas the latter takes a maximum over all lines).
 
-```@example stable-multiline
-# multiline string's 'length' is 3, hence under margin
-format_text(s; margin=46, v2_stable_multiline_strings=true) |> println
-```
+    This means that `v2_stable_multiline_strings = true` will reduce the amount of line breaks, at the cost of subsequent lines of the multiline string potentially extending past the margin.
+    Returning to the example at the start of this section:
 
-I will happily admit that this is *not* principled either!
-In general, the decision of whether or not to nest arguments when a multiline string is present is more complicated than just looking at the 'length' of the arguments.
+    ```@example stable-multiline
+    s = """
+    throw(ArgumentError(\"""
+                        ooohhhhhh a very long thing
+                        \"""))
+    """
 
-If we take a step back, the broader problem is that the outer call to `foooo(...)` is making formatting decisions without any knowledge of how its children are going to be nested, which could itself change the decisions that `foooo(...)` makes.
-This means that instead of exploring the full space of possible formatting outputs, where nesting decisions in parent and child nodes are coupled, JuliaFormatter is decomposing this into two 'local' decisions: one for the parent and one for the child.
-In many cases these can be fully decoupled, but in this case it can't, and in many other cases even though it can be decoupled this leads to suboptimal formatting.
-*Fixing this properly therefore requires a complete rethink of the formatting algorithm.*
-If you're interested in *that*, see e.g. [this issue](https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/1104).
+    # multiline string's 'length' is 27, hence over margin
+    format_text(s; margin=46, v2_stable_multiline_strings=false) |> println
+    ```
+
+    ```@example stable-multiline
+    # multiline string's 'length' is 3, hence under margin
+    format_text(s; margin=46, v2_stable_multiline_strings=true) |> println
+    ```
+
+    I will happily admit that this is *not* principled either!
+    In general, the decision of whether or not to nest arguments when a multiline string is present is more complicated than just looking at the 'length' of the arguments.
+
+    If we take a step back, the broader problem is that the outer call to `foooo(...)` is making formatting decisions without any knowledge of how its children are going to be nested, which could itself change the decisions that `foooo(...)` makes.
+    This means that instead of exploring the full space of possible formatting outputs, where nesting decisions in parent and child nodes are coupled, JuliaFormatter is decomposing this into two 'local' decisions: one for the parent and one for the child.
+    In many cases these can be fully decoupled, but in this case it can't, and in many other cases even though it can be decoupled this leads to suboptimal formatting.
+    *Fixing this properly therefore requires a complete rethink of the formatting algorithm.*
+    If you're interested in *that*, see e.g. [this issue](https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/1104).
 
 ## [`whitespace_ops_in_indices`](@id options-whitespace-ops-in-indices)
 
