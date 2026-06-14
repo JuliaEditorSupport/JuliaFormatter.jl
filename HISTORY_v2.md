@@ -1,3 +1,9 @@
+# v2.8.0
+
+Added a new formatting option, `v2_stable_multiline_strings`, which aims to guarantee formatting idempotence with multiline strings.
+By default this option is **not** enabled as it will lead to some changes in the formatting of expressions containing multiline strings: you must opt into it.
+Please see the [documentation](https://juliaeditorsupport.github.io/JuliaFormatter.jl/stable/formatting_options/#options-v2-stable-multiline-strings) for more information. (#1109, #1110)
+
 # v2.7.1
 
 Fixed a bug causing lack of idempotence in typed comprehension expressions (i.e., things like `T[expr for x in y]`). (#1105, #1106)

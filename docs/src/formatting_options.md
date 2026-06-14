@@ -649,11 +649,32 @@ For example, `f(s! = x)` will be transformed to `f((s!)=x)`, and `f(t = >=(1))` 
 Default: `false`
 
 If `true`, changes the nesting behaviour for multiline strings to guarantee idempotence on formatting.
-In general, setting this option to `true` will cause multiline strings to be indented more than they would be; equivalently, setting it to `false` will cause multiline strings to be moved onto new lines more easily.
+
+In general, setting this option to `true` will cause multiline strings to be indented more to the right; equivalently, setting it to `false` will cause multiline strings to be shifted onto new lines more easily.
+**However, note that this option is not intended to primarily be used as a way to control indentation of multiline strings.**
+Its primary purpose is to guarantee idempotence; the indentation differences are a side effect which are documented here for users' awareness.
+
+```@example stable-multiline
+s = """
+throw(ArgumentError(\"""
+                    ooohhhhhh a very long thing
+                    \"""))
+"""
+
+using JuliaFormatter: format_text
+format_text(s; margin=46, v2_stable_multiline_strings=false) |> println
+```
+
+vs
+
+```@example stable-multiline
+format_text(s; margin=46, v2_stable_multiline_strings=true) |> println
+```
 
 If that description is enough for you, feel free to not read on.
-However, some explanation is included for the curious.
-This is best demonstrated with an example:
+However, a rather long explanation is included for the curious.
+(It is a complicated issue!)
+We begin by introducing an example of non-idempotence:
 
 ```@example stable-multiline
 s = """
@@ -725,22 +746,41 @@ format_text(format_text(s; margin=21); margin=21) |> println
 
 `v2_stable_multiline_strings = true` fixes this by changing the way the 'length' of a multiline string is calculated.
 With this option enabled, the 'length' is always simply the length of the first line.
-(In the example above, this is 3, i.e., just the triple quotes).
-That means that regardless of how the multiline string is indented, the 'length' will always be constant, and so the decision of whether or not to nest the arguments will be consistent across multiple formatting passes.
+In the example above, this is 3, i.e., just the triple quotes.
+Because of this, the outer call is never nested, and the output looks like:
 
 ```@example stable-multiline
 kw = (margin=21, v2_stable_multiline_strings=true)
-format_text(s; kw...) == format_text(format_text(s; kw...); kw...)
-```
-
-Because the 'length' of the multiline string is now 3, the outer call is never nested, and the output looks like:
-
-```@example stable-multiline
 format_text(s; kw...) |> println
 ```
 
-From the description above, it follows that the 'length' of the multiline string with `v2_stable_multiline_strings = true` is always less than or equal to the 'length' with `v2_stable_multiline_strings = false` (since it does not take a maximum over all lines).
+Importantly, though, this option means that regardless of how the multiline string is indented, the 'length' will always be constant.
+So, the decision of whether or not to nest the arguments will be consistent across multiple formatting passes.
+
+```@example stable-multiline
+format_text(s; kw...) == format_text(format_text(s; kw...); kw...)
+```
+
+From the description above, it follows that the 'length' of the multiline string with `v2_stable_multiline_strings = true` is always less than or equal to the 'length' with `v2_stable_multiline_strings = false` (since the former only inspects the first line, whereas the latter takes a maximum over all lines).
+
 This means that `v2_stable_multiline_strings = true` will reduce the amount of line breaks, at the cost of subsequent lines of the multiline string potentially extending past the margin.
+Returning to the example at the start of this section:
+
+```@example stable-multiline
+s = """
+throw(ArgumentError(\"""
+                    ooohhhhhh a very long thing
+                    \"""))
+"""
+
+# multiline string's 'length' is 27, hence over margin
+format_text(s; margin=46, v2_stable_multiline_strings=false) |> println
+```
+
+```@example stable-multiline
+# multiline string's 'length' is 3, hence under margin
+format_text(s; margin=46, v2_stable_multiline_strings=true) |> println
+```
 
 I will happily admit that this is *not* principled either!
 In general, the decision of whether or not to nest arguments when a multiline string is present is more complicated than just looking at the 'length' of the arguments.
