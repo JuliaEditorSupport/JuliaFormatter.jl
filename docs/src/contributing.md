@@ -14,6 +14,8 @@ However, the complexity comes from the fact that:
 
 I'm happy to help with any questions about how best to implement stuff, although please note I'm also finding my way around the codebase myself, so I might not always have the best answer.
 
+In this page I've attempted to document some assorted bits of information that may be useful if you are contributing to JuliaFormatter.
+
 ## The `JuliaFormatter.Internal` module
 
 JuliaFormatter contains some useful utilities which are explicitly marked as internal (i.e., not semver-compliant), inside the `JuliaFormatter.Internal` module.
@@ -41,6 +43,49 @@ precompile_workload = false
 ```
 
 (This suggestion is taken from [the PrecompileTools.jl docs](https://julialang.github.io/PrecompileTools.jl/stable/#Package-developers:-reducing-the-cost-of-precompilation-during-development).)
+
+## Installing an MCP tool
+
+If you are actively developing JuliaFormatter and are using agentic AI to investigate bugs, you likely want to install an MCP tool or similar which the agent can use to run JuliaFormatter.
+
+In particular, I have [a fork of `julia-mcp`](https://github.com/penelopeysm/julia-format-mcp) which includes an additional `julia-format` tool specifically for running JuliaFormatter.
+JuliaFormatter contains an `AGENTS.md` file which instructs your agent to use this tool.
+
+To set this up, run the following commands:
+
+```bash
+# You can clone it anywhere you like, but I like to keep it inside ~/.julia.
+git clone https://github.com/penelopeysm/julia-format-mcp ~/.julia/julia-format-mcp
+claude mcp add --scope user julia -- uv run --directory ~/.julia/julia-format-mcp python server.py
+```
+
+For other harnesses, please see the [julia-mcp docs](https://github.com/aplavin/julia-mcp#usage) for corresponding instructions.
+
+Claude Code (as of v2.1.177) has [an annoying issue](https://github.com/anthropics/claude-code/issues/45839) where results from the MCP tool are only displayed to the user in JSON, which is impossible to read whenever multiline strings are involved.
+To get around this, you can install a post-tool hook which prints the tool's results directly into your Claude Code session.
+If you are using the fork above, you can add this block to your `~/.claude/settings.json` file:
+
+```json
+{
+  ...,
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "mcp__julia__julia_eval|mcp__julia__julia_format",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_response | fromjson | (.content[0].text // .result)' | jq -Rs '{systemMessage: (\"\\n\" + .)}' 2>/dev/null || true"
+          }
+        ]
+      }
+    ]
+  },
+  ...,
+}
+```
+
+and every time `julia_eval` or `julia_format` is called, the hook will print whatever output Julia generated.
 
 ## GitHub-specific things
 

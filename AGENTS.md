@@ -3,11 +3,13 @@
 - If you have a Julia MCP tool, always run code with that.
   Don't invoke julia from bash as that is very slow.
 
-- When running code in the MCP tool it's not easily visible to the user.
-  If you're e.g. checking how a string parses, you should explicitly report the user what you tested and what the result was.
+- To investigate formatting with JuliaFormatter, use the `julia_format` tool.
+  The first time you run it, you need to specify `formatter_path=...` with the local checkout of JulaiFormatter.
 
-- Avoid using Julia environments that the user has already set up.
-  Create a temporary test environment with `Pkg.activate(; temp=true)`, `Pkg.develop(; path=...)` the current checkout of JuliaFormatter, and add any other packages you need.
+- To run generic Julia code, use the `julia_eval` tool.
+  Avoid passing a specific `env_path` as that will clutter the user's environment.
+  In the absence of an `env_path`, the tool will create a temporary environment for you.
+  In this environment you can `Pkg.develop(; path=...)` the local checkout of JuliaFormatter and add any other packages you need.
 
 - Code changes in the local checkout should be immediately visible without having to reload the session (thanks to Revise.jl).
   If you encounter any issues with this, try restarting the MCP session.
