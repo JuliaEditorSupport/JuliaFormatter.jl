@@ -1323,11 +1323,19 @@ function add_node!(
     if !join_lines && is_end(n)
         # end keyword isn't useful w.r.t margin lengths
     elseif t.typ === StringN
-        # The length of this node is the length of
-        # the longest string. The length of the string is
-        # only considered "in the positive" when it's past
-        # the hits the initial """ offset, i.e. `t.indent`.
-        t.len = max(t.len, n.indent + length(n) - t.indent)
+        if !s.opts.v2_stable_docstrings
+            # The length of this node is the length of the longest string. The length of the
+            # string is only considered "in the positive" when it's past the hits the
+            # initial """ offset, i.e. `t.indent`.
+            t.len = max(t.len, n.indent + length(n) - t.indent)
+        else
+            # Only the first line (the opening `"""`) contributes to the parent's line
+            # width. Continuation lines are on their own lines and don't affect the parent's
+            # margin. Using only the first-line width makes `len` independent of the
+            # string's indentation context, which prevents idempotence bugs where shifting
+            # the string changes its `len`, which changes ancestor nesting decisions.
+            false
+        end
     elseif is_multiline(n) ||
            (!isnothing(t.metadata) && (t.metadata::Metadata).has_multiline_argument)
         if isnothing(t.metadata)

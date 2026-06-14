@@ -51,6 +51,7 @@ Values that differ from `DefaultStyle` are shown in **bold**.
 | [`trailing_comma`](@ref options-trailing-comma)                                     | `true`    | `true`      | `true`      | **`false`**  | **`nothing`** |
 | [`trailing_zero`](@ref options-trailing-zero)                                       | `true`    | `true`      | `true`      | `true`       | **`false`**   |
 | [`variable_call_indent`](@ref options-variable-call-indent)                         | `[]`      | `[]`        | `[]`        | `[]`         | `[]`          |
+| [`v2_stable_multiline_strings`](@ref options-v2-stable-multiline-strings)           | `false`   | `false`     | `false`     | `false`      | `false`       |
 | [`whitespace_in_kwargs`](@ref options-whitespace-in-kwargs)                         | `true`    | **`false`** | **`false`** | `true`       | **`false`**   |
 | [`whitespace_ops_in_indices`](@ref options-whitespace-ops-in-indices)               | `false`   | **`true`**  | **`true`**  | **`true`**   | `false`       |
 | [`whitespace_typedefs`](@ref options-whitespace-typedefs)                           | `false`   | `false`     | `false`     | **`true`**   | `false`       |
@@ -642,6 +643,57 @@ f(; a = 4)
 
 Note that if this option is false, the arguments on either side of the equals may sometimes be parenthesised to avoid parsing ambiguities.
 For example, `f(s! = x)` will be transformed to `f((s!)=x)`, and `f(t = >=(1))` will be transformed to `f(t=(>=(1)))`.
+
+## [`v2_stable_multiline_strings`](@id options-v2-stable-multiline-strings)
+
+Default: `false`
+
+If `true`, changes the nesting behaviour for multiline strings to guarantee idempotence on formatting.
+In general, setting this option to `true` will cause multiline strings to be indented more than they would be; equivalently, setting it to `false` will cause multiline strings to be moved onto new lines more easily.
+
+If that description is enough for you, feel free to not read on.
+However, some explanation is included for the curious.
+This is best demonstrated with an example:
+
+```@example stable-multiline
+s = """
+p = f((\"""
+12345\""", g),
+    a, b)
+"""
+    
+s |> println
+```
+
+```@example stable-multiline
+using JuliaFormatter: format_text
+format_text(s; margin=21) |> println
+```
+
+```@example stable-multiline
+format_text(format_text(s; margin=21); margin=21) |> println
+```
+
+What on earth is going on here?!
+When JuliaFormatter decides ewhether or not to insert line breaks between arguments, it does so based on the _sum of the 'length's of the arguments_.
+That is, for example, `f(a, b, c)` is ten characters long.
+If `margin < 10`, then JuliaFormatter will opt to move `a`, `b`, and `c` onto their own lines.
+
+'Length's of most arguments are calculated very straightforwardly by calling `length()`. (Note that this should **really** be `textwidth()`: this is a known issue with JuliaFormatter, which will be fixed in a future version.)
+
+The 'length' of a multiline string, with `v2_stable_multiline_strings = false`, is the _greatest extent to which any line extends past the column before the opening quote of the string_.
+For example, in the string below, the opening `"""` begins at column 6, so the column before it is 5.
+The "length" of the string is the greatest extent to which any line extends past column 5.
+From the numbers below we can see that this is 7.
+
+```
+     """4
+000001234
+    01234567
+   """
+```
+
+In our input text, the second line ends _before_ the end of the opening `"""`, so the greatest extent any line extends past 
 
 ## [`whitespace_ops_in_indices`](@id options-whitespace-ops-in-indices)
 
