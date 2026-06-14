@@ -236,6 +236,11 @@ function print_help()
                    Add trailing zeros to floats.
                    Default: true
 
+               --v2_stable_multiline_strings / --no-v2_stable_multiline_strings
+                   Use stable multiline string length calculation for idempotent
+                   formatting.
+                   Default: false
+
                --normalize_line_endings=<mode>
                    Normalize line endings: "auto", "unix", or "windows".
                    Default: "auto"
@@ -514,6 +519,12 @@ function main(argv::Vector{String})
             i += 1
         elseif x == "--no-trailing_zero"
             format_options[:trailing_zero] = false
+            i += 1
+        elseif x == "--v2_stable_multiline_strings"
+            format_options[:v2_stable_multiline_strings] = true
+            i += 1
+        elseif x == "--no-v2_stable_multiline_strings"
+            format_options[:v2_stable_multiline_strings] = false
             i += 1
         else
             # Not an option, must be a file or directory

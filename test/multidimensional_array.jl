@@ -1,10 +1,8 @@
 module MultidimensionalArrayTests
 
 using JuliaFormatter
-using JuliaFormatter.Internal: test_format
+using JuliaFormatter.Internal: test_format, ALL_STYLES
 using Test
-
-ALL_STYLES = (DefaultStyle(), YASStyle(), BlueStyle(), MinimalStyle(), SciMLStyle())
 
 @testset "array literal examples" begin
     # Don't really care how it formats, but make sure that it parses to the same AST. Some

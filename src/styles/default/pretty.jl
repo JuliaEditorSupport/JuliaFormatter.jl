@@ -2967,9 +2967,8 @@ function p_parens(
     nest = if length(args) > 0
         arg = args[1]
         if is_block(arg) || (
-            kind(arg) === K"generator" &&
-            haschildren(arg) &&
-            first_nontrivial_child_is_block(arg)
+            # this branch covers something like (BLOCK for x in y)
+            kind(arg) === K"generator" && first_nontrivial_child_is_block(arg)
         )
             t.nest_behavior = AlwaysNest
         end
