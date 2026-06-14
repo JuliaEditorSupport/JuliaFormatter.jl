@@ -89,7 +89,7 @@ jobs:
 
       - name: Remove target formatter config
         if: matrix.remove_config
-        run: find target -name ".JuliaFormatter.toml" -o -name "JuliaFormatter.toml" | xargs rm -f
+        run: find target -name ".JuliaFormatter.toml" | xargs rm -f
 
       - name: Count Julia lines
         run: |
