@@ -2,11 +2,9 @@ module IssuesTests
 
 using JuliaFormatter
 using JuliaFormatter: DefaultStyle, YASStyle, BlueStyle, MinimalStyle, SciMLStyle, Options, format_text
-using JuliaFormatter.Internal: test_format
+using JuliaFormatter.Internal: test_format, ALL_STYLES
 using JuliaSyntax
 using Test
-
-ALL_STYLES = (DefaultStyle(), YASStyle(), BlueStyle(), MinimalStyle(), SciMLStyle())
 
 function run_nest(text::String; opts = Options(), style = DefaultStyle())
     d = JuliaFormatter.Document(text)
@@ -2881,6 +2879,81 @@ end
             test_format(s_, s, style; margin=92, always_use_return=false, always_for_in=true, for_in_replacement="=")
         end
     end
+
+    @testset "1109 multiline string idempotence" begin
+        # All of these were idempotence bugs with JuliaLang/julia@v1.12.6.
+
+        # from test/intrinsics.jl
+        s1 = """
+        @testset "issue #54548" begin
+            @inline passthrough(ptr::Core.LLVMPtr{T,A}) where {T,A} = Base.llvmcall((
+                \"""
+        define ptr addrspace(1) @entry(ptr addrspace(1) %0) #0 {
+        entry:
+            ret ptr addrspace(1) %0
+        }
+
+        attributes #0 = { alwaysinline }\""",
+                "entry",
+            ), Core.LLVMPtr{T,A}, Tuple{Core.LLVMPtr{T,A}}, ptr)
+            f(gws) = passthrough(Core.bitcast(Core.LLVMPtr{UInt32,1}, gws))
+            f(C_NULL)
+        end
+        """
+
+        # from test/show.jl
+        s2 = raw"""
+        eval(Meta._parse_string(
+            \"""function my_fun28173(x)
+            y = if x == 1
+                    "HI"
+                elseif x == 2
+                    r = 1
+                    s = try
+                        r = 2
+                        Base.inferencebarrier(false) && error()
+                        "BYE"
+                    catch
+                        r = 3
+                        "CAUGHT!"
+                    end
+                    "\$r\$s"
+                else
+                    "three"
+                end
+            return y
+        end\""",
+            "a"^80,
+            1,
+            1,
+            :statement,
+        )[1]) # use parse to control the line numbers
+        """
+
+        # from test/syntax.jl
+        s3 = """
+        @test isempty(Test.collect_test_logs() do
+            include_string(
+                @__MODULE__,
+                \"""
+        function foo37126()
+            f(lhs::Integer, rhs::Integer) = nothing
+            f(lhs::Integer, rhs::AbstractVector{<:Integer}) = nothing
+            return f
+        end
+        struct Bar37126{T<:Real, P<:Real} end
+        \""",
+            )
+        end[1])
+        """
+
+        for s in (s1, s2, s3)
+            for style in ALL_STYLES
+                test_format(s, nothing, style; v2_stable_multiline_strings=true)
+            end
+        end
+    end
+
 end
 
 end

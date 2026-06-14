@@ -9,6 +9,13 @@ import ..JuliaFormatter as JF
 using Test
 
 """
+    JuliaFormatter.Internal.ALL_STYLES
+
+Tuple of Default, YAS, Blue, SciML, and Minimal styles.
+"""
+const ALL_STYLES = (JF.DefaultStyle(), JF.YASStyle(), JF.BlueStyle(), JF.SciMLStyle(), JF.MinimalStyle())
+
+"""
     JuliaFormatter.Internal.format_to_stage(
         stage::Symbol,
         text::AbstractString,

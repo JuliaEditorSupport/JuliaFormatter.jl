@@ -1,10 +1,8 @@
 module OptionsForToInTests
 
 using JuliaFormatter: DefaultStyle, YASStyle, BlueStyle, SciMLStyle, MinimalStyle, format_text
-using JuliaFormatter.Internal: test_format
+using JuliaFormatter.Internal: test_format, ALL_STYLES
 using Test
-
-ALL_STYLES = (DefaultStyle(), YASStyle(), BlueStyle(), SciMLStyle(), MinimalStyle())
 
 @testset "for_to_in normalization" begin
     @testset "always convert `=` to `in` (for loops)" begin
