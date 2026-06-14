@@ -737,8 +737,9 @@ Click on the "Show explanation" toggle below to read it.
     format_text(s; margin=21) |> println
     ```
 
-    !!! note "Unprincipled"
-        To be honest, this code doesn't really make a lot of sense to me. The total 'length' being 21 here is not really a meaningful metric because the arguments to `foooo(...)` would never go on the same line anyway! The treatment of multiline strings may be reworked a future version.
+    To be honest, this code doesn't really make a lot of sense to me.
+    The total 'length' being 21 here is not really a meaningful metric because the arguments to `foooo(...)` would never go on the same line anyway!
+    The treatment of multiline strings will probably be reworked a future version.
 
     The problem is that for the **inner** tuple, it sees that it has a multiline string as an argument, and because of this it will force line breaks *inside* the tuple.
     That's why the first output causes the multiline string and `g` to be moved onto separate lines.
