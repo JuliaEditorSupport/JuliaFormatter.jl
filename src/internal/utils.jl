@@ -13,7 +13,8 @@ using Test
 
 Tuple of Default, YAS, Blue, SciML, and Minimal styles.
 """
-const ALL_STYLES = (JF.DefaultStyle(), JF.YASStyle(), JF.BlueStyle(), JF.SciMLStyle(), JF.MinimalStyle())
+const ALL_STYLES =
+    (JF.DefaultStyle(), JF.YASStyle(), JF.BlueStyle(), JF.SciMLStyle(), JF.MinimalStyle())
 
 """
     JuliaFormatter.Internal.format_to_stage(
