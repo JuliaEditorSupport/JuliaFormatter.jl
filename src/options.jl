@@ -37,7 +37,7 @@ Base.@kwdef struct Options
     sciml_margin_overrun::Int = 20
     short_circuit_to_if::Bool = false
     disallow_single_arg_nesting::Bool = false
-    v2_stable_docstrings::Bool = false
+    v2_stable_multiline_strings::Bool = false
 
     function Options(args...)
         opts = new(args...)

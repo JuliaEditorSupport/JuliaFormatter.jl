@@ -657,7 +657,7 @@ This is best demonstrated with an example:
 
 ```@example stable-multiline
 s = """
-p = f((\"""
+foooo((\"""
 12345\""", g),
     a, b)
 """
@@ -693,7 +693,63 @@ From the numbers below we can see that this is 7.
    """
 ```
 
-In our input text, the second line ends _before_ the end of the opening `"""`, so the greatest extent any line extends past 
+Cool.
+Now returning to our input text
+
+```@example stable-multiline
+s |> println
+```
+
+the second line ends _before_ the end of the opening `"""`, so the 'length' of the multiline string is 3 (which corresponds to the triple quotes in the _first_ line).
+If you sum the lengths up you should find that the total length of the arguments is 21 — exactly equal to the margin we used.
+So when JuliaFormatter looks at the **outer** call to `foooo(...)`, it decides that it *doesn't* need to nest its arguments, in other words we can do `foooo((...), ...)` instead of `foooo(\n(...),\n...)`.
+Notice how `a` and `b` are also kept on the same line.
+
+```@example stable-multiline
+format_text(s; margin=21) |> println
+```
+
+!!! note "Unprincipled"
+    To be honest, this code doesn't really make a lot of sense to me. The total 'length' being 21 here is not really a meaningful metric because the arguments to `foooo(...)` would never go on the same line anyway! The treatment of multiline strings may be reworked a future version.
+
+The problem is that for the **inner** tuple, it sees that it has a multiline string as an argument, and because of this it will force line breaks *inside* the tuple.
+That's why the first output causes the multiline string and `g` to be moved onto separate lines.
+
+So far so good, but if we now look at that output, the opening triple quotes have been moved down into a new line.
+**The line below it, `12345"""`, now extends *beyond* the opening triple quote!**
+And so the 'length' of the multiline string is now 4, which causes the entire expression to be over the margin, and the next formatting pass will cause the outer `foooo(...)` call to also be nested.
+
+```@example stable-multiline
+format_text(format_text(s; margin=21); margin=21) |> println
+```
+
+`v2_stable_multiline_strings = true` fixes this by changing the way the 'length' of a multiline string is calculated.
+With this option enabled, the 'length' is always simply the length of the first line.
+(In the example above, this is 3, i.e., just the triple quotes).
+That means that regardless of how the multiline string is indented, the 'length' will always be constant, and so the decision of whether or not to nest the arguments will be consistent across multiple formatting passes.
+
+```@example stable-multiline
+kw = (margin=21, v2_stable_multiline_strings=true)
+format_text(s; kw...) == format_text(format_text(s; kw...); kw...)
+```
+
+Because the 'length' of the multiline string is now 3, the outer call is never nested, and the output looks like:
+
+```@example stable-multiline
+format_text(s; kw...) |> println
+```
+
+From the description above, it follows that the 'length' of the multiline string with `v2_stable_multiline_strings = true` is always less than or equal to the 'length' with `v2_stable_multiline_strings = false` (since it does not take a maximum over all lines).
+This means that `v2_stable_multiline_strings = true` will reduce the amount of line breaks, at the cost of subsequent lines of the multiline string potentially extending past the margin.
+
+I will happily admit that this is *not* principled either!
+In general, the decision of whether or not to nest arguments when a multiline string is present is more complicated than just looking at the 'length' of the arguments.
+
+If we take a step back, the broader problem is that the outer call to `foooo(...)` is making formatting decisions without any knowledge of how its children are going to be nested, which could itself change the decisions that `foooo(...)` makes.
+This means that instead of exploring the full space of possible formatting outputs, where nesting decisions in parent and child nodes are coupled, JuliaFormatter is decomposing this into two 'local' decisions: one for the parent and one for the child.
+In many cases these can be fully decoupled, but in this case it can't, and in many other cases even though it can be decoupled this leads to suboptimal formatting.
+*Fixing this properly therefore requires a complete rethink of the formatting algorithm.*
+If you're interested in *that*, see e.g. [this issue](https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/1104).
 
 ## [`whitespace_ops_in_indices`](@id options-whitespace-ops-in-indices)
 
