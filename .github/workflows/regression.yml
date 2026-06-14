@@ -33,6 +33,26 @@ jobs:
             rev: v1.12.6
             remove_config: true
             args: "--v2_stable_multiline_strings"
+          - repo: SciML/OrdinaryDiffEq.jl
+            rev: v7.0.0
+            remove_config: true
+            args: "--v2_stable_multiline_strings"
+          - repo: MakieOrg/Makie.jl
+            rev: v0.24.11
+            remove_config: true
+            args: "--v2_stable_multiline_strings"
+          - repo: jump-dev/JuMP.jl
+            rev: v1.30.1
+            remove_config: true
+            args: "--v2_stable_multiline_strings"
+          - repo: EnzymeAD/Enzyme.jl
+            rev: v0.13.157
+            remove_config: true
+            args: "--v2_stable_multiline_strings"
+          - repo: trixi-particles/Trixi.jl
+            rev: v0.16.18
+            remove_config: true
+            args: "--v2_stable_multiline_strings"
 
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # 6.0.3
@@ -50,6 +70,11 @@ jobs:
       - name: Remove target formatter config
         if: matrix.remove_config
         run: find target -name ".JuliaFormatter.toml" -o -name "JuliaFormatter.toml" | xargs rm -f
+
+      - name: Count Julia lines
+        run: |
+          lines=$(find target/${{ matrix.subdir }} -name '*.jl' | xargs wc -l | tail -1 | awk '{print $1}')
+          echo "Formatting ${{ matrix.repo }}@${{ matrix.rev }} — $lines lines of Julia"
 
       - name: Format (pass 1)
         run: |
