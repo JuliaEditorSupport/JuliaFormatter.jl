@@ -1,3 +1,7 @@
+# v2.8.4
+
+Fixed a bug where indentation of `x && y` and `x || y` expressions were overly context-sensitive, leading to inconsistent and sometimes non-idempotent formatting. (#1121, #1122)
+
 # v2.8.3
 
 Fixed a bug where formatting of ranges (e.g. `a:b`) was not idempotent when either side was being parenthesised. (#1118, #1119)

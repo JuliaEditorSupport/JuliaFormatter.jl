@@ -3052,6 +3052,42 @@ end
         )()"""
         test_format(s, out; ast=true, margin=10)
     end
+
+    @testset "1121 standalone circuit inconsistency" begin
+        for prefix in (
+            "",
+            "x = ",
+            "x + ",
+            "return ",
+        )
+            s = "$(prefix)f(a, mmmmm || nnnnn, c)"
+            out = "$(prefix)f(\n    a,\n    mmmmm ||\n        nnnnn,\n    c,\n)"
+            test_format(s, out; ast=true, margin=10)
+        end
+
+        # and the original trigger
+        s = """
+        function f()
+            EnzymeInterpreter(cache_or_token, mt, world, mode == API.DEM_ForwardMode, mode == API.DEM_ReverseModeCombined || mode == API.DEM_ReverseModePrimal || mode == API.DEM_ReverseModeGradient, inactive_rules, broadcast_rewrite, within_autodiff_rewrite, handler)
+        end"""
+        out = """
+        function f()
+            return EnzymeInterpreter(
+                cache_or_token,
+                mt,
+                world,
+                mode == API.DEM_ForwardMode,
+                mode == API.DEM_ReverseModeCombined ||
+                    mode == API.DEM_ReverseModePrimal ||
+                    mode == API.DEM_ReverseModeGradient,
+                inactive_rules,
+                broadcast_rewrite,
+                within_autodiff_rewrite,
+                handler,
+            )
+        end"""
+        test_format(s, out, BlueStyle())
+    end
 end
 
 end
