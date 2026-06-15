@@ -3010,10 +3010,11 @@ function p_parens(
     #
     # we can't put newlines around `expr` as that causes JuliaSyntax to
     # parse the resulting code incorrectly.
-    disable_nesting = (ctx.is_parenthesised_caller
-        && length(lineage) >= 2
-        && lineage[end-1][1] === K"call"
-        && lineage[end-2][1] === K"function"
+    disable_nesting = (
+        ctx.is_parenthesised_caller &&
+        length(lineage) >= 2 &&
+        lineage[end-1][1] === K"call" &&
+        lineage[end-2][1] === K"function"
     )
     nest = nest && !disable_nesting
     # turn off the is_parenthesised_caller flag so that it's not propagated to children.
