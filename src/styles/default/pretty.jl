@@ -3567,8 +3567,6 @@ function p_vcat(
                 add_node!(t, Placeholder(0), s)
             end
             add_node!(t, n, s; join_lines = true)
-        elseif kind(a) === K"Comment"
-            add_hasheq_comment!(t, n, s)
         elseif JuliaSyntax.is_whitespace(a)
             add_node!(t, n, s; join_lines = true)
         elseif kind(a) === K";"
@@ -3964,11 +3962,6 @@ function p_row(
         )
         if kind(a) === K";"
             add_node!(t, n, s; join_lines = true)
-        elseif kind(a) === K"Comment"
-            # Handle #= =# comments inline; regular # comments are NONE from pretty()
-            # and are silently skipped by add_node!. The gap detection at the parent
-            # level (p_vcat/p_ncat) will reconstruct them via NOTCODE.
-            add_hasheq_comment!(t, n, s)
         elseif JuliaSyntax.is_whitespace(a)
             # is_semantically_important_newline handles case (a)
             if is_semantically_important_newline(cst, i, is_last_arg_of_parent)
