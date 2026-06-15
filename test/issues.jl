@@ -3001,6 +3001,22 @@ end
             return SVector(u_inner[1], v1, u_inner[3])
         end"""
         test_format(s, output; ast=true)
+
+        # Check that parenthesised callers outside of function definitions aren't affected.
+        s = "(loooooong)(1, 2, 3)"
+        out = "(\n    loooooong\n)(\n    1,\n    2,\n    3,\n)"
+        test_format(s, out; ast=true, margin=10)
+        s = """
+        (function()
+            foo
+        end)()"""
+        out = """
+        (
+            function ()
+                foo
+            end
+        )()"""
+        test_format(s, out; ast=true, margin=10)
     end
 end
 

@@ -2998,18 +2998,35 @@ function p_parens(
         false
     end
 
-    # turn off the is_parenthesised_caller flag so that it's not propagated to children
-    is_parenthesised_caller = ctx.is_parenthesised_caller
+    # This is a workaround for 
+    # https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/1114
+    # https://github.com/JuliaLang/julia/issues/62124
+    #
+    # For a construct like
+    #
+    #     function (expr)(args...)
+    #         body
+    #     end
+    #
+    # we can't put newlines around `expr` as that causes JuliaSyntax to
+    # parse the resulting code incorrectly.
+    disable_nesting = (ctx.is_parenthesised_caller
+        && length(lineage) >= 2
+        && lineage[end-1][1] === K"call"
+        && lineage[end-2][1] === K"function"
+    )
+    nest = nest && !disable_nesting
+    # turn off the is_parenthesised_caller flag so that it's not propagated to children.
     ctx = newctx(ctx; is_parenthesised_caller = false)
 
     for c in children(cst)
         if kind(c) === K"("
             add_node!(t, pretty(style, c, s, ctx, lineage), s; join_lines = true)
-            if nest && !is_parenthesised_caller
+            if nest
                 add_node!(t, Placeholder(0), s)
             end
         elseif kind(c) === K")"
-            if nest && !is_parenthesised_caller
+            if nest
                 add_node!(t, Placeholder(0), s)
             end
             add_node!(t, pretty(style, c, s, ctx, lineage), s; join_lines = true)
