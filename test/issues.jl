@@ -2954,6 +2954,17 @@ end
         end
     end
 
+    @testset "1114 parenthesised caller in function def" begin
+        s = """
+        function (foo::Foo)(a, b)
+           foo
+        end
+        """
+        for style in ALL_STYLES
+            test_format(s, nothing, style; ast=true, always_use_return=false)
+            test_format(s, nothing, style; ast=true, always_use_return=false, margin=10)
+        end
+    end
 end
 
 end

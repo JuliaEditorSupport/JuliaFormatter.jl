@@ -21,6 +21,10 @@
     # indicates whether newlines at the end are semantically meaningful
     is_last_ncat_or_nrow_arg::Bool=false
 
+    # indicates whether the caller in a function definition has been parenthesised
+    # see p_call for explanation
+    is_parenthesised_caller::Bool=false
+
     ignore_single_line::Bool = false
     from_quote::Bool = false
     join_body::Bool = false
@@ -2911,36 +2915,47 @@ function p_call(
         childs = childs[1:(do_block_idx-1)]
     end
 
+    caller_idx = findfirst(n -> !JuliaSyntax.is_whitespace(n), childs)
     args = call_args(childs)
     nest = should_allow_nesting_call_args(args, s.opts.disallow_single_arg_nesting)
 
     for (i, a) in enumerate(childs)
         k = kind(a)
-        n = if k == K"=" && haschildren(a)
-            p_kw(style, a, s, ctx, lineage)
-        else
-            pretty(style, a, s, ctx, lineage)
-        end
-
         if k === K"("
+            n = pretty(style, a, s, ctx, lineage)
             add_node!(t, n, s; join_lines = true)
             if nest
                 add_node!(t, Placeholder(0), s)
             end
         elseif k === K")"
+            n = pretty(style, a, s, ctx, lineage)
             if nest
                 add_node!(t, TrailingComma(), s)
                 add_node!(t, Placeholder(0), s)
             end
             add_node!(t, n, s; join_lines = true)
         elseif k === K","
+            n = pretty(style, a, s, ctx, lineage)
             add_node!(t, n, s; join_lines = true)
 
             # figure out if we need to put a placeholder
             if has_more_args_to_come(childs, i + 1, K")")
                 add_node!(t, Placeholder(1), s)
             end
+        elseif k == K"=" && haschildren(a)
+            n = p_kw(style, a, s, ctx, lineage)
+            add_node!(t, n, s; join_lines = true)
         else
+            # If the caller is parenthesised (usually callable struct, but not necessarily),
+            # avoid inserting placeholders after ( and before ), because that causes
+            # JuliaSyntax@1.0.2 to parse it wrongly. Hopefully this will be fixed
+            # https://github.com/JuliaLang/julia/issues/62124
+            ctx2 = if i == caller_idx && k === K"parens" && haschildren(a)
+                newctx(ctx; is_parenthesised_caller = true)
+            else
+                ctx
+            end
+            n = pretty(style, a, s, ctx2, lineage)
             add_node!(t, n, s; join_lines = true)
         end
     end
@@ -2983,19 +2998,19 @@ function p_parens(
         false
     end
 
+    # turn off the is_parenthesised_caller flag so that it's not propagated to children
+    is_parenthesised_caller = ctx.is_parenthesised_caller
+    ctx = newctx(ctx; is_parenthesised_caller = false)
+
     for c in children(cst)
         if kind(c) === K"("
             add_node!(t, pretty(style, c, s, ctx, lineage), s; join_lines = true)
-            if nest
+            if nest && !is_parenthesised_caller
                 add_node!(t, Placeholder(0), s)
-            else
-                false
             end
         elseif kind(c) === K")"
-            if nest
+            if nest && !is_parenthesised_caller
                 add_node!(t, Placeholder(0), s)
-            else
-                false
             end
             add_node!(t, pretty(style, c, s, ctx, lineage), s; join_lines = true)
         elseif kind(c) === K"block"
