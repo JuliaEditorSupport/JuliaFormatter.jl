@@ -2,6 +2,8 @@
 
 Fixed a bug where formatting of ranges (e.g. `a:b`) was not idempotent when either side was being parenthesised. (#1118, #1119)
 
+Extended the v2.8.2 bugfix for parenthesised callers to include function definitions with `where` clauses. (#1114, #1119)
+
 # v2.8.2
 
 Fixed a bug where JuliaFormatter would insert newlines around a parenthesised caller in a function definition, causing the function to be parsed differently on Julia 1.12.
