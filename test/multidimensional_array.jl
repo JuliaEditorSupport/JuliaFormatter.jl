@@ -239,4 +239,30 @@ end
     end
 end
 
+@testset "comments in vcat array literals" begin
+    # Leading comment
+    s = "X = [\n    # leading\n    1 2\n    3 4\n]\n"
+    test_format(s, s)
+
+    # Trailing comment
+    s = "X = [\n    1 2\n    3 4\n    # trailing\n]\n"
+    test_format(s, s)
+
+    # Both leading and trailing
+    s = "X = [\n    # foo\n    1 2\n    3 4\n    # bar\n]\n"
+    test_format(s, s)
+
+    # format on/off
+    s = "X = [\n    #! format: off\n    1     2\n    3     4\n    #! format: on\n]\n"
+    test_format(s, s)
+
+    # Comment between rows
+    s = "X = [\n    1 2\n    # between\n    3 4\n]\n"
+    test_format(s, s)
+
+    # Typed vcat
+    s = "X = Int[\n    # foo\n    1 2\n    3 4\n    # bar\n]\n"
+    test_format(s, s)
+end
+
 end # module
