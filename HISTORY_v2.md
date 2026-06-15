@@ -1,3 +1,7 @@
+# v2.8.1
+
+Fixed a bug causing line comments inside array literals to be dropped or otherwise cause non-idempotent formatting. (#1113, #1114)
+
 # v2.8.0
 
 Fixed a bug causing lack of idempotence in typed comprehension expressions (i.e., things like `T[expr for x in y]`). (#1105, #1106)
