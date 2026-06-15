@@ -2955,14 +2955,16 @@ end
     end
 
     @testset "1114 parenthesised caller in function def" begin
-        s = """
-        function (foo::Foo)(a, b)
-           foo
-        end
-        """
-        for style in ALL_STYLES
-            test_format(s, nothing, style; ast=true, always_use_return=false)
-            test_format(s, nothing, style; ast=true, always_use_return=false, margin=10)
+        for where in ("", " where T", " where {S,T}", " where S where T")
+            s = """
+            function (foo::Foo)(a, b)$(where)
+               foo
+            end
+            """
+            for style in ALL_STYLES
+                test_format(s, nothing, style; ast=true, always_use_return=false)
+                test_format(s, nothing, style; ast=true, always_use_return=false, margin=10)
+            end
         end
 
         s = """
@@ -3001,6 +3003,38 @@ end
             return SVector(u_inner[1], v1, u_inner[3])
         end"""
         test_format(s, output; ast=true)
+
+        s = raw"""
+        function (f::AbsAffineSchemeMor{<:AbsAffineScheme{S},<:AbsAffineScheme{S},<:Any,<:Any,Nothing})(P::AbsAffineRationalPoint) where {S}
+          # The Nothing type parameter assures that the base morphism is trivial.
+          @req domain(f) == codomain(P) "$(P) not in domain"
+          @req base_ring(domain(f)) == base_ring(codomain(f)) "schemes must be defined over the same base ring. Try to map the point as an ideal instead"
+          x = coordinates(codomain(f))
+          g = pullback(f)
+          p = coordinates(P)
+          imgs = [evaluate(lift(g(y)),p) for y in x]
+          return codomain(f)(imgs; check=false)
+        end"""
+        out = raw"""
+        function (f::AbsAffineSchemeMor{
+            <:AbsAffineScheme{S},
+            <:AbsAffineScheme{S},
+            <:Any,
+            <:Any,
+            Nothing,
+        })(
+            P::AbsAffineRationalPoint,
+        ) where {S}
+            # The Nothing type parameter assures that the base morphism is trivial.
+            @req domain(f) == codomain(P) "$(P) not in domain"
+            @req base_ring(domain(f)) == base_ring(codomain(f)) "schemes must be defined over the same base ring. Try to map the point as an ideal instead"
+            x = coordinates(codomain(f))
+            g = pullback(f)
+            p = coordinates(P)
+            imgs = [evaluate(lift(g(y)), p) for y in x]
+            return codomain(f)(imgs; check = false)
+        end"""
+        test_format(s, out; ast=true)
 
         # Check that parenthesised callers outside of function definitions aren't affected.
         s = "(loooooong)(1, 2, 3)"

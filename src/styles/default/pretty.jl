@@ -3006,18 +3006,26 @@ function p_parens(
     #
     # For a construct like
     #
-    #     function (expr)(args...)
+    #     function (expr)(args...) [where S [where T ...]]
     #         body
     #     end
     #
     # we can't put newlines around `expr` as that causes JuliaSyntax to
     # parse the resulting code incorrectly.
-    disable_nesting = (
-        ctx.is_parenthesised_caller &&
-        length(lineage) >= 2 &&
-        lineage[end-1][1] === K"call" &&
-        lineage[end-2][1] === K"function"
-    )
+    #
+    # The case we want to catch is K"function" [-> K"where"]* -> K"call" -> K"parens"
+    function is_from_function_def(lineage)
+        length(lineage) >= 3 || return false
+        lineage[end][1] === K"parens" || return false
+        lineage[end-1][1] === K"call" || return false
+        # any number of `where`s
+        i = length(lineage) - 2
+        while i > 0 && lineage[i][1] === K"where"
+            i -= 1
+        end
+        return i > 0 && lineage[i][1] === K"function"
+    end
+    disable_nesting = (ctx.is_parenthesised_caller && is_from_function_def(lineage))
     nest = nest && !disable_nesting
     # turn off the is_parenthesised_caller flag so that it's not propagated to children.
     ctx = newctx(ctx; is_parenthesised_caller = false)
