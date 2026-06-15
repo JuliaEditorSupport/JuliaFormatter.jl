@@ -239,4 +239,68 @@ end
     end
 end
 
+@testset "#1113 - comments in vcat array literals" begin
+    for s in (
+        "X = [\n    # leading\n    1 2\n    3 4\n]\n",
+        "X = [\n    1 2\n    3 4\n    # trailing\n]\n",
+        "X = [\n    # foo\n    1 2\n    3 4\n    # bar\n]\n",
+        "X = [\n    1 2\n    # between\n    3 4\n]\n",
+        "X = Int[\n    # foo\n    1 2\n    3 4\n    # bar\n]\n",
+    )
+        for style in ALL_STYLES
+            if style isa DefaultStyle
+                # Default should leave it unchanged
+                test_format(s, s; ast = true)
+            else
+                test_format(s, nothing, style; ast = true)
+            end
+        end
+    end
+end
+
+@testset "#1113 - comments in ncat array literals" begin
+    for s in (
+        "[\n    # leading\n    1\n    2;;\n    3\n    4\n]\n",
+        "[\n    1\n    2;;\n    3\n    4\n    # trailing\n]\n",
+        "[\n    1\n    2;;\n    # between\n    3\n    4\n]\n",
+        "[\n    1;\n    2;;\n    # between\n    3;\n    4\n]\n",
+    )
+        for style in ALL_STYLES
+            if style isa DefaultStyle
+                # Default should leave it unchanged
+                test_format(s, s; ast = true)
+            else
+                test_format(s, nothing, style; ast = true)
+            end
+        end
+    end
+
+    # this one is still a bit wonky because the \n after 2;; is collapsed
+    s = "[\n    # leading\n    1\n    2;;\n    3\n    4;;;\n    5\n    6;;\n    7\n    8\n]\n"
+    for style in ALL_STYLES
+        test_format(s, nothing, style; ast = true)
+        @test occursin("# leading", format_text(s))
+    end
+    @test_broken format_text(s) == s
+end
+
+@testset "#1113 - comments in hcat array literals" begin
+    for s in (
+        "X = [\n    # only\n    1 2\n]\n",
+        "X = [\n    1 2\n    # trailing\n]\n",
+        "X = [\n    # foo\n    1 2\n    # bar\n]\n",
+        "X = [\n    1 2;;\n    # hi\n    3 4\n]\n",
+        "X = [#= inline =# 1 2]\n",
+        "X = [1 #= mid =# 2]\n",
+    )
+        for style in ALL_STYLES
+            if style isa DefaultStyle
+                test_format(s, s; ast = true)
+            else
+                test_format(s, nothing, style; ast = true)
+            end
+        end
+    end
+end
+
 end # module
