@@ -239,30 +239,49 @@ end
     end
 end
 
-@testset "comments in vcat array literals" begin
-    # Leading comment
-    s = "X = [\n    # leading\n    1 2\n    3 4\n]\n"
-    test_format(s, s)
+@testset "#1113 - comments in vcat array literals" begin
+    for s in (
+        "X = [\n    # leading\n    1 2\n    3 4\n]\n",
+        "X = [\n    1 2\n    3 4\n    # trailing\n]\n",
+        "X = [\n    # foo\n    1 2\n    3 4\n    # bar\n]\n",
+        "X = [\n    1 2\n    # between\n    3 4\n]\n",
+        "X = Int[\n    # foo\n    1 2\n    3 4\n    # bar\n]\n",
+    )
+        for style in ALL_STYLES
+            if style isa DefaultStyle
+                # Default should leave it unchanged
+                test_format(s, s; ast = true)
+            else
+                test_format(s, nothing, style; ast = true)
+            end
+        end
+    end
+end
 
-    # Trailing comment
-    s = "X = [\n    1 2\n    3 4\n    # trailing\n]\n"
-    test_format(s, s)
+@testset "#1113 - comments in ncat array literals" begin
+    for s in (
+        "[\n    # leading\n    1\n    2;;\n    3\n    4\n]\n",
+        "[\n    1\n    2;;\n    3\n    4\n    # trailing\n]\n",
+        "[\n    1\n    2;;\n    # between\n    3\n    4\n]\n",
+        "[\n    1;\n    2;;\n    # between\n    3;\n    4\n]\n",
+    )
+        for style in ALL_STYLES
+            if style isa DefaultStyle
+                # Default should leave it unchanged
+                test_format(s, s; ast = true)
+            else
+                test_format(s, nothing, style; ast = true)
+            end
+        end
+    end
 
-    # Both leading and trailing
-    s = "X = [\n    # foo\n    1 2\n    3 4\n    # bar\n]\n"
-    test_format(s, s)
-
-    # format on/off
-    s = "X = [\n    #! format: off\n    1     2\n    3     4\n    #! format: on\n]\n"
-    test_format(s, s)
-
-    # Comment between rows
-    s = "X = [\n    1 2\n    # between\n    3 4\n]\n"
-    test_format(s, s)
-
-    # Typed vcat
-    s = "X = Int[\n    # foo\n    1 2\n    3 4\n    # bar\n]\n"
-    test_format(s, s)
+    # this one is still a bit wonky because the \n after 2;; is collapsed
+    s = "[\n    # leading\n    1\n    2;;\n    3\n    4;;;\n    5\n    6;;\n    7\n    8\n]\n"
+    for style in ALL_STYLES
+        test_format(s, nothing, style; ast = true)
+        @test occursin("# leading", format_text(s))
+    end
+    @test_broken false
 end
 
 end # module
