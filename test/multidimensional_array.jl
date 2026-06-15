@@ -284,4 +284,23 @@ end
     @test_broken false
 end
 
+@testset "#1113 - comments in hcat array literals" begin
+    for s in (
+        "X = [\n    # only\n    1 2\n]\n",
+        "X = [\n    1 2\n    # trailing\n]\n",
+        "X = [\n    # foo\n    1 2\n    # bar\n]\n",
+        "X = [\n    1 2;;\n    # hi\n    3 4\n]\n",
+        "X = [#= inline =# 1 2]\n",
+        "X = [1 #= mid =# 2]\n",
+    )
+        for style in ALL_STYLES
+            if style isa DefaultStyle
+                test_format(s, s; ast = true)
+            else
+                test_format(s, nothing, style; ast = true)
+            end
+        end
+    end
+end
+
 end # module

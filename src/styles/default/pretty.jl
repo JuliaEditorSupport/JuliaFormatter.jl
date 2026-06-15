@@ -3698,6 +3698,7 @@ function p_hcat(
     # to decide whether to place boundary newlines. In other words, we can safely insert
     # Placeholder nodes at these positions.
 
+    prev_comment_was_dropped = false
     for (i, a) in enumerate(childs)
         n = pretty(style, a, s, ctx, lineage)
         if kind(a) === K"["
@@ -3728,7 +3729,7 @@ function p_hcat(
             add_node!(t, n, s; join_lines = true)
         elseif JuliaSyntax.is_whitespace(a)
             if kind(a) === K"Comment"
-                add_node!(t, n, s; join_lines = true)
+                prev_comment_was_dropped = !add_hasheq_comment!(t, n, s)
             elseif is_newline_after_2semicolons(cst, i)
                 # See above: we cannot convert ';;\n' to ';;'
                 add_node!(t, Newline(; nest_behavior = AlwaysNest), s)
@@ -3738,13 +3739,28 @@ function p_hcat(
                 # later on, `n_tuple!` will insert newlines after the `[` and before the
                 # `].`
                 t.nest_behavior = AlwaysNest
-            elseif !(kind(cst[i+1]) in KSet"; ]") && !(kind(cst[i-1]) in KSet"; [")
-                # Whitespace is generally important to retain, because it can be a separator
-                # -- but we should omit it in a few cases:
-                # 1. If it's followed by / before a ';;' separator, since it's not needed.
-                # 2. Directly after the opening bracket.
-                # 3. Directly before the closing bracket.
-                add_node!(t, Whitespace(1), s)
+                prev_comment_was_dropped = false
+            elseif !(kind(cst[i+1]) in KSet"; ] Comment") && !(kind(cst[i-1]) in KSet"; [")
+                if !isnothing(first_arg_idx) &&
+                   i < first_arg_idx &&
+                   prev_comment_was_dropped
+                    # Before the first argument, after a dropped regular # comment.
+                    # Suppress whitespace so NOTCODE gap detection can reconstruct
+                    # the comment at the parent level.
+                elseif prev_comment_was_dropped
+                    # After a dropped regular # comment, past the first argument.
+                    # Remove the preceding forced NEWLINE (e.g. from ;;) so that
+                    # add_node!'s gap detection is not short-circuited by
+                    # is_prev_newline, and can insert NOTCODE for the comment.
+                    if is_prev_newline(t)
+                        remove_prev_newline!(t)
+                    end
+                else
+                    add_node!(t, Whitespace(1), s)
+                end
+                prev_comment_was_dropped = false
+            else
+                prev_comment_was_dropped = false
             end
         elseif i == 1 && kind(a) !== K"["
             # Type preceding the `[`, e.g. `T` in `T[1 2 3]`.
