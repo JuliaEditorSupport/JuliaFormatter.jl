@@ -3865,18 +3865,17 @@ function is_semantically_important_newline(
     # A newline is not important if it's adjacent to a comment and all the children
     # between the comment and the boundary of the row (start or end) are whitespace.
     #
-    # Trailing comment case: all children after this newline are whitespace, and at
-    # least one is a comment. Example: `3 4\n # bar\n` — the newline before `# bar`
-    # is not a row separator. Such trailing comments will be handled by the NOTCODE
-    # mechanism at the parent level (p_vcat/p_ncat).
+    # Trailing comment case: all children after this newline are whitespace, and at least
+    # one is a comment. Example: `3 4\n # bar\n` — the newline before `# bar` is not a row
+    # separator. We don't need to include it.
     if all(j -> JuliaSyntax.is_whitespace(row_cst[j]), (i+1):n) &&
        any(j -> kind(row_cst[j]) === K"Comment", (i+1):n)
         return false
     end
-    # Leading comment case: all children before this newline are whitespace, and at
-    # least one is a comment. Example: `\n # foo\n 1 2` — the newline after `# foo`
-    # is not a row separator. Such leading comments are handled by explicit NOTCODE
-    # insertion in p_row.
+    # Leading comment case: all children before this newline are whitespace, and at least
+    # one is a comment. Example: `\n # foo\n 1 2` — the newline after `# foo` is not a row
+    # separator. We can drop all newlines after the comment, because the insertion of the
+    # newline after the comment is handled by the NOTCODE mechanism later on.
     if all(j -> JuliaSyntax.is_whitespace(row_cst[j]), 1:(i-1)) &&
        any(j -> kind(row_cst[j]) === K"Comment", 1:(i-1))
         return false
