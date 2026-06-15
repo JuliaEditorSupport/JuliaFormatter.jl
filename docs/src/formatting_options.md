@@ -693,17 +693,21 @@ Click on the "Show explanation" toggle below to read it.
     s |> println
     ```
 
+    Formatting once:
+
     ```@example stable-multiline
     using JuliaFormatter: format_text
     format_text(s; margin=21) |> println
     ```
+
+    And formatting twice:
 
     ```@example stable-multiline
     format_text(format_text(s; margin=21); margin=21) |> println
     ```
 
     What on earth is going on here?!
-    When JuliaFormatter decides ewhether or not to insert line breaks between arguments, it does so based on the _sum of the 'length's of the arguments_.
+    When JuliaFormatter decides whether or not to insert line breaks between arguments, it does so based on the _sum of the 'length's of the arguments_.
     That is, for example, `f(a, b, c)` is ten characters long.
     If `margin < 10`, then JuliaFormatter will opt to move `a`, `b`, and `c` onto their own lines.
 
@@ -730,18 +734,21 @@ Click on the "Show explanation" toggle below to read it.
 
     the second line ends _before_ the end of the opening `"""`, so the 'length' of the multiline string is 3 (which corresponds to the triple quotes in the _first_ line).
     If you sum the lengths up you should find that the total length of the arguments is 21 — exactly equal to the margin we used.
-    So when JuliaFormatter looks at the **outer** call to `foooo(...)`, it decides that it *doesn't* need to nest its arguments, in other words we can do `foooo((...), ...)` instead of `foooo(\n(...),\n...)`.
-    Notice how `a` and `b` are also kept on the same line.
+    So when JuliaFormatter looks at the **outer** call to `foooo(...)`, it decides that it *doesn't* need to nest its arguments, in other words we can do `foooo((...), a, b)` instead of `foooo(\n    (...),\n    a,\n    b,\n)`:
 
     ```@example stable-multiline
     format_text(s; margin=21) |> println
     ```
 
-    To be honest, this code doesn't really make a lot of sense to me.
+    As expected, `a` and `b` are also kept on the same line.
+
+    To be honest, this logic doesn't really make a lot of sense to me.
     The total 'length' being 21 here is not really a meaningful metric because the arguments to `foooo(...)` would never go on the same line anyway!
     The treatment of multiline strings will probably be reworked a future version.
 
-    The problem is that for the **inner** tuple, it sees that it has a multiline string as an argument, and because of this it will force line breaks *inside* the tuple.
+    Okay, so far so good.
+    The problem begins with the fact that for the **inner** tuple, it sees that it has a multiline string as an argument, and because of this it will force line breaks *inside* the tuple.
+    (In general, any block-like argument, e.g. `if...else...end` or `begin...end` will force nesting.)
     That's why the first output causes the multiline string and `g` to be moved onto separate lines.
 
     So far so good, but if we now look at that output, the opening triple quotes have been moved down into a new line.
@@ -795,7 +802,7 @@ Click on the "Show explanation" toggle below to read it.
 
     If we take a step back, the broader problem is that the outer call to `foooo(...)` is making formatting decisions without any knowledge of how its children are going to be nested, which could itself change the decisions that `foooo(...)` makes.
     This means that instead of exploring the full space of possible formatting outputs, where nesting decisions in parent and child nodes are coupled, JuliaFormatter is decomposing this into two 'local' decisions: one for the parent and one for the child.
-    In many cases these can be fully decoupled, but in this case it can't, and in many other cases even though it can be decoupled this leads to suboptimal formatting.
+    In many cases these can be fully decoupled, but in this case it can't; furthermore, even though decoupling does not actually ruin idempotence in many other cases, it can still lead to suboptimal formatting (which makes sense -- after all we're trying fewer possibilities).
     *Fixing this properly therefore requires a complete rethink of the formatting algorithm.*
     If you're interested in *that*, see e.g. [this issue](https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/1104).
 
