@@ -1,6 +1,6 @@
 # v2.8.1
 
-Fixed a bug causing line comments inside array literals to be dropped or otherwise cause non-idempotent formatting. (#1113, #1114)
+Fixed a bug causing line comments inside array literals to be dropped or otherwise cause non-idempotent formatting. (#1113, #1115, #1116)
 
 # v2.8.0
 
