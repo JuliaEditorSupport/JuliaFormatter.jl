@@ -2954,6 +2954,70 @@ end
         end
     end
 
+    @testset "1114 parenthesised caller in function def" begin
+        s = """
+        function (foo::Foo)(a, b)
+           foo
+        end
+        """
+        for style in ALL_STYLES
+            test_format(s, nothing, style; ast=true, always_use_return=false)
+            test_format(s, nothing, style; ast=true, always_use_return=false, margin=10)
+        end
+
+        s = """
+        @inline function (boundary_condition::BoundaryConditionNavierStokesWall{<:NoSlip,
+                                                                                <:Adiabatic})(flux_inner,
+                                                                                              u_inner,
+                                                                                              orientation::Integer,
+                                                                                              direction,
+                                                                                              x,
+                                                                                              t,
+                                                                                              operator_type::Gradient,
+                                                                                              equations::CompressibleNavierStokesDiffusion1D{GradientVariablesPrimitive})
+            v1 = boundary_condition.boundary_condition_velocity.boundary_value_function(x, t,
+                                                                                        equations)
+            return SVector(u_inner[1], v1, u_inner[3])
+        end"""
+        output = """
+        @inline function (boundary_condition::BoundaryConditionNavierStokesWall{
+            <:NoSlip,
+            <:Adiabatic,
+        })(
+            flux_inner,
+            u_inner,
+            orientation::Integer,
+            direction,
+            x,
+            t,
+            operator_type::Gradient,
+            equations::CompressibleNavierStokesDiffusion1D{GradientVariablesPrimitive},
+        )
+            v1 = boundary_condition.boundary_condition_velocity.boundary_value_function(
+                x,
+                t,
+                equations,
+            )
+            return SVector(u_inner[1], v1, u_inner[3])
+        end"""
+        test_format(s, output; ast=true)
+
+        # Check that parenthesised callers outside of function definitions aren't affected.
+        s = "(loooooong)(1, 2, 3)"
+        out = "(\n    loooooong\n)(\n    1,\n    2,\n    3,\n)"
+        test_format(s, out; ast=true, margin=10)
+        s = """
+        (function()
+            foo
+        end)()"""
+        out = """
+        (
+            function ()
+                foo
+            end
+        )()"""
+        test_format(s, out; ast=true, margin=10)
+    end
 end
 
 end

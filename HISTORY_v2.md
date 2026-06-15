@@ -1,3 +1,8 @@
+# v2.8.2
+
+Fixed a bug where JuliaFormatter would insert newlines around a parenthesised caller in a function definition, causing the function to be parsed differently on Julia 1.12.
+This is probably a Julia bug and not really JuliaFormatter's fault, but this patch works around it. (#1114, #1117)
+
 # v2.8.1
 
 Fixed a bug causing line comments inside array literals to be dropped or otherwise cause non-idempotent formatting. (#1113, #1115, #1116)
