@@ -2641,29 +2641,31 @@ function p_binaryopcall(
                 # TODO(penelopeysm): Add a config option for this parenthesisation (false
                 # should preserve the original parens, true should add parens if there are
                 # none).
+                bracket_fst = FST(Brackets, nspaces(s))
                 add_node!(
-                    t,
+                    bracket_fst,
                     FST(PUNCTUATION, -1, n.startline, n.startline, "("),
                     s;
                     join_lines = true,
                 )
                 if after_op
                     add_node!(
-                        t,
+                        bracket_fst,
                         n,
                         s;
                         join_lines = true,
                         override_join_lines_based_on_source = !nest,
                     )
                 else
-                    add_node!(t, n, s; join_lines = true)
+                    add_node!(bracket_fst, n, s; join_lines = true)
                 end
                 add_node!(
-                    t,
+                    bracket_fst,
                     FST(PUNCTUATION, -1, n.startline, n.startline, ")"),
                     s;
                     join_lines = true,
                 )
+                add_node!(t, bracket_fst, s; join_lines = true)
             else
                 if after_op
                     add_node!(
