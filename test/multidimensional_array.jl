@@ -281,7 +281,7 @@ end
         test_format(s, nothing, style; ast = true)
         @test occursin("# leading", format_text(s))
     end
-    @test_broken false
+    @test_broken format_text(s) == s
 end
 
 @testset "#1113 - comments in hcat array literals" begin
