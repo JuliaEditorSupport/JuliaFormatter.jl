@@ -3567,6 +3567,8 @@ function p_vcat(
                 add_node!(t, Placeholder(0), s)
             end
             add_node!(t, n, s; join_lines = true)
+        elseif kind(a) === K"Comment"
+            add_hasheq_comment!(t, n, s)
         elseif JuliaSyntax.is_whitespace(a)
             add_node!(t, n, s; join_lines = true)
         elseif kind(a) === K";"
@@ -3862,6 +3864,25 @@ function is_semantically_important_newline(
     n = length(children(row_cst))
     # Start of the row - not important
     i == 1 && return false
+    # A newline is not important if it's adjacent to a comment and all the children
+    # between the comment and the boundary of the row (start or end) are whitespace.
+    #
+    # Trailing comment case: all children after this newline are whitespace, and at
+    # least one is a comment. Example: `3 4\n # bar\n` — the newline before `# bar`
+    # is not a row separator. Such trailing comments will be handled by the NOTCODE
+    # mechanism at the parent level (p_vcat/p_ncat).
+    if all(j -> JuliaSyntax.is_whitespace(row_cst[j]), (i + 1):n) &&
+       any(j -> kind(row_cst[j]) === K"Comment", (i + 1):n)
+        return false
+    end
+    # Leading comment case: all children before this newline are whitespace, and at
+    # least one is a comment. Example: `\n # foo\n 1 2` — the newline after `# foo`
+    # is not a row separator. Such leading comments are handled by explicit NOTCODE
+    # insertion in p_row.
+    if all(j -> JuliaSyntax.is_whitespace(row_cst[j]), 1:(i - 1)) &&
+       any(j -> kind(row_cst[j]) === K"Comment", 1:(i - 1))
+        return false
+    end
     # End of the row -- might be important
     i == n && return (!is_last_arg_of_parent && kind(row_cst[i-1]) !== K";")
     # Otherwise it's important
@@ -3943,6 +3964,11 @@ function p_row(
         )
         if kind(a) === K";"
             add_node!(t, n, s; join_lines = true)
+        elseif kind(a) === K"Comment"
+            # Handle #= =# comments inline; regular # comments are NONE from pretty()
+            # and are silently skipped by add_node!. The gap detection at the parent
+            # level (p_vcat/p_ncat) will reconstruct them via NOTCODE.
+            add_hasheq_comment!(t, n, s)
         elseif JuliaSyntax.is_whitespace(a)
             # is_semantically_important_newline handles case (a)
             if is_semantically_important_newline(cst, i, is_last_arg_of_parent)
