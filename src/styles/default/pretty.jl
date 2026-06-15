@@ -1015,6 +1015,8 @@ end
 # `#= ... =#` comments are reported as whitespace by JuliaSyntax, so block
 # handlers that skip whitespace would otherwise drop them. Append the comment
 # (keeping it on the current line when it trails code) instead of losing it.
+#
+# Returns true if the comment was added, false otherwise.
 function add_hasheq_comment!(t::FST, n::FST, s::State)
     n.typ === HASHEQCOMMENT || return false
     tnodes = t.nodes::Vector{FST}
@@ -3741,6 +3743,14 @@ function p_hcat(
                 t.nest_behavior = AlwaysNest
                 prev_comment_was_dropped = false
             elseif !(kind(cst[i+1]) in KSet"; ] Comment") && !(kind(cst[i-1]) in KSet"; [")
+                # Whitespace is generally important to retain, because it can be a separator
+                # -- but we should omit it in a few cases:
+                # 1. If it's followed by / before a ';;' separator, since it's not needed.
+                # 2. Directly after the opening bracket.
+                # 3. Directly before the closing bracket.
+                #
+                # There's also some special logic for comments, because the current way that
+                # JuliaFormatter deals with comments is crazily hacky.
                 if !isnothing(first_arg_idx) &&
                    i < first_arg_idx &&
                    prev_comment_was_dropped
