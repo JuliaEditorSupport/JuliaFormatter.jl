@@ -1388,10 +1388,6 @@ function p_functiondef(
 
             s.indent += s.opts.indent
             n = pretty(style, c, s, newctx(ctx; ignore_single_line = true), lineage)
-            # TODORETURN
-            # if s.opts.always_use_return
-            #     prepend_return!(n, s)
-            # end
             add_node!(t, n, s; max_padding = s.opts.indent)
             s.indent -= s.opts.indent
         elseif is_func_call(c)
@@ -2037,10 +2033,6 @@ function append_do_nodes!(
         elseif kind(c) === K"block"
             s.indent += s.opts.indent
             n = pretty(style, c, s, newctx(ctx; ignore_single_line = true), lineage)
-            # TODORETURN
-            # if s.opts.always_use_return
-            #     prepend_return!(n, s)
-            # end
             add_node!(t, n, s; max_padding = s.opts.indent)
             s.indent -= s.opts.indent
         elseif kind(c) === K"tuple"
