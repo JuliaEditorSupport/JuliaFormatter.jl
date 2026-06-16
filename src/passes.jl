@@ -807,7 +807,8 @@ function short_circuit_to_if_pass!(fst::FST, s::State)
             # (e.g. function body, loop body) or at the top level. Don't expand inside
             # calls, tuples, etc. where the value is being used -- `a && b` and
             # `if a; b; end` have different return values when `a` is falsy.
-            value_is_needed = i == length(fst.nodes) && (fst.typ === Block || fst.typ === Return)
+            value_is_needed =
+                i == length(fst.nodes) && (fst.typ === Block || fst.typ === Return)
             _short_circuit_to_if!(n, s, value_is_needed)
         else
             short_circuit_to_if_pass!(n, s)

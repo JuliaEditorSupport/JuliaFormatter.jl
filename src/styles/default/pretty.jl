@@ -2464,8 +2464,7 @@ function p_binaryopcall(
             # while       while a && b  (see also #940)
             # if          if a && b
             # elseif      elseif a && b
-            if parent_node in KSet"parens macrocall return while if elseif" ||
-               is_assign
+            if parent_node in KSet"parens macrocall return while if elseif" || is_assign
                 standalone_binary_circuit = false
             end
         end
