@@ -1082,21 +1082,29 @@ Indeed, even with semantic analysis about the programme, it's not possible to de
 cases, because answering the question "does this expression return a value" amounts to
 exactly the halting problem.
 """
-function should_add_return_to_last_statement(cst::JuliaSyntax.GreenNode, s::State, lineage::Vector{Tuple{JuliaSyntax.Kind,Bool,Bool}})
-    kind(cst) === K"block" || error("should_add_return_to_last_statement called on a non-block node")
+function should_add_return_to_last_statement(
+    cst::JuliaSyntax.GreenNode,
+    s::State,
+    lineage::Vector{Tuple{JuliaSyntax.Kind,Bool,Bool}},
+)
+    kind(cst) === K"block" ||
+        error("should_add_return_to_last_statement called on a non-block node")
 
     # If the option is not enabled, don't add return.
     s.opts.always_use_return || return false
 
     # If the block is empty, don't add return.
-    last_stmt_idx = findlast(n -> !JuliaSyntax.is_whitespace(n) && kind(n) !== K";", children(cst))
+    last_stmt_idx =
+        findlast(n -> !JuliaSyntax.is_whitespace(n) && kind(n) !== K";", children(cst))
     last_stmt_idx === nothing && return false
 
     # Only add return if the block is the body of a function/macro definition or a do-block
     # in a function/macro call.
     if !(
         length(lineage) >= 2 && lineage[end-1][1] in KSet"function macro" ||
-        length(lineage) >= 3 && lineage[end-1][1] === K"do" && lineage[end-2][1] in KSet"call macrocall"
+        length(lineage) >= 3 &&
+        lineage[end-1][1] === K"do" &&
+        lineage[end-2][1] in KSet"call macrocall"
     )
         return false
     end
@@ -1120,17 +1128,21 @@ function should_add_return_to_last_statement(cst::JuliaSyntax.GreenNode, s::Stat
     #     raw"""string"""\n f   -- [macrocall] -> NewlineWS -> Identifier
     #     """string"""\n f      -- [string] -> NewlineWS -> Identifier
     if last_stmt_idx >= 3
-        preceded_by_newline = kind(cst[last_stmt_idx - 1]) === K"NewlineWs"
-        maybe_docstring = cst[last_stmt_idx - 2]
-        then_preceded_by_docstring = kind(maybe_docstring) === K"string" || (kind(maybe_docstring) === K"macrocall" && haschildren(maybe_docstring) && kind(maybe_docstring[1]) === K"StringMacroName")
+        preceded_by_newline = kind(cst[last_stmt_idx-1]) === K"NewlineWs"
+        maybe_docstring = cst[last_stmt_idx-2]
+        then_preceded_by_docstring =
+            kind(maybe_docstring) === K"string" || (
+                kind(maybe_docstring) === K"macrocall" &&
+                haschildren(maybe_docstring) &&
+                kind(maybe_docstring[1]) === K"StringMacroName"
+            )
         if preceded_by_newline && then_preceded_by_docstring
             return false
         end
     end
-    
+
     return true
 end
-
 
 # Block
 # length Block is the length of the longest expr
@@ -1146,12 +1158,13 @@ function p_block(
     if !haschildren(cst)
         return t
     end
-    
+
     # We might want to add return to the last statement.
     add_return_to_last_statement = should_add_return_to_last_statement(cst, s, lineage)
     # Technically this doesn't need to be computed if add_return_to_last_statement is false,
     # but it's cheap.
-    last_stmt_idx = findlast(n -> !JuliaSyntax.is_whitespace(n) && kind(n) !== K";", children(cst))
+    last_stmt_idx =
+        findlast(n -> !JuliaSyntax.is_whitespace(n) && kind(n) !== K";", children(cst))
 
     join_body = ctx.join_body
     ignore_single_line = ctx.ignore_single_line
@@ -1227,8 +1240,13 @@ function p_block(
                     # Add a return statement to the last statement in the block.
                     c = cursor_loc(s)
                     return_fst = FST(Return, nspaces(s))
-                    add_node!(return_fst, FST(KEYWORD, c[2], c[1], c[1], "return"), s; join_lines=true)
-                    add_node!(return_fst, Whitespace(1), s; join_lines=true)
+                    add_node!(
+                        return_fst,
+                        FST(KEYWORD, c[2], c[1], c[1], "return"),
+                        s;
+                        join_lines = true,
+                    )
+                    add_node!(return_fst, Whitespace(1), s; join_lines = true)
                     # have to push to lineage to make sure that the return value node is
                     # formatted properly. See #1125.
                     push!(lineage, (K"return", false, false))

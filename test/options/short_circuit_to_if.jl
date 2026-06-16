@@ -7,15 +7,15 @@ using Test
     s_ = """
         begin
         a && b
+        2
         end
     """
     s = """
     begin
         if a
             b
-        else
-            false
         end
+        2
     end
     """
     test_format(s_, s; margin=92, short_circuit_to_if = true)
@@ -23,15 +23,15 @@ using Test
     s_ = """
         begin
         a || b
+        2
         end
     """
     s = """
     begin
         if !(a)
             b
-        else
-            true
         end
+        2
     end
     """
     test_format(s_, s; margin=11, short_circuit_to_if = true)
@@ -42,9 +42,8 @@ using Test
             a
         )
             b
-        else
-            true
         end
+        2
     end
     """
     test_format(s_, s; margin=10, short_circuit_to_if = true)
@@ -53,15 +52,15 @@ using Test
     s_ = """
         begin
         a && b && c && d
+        2
         end
     """
     s = """
     begin
         if a && b && c
             d
-        else
-            false
         end
+        2
     end
     """
     test_format(s_, s; margin=92, short_circuit_to_if = true)
@@ -69,15 +68,15 @@ using Test
     s_ = """
         begin
         a && b && c || d
+        2
         end
     """
     s1 = """
     begin
         if !(a && b && c)
             d
-        else
-            true
         end
+        2
     end
     """
     test_format(s_, s1; margin=21, short_circuit_to_if = true)
@@ -88,9 +87,8 @@ using Test
             a && b && c
         )
             d
-        else
-            true
         end
+        2
     end
     """
     test_format(s_, s2; margin=20, short_circuit_to_if = true)
@@ -98,6 +96,7 @@ using Test
     s_ = """
         begin
         (a && b && c) || d
+        2
         end
     """
     test_format(s_, s1; margin=21, short_circuit_to_if = true)
@@ -106,15 +105,15 @@ using Test
     s_ = """
     function foo()
         a && (b || c || d)
+        2
     end
     """
     s = """
     function foo()
         if a
             (b || c || d)
-        else
-            false
         end
+        2
     end
     """
     test_format(s_, s; margin=92, short_circuit_to_if = true)
@@ -144,6 +143,7 @@ using Test
         "hello"
 
         b && return "ooo"
+        2
     end
     """
     s = """
@@ -156,59 +156,32 @@ using Test
 
         if b
             return "ooo"
-        else
-            false
         end
+        2
     end
     """
     test_format(s_, s; margin=92, short_circuit_to_if = true)
 
     @testset "return statement" begin
-        # If the return statement is already there, don't add it!
         for op in ("&&", "||")
+            # If the return statement is already there, don't expand it!
             s = """
             function f()
                 return a $(op) b
-            end
-            """
+            end"""
             test_format(s, s; short_circuit_to_if = true)
-        end
 
-        # But if the return statement isn't there yet and we asked to prepend it...
-        s = """
-        function f()
-            a && b
+            # Also don't expand if it's the last statement in the function and always_use_return
+            # is true -- because that means it's conceptually the same as a returned value.
+            s_noreturn = """
+            function f()
+                a $(op) b
+            end"""
+            test_format(s_noreturn, s; short_circuit_to_if = true, always_use_return = true)
         end
-        """
-        output = """
-        function f()
-            return if a
-                b
-            else
-                false
-            end
-        end
-        """
-        test_format(s, output; short_circuit_to_if = true, always_use_return = true)
-
-        s = """
-        function f()
-            a || b
-        end
-        """
-        output = """
-        function f()
-            return if !(a)
-                b
-            else
-                true
-            end
-        end
-        """
-        test_format(s, output; short_circuit_to_if = true, always_use_return = true)
     end
 
-    @testset "while cond" begin
+    @testset "don't expand in while cond" begin
         s = """
         while a && b
             c

@@ -815,7 +815,9 @@ function short_circuit_to_if_pass!(fst::FST, s::State)
             # `if a; b; end` have different return values when `a` is falsy.
             value_is_needed =
                 i == length(fst.nodes) && (fst.typ === Block || fst.typ === Return)
-            _short_circuit_to_if!(n, s, value_is_needed)
+            if !value_is_needed
+                _short_circuit_to_if!(n, s, false)
+            end
         else
             short_circuit_to_if_pass!(n, s)
         end
