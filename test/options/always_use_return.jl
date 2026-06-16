@@ -129,7 +129,7 @@ using Test
             test_format(str, str; always_use_return = true)
         end
 
-        @testset "blocks"
+        @testset "blocks" begin
             str = """
             function foo()
                 for i = 1:10
@@ -149,35 +149,36 @@ using Test
             test_format(str, str; always_use_return = true)
         end
 
-    @testset "expressions containing returns" begin
-        str = """
-        function f()
-            (1 + 1; return 2)
-        end
-        """
-        test_format(str, str; always_use_return = true)
-
-        str = """
-        function foo(x)
-            x > 0 ? (return 1) : (return 2)
-        end
-        """
-        test_format(str, str; always_use_return = true)
-
-        str = """
-        function foo(x)
-            x > 0 ? (return 1) : 2
-        end
-        """
-        test_format(str, str; always_use_return = true)
-
-        for op in ("&&", "||")
+        @testset "expressions containing returns" begin
             str = """
-            function foo(x)
-                x > 0 $op (return 1)
+            function f()
+                (1 + 1; return 2)
             end
             """
             test_format(str, str; always_use_return = true)
+
+            str = """
+            function foo(x)
+                x > 0 ? (return 1) : (return 2)
+            end
+            """
+            test_format(str, str; always_use_return = true)
+
+            str = """
+            function foo(x)
+                x > 0 ? (return 1) : 2
+            end
+            """
+            test_format(str, str; always_use_return = true)
+
+            for op in ("&&", "||")
+                str = """
+                function foo(x)
+                    x > 0 $op (return 1)
+                end
+                """
+                test_format(str, str; always_use_return = true)
+            end
         end
     end
 end
