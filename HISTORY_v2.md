@@ -7,7 +7,9 @@ Fixed a bug where `x && y` would be expanded to `if x; y; end` with `short_circu
 Fixed a bug where indentation of `x && y` and `x || y` expressions were overly context-sensitive, leading to inconsistent and sometimes non-idempotent formatting. (#1121, #1122)
 
 Fixed a bug where `always_use_return` would sometimes cause lack of idempotence.
-(Note however that this option can still cause lack of idempotence *if and only if* combined with `short_to_long_function_def`.) (#1125, #1128)
+(Note however that this option can still cause lack of idempotence *if and only if* combined with `short_to_long_function_def`.)
+Furthermore, as a consequence of this fix, `return` *will* get prepended to `throw(...)` if that is the final expression in the function.
+This differs from previous behaviour: if you do not want this, consider adding `return nothing` at the end of your function after the `throw(...)` statement, or just disable the `always_use_return` option. (#1125, #1128)
 
 # v2.8.3
 
