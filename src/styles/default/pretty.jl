@@ -1039,6 +1039,16 @@ function add_hasheq_comment!(t::FST, n::FST, s::State)
 end
 
 """
+Recursively check whether a CST node contains a `return` node anywhere inside it.
+Used to avoid prepending `return` to expressions like `x > 0 ? (return 1) : (return 2)`.
+"""
+function _contains_return(cst::JuliaSyntax.GreenNode)::Bool
+    kind(cst) === K"return" && return true
+    haschildren(cst) && return any(_contains_return, children(cst))
+    return false
+end
+
+"""
     should_add_return_to_last_statement(cst, s, lineage)
 
 For a block `cst`, determine whether we should add a `return` to the last statement in the block.
@@ -1114,6 +1124,12 @@ function should_add_return_to_last_statement(
     if kind(last_stmt) in KSet"return macrocall" || is_block(last_stmt)
         # If the last statement is already a return, a macro, or a block, don't add
         # return.
+        return false
+    end
+
+    # If the last statement already contains a `return` somewhere inside it (e.g.
+    # `x > 0 ? (return 1) : (return 2)`), don't add another one.
+    if _contains_return(last_stmt)
         return false
     end
 
