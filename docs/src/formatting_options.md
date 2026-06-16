@@ -45,7 +45,7 @@ Note that, although styles each define a different set of options, they are not 
 | [`always_for_in`](@ref options-always-for-in)                                       | ♻️   | `false`   | **`true`**  | **`true`**  | **`true`**   | **`nothing`** |
 | [`always_use_return`](@ref options-always-use-return)                               | ⚠️   | `false`   | **`true`**  | **`true`**  | `false`      | `false`       |
 | [`annotate_untyped_fields_with_any`](@ref options-annotate-untyped-fields-with-any) | ⚠️   | `true`    | `true`      | **`false`** | `true`       | **`false`**   |
-| [`conditional_to_if`](@ref options-conditional-to-if)                               | ⚠️   | `false`   | `false`     | **`true`**  | `false`      | `false`       |
+| [`conditional_to_if`](@ref options-conditional-to-if)                               | ♻️   | `false`   | `false`     | **`true`**  | `false`      | `false`       |
 | [`disallow_single_arg_nesting`](@ref options-disallow-single-arg-nesting)           | 📐   | `false`   | `false`     | `false`     | **`true`**   | `false`       |
 | [`for_in_replacement`](@ref options-for-in-replacement)                             | ♻️   | `"in"`    | `"in"`      | `"in"`      | `"in"`       | `"in"`        |
 | [`force_long_function_def`](@ref options-force-long-function-def)                   | ⚠️   | `false`   | `false`     | `false`     | `false`      | `false`       |
