@@ -1121,9 +1121,18 @@ function should_add_return_to_last_statement(
 
     # Need to check the children carefully now.
     last_stmt = children(cst)[last_stmt_idx]
-    if kind(last_stmt) in KSet"return macrocall" || is_block(last_stmt)
-        # If the last statement is already a return, a macro, or a block, don't add
-        # return.
+    # If the last statement is already a return or a macro, don't add return.
+    if kind(last_stmt) in KSet"return macrocall"
+        return false
+    end
+    # If the last statement is a block, don't add return. However, parenthesised blocks like
+    # `(a; b)` still get return. Thankfully, JuliaSyntax tells us about that!
+    if is_block(last_stmt) && !JuliaSyntax.has_flags(last_stmt, JuliaSyntax.PARENS_FLAG)
+        return false
+    end
+    # Do-blocks don't get caught by `is_block()` because they have K"call" or K"macrocall",
+    # so we search for them separately here and disable them here too.
+    if has_do_block_call(last_stmt) !== nothing
         return false
     end
 

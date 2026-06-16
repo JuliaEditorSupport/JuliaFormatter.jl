@@ -56,6 +56,7 @@ using Test
         test_format(
             str_,
             str;
+            margin = length(str_) - 1,
             short_to_long_function_def = true,
             always_use_return = true,
         )
@@ -129,6 +130,17 @@ using Test
             test_format(str, str; always_use_return = true)
         end
 
+        @testset "do-block calls" begin
+            str = """
+            function foo()
+                open("metrics.out", "w") do f
+                    return JSON.print(f, metrics)
+                end
+            end
+            """
+            test_format(str, str; always_use_return = true)
+        end
+
         @testset "blocks" begin
             str = """
             function foo()
@@ -147,6 +159,20 @@ using Test
                 end
             end"""
             test_format(str, str; always_use_return = true)
+        end
+
+        @testset "parenthesized compound expression gets return" begin
+            str_ = """
+            function foo(integrator, dt)
+                (integrator.dtpropose = dt; integrator.dtcache = dt)
+            end
+            """
+            str = """
+            function foo(integrator, dt)
+                return (integrator.dtpropose = dt; integrator.dtcache = dt)
+            end
+            """
+            test_format(str_, str; always_use_return = true)
         end
 
         @testset "expressions containing returns" begin
