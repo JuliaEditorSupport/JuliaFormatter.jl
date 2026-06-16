@@ -522,18 +522,6 @@ end
         end"""
         test_format(str, str; indent=4, margin=92, always_use_return = true)
 
-        @testset "426" begin
-            # throw function heuristic
-            str = """
-            function f(x)
-                x == 1 && return "a"
-                x == 2 && return "b"
-                throw(ArgumentError("x must be 1 or 2"))
-            end
-            """
-            test_format(str, str; always_use_return = true)
-        end
-
         @testset "507" begin
             # detect return
             str = """

@@ -3123,6 +3123,34 @@ end
         # And at the top level
         test_format("a && f()", "if a\n    f()\nend"; short_circuit_to_if=true)
     end
+
+    @testset "1125 always_use_return idempotence" begin
+        s = """
+        function f()
+            if visible
+                any_visible = any(ALL_SCREENS) do s
+                    s !== screen && s.owns_glscreen &&
+                        GLAbstraction.context_alive(s.glscreen) &&
+                        GLFW.GetWindowAttrib(s.glscreen, GLFW.VISIBLE) != 0
+                end
+                any_visible || macos_set_dock_visible(false)
+            end
+        end"""
+        output = """
+        function f()
+            if visible
+                any_visible = any(ALL_SCREENS) do s
+                    return s !== screen &&
+                           s.owns_glscreen &&
+                           GLAbstraction.context_alive(s.glscreen) &&
+                           GLFW.GetWindowAttrib(s.glscreen, GLFW.VISIBLE) != 0
+                end
+                any_visible || macos_set_dock_visible(false)
+            end
+        end"""
+        test_format(s, output; always_use_return=true)
+        test_format(s, output, BlueStyle())
+    end
 end
 
 end

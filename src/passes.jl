@@ -221,7 +221,7 @@ function short_to_long_function_def!(
 
     # body
 
-    # s.opts.always_use_return && prepend_return!(fst[end], s)
+    s.opts.always_use_return && prepend_return_fst!(fst[end], s)
     if fst[end].typ === Block
         add_node!(funcdef, fst[end], s; max_padding = s.opts.indent)
     elseif fst[end].typ === Begin
@@ -258,7 +258,7 @@ function short_to_long_function_def!(
     add_indent!(funcdef[end], s, s.opts.indent)
 
     if s.opts.always_use_return
-        prepend_return!(funcdef[end], s)
+        prepend_return_fst!(funcdef[end], s)
     end
 
     # end
@@ -424,9 +424,15 @@ function binaryop_to_whereop!(fst::FST, s::State)
 end
 
 """
-    prepend_return!(fst::FST, s::State)
+    prepend_return_fst!(fst::FST, s::State)
 
 Prepends `return` to the last expression of a block if applicable.
+
+*Note*: This function is only called when a short-form function definition is converted to a
+long-form one, AND `always_use_return` is true. For ordinary, pre-existing long-form
+function definitions, the implementation of `always_use_return` is in `p_block` in
+`default/pretty.jl`. This is done to avoid post-FST passes which tend to cause idempotence
+issues.
 
 ```julia
 function foo()
@@ -444,7 +450,7 @@ function foo()
 end
 ```
 """
-function prepend_return!(fst::FST, s::State)
+function prepend_return_fst!(fst::FST, s::State)
     if fst.typ !== Block || length(fst.nodes::Vector{FST}) == 0
         return
     end

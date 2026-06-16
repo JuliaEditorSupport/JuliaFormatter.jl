@@ -1038,6 +1038,100 @@ function add_hasheq_comment!(t::FST, n::FST, s::State)
     return true
 end
 
+"""
+    should_add_return_to_last_statement(cst, s, lineage)
+
+For a block `cst`, determine whether we should add a `return` to the last statement in the block.
+
+NOTE(penelopeysm): Previously, JuliaFormatter would avoid prepending return if the last
+statement was a call to `throw(...)`. This was possible to detect at the FST level because
+the identifier `throw` was already part of the FST. However, now that the return insertion
+has been moved to the CST level, we don't have access to the identifier (not without doing a
+ton of nasty offset calculation).
+
+Note that prepending return has to be done at the CST level to avoid idempotence issues. In
+general, mutating the FST post-construction will trigger idempotence issues because
+formatting decisions are already encoded in the FST by the time it's been constructed.
+
+In any case, personally, I don't agree that throw() should be exempt from return. Firstly,
+throw() *does* have a type: it's `Union{}`, which is a bottom type. Sure, that type cannot
+be inhabited, i.e., there's no actual value that belongs to that type; however, from a
+theoretical point of view there's absolutely nothing wrong with returning something that has
+type `Union{}`. It is vacuous, much like saying "select an element from an empty set", but
+that doesn't mean it's *wrong*; it's just *meaningless*.
+
+Secondly, from a practical point of view, it is impossible at the syntax level to determine
+what expressions are guaranteed to throw an exception (or more generally, what expressions
+are guaranteed to not return a value). For example, if we special-case `throw`, then one
+could argue that we should also special-case qualified calls like `Base.throw`, and other
+functions like `error` and `exit`, and then user-defined functions like
+
+    mythrow(x) = throw("error: \$x")
+
+or constructs like
+
+    function f()
+        do_other_stuff()
+        f()  # This never returns, so maybe we shouldn't add return?!
+    end
+
+Obviously none of that makes any sense, so the only *principled* approach is not to
+special-case anything.
+
+Indeed, even with semantic analysis about the programme, it's not possible to determine such
+cases, because answering the question "does this expression return a value" amounts to
+exactly the halting problem.
+"""
+function should_add_return_to_last_statement(cst::JuliaSyntax.GreenNode, s::State, lineage::Vector{Tuple{JuliaSyntax.Kind,Bool,Bool}})
+    kind(cst) === K"block" || error("should_add_return_to_last_statement called on a non-block node")
+
+    # If the option is not enabled, don't add return.
+    s.opts.always_use_return || return false
+
+    # If the block is empty, don't add return.
+    last_stmt_idx = findlast(n -> !JuliaSyntax.is_whitespace(n) && kind(n) !== K";", children(cst))
+    last_stmt_idx === nothing && return false
+
+    # Only add return if the block is the body of a function/macro definition or a do-block
+    # in a function/macro call.
+    if !(
+        length(lineage) >= 2 && lineage[end-1][1] in KSet"function macro" ||
+        length(lineage) >= 3 && lineage[end-1][1] === K"do" && lineage[end-2][1] in KSet"call macrocall"
+    )
+        return false
+    end
+
+    # Need to check the children carefully now.
+    last_stmt = children(cst)[last_stmt_idx]
+    if kind(last_stmt) in KSet"return macrocall" || is_block(last_stmt)
+        # If the last statement is already a return, a macro, or a block, don't add
+        # return.
+        return false
+    end
+
+    # If the last statement is something that has a docstring attached to it, don't add
+    # return. See https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/405
+    #
+    # There are several cases we have to deal with here:
+    #
+    #     @doc """string"""\n f -- in this case the last statement is the entire macrocall
+    #                              and so will be skipped by the previous branch, we don't
+    #                              need to worry about it here.
+    #     raw"""string"""\n f   -- [macrocall] -> NewlineWS -> Identifier
+    #     """string"""\n f      -- [string] -> NewlineWS -> Identifier
+    if last_stmt_idx >= 3
+        preceded_by_newline = kind(cst[last_stmt_idx - 1]) === K"NewlineWs"
+        maybe_docstring = cst[last_stmt_idx - 2]
+        then_preceded_by_docstring = kind(maybe_docstring) === K"string" || (kind(maybe_docstring) === K"macrocall" && haschildren(maybe_docstring) && kind(maybe_docstring[1]) === K"StringMacroName")
+        if preceded_by_newline && then_preceded_by_docstring
+            return false
+        end
+    end
+    
+    return true
+end
+
+
 # Block
 # length Block is the length of the longest expr
 function p_block(
@@ -1052,6 +1146,12 @@ function p_block(
     if !haschildren(cst)
         return t
     end
+    
+    # We might want to add return to the last statement.
+    add_return_to_last_statement = should_add_return_to_last_statement(cst, s, lineage)
+    # Technically this doesn't need to be computed if add_return_to_last_statement is false,
+    # but it's cheap.
+    last_stmt_idx = findlast(n -> !JuliaSyntax.is_whitespace(n) && kind(n) !== K";", children(cst))
 
     join_body = ctx.join_body
     ignore_single_line = ctx.ignore_single_line
@@ -1080,9 +1180,9 @@ function p_block(
             s.offset += span(a)
             continue
         end
-        n = pretty(style, a, s, ctx, lineage)
 
         if from_quote && !single_line
+            n = pretty(style, a, s, ctx, lineage)
             if kind(a) in KSet"; ) ("
                 add_node!(t, n, s; join_lines = true)
             elseif kind(a) === K","
@@ -1099,6 +1199,7 @@ function p_block(
                 add_node!(t, n, s; max_padding = 0)
             end
         elseif single_line
+            n = pretty(style, a, s, ctx, lineage)
             if kind(a) in KSet", ;"
                 add_node!(t, n, s; join_lines = true)
                 if has_more_args_to_come(childs, i + 1, K")")
@@ -1109,16 +1210,36 @@ function p_block(
             end
         else
             if kind(a) === K","
+                n = pretty(style, a, s, ctx, lineage)
                 add_node!(t, n, s; join_lines = true)
                 if join_body && has_more_args_to_come(childs, i + 1, K")")
                     add_node!(t, Placeholder(1), s)
                 end
             elseif kind(a) === K";"
+                n = pretty(style, a, s, ctx, lineage)
                 add_node!(t, n, s; join_lines = true)
             elseif join_body
+                n = pretty(style, a, s, ctx, lineage)
                 add_node!(t, n, s; join_lines = true)
             else
-                add_node!(t, n, s; max_padding = 0)
+                # Other statements.
+                node_to_add = if i === last_stmt_idx && add_return_to_last_statement
+                    # Add a return statement to the last statement in the block.
+                    c = cursor_loc(s)
+                    return_fst = FST(Return, nspaces(s))
+                    add_node!(return_fst, FST(KEYWORD, c[2], c[1], c[1], "return"), s; join_lines=true)
+                    add_node!(return_fst, Whitespace(1), s; join_lines=true)
+                    # have to push to lineage to make sure that the return value node is
+                    # formatted properly. See #1125.
+                    push!(lineage, (K"return", false, false))
+                    n = pretty(style, a, s, ctx, lineage)
+                    pop!(lineage)
+                    add_node!(return_fst, n, s; join_lines = true)
+                    return_fst
+                else
+                    pretty(style, a, s, ctx, lineage)
+                end
+                add_node!(t, node_to_add, s; max_padding = 0)
             end
         end
     end
@@ -1267,9 +1388,10 @@ function p_functiondef(
 
             s.indent += s.opts.indent
             n = pretty(style, c, s, newctx(ctx; ignore_single_line = true), lineage)
-            if s.opts.always_use_return
-                prepend_return!(n, s)
-            end
+            # TODORETURN
+            # if s.opts.always_use_return
+            #     prepend_return!(n, s)
+            # end
             add_node!(t, n, s; max_padding = s.opts.indent)
             s.indent -= s.opts.indent
         elseif is_func_call(c)
@@ -1915,9 +2037,10 @@ function append_do_nodes!(
         elseif kind(c) === K"block"
             s.indent += s.opts.indent
             n = pretty(style, c, s, newctx(ctx; ignore_single_line = true), lineage)
-            if s.opts.always_use_return
-                prepend_return!(n, s)
-            end
+            # TODORETURN
+            # if s.opts.always_use_return
+            #     prepend_return!(n, s)
+            # end
             add_node!(t, n, s; max_padding = s.opts.indent)
             s.indent -= s.opts.indent
         elseif kind(c) === K"tuple"
