@@ -1,5 +1,7 @@
 # v2.8.4
 
+Fixed a bug where `x && y` would be expanded to `if x; y; end` with `short_circuit_to_if=true` even when the value of `x && y` was being used, which would change the meaning of the code if `x` was false. (#1123, #1122)
+
 Fixed a bug where indentation of `x && y` and `x || y` expressions were overly context-sensitive, leading to inconsistent and sometimes non-idempotent formatting. (#1121, #1122)
 
 # v2.8.3
