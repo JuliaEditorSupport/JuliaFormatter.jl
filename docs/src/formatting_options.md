@@ -16,46 +16,62 @@ All of these [_formatting options_](@ref formatting-options) can be specified as
 Below is a table of all the currently available formatting options, along with what each style sets each option to.
 Values that differ from `DefaultStyle` are shown in **bold**.
 
-!!! note "Styles vs options"
-    Note that, although styles each define a different set of options, they are not _just_ collections of options; they also have unique formatting rules that are not captured by the options.
+Note that, although styles each define a different set of options, they are not _just_ collections of options; they also have unique formatting rules that are not captured by the options.
 
-| Option                                                                              | Default   | YAS         | Blue        | SciML        | Minimal       |
-| :-------                                                                            | --------- | -----       | ------      | -------      | ---------     |
-| [`align_assignment`](@ref options-align-star)                                       | `false`   | `false`     | `false`     | `false`      | `false`       |
-| [`align_conditional`](@ref options-align-star)                                      | `false`   | `false`     | `false`     | `false`      | `false`       |
-| [`align_matrix`](@ref options-align-matrix)                                         | `false`   | `false`     | `false`     | `false`      | `false`       |
-| [`align_pair_arrow`](@ref options-align-star)                                       | `false`   | `false`     | `false`     | `false`      | `false`       |
-| [`align_struct_field`](@ref options-align-star)                                     | `false`   | `false`     | `false`     | `false`      | `false`       |
-| [`always_for_in`](@ref options-always-for-in)                                       | `false`   | **`true`**  | **`true`**  | **`true`**   | **`nothing`** |
-| [`always_use_return`](@ref options-always-use-return)                               | `false`   | **`true`**  | **`true`**  | `false`      | `false`       |
-| [`annotate_untyped_fields_with_any`](@ref options-annotate-untyped-fields-with-any) | `true`    | `true`      | **`false`** | `true`       | **`false`**   |
-| [`conditional_to_if`](@ref options-conditional-to-if)                               | `false`   | `false`     | **`true`**  | `false`      | `false`       |
-| [`disallow_single_arg_nesting`](@ref options-disallow-single-arg-nesting)           | `false`   | `false`     | `false`     | **`true`**   | `false`       |
-| [`for_in_replacement`](@ref options-for-in-replacement)                             | `"in"`    | `"in"`      | `"in"`      | `"in"`       | `"in"`        |
-| [`force_long_function_def`](@ref options-force-long-function-def)                   | `false`   | `false`     | `false`     | `false`      | `false`       |
-| [`format_docstrings`](@ref options-format-docstrings)                               | `false`   | `false`     | `false`     | `false`      | `false`       |
-| [`import_to_using`](@ref options-import-to-using)                                   | `false`   | **`true`**  | **`true`**  | `false`      | `false`       |
-| [`indent`](@ref options-indent)                                                     | `4`       | `4`         | `4`         | `4`          | `4`           |
-| [`indent_submodule`](@ref options-indent-submodule)                                 | `false`   | `false`     | **`true`**  | `false`      | `false`       |
-| [`join_lines_based_on_source`](@ref options-join-lines-based-on-source)             | `false`   | **`true`**  | `false`     | **`true`**   | **`true`**    |
-| [`long_to_short_function_def`](@ref options-long-to-short-function-def)             | `false`   | `false`     | `false`     | `false`      | `false`       |
-| [`margin`](@ref options-margin)                                                     | `92`      | `92`        | `92`        | `92`         | **`10_000`**  |
-| [`normalize_line_endings`](@ref options-normalize-line-endings)                     | `"auto"`  | `"auto"`    | `"auto"`    | **`"unix"`** | `"auto"`      |
-| [`pipe_to_function_call`](@ref options-pipe-to-function-call)                       | `false`   | **`true`**  | **`true`**  | `false`      | `false`       |
-| [`remove_extra_newlines`](@ref options-remove-extra-newlines)                       | `false`   | **`true`**  | **`true`**  | **`true`**   | `false`       |
-| [`sciml_margin_overrun`](@ref options-sciml-margin-overrun)                         | unused    | unused      | unused      | **`20`**     | unused        |
-| [`separate_kwargs_with_semicolon`](@ref options-separate-kwargs-with-semicolon)     | `false`   | **`true`**  | **`true`**  | `false`      | `false`       |
-| [`short_circuit_to_if`](@ref options-short-circuit-to-if)                           | `false`   | `false`     | `false`     | `false`      | `false`       |
-| [`short_to_long_function_def`](@ref options-short-to-long-function-def)             | `false`   | **`true`**  | **`true`**  | **`true`**   | `false`       |
-| [`surround_whereop_typeparameters`](@ref options-surround-whereop-typeparameters)   | `true`    | `true`      | `true`      | `true`       | **`false`**   |
-| [`trailing_comma`](@ref options-trailing-comma)                                     | `true`    | `true`      | `true`      | **`false`**  | **`nothing`** |
-| [`trailing_zero`](@ref options-trailing-zero)                                       | `true`    | `true`      | `true`      | `true`       | **`false`**   |
-| [`variable_call_indent`](@ref options-variable-call-indent)                         | `[]`      | `[]`        | `[]`        | `[]`         | `[]`          |
-| [`v2_stable_multiline_strings`](@ref options-v2-stable-multiline-strings)           | `false`   | `false`     | `false`     | `false`      | `false`       |
-| [`whitespace_in_kwargs`](@ref options-whitespace-in-kwargs)                         | `true`    | **`false`** | **`false`** | `true`       | **`false`**   |
-| [`whitespace_ops_in_indices`](@ref options-whitespace-ops-in-indices)               | `false`   | **`true`**  | **`true`**  | **`true`**   | `false`       |
-| [`whitespace_typedefs`](@ref options-whitespace-typedefs)                           | `false`   | `false`     | `false`     | **`true`**   | `false`       |
-| [`yas_style_nesting`](@ref options-yas-style-nesting)                               | `false`   | `false`     | `false`     | `false`      | `false`       |
+!!! danger "Dangerous options"
+
+    **Some of the options below are more dangerous than others, because they perform syntax transformations** (i.e., `Meta.parse(format_text(s))` may not be equal to `Meta.parse(s)`).
+    These options can therefore change the meaning of the code being formatted depending on the context, and should be used with caution.
+
+    To help you identify dangerous options, there is an emoji legend in the 'Kind' column:
+
+    - 📐: purely about whitespace
+    - ♻️: syntax normalisation — this does more than just whitespace as it can insert e.g. parentheses, but it does not change the AST in any way
+    - ⚠️: syntax transformation — this does change the AST, but the transformations are conservatively scoped and thus should be safe
+    - 🔥: dangerous syntax transformation — this can change the AST, and it is not actually possible to be conservative because that would defeat the entire purpose of the option.
+      **Note that some styles enable these by default!!**
+      Use with care, and *please* consider manually disabling them; it is possible that these will be removed in v3.
+
+      Currently, only [**`pipe_to_function_call`**](@ref options-pipe-to-function-call) is in this category.
+      [`separate_kwargs_with_semicolon`](@ref options-separate-kwargs-with-semicolon) is also labelled as a dangerous syntax transformation right now, but [that is because of a bug](https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/625), which will be fixed soon.
+
+| Option                                                                              | Kind | Default   | YAS         | Blue        | SciML        | Minimal       |
+| :-------                                                                            | ---- | --------- | -----       | ------      | -------      | ---------     |
+| [`align_assignment`](@ref options-align-star)                                       | 📐   | `false`   | `false`     | `false`     | `false`      | `false`       |
+| [`align_conditional`](@ref options-align-star)                                      | 📐   | `false`   | `false`     | `false`     | `false`      | `false`       |
+| [`align_matrix`](@ref options-align-matrix)                                         | 📐   | `false`   | `false`     | `false`     | `false`      | `false`       |
+| [`align_pair_arrow`](@ref options-align-star)                                       | 📐   | `false`   | `false`     | `false`     | `false`      | `false`       |
+| [`align_struct_field`](@ref options-align-star)                                     | 📐   | `false`   | `false`     | `false`     | `false`      | `false`       |
+| [`always_for_in`](@ref options-always-for-in)                                       | ♻️   | `false`   | **`true`**  | **`true`**  | **`true`**   | **`nothing`** |
+| [`always_use_return`](@ref options-always-use-return)                               | ⚠️   | `false`   | **`true`**  | **`true`**  | `false`      | `false`       |
+| [`annotate_untyped_fields_with_any`](@ref options-annotate-untyped-fields-with-any) | ⚠️   | `true`    | `true`      | **`false`** | `true`       | **`false`**   |
+| [`conditional_to_if`](@ref options-conditional-to-if)                               | ♻️   | `false`   | `false`     | **`true`**  | `false`      | `false`       |
+| [`disallow_single_arg_nesting`](@ref options-disallow-single-arg-nesting)           | 📐   | `false`   | `false`     | `false`     | **`true`**   | `false`       |
+| [`for_in_replacement`](@ref options-for-in-replacement)                             | ♻️   | `"in"`    | `"in"`      | `"in"`      | `"in"`       | `"in"`        |
+| [`force_long_function_def`](@ref options-force-long-function-def)                   | ⚠️   | `false`   | `false`     | `false`     | `false`      | `false`       |
+| [`format_docstrings`](@ref options-format-docstrings)                               | ⚠️   | `false`   | `false`     | `false`     | `false`      | `false`       |
+| [`import_to_using`](@ref options-import-to-using)                                   | ⚠️   | `false`   | **`true`**  | **`true`**  | `false`      | `false`       |
+| [`indent`](@ref options-indent)                                                     | 📐   | `4`       | `4`         | `4`         | `4`          | `4`           |
+| [`indent_submodule`](@ref options-indent-submodule)                                 | 📐   | `false`   | `false`     | **`true`**  | `false`      | `false`       |
+| [`join_lines_based_on_source`](@ref options-join-lines-based-on-source)             | 📐   | `false`   | **`true`**  | `false`     | **`true`**   | **`true`**    |
+| [`long_to_short_function_def`](@ref options-long-to-short-function-def)             | ⚠️   | `false`   | `false`     | `false`     | `false`      | `false`       |
+| [`margin`](@ref options-margin)                                                     | 📐   | `92`      | `92`        | `92`        | `92`         | **`10_000`**  |
+| [`normalize_line_endings`](@ref options-normalize-line-endings)                     | 📐   | `"auto"`  | `"auto"`    | `"auto"`    | **`"unix"`** | `"auto"`      |
+| [`pipe_to_function_call`](@ref options-pipe-to-function-call)                       | 🔥   | `false`   | **`true`**  | **`true`**  | `false`      | `false`       |
+| [`remove_extra_newlines`](@ref options-remove-extra-newlines)                       | 📐   | `false`   | **`true`**  | **`true`**  | **`true`**   | `false`       |
+| [`sciml_margin_overrun`](@ref options-sciml-margin-overrun)                         | 📐   | unused    | unused      | unused      | **`20`**     | unused        |
+| [`separate_kwargs_with_semicolon`](@ref options-separate-kwargs-with-semicolon)     | 🔥   | `false`   | **`true`**  | **`true`**  | `false`      | `false`       |
+| [`short_circuit_to_if`](@ref options-short-circuit-to-if)                           | ⚠️   | `false`   | `false`     | `false`     | `false`      | `false`       |
+| [`short_to_long_function_def`](@ref options-short-to-long-function-def)             | ⚠️   | `false`   | **`true`**  | **`true`**  | **`true`**   | `false`       |
+| [`surround_whereop_typeparameters`](@ref options-surround-whereop-typeparameters)   | ♻️   | `true`    | `true`      | `true`      | `true`       | **`false`**   |
+| [`trailing_comma`](@ref options-trailing-comma)                                     | ♻️   | `true`    | `true`      | `true`      | **`false`**  | **`nothing`** |
+| [`trailing_zero`](@ref options-trailing-zero)                                       | ♻️   | `true`    | `true`      | `true`      | `true`       | **`false`**   |
+| [`variable_call_indent`](@ref options-variable-call-indent)                         | 📐   | `[]`      | `[]`        | `[]`        | `[]`         | `[]`          |
+| [`v2_stable_multiline_strings`](@ref options-v2-stable-multiline-strings)           | 📐   | `false`   | `false`     | `false`     | `false`      | `false`       |
+| [`whitespace_in_kwargs`](@ref options-whitespace-in-kwargs)                         | 📐   | `true`    | **`false`** | **`false`** | `true`       | **`false`**   |
+| [`whitespace_ops_in_indices`](@ref options-whitespace-ops-in-indices)               | 📐   | `false`   | **`true`**  | **`true`**  | **`true`**   | `false`       |
+| [`whitespace_typedefs`](@ref options-whitespace-typedefs)                           | 📐   | `false`   | `false`     | `false`     | **`true`**   | `false`       |
+| [`yas_style_nesting`](@ref options-yas-style-nesting)                               | 📐   | `false`   | `false`     | `false`     | `false`      | `false`       |
 
 ## [`align_...`](@id options-align-star)
 
@@ -252,6 +268,9 @@ There are some exceptions to this:
   ```julia
   import Base.Threads as th
   ```
+
+- `import ..Module` is not rewritten as that causes an invalid `using ..Module: Module`.
+  See e.g. [this issue](https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/723).
 
 - If `import` is used in the following context it is *not* rewritten.
   This may change in a future patch.

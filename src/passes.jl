@@ -692,7 +692,7 @@ function remove_superfluous_whitespace!(fst::FST)
     return
 end
 
-function _short_circuit_to_if!(fst::FST, s::State, last_arg::Bool)
+function _short_circuit_to_if!(fst::FST, s::State, value_is_needed::Bool)
     # change it into an if
     t = FST(If, fst.indent)
     kw = FST(KEYWORD, -1, fst.startline, fst.startline, "if")
@@ -767,7 +767,7 @@ function _short_circuit_to_if!(fst::FST, s::State, last_arg::Bool)
     end
     add_node!(t, block1, s; max_padding = s.opts.indent)
 
-    if last_arg
+    if value_is_needed
         # Add the 'else' branch
         else_kw = FST(KEYWORD, 0, 0, -1, "else")
         add_node!(t, else_kw, s; max_padding = 0)
@@ -801,13 +801,15 @@ function short_circuit_to_if_pass!(fst::FST, s::State)
             continue
         elseif (n.typ === Binary || n.typ === Chain) &&
                !isnothing(n.metadata) &&
-               (n.metadata::Metadata).is_standalone_shortcircuit
-            # if it's the last thing that occurs in a block, or a return statement, then we
-            # need to make sure that the short-circuiting is converted to an if statement
-            # that returns a value. Otherwise, we can just convert it to an if statement
-            # that executes the second argument.
-            last_arg = i == length(fst.nodes) && (fst.typ === Block || fst.typ === Return)
-            _short_circuit_to_if!(n, s, last_arg)
+               (n.metadata::Metadata).is_standalone_shortcircuit &&
+               fst.typ in (Block, TopLevel, Return)
+            # Only expand short-circuit expressions that appear as statements in a block
+            # (e.g. function body, loop body) or at the top level. Don't expand inside
+            # calls, tuples, etc. where the value is being used -- `a && b` and
+            # `if a; b; end` have different return values when `a` is falsy.
+            value_is_needed =
+                i == length(fst.nodes) && (fst.typ === Block || fst.typ === Return)
+            _short_circuit_to_if!(n, s, value_is_needed)
         else
             short_circuit_to_if_pass!(n, s)
         end

@@ -1839,22 +1839,6 @@ function p_for(
             if kind(cst) === K"for"
                 eq_to_in_normalization!(n, s.opts.always_for_in, s.opts.for_in_replacement)
             end
-            # Disable is_standalone_shortcircuit so that while loop conditions aren't
-            # affected by short_circuit_to_if. See #940.
-            if kind(cst) === K"while"
-                m = n.metadata
-                if !isnothing(m)
-                    newm = Metadata(
-                        m.op_kind,
-                        false,
-                        m.is_short_form_function,
-                        m.is_assignment,
-                        m.is_long_form_function,
-                        m.has_multiline_argument,
-                    )
-                    n.metadata = newm
-                end
-            end
             add_node!(t, n, s; join_lines = true)
         end
     end
@@ -2458,15 +2442,30 @@ function p_binaryopcall(
     can_separate_kwargs = ctx.can_separate_kwargs && !is_function_or_macro_def(cst)
 
     lazy_op = is_lazy_op(opkind)
-    # check if expression is a lazy circuit
+    # Check if expression is a lazy circuit. If it is, this does two things: first it causes
+    # the indentation to be increased for subsequent lines -- for example
+    #
+    #    aaaaa ||        rather than      aaaaa ||
+    #        bbbbb                        bbbbb
+    #
+    # Secondly if `short_circuit_to_if` is true, then this allows the expression to be
+    # expanded to if/elseif/else.
+    #
+    # cf. https://github.com/JuliaEditorSupport/JuliaFormatter.jl/pull/224
     if lazy_op && standalone_binary_circuit
-        for i in (length(lineage)-1):-1:1
-            tt, _, is_assign = lineage[i]
-            if tt in KSet"parens macrocall return if elseif else" || is_assign
+        if length(lineage) >= 2
+            parent_node, _, is_assign = lineage[end-1]
+            # Disable if the binary expression is "used" in a certain context --
+            # for example
+            # 
+            # parens      (a && b)
+            # macrocall   @foo a && b
+            # return      return a && b
+            # while       while a && b  (see also #940)
+            # if          if a && b
+            # elseif      elseif a && b
+            if parent_node in KSet"parens macrocall return while if elseif" || is_assign
                 standalone_binary_circuit = false
-                break
-            elseif tt === K"block"
-                break
             end
         end
     end

@@ -3052,6 +3052,77 @@ end
         )()"""
         test_format(s, out; ast=true, margin=10)
     end
+
+    @testset "1121 standalone circuit inconsistency" begin
+        for prefix in (
+            "",
+            "x = ",
+            "x + ",
+            "return ",
+        )
+            s = "$(prefix)f(a, mmmmm || nnnnn, c)"
+            out = "$(prefix)f(\n    a,\n    mmmmm ||\n        nnnnn,\n    c,\n)"
+            test_format(s, out; ast=true, margin=10)
+        end
+
+        # and the original trigger
+        s = """
+        function f()
+            EnzymeInterpreter(cache_or_token, mt, world, mode == API.DEM_ForwardMode, mode == API.DEM_ReverseModeCombined || mode == API.DEM_ReverseModePrimal || mode == API.DEM_ReverseModeGradient, inactive_rules, broadcast_rewrite, within_autodiff_rewrite, handler)
+        end"""
+        out = """
+        function f()
+            return EnzymeInterpreter(
+                cache_or_token,
+                mt,
+                world,
+                mode == API.DEM_ForwardMode,
+                mode == API.DEM_ReverseModeCombined ||
+                    mode == API.DEM_ReverseModePrimal ||
+                    mode == API.DEM_ReverseModeGradient,
+                inactive_rules,
+                broadcast_rewrite,
+                within_autodiff_rewrite,
+                handler,
+            )
+        end"""
+        test_format(s, out, BlueStyle())
+    end
+
+    @testset "1123 short_circuit_to_if inside calls" begin
+        # short_circuit_to_if should not expand `&&`/`||` inside function calls,
+        # tuples, etc. where the value is used.
+        for s in (
+            "f(a && b)",
+            "return f(a && b)",
+            "x = f(a && b)",
+            "(a && b, c)",
+            "[a && b]",
+            "@macro a && b",
+            "(a && b) + c", # even when parenthesised
+        )
+            test_format(s, s; short_circuit_to_if=true)
+        end
+
+        # But standalone `a && f()` in a block should still expand
+        for (block_begin, block_end) in (
+            ("function g()", "end"),
+            ("if foo", "end"),
+            ("for i = 1:10", "end"),
+            ("while true", "end"),
+            ("let x = 1", "end"),
+            ("begin", "end"),
+        )
+            test_format(
+                "$block_begin\n    a && f()\n$block_end",
+                "$block_begin\n    if a\n        f()\n    else\n        false\n    end\n$block_end";
+                short_circuit_to_if=true,
+            )
+        end
+
+        # And at the top level
+        test_format("a && f()", "if a\n    f()\nend"; short_circuit_to_if=true)
+    end
 end
 
 end
