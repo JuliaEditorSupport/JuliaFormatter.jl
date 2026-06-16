@@ -3088,6 +3088,41 @@ end
         end"""
         test_format(s, out, BlueStyle())
     end
+
+    @testset "1123 short_circuit_to_if inside calls" begin
+        # short_circuit_to_if should not expand `&&`/`||` inside function calls,
+        # tuples, etc. where the value is used.
+        for s in (
+            "f(a && b)",
+            "return f(a && b)",
+            "x = f(a && b)",
+            "(a && b, c)",
+            "[a && b]",
+            "@macro a && b",
+            "(a && b) + c", # even when parenthesised
+        )
+            test_format(s, s; short_circuit_to_if=true)
+        end
+
+        # But standalone `a && f()` in a block should still expand
+        for (block_begin, block_end) in (
+            ("function g()", "end"),
+            ("if foo", "end"),
+            ("for i = 1:10", "end"),
+            ("while true", "end"),
+            ("let x = 1", "end"),
+            ("begin", "end"),
+        )
+            test_format(
+                "$block_begin\n    a && f()\n$block_end",
+                "$block_begin\n    if a\n        f()\n    else\n        false\n    end\n$block_end";
+                short_circuit_to_if=true,
+            )
+        end
+
+        # And at the top level
+        test_format("a && f()", "if a\n    f()\nend"; short_circuit_to_if=true)
+    end
 end
 
 end
