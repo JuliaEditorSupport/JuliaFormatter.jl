@@ -1,6 +1,7 @@
 # v2.8.4
 
-Disabled `short_circuit_to_if` for `x && y` and `x || y` statements at the end of a block (since the value of the expression is in fact being used). (#887, #1128)
+Disabled `short_circuit_to_if` for `x && y` and `x || y` statements at the end of a block (since the value of the expression is in fact being used).
+This includes if there is a comment at the end of the function. (#887, #1129, #1128)
 
 Fixed a bug where `x && y` would be expanded to `if x; y; end` with `short_circuit_to_if=true` even when the value of `x && y` was being used (e.g. as an argument to a function call), which would change the meaning of the code if `x` was false. (#1123, #1122)
 

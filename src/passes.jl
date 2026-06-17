@@ -806,8 +806,12 @@ function short_circuit_to_if_pass!(fst::FST, s::State)
             # (e.g. function body, loop body) or at the top level. Don't expand inside
             # calls, tuples, etc. where the value is being used -- `a && b` and
             # `if a; b; end` have different return values when `a` is falsy.
+            last_expr_idx = findlast(
+                n -> n.typ !== HASHEQCOMMENT && n.typ !== WHITESPACE && n.typ !== PLACEHOLDER,
+                fst.nodes::Vector{FST},
+            )
             value_is_needed =
-                i == length(fst.nodes) && (fst.typ === Block || fst.typ === Return)
+                i == last_expr_idx && (fst.typ === Block || fst.typ === Return)
             if !value_is_needed
                 _short_circuit_to_if!(n, s, false)
             end
