@@ -306,7 +306,7 @@ else
                         JuliaFormatter.main(["--lines=abc", "a.jl"])
                     end
                     @test errno == 1
-                    @test occursin("invalid `--lines` argument", stderr)
+                    @test occursin("invalid value `abc` for option `--lines=abc`", stderr)
 
                     # start greater than stop
                     errno, stderr = capture_stderr() do
