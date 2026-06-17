@@ -34,45 +34,45 @@ jobs:
           - repo: JuliaLang/julia
             rev: v1.12.6
             remove_config: true
-            args: "--v2_stable_multiline_strings"
-            name_suffix: "default"
+            args: "--style=blue --v2_stable_multiline_strings --no-conditional_to_if"
+            name_suffix: "blue"
           - repo: SciML/OrdinaryDiffEq.jl
             rev: v7.0.0
             remove_config: true
-            args: "--v2_stable_multiline_strings"
-            name_suffix: "default"
+            args: "--style=blue --v2_stable_multiline_strings --no-conditional_to_if"
+            name_suffix: "blue"
           - repo: MakieOrg/Makie.jl
             rev: v0.24.11
             remove_config: true
-            args: "--v2_stable_multiline_strings"
-            name_suffix: "default"
+            args: "--style=blue --v2_stable_multiline_strings --no-conditional_to_if"
+            name_suffix: "blue"
           - repo: jump-dev/JuMP.jl
             rev: v1.30.1
             remove_config: true
-            args: "--v2_stable_multiline_strings"
-            name_suffix: "default"
+            args: "--style=blue --v2_stable_multiline_strings --no-conditional_to_if"
+            name_suffix: "blue"
           - repo: EnzymeAD/Enzyme.jl
             rev: v0.13.157
             remove_config: true
-            args: "--v2_stable_multiline_strings"
-            name_suffix: "default"
+            args: "--style=blue --v2_stable_multiline_strings --no-conditional_to_if"
+            name_suffix: "blue"
           - repo: trixi-framework/Trixi.jl
             rev: v0.16.18
             remove_config: true
-            args: "--v2_stable_multiline_strings"
-            name_suffix: "default"
+            args: "--style=blue --v2_stable_multiline_strings --no-conditional_to_if"
+            name_suffix: "blue"
           - repo: oscar-system/Oscar.jl
             rev: v1.7.3
             remove_config: true
             # that specific file defines 'expected output' for Documenter purposes,
             # which is not valid Julia
-            args: "--v2_stable_multiline_strings --ignore=test/book/cornerstones/polyhedral-geometry/g-vectors.jl"
-            name_suffix: "default"
+            args: "--style=blue --v2_stable_multiline_strings --no-conditional_to_if --ignore=test/book/cornerstones/polyhedral-geometry/g-vectors.jl"
+            name_suffix: "blue"
           - repo: SciML/ModelingToolkit.jl
             rev: v11.26.8
             remove_config: true
-            args: "--v2_stable_multiline_strings"
-            name_suffix: "default"
+            args: "--style=blue --v2_stable_multiline_strings --no-conditional_to_if"
+            name_suffix: "blue"
 
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # 6.0.3
