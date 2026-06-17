@@ -166,25 +166,23 @@ end</code></pre><p>Modules are the only type of code block where it is permissib
 
 -&gt;
 
-f(a; b=1)</code></pre><h2 id="options-short-circuit-to-if"><a class="docs-heading-anchor" href="#options-short-circuit-to-if"><code>short_circuit_to_if</code></a><a id="options-short-circuit-to-if-1"></a><a class="docs-heading-anchor-permalink" href="#options-short-circuit-to-if" title="Permalink"></a></h2><p>If <code>truer</code>, converts shortcircuiting expressions to the equivalent if-expression.</p><pre><code class="language-julia hljs">function foo(a, b)
+f(a; b=1)</code></pre><h2 id="options-short-circuit-to-if"><a class="docs-heading-anchor" href="#options-short-circuit-to-if"><code>short_circuit_to_if</code></a><a id="options-short-circuit-to-if-1"></a><a class="docs-heading-anchor-permalink" href="#options-short-circuit-to-if" title="Permalink"></a></h2><p>If <code>true</code>, converts logical operators to the equivalent if-expression, if it is clear that the value is not used.</p><p>In particular, <code>a &amp;&amp; f()</code> is converted to <code>if a; f(); end</code>, and <code>a || f()</code> is converted to <code>if !a; f(); end</code>.</p><pre><code class="language-julia hljs">s = &quot;&quot;&quot;
+function foo(a, b)
     a || return &quot;bar&quot;
-
-    &quot;hello&quot;
-
     b &amp;&amp; return &quot;ooo&quot;
-end</code></pre><p>becomes</p><pre><code class="language-julia hljs">function foo(a, b)
+    return 5
+end&quot;&quot;&quot;
+
+using JuliaFormatter: format_text
+format_text(s; short_circuit_to_if=true) |&gt; println</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">function foo(a, b)
     if !(a)
         return &quot;bar&quot;
     end
-
-    &quot;hello&quot;
-
     if b
         return &quot;ooo&quot;
-    else
-        false
     end
-end</code></pre><h2 id="options-short-to-long-function-def"><a class="docs-heading-anchor" href="#options-short-to-long-function-def"><code>short_to_long_function_def</code></a><a id="options-short-to-long-function-def-1"></a><a class="docs-heading-anchor-permalink" href="#options-short-to-long-function-def" title="Permalink"></a></h2><p>Default: <code>false</code></p><p>Transforms a <em>short</em> function definition</p><pre><code class="language-julia hljs">f(arg1, arg2) = body</code></pre><p>to a <em>long</em> function definition if the short function definition exceeds the maximum margin, or if <a href="#options-force-long-function-def"><code>force_long_function_def</code></a> is set to <code>true</code>.</p><pre><code class="language-julia hljs">function f(arg2, arg2)
+    return 5
+end</code></pre><p>In general these are only converted if they are a top-level statement inside a block. If the value of the logical operator is in any way used, it will not be converted. These include:</p><ul><li>Conditions in <code>if</code>, <code>elseif</code>, and <code>while</code> statements.</li><li>The value being assigned to a variable or otherwise being part of some expression.</li><li>The value being returned (including implicitly, by being the last statement in a block).</li></ul><h2 id="options-short-to-long-function-def"><a class="docs-heading-anchor" href="#options-short-to-long-function-def"><code>short_to_long_function_def</code></a><a id="options-short-to-long-function-def-1"></a><a class="docs-heading-anchor-permalink" href="#options-short-to-long-function-def" title="Permalink"></a></h2><p>Default: <code>false</code></p><p>Transforms a <em>short</em> function definition</p><pre><code class="language-julia hljs">f(arg1, arg2) = body</code></pre><p>to a <em>long</em> function definition if the short function definition exceeds the maximum margin, or if <a href="#options-force-long-function-def"><code>force_long_function_def</code></a> is set to <code>true</code>.</p><pre><code class="language-julia hljs">function f(arg2, arg2)
     body
 end</code></pre><p>See also: <a href="#options-long-to-short-function-def"><code>long_to_short_function_def</code></a>.</p><h2 id="options-surround-whereop-typeparameters"><a class="docs-heading-anchor" href="#options-surround-whereop-typeparameters"><code>surround_whereop_typeparameters</code></a><a id="options-surround-whereop-typeparameters-1"></a><a class="docs-heading-anchor-permalink" href="#options-surround-whereop-typeparameters" title="Permalink"></a></h2><p>Default: <code>true</code></p><p>If <code>true</code>, surrounds type parameters with curly braces if the braces are not already present.</p><pre><code class="language-julia hljs">function func(...) where TPARAM
 end</code></pre><p>becomes</p><pre><code class="language-julia hljs">function func(...) where {TPARAM}
@@ -281,4 +279,4 @@ function my_large_function(argument1, argument2,
                            argument3, argument4,
                            argument5, x, y, z)
     foo(x) + goo(y)
-end</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../">« Overview</a><a class="docs-footer-nextpage" href="../custom_alignment/">Custom Alignment »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.17.0 on <span class="colophon-date" title="Wednesday 17 June 2026 00:39">Wednesday 17 June 2026</span>. Using Julia version 1.12.6.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+end</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../">« Overview</a><a class="docs-footer-nextpage" href="../custom_alignment/">Custom Alignment »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.17.0 on <span class="colophon-date" title="Wednesday 17 June 2026 00:47">Wednesday 17 June 2026</span>. Using Julia version 1.12.6.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
