@@ -1,6 +1,6 @@
 # v2.9.0
 
-Rewrote CLI argument parsing code to avoid code duplication.
+Rewrote CLI argument parsing code to avoid code duplication. (#1031, #1135)
 
 # v2.8.5
 
