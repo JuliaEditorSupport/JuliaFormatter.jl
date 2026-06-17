@@ -181,6 +181,21 @@ using Test
         end
     end
 
+    @testset "don't expand before trailing block comment" begin
+        # The short-circuit is the last expression in the block (the block comment
+        # doesn't count), so its value is needed and it shouldn't be expanded.
+        s_ = """
+        function foo(a, b)
+            a && b
+            #= hello =#
+        end"""
+        s = """
+        function foo(a, b)
+            a && b #= hello =#
+        end"""
+        test_format(s_, s; short_circuit_to_if = true)
+    end
+
     @testset "don't expand in while cond" begin
         s = """
         while a && b
