@@ -2334,6 +2334,11 @@ end
         end
     end
 
+    @testset "908 comment in do-block" begin
+        s = "funct() do # comment\nend"
+        test_format(s, s)
+    end
+
     @testset "911" begin
         # `@testset` block should not prevent the formatter from nesting function
         # arguments that exceed the margin.
