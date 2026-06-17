@@ -35,43 +35,48 @@ Note that, although styles each define a different set of options, they are not 
       Currently, only [**`pipe_to_function_call`**](@ref options-pipe-to-function-call) is in this category.
       [`separate_kwargs_with_semicolon`](@ref options-separate-kwargs-with-semicolon) is also labelled as a dangerous syntax transformation right now, but [that is because of a bug](https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/625), which will be fixed soon.
 
-| Option                                                                              | Kind | Default   | YAS         | Blue        | SciML        | Minimal       |
-| :-------                                                                            | ---- | --------- | -----       | ------      | -------      | ---------     |
-| [`align_assignment`](@ref options-align-star)                                       | 📐   | `false`   | `false`     | `false`     | `false`      | `false`       |
-| [`align_conditional`](@ref options-align-star)                                      | 📐   | `false`   | `false`     | `false`     | `false`      | `false`       |
-| [`align_matrix`](@ref options-align-matrix)                                         | 📐   | `false`   | `false`     | `false`     | `false`      | `false`       |
-| [`align_pair_arrow`](@ref options-align-star)                                       | 📐   | `false`   | `false`     | `false`     | `false`      | `false`       |
-| [`align_struct_field`](@ref options-align-star)                                     | 📐   | `false`   | `false`     | `false`     | `false`      | `false`       |
-| [`always_for_in`](@ref options-always-for-in)                                       | ♻️   | `false`   | **`true`**  | **`true`**  | **`true`**   | **`nothing`** |
-| [`always_use_return`](@ref options-always-use-return)                               | ⚠️   | `false`   | **`true`**  | **`true`**  | `false`      | `false`       |
-| [`annotate_untyped_fields_with_any`](@ref options-annotate-untyped-fields-with-any) | ⚠️   | `true`    | `true`      | **`false`** | `true`       | **`false`**   |
-| [`conditional_to_if`](@ref options-conditional-to-if)                               | ♻️   | `false`   | `false`     | **`true`**  | `false`      | `false`       |
-| [`disallow_single_arg_nesting`](@ref options-disallow-single-arg-nesting)           | 📐   | `false`   | `false`     | `false`     | **`true`**   | `false`       |
-| [`for_in_replacement`](@ref options-for-in-replacement)                             | ♻️   | `"in"`    | `"in"`      | `"in"`      | `"in"`       | `"in"`        |
-| [`force_long_function_def`](@ref options-force-long-function-def)                   | ⚠️   | `false`   | `false`     | `false`     | `false`      | `false`       |
-| [`format_docstrings`](@ref options-format-docstrings)                               | ⚠️   | `false`   | `false`     | `false`     | `false`      | `false`       |
-| [`import_to_using`](@ref options-import-to-using)                                   | ⚠️   | `false`   | **`true`**  | **`true`**  | `false`      | `false`       |
-| [`indent`](@ref options-indent)                                                     | 📐   | `4`       | `4`         | `4`         | `4`          | `4`           |
-| [`indent_submodule`](@ref options-indent-submodule)                                 | 📐   | `false`   | `false`     | **`true`**  | `false`      | `false`       |
-| [`join_lines_based_on_source`](@ref options-join-lines-based-on-source)             | 📐   | `false`   | **`true`**  | `false`     | **`true`**   | **`true`**    |
-| [`long_to_short_function_def`](@ref options-long-to-short-function-def)             | ⚠️   | `false`   | `false`     | `false`     | `false`      | `false`       |
-| [`margin`](@ref options-margin)                                                     | 📐   | `92`      | `92`        | `92`        | `92`         | **`10_000`**  |
-| [`normalize_line_endings`](@ref options-normalize-line-endings)                     | 📐   | `"auto"`  | `"auto"`    | `"auto"`    | **`"unix"`** | `"auto"`      |
-| [`pipe_to_function_call`](@ref options-pipe-to-function-call)                       | 🔥   | `false`   | **`true`**  | **`true`**  | `false`      | `false`       |
-| [`remove_extra_newlines`](@ref options-remove-extra-newlines)                       | 📐   | `false`   | **`true`**  | **`true`**  | **`true`**   | `false`       |
-| [`sciml_margin_overrun`](@ref options-sciml-margin-overrun)                         | 📐   | unused    | unused      | unused      | **`20`**     | unused        |
-| [`separate_kwargs_with_semicolon`](@ref options-separate-kwargs-with-semicolon)     | 🔥   | `false`   | **`true`**  | **`true`**  | `false`      | `false`       |
-| [`short_circuit_to_if`](@ref options-short-circuit-to-if)                           | ⚠️   | `false`   | `false`     | `false`     | `false`      | `false`       |
-| [`short_to_long_function_def`](@ref options-short-to-long-function-def)             | ⚠️   | `false`   | **`true`**  | **`true`**  | **`true`**   | `false`       |
-| [`surround_whereop_typeparameters`](@ref options-surround-whereop-typeparameters)   | ♻️   | `true`    | `true`      | `true`      | `true`       | **`false`**   |
-| [`trailing_comma`](@ref options-trailing-comma)                                     | ♻️   | `true`    | `true`      | `true`      | **`false`**  | **`nothing`** |
-| [`trailing_zero`](@ref options-trailing-zero)                                       | ♻️   | `true`    | `true`      | `true`      | `true`       | **`false`**   |
-| [`variable_call_indent`](@ref options-variable-call-indent)                         | 📐   | `[]`      | `[]`        | `[]`        | `[]`         | `[]`          |
-| [`v2_stable_multiline_strings`](@ref options-v2-stable-multiline-strings)           | 📐   | `false`   | `false`     | `false`     | `false`      | `false`       |
-| [`whitespace_in_kwargs`](@ref options-whitespace-in-kwargs)                         | 📐   | `true`    | **`false`** | **`false`** | `true`       | **`false`**   |
-| [`whitespace_ops_in_indices`](@ref options-whitespace-ops-in-indices)               | 📐   | `false`   | **`true`**  | **`true`**  | **`true`**   | `false`       |
-| [`whitespace_typedefs`](@ref options-whitespace-typedefs)                           | 📐   | `false`   | `false`     | `false`     | **`true`**   | `false`       |
-| [`yas_style_nesting`](@ref options-yas-style-nesting)                               | 📐   | `false`   | `false`     | `false`     | `false`      | `false`       |
+!!! warning "Options that can spoil idempotence"
+
+    Some of the options below additionally have the potential to cause non-idempotent formatting if enabled (or, in the case of [`v2_stable_multiline_strings`](@ref options-v2-stable-multiline-strings), if disabled).
+    They are marked with a 🪃 emoji.
+
+| Option                                                                              | Kind  | Default   | YAS         | Blue        | SciML        | Minimal       |
+| :-------                                                                            | ----- | --------- | -----       | ------      | -------      | ---------     |
+| [`align_assignment`](@ref options-align-star)                                       | 📐    | `false`   | `false`     | `false`     | `false`      | `false`       |
+| [`align_conditional`](@ref options-align-star)                                      | 📐    | `false`   | `false`     | `false`     | `false`      | `false`       |
+| [`align_matrix`](@ref options-align-matrix)                                         | 📐    | `false`   | `false`     | `false`     | `false`      | `false`       |
+| [`align_pair_arrow`](@ref options-align-star)                                       | 📐    | `false`   | `false`     | `false`     | `false`      | `false`       |
+| [`align_struct_field`](@ref options-align-star)                                     | 📐    | `false`   | `false`     | `false`     | `false`      | `false`       |
+| [`always_for_in`](@ref options-always-for-in)                                       | ♻️    | `false`   | **`true`**  | **`true`**  | **`true`**   | **`nothing`** |
+| [`always_use_return`](@ref options-always-use-return)                               | ⚠️    | `false`   | **`true`**  | **`true`**  | `false`      | `false`       |
+| [`annotate_untyped_fields_with_any`](@ref options-annotate-untyped-fields-with-any) | ⚠️    | `true`    | `true`      | **`false`** | `true`       | **`false`**   |
+| [`conditional_to_if`](@ref options-conditional-to-if)                               | 🪃 ♻️ | `false`   | `false`     | **`true`**  | `false`      | `false`       |
+| [`disallow_single_arg_nesting`](@ref options-disallow-single-arg-nesting)           | 📐    | `false`   | `false`     | `false`     | **`true`**   | `false`       |
+| [`for_in_replacement`](@ref options-for-in-replacement)                             | ♻️    | `"in"`    | `"in"`      | `"in"`      | `"in"`       | `"in"`        |
+| [`force_long_function_def`](@ref options-force-long-function-def)                   | ⚠️    | `false`   | `false`     | `false`     | `false`      | `false`       |
+| [`format_docstrings`](@ref options-format-docstrings)                               | ⚠️    | `false`   | `false`     | `false`     | `false`      | `false`       |
+| [`import_to_using`](@ref options-import-to-using)                                   | ⚠️    | `false`   | **`true`**  | **`true`**  | `false`      | `false`       |
+| [`indent`](@ref options-indent)                                                     | 📐    | `4`       | `4`         | `4`         | `4`          | `4`           |
+| [`indent_submodule`](@ref options-indent-submodule)                                 | 📐    | `false`   | `false`     | **`true`**  | `false`      | `false`       |
+| [`join_lines_based_on_source`](@ref options-join-lines-based-on-source)             | 📐    | `false`   | **`true`**  | `false`     | **`true`**   | **`true`**    |
+| [`long_to_short_function_def`](@ref options-long-to-short-function-def)             | ⚠️    | `false`   | `false`     | `false`     | `false`      | `false`       |
+| [`margin`](@ref options-margin)                                                     | 📐    | `92`      | `92`        | `92`        | `92`         | **`10_000`**  |
+| [`normalize_line_endings`](@ref options-normalize-line-endings)                     | 📐    | `"auto"`  | `"auto"`    | `"auto"`    | **`"unix"`** | `"auto"`      |
+| [`pipe_to_function_call`](@ref options-pipe-to-function-call)                       | 🔥    | `false`   | **`true`**  | **`true`**  | `false`      | `false`       |
+| [`remove_extra_newlines`](@ref options-remove-extra-newlines)                       | 📐    | `false`   | **`true`**  | **`true`**  | **`true`**   | `false`       |
+| [`sciml_margin_overrun`](@ref options-sciml-margin-overrun)                         | 📐    | unused    | unused      | unused      | **`20`**     | unused        |
+| [`separate_kwargs_with_semicolon`](@ref options-separate-kwargs-with-semicolon)     | 🔥    | `false`   | **`true`**  | **`true`**  | `false`      | `false`       |
+| [`short_circuit_to_if`](@ref options-short-circuit-to-if)                           | ⚠️    | `false`   | `false`     | `false`     | `false`      | `false`       |
+| [`short_to_long_function_def`](@ref options-short-to-long-function-def)             | ⚠️    | `false`   | **`true`**  | **`true`**  | **`true`**   | `false`       |
+| [`surround_whereop_typeparameters`](@ref options-surround-whereop-typeparameters)   | ♻️    | `true`    | `true`      | `true`      | `true`       | **`false`**   |
+| [`trailing_comma`](@ref options-trailing-comma)                                     | ♻️    | `true`    | `true`      | `true`      | **`false`**  | **`nothing`** |
+| [`trailing_zero`](@ref options-trailing-zero)                                       | ♻️    | `true`    | `true`      | `true`      | `true`       | **`false`**   |
+| [`variable_call_indent`](@ref options-variable-call-indent)                         | 📐    | `[]`      | `[]`        | `[]`        | `[]`         | `[]`          |
+| [`v2_stable_multiline_strings`](@ref options-v2-stable-multiline-strings)           | 🪃 📐 | `false`   | `false`     | `false`     | `false`      | `false`       |
+| [`whitespace_in_kwargs`](@ref options-whitespace-in-kwargs)                         | 📐    | `true`    | **`false`** | **`false`** | `true`       | **`false`**   |
+| [`whitespace_ops_in_indices`](@ref options-whitespace-ops-in-indices)               | 📐    | `false`   | **`true`**  | **`true`**  | **`true`**   | `false`       |
+| [`whitespace_typedefs`](@ref options-whitespace-typedefs)                           | 📐    | `false`   | `false`     | `false`     | **`true`**   | `false`       |
+| [`yas_style_nesting`](@ref options-yas-style-nesting)                               | 📐    | `false`   | `false`     | `false`     | `false`      | `false`       |
 
 ## [`align_...`](@id options-align-star)
 
@@ -133,26 +138,80 @@ If `nothing`, the choice between `in` and `=` is left to the user, and no normal
 
 Default: `false`
 
-If true, `return` will be prepended to the last expression where
-applicable in function definitions, macro definitions, and do blocks.
+If true, `return` will be prepended to the last expression in function definitions, macro definitions, and do blocks.
 
-Example:
+For example:
 
-```julia
+```@example always-use-return
+s = """
 function foo()
     expr1
     expr2
-end
+end"""
+
+using JuliaFormatter: format_text
+format_text(s; always_use_return=true) |> println
 ```
 
-to
+A number of cases are skipped over:
 
-```julia
-function foo()
-    expr1
-    return expr2
-end
-```
+- If the final expression is (already) `return`.
+- If the final expression is a macro.
+- If the final expression is a multiline block expression (e.g. `if...end`, `begin...end`, etc.). This includes calls with do blocks.
+- If the final expression contains a `return` statement somewhere in it (e.g. `cond ? (return 1) : (return 2)`).
+- If the final expression has a docstring attached to it.
+
+Note that `return` *is* prepended to calls to functions such as `throw(...)`  and `error()`.
+If you don't want this behaviour, add a `return nothing` at the end of the function (or just disable this option!).
+Click the "Show explanation" toggle below for a more detailed explanation of why I choose *not* to do this.
+(You may also be interested in [the corresponding discussion on Runic.jl](https://github.com/fredrikekre/Runic.jl/issues/202), which has the same behaviour.)
+
+!!! details "Show explanation for always_use_return"
+
+    There are several reasons why I don't want to carve out an exception for `throw(...)`.
+
+    The first is pragmatic.
+    Previous versions of JuliaFormatter implemented `always_use_return` at the FST level, that is to say, it would construct an `FST` and *then* insert `return` in (usually...) the right place.
+    This, however, causes idempotence issues because the formatting of the return value can depend on whether it is prepended with `return` or not.
+    In other words, formatting choices are already baked into the FST before the `return` is inserted, and on the second formatting pass, the formatting choices may be different, which can lead to non-idempotence!
+
+    To fix these bugs I moved the return insertion one stage prior, so that the FST is constructed *with* the `return` keyword from the start.
+    However, this means that we don't have easy access to the identifier `throw`, not without a lot of incredibly finicky code to extract the CST node and then count the offsets carefully to find the identifier in the source text.
+
+    While I *could* have implemented this, I'm unwilling to because of the second reason, which is more philosophical.
+    I don't even really agree that `throw()` should be exempt from `return`.
+    Firstly, `throw()` *does* have a type: it's `Union{}`, which is [a bottom type](https://en.wikipedia.org/wiki/Bottom_type).
+    Sure, that type cannot be inhabited, i.e., there's no actual value that belongs to that type.
+
+    However, from a theoretical point of view there's absolutely nothing wrong with "return"ing something that has type `Union{}`.
+    It is vacuous, much like saying "select an element from an empty set", but that doesn't mean it's *wrong*; it's just *meaningless*.
+
+    Furthermore, Julia's semantics are that the last statement in a block is the value it evaluates to.
+    (This is not unique to Julia: see e.g. Haskell / OCaml / Rust.)
+    If `throw(...)` could not be treated as a value, then following that logic, `throw()` should not even be *allowed* to be the last statement in a block.
+    But clearly it can be!
+    Correspondingly, there's no reason why returning it is wrong.
+
+    The last reason is that it is impossible at the syntax level to determine what expressions are guaranteed to throw an exception (or more generally, what expressions are guaranteed to not return a value).
+    For example, if we special-case `throw`, then one could argue that we should also special-case qualified calls like `Base.throw`, and other functions like `error` and `exit`, and then user-defined functions like
+
+    ```julia
+    mythrow(x) = throw("error: \$x")
+    ```
+
+    or constructs like
+
+    ```julia
+    function f()
+        do_other_stuff()
+        f()  # This never returns, so maybe we shouldn't add return?!
+    end
+    ```
+
+    Obviously it doesn't make any sense to special-case any of that, so the only *principled* approach is not to special-case anything.
+    I don't believe that JuliaFormatter should have an exception list that claims to do the right thing but cannot.
+
+    Indeed, even if we could perform semantic analysis on the programme, it's not possible to determine such cases, because answering the question 'does this expression return a value' amounts to solving the halting problem.
 
 ## [`annotate_untyped_fields_with_any`](@id options-annotate-untyped-fields-with-any)
 
@@ -160,33 +219,80 @@ Default: `true`
 
 Annotates fields in a type definitions with `::Any` if no type annotation is provided:
 
-```julia
+```@example annotate-untyped-fields-with-any
+s = """
 struct A
     arg1
 end
-```
+"""
 
-to
-
-```julia
-struct A
-    arg1::Any
-end
+using JuliaFormatter: format_text
+format_text(s; annotate_untyped_fields_with_any=true) |> println
 ```
 
 ## [`conditional_to_if`](@id options-conditional-to-if)
 
 Default: `false`
 
-If the conditional `E ? A : B` exceeds the maximum margin converts it into the equivalent `if` block:
+If a ternary expression exceeds the margin, convert it into the equivalent `if` block:
 
-```julia
-if E
-    A
-else
-    B
-end
+```@example conditional-to-if
+s = "cond ? trueval : falseval"
+
+using JuliaFormatter: format_text
+format_text(s; margin=20, conditional_to_if=true) |> println
 ```
+
+!!! warning "Enabling this can cause lack of idempotence"
+    
+    Enabling `conditional_to_if` can cause non-idempotent formatting, because the `if` block may trigger different formatting choices compared to the ternary.
+
+    For more details, click on the "Show explanation" toggle below.
+
+!!! details "Show explanation for conditional_to_if"
+
+    Here is an example of non-idempotence.
+    As you can see it is very easy to trigger!
+
+    ```@example conditional-to-if
+    s = "foo(cond ? trueval : falseval)"
+    length(s)
+    ```
+
+    Let's format this with a margin of 28.
+    (Obviously, this is smaller than typical real-world margins; but this is chosen for the purposes of simplicity.
+    With a margin of 92, you can still hit such cases easily with longer expressions, variable names, or indentation—basically, with real-world code!)
+
+    On the first pass, two things happen:
+
+    1. The function call's arguments are nested because the length of the arguments (including the ternary) exceeds the line margin.
+
+    2. This at first leads to something like
+
+       ```julia
+       foo(
+           cond ? trueval : falseval,
+       )
+       ```
+
+       (this string itself is never materialised, but there is an intermediate data structure that essentially represents this).
+       Now, because the ternary itself is still over the margin, the ternary is converted to `if...end`.
+
+    Collectively, these steps give us the formatting of the first pass:
+
+    ```@example conditional-to-if
+    out1 = format_text(s; margin=28, conditional_to_if=true)
+    println(out1)
+    ```
+
+    On the second time we format, the function call `foo(...)` sees that it has only one argument which is a block, and thus collapses the nesting (the logic being that the argument can handle the line-breaking itself):
+
+    ```@example conditional-to-if
+    out2 = format_text(out1; margin=28, conditional_to_if=true)
+    println(out2)
+    ```
+
+    Fundamentally, the issue is that formatting choices for the function call `foo(...)` depend on whether or not the ternary is expanded or not, but by the time the ternary is expanded, the function call has already been formatted.
 
 ## [`disallow_single_arg_nesting`](@id options-disallow-single-arg-nesting)
 
@@ -515,35 +621,29 @@ f(a; b=1)
 
 ## [`short_circuit_to_if`](@id options-short-circuit-to-if)
 
-If `truer`, converts shortcircuiting expressions to the equivalent if-expression.
+If `true`, converts logical operators to the equivalent if-expression, if it is clear that the value is not used.
 
-```julia
+In particular, `a && f()` is converted to `if a; f(); end`, and `a || f()` is converted to `if !a; f(); end`.
+
+```@example short-circuit-to-if
+s = """
 function foo(a, b)
     a || return "bar"
-
-    "hello"
-
     b && return "ooo"
-end
+    return 5
+end"""
+
+using JuliaFormatter: format_text
+format_text(s; short_circuit_to_if=true) |> println
 ```
 
-becomes
+In general these are only converted if they are a top-level statement inside a block.
+If the value of the logical operator is in any way used, it will not be converted.
+These include:
 
-```julia
-function foo(a, b)
-    if !(a)
-        return "bar"
-    end
-
-    "hello"
-
-    if b
-        return "ooo"
-    else
-        false
-    end
-end
-```
+- Conditions in `if`, `elseif`, and `while` statements.
+- The value being assigned to a variable or otherwise being part of some expression.
+- The value being returned (including implicitly, by being the last statement in a block).
 
 ## [`short_to_long_function_def`](@id options-short-to-long-function-def)
 

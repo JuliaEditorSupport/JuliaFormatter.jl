@@ -2234,11 +2234,7 @@ end
         end"""
         expected = raw"""
         function exampleFunction()
-            return if LOGFILEHANDLE != "notset"
-                write(LOGFILEHANDLE, "examplestring")
-            else
-                false
-            end
+            return LOGFILEHANDLE != "notset" && write(LOGFILEHANDLE, "examplestring")
         end"""
         for style in ALL_STYLES
             test_format(s, expected, style; short_circuit_to_if = true, always_use_return = true)
@@ -2336,6 +2332,11 @@ end
                 always_for_in = true,
             )
         end
+    end
+
+    @testset "908 comment in do-block" begin
+        s = "funct() do # comment\nend"
+        test_format(s, s)
     end
 
     @testset "911" begin
@@ -3104,7 +3105,8 @@ end
             test_format(s, s; short_circuit_to_if=true)
         end
 
-        # But standalone `a && f()` in a block should still expand
+        # But standalone `a && b` in a block should still expand -- as long as it's not at
+        # the end of the block (in which case the block evaluates to it).
         for (block_begin, block_end) in (
             ("function g()", "end"),
             ("if foo", "end"),
@@ -3114,14 +3116,49 @@ end
             ("begin", "end"),
         )
             test_format(
-                "$block_begin\n    a && f()\n$block_end",
-                "$block_begin\n    if a\n        f()\n    else\n        false\n    end\n$block_end";
+                "$block_begin\n    a && b\n    2\n$block_end",
+                "$block_begin\n    if a\n        b\n    end\n    2\n$block_end";
+                short_circuit_to_if=true,
+            )
+
+            # Check that it doesn't expand at the end of the block.
+            test_format(
+                "$block_begin\n    a && b\n$block_end",
+                "$block_begin\n    a && b\n$block_end",
                 short_circuit_to_if=true,
             )
         end
 
-        # And at the top level
-        test_format("a && f()", "if a\n    f()\nend"; short_circuit_to_if=true)
+        # Should expand at the top level.
+        test_format("a && b", "if a\n    b\nend"; short_circuit_to_if=true)
+    end
+
+    @testset "1125 always_use_return idempotence" begin
+        s = """
+        function f()
+            if visible
+                any_visible = any(ALL_SCREENS) do s
+                    s !== screen && s.owns_glscreen &&
+                        GLAbstraction.context_alive(s.glscreen) &&
+                        GLFW.GetWindowAttrib(s.glscreen, GLFW.VISIBLE) != 0
+                end
+                any_visible || macos_set_dock_visible(false)
+            end
+        end"""
+        output = """
+        function f()
+            if visible
+                any_visible = any(ALL_SCREENS) do s
+                    return s !== screen &&
+                           s.owns_glscreen &&
+                           GLAbstraction.context_alive(s.glscreen) &&
+                           GLFW.GetWindowAttrib(s.glscreen, GLFW.VISIBLE) != 0
+                end
+                any_visible || macos_set_dock_visible(false)
+            end
+        end"""
+        test_format(s, output; always_use_return=true)
+        test_format(s, output, BlueStyle())
     end
 end
 

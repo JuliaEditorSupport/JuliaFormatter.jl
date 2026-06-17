@@ -1038,6 +1038,98 @@ function add_hasheq_comment!(t::FST, n::FST, s::State)
     return true
 end
 
+"""
+Recursively check whether a CST node contains a `return` node anywhere inside it.
+Used to avoid prepending `return` to expressions like `x > 0 ? (return 1) : (return 2)`.
+"""
+function _contains_return(cst::JuliaSyntax.GreenNode)::Bool
+    kind(cst) === K"return" && return true
+    haschildren(cst) && return any(_contains_return, children(cst))
+    return false
+end
+
+"""
+    should_add_return_to_last_statement(cst, s, lineage)
+
+For a block `cst`, determine whether we should add a `return` to the last statement in the block.
+"""
+function should_add_return_to_last_statement(
+    cst::JuliaSyntax.GreenNode,
+    s::State,
+    lineage::Vector{Tuple{JuliaSyntax.Kind,Bool,Bool}},
+)
+    kind(cst) === K"block" ||
+        error("should_add_return_to_last_statement called on a non-block node")
+
+    # If the option is not enabled, don't add return.
+    s.opts.always_use_return || return false
+
+    # If the block is empty, don't add return.
+    last_stmt_idx =
+        findlast(n -> !JuliaSyntax.is_whitespace(n) && kind(n) !== K";", children(cst))
+    last_stmt_idx === nothing && return false
+
+    # Only add return if the block is the body of a function/macro definition or a do-block
+    # in a function/macro call.
+    if !(
+        length(lineage) >= 2 && lineage[end-1][1] in KSet"function macro" ||
+        length(lineage) >= 3 &&
+        lineage[end-1][1] === K"do" &&
+        lineage[end-2][1] in KSet"call macrocall"
+    )
+        return false
+    end
+
+    # Need to check the children carefully now.
+    last_stmt = children(cst)[last_stmt_idx]
+    # If the last statement is already a return or a macro, don't add return.
+    if kind(last_stmt) in KSet"return macrocall"
+        return false
+    end
+    # If the last statement is a block, don't add return. However, parenthesised blocks like
+    # `(a; b)` still get return. Thankfully, JuliaSyntax tells us about that!
+    if is_block(last_stmt) && !JuliaSyntax.has_flags(last_stmt, JuliaSyntax.PARENS_FLAG)
+        return false
+    end
+    # Do-blocks don't get caught by `is_block()` because they have K"call" or K"macrocall",
+    # so we search for them separately here and disable them here too.
+    if has_do_block_call(last_stmt) !== nothing
+        return false
+    end
+
+    # If the last statement already contains a `return` somewhere inside it (e.g.
+    # `x > 0 ? (return 1) : (return 2)`), don't add another one.
+    if _contains_return(last_stmt)
+        return false
+    end
+
+    # If the last statement is something that has a docstring attached to it, don't add
+    # return. See https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/405
+    #
+    # There are several cases we have to deal with here:
+    #
+    #     @doc """string"""\n f -- in this case the last statement is the entire macrocall
+    #                              and so will be skipped by the previous branch, we don't
+    #                              need to worry about it here.
+    #     raw"""string"""\n f   -- [macrocall] -> NewlineWS -> Identifier
+    #     """string"""\n f      -- [string] -> NewlineWS -> Identifier
+    if last_stmt_idx >= 3
+        preceded_by_newline = kind(cst[last_stmt_idx-1]) === K"NewlineWs"
+        maybe_docstring = cst[last_stmt_idx-2]
+        then_preceded_by_docstring =
+            kind(maybe_docstring) === K"string" || (
+                kind(maybe_docstring) === K"macrocall" &&
+                haschildren(maybe_docstring) &&
+                kind(maybe_docstring[1]) === K"StringMacroName"
+            )
+        if preceded_by_newline && then_preceded_by_docstring
+            return false
+        end
+    end
+
+    return true
+end
+
 # Block
 # length Block is the length of the longest expr
 function p_block(
@@ -1052,6 +1144,13 @@ function p_block(
     if !haschildren(cst)
         return t
     end
+
+    # We might want to add return to the last statement.
+    add_return_to_last_statement = should_add_return_to_last_statement(cst, s, lineage)
+    # Technically this doesn't need to be computed if add_return_to_last_statement is false,
+    # but it's cheap.
+    last_stmt_idx =
+        findlast(n -> !JuliaSyntax.is_whitespace(n) && kind(n) !== K";", children(cst))
 
     join_body = ctx.join_body
     ignore_single_line = ctx.ignore_single_line
@@ -1080,9 +1179,9 @@ function p_block(
             s.offset += span(a)
             continue
         end
-        n = pretty(style, a, s, ctx, lineage)
 
         if from_quote && !single_line
+            n = pretty(style, a, s, ctx, lineage)
             if kind(a) in KSet"; ) ("
                 add_node!(t, n, s; join_lines = true)
             elseif kind(a) === K","
@@ -1099,6 +1198,7 @@ function p_block(
                 add_node!(t, n, s; max_padding = 0)
             end
         elseif single_line
+            n = pretty(style, a, s, ctx, lineage)
             if kind(a) in KSet", ;"
                 add_node!(t, n, s; join_lines = true)
                 if has_more_args_to_come(childs, i + 1, K")")
@@ -1109,16 +1209,41 @@ function p_block(
             end
         else
             if kind(a) === K","
+                n = pretty(style, a, s, ctx, lineage)
                 add_node!(t, n, s; join_lines = true)
                 if join_body && has_more_args_to_come(childs, i + 1, K")")
                     add_node!(t, Placeholder(1), s)
                 end
             elseif kind(a) === K";"
+                n = pretty(style, a, s, ctx, lineage)
                 add_node!(t, n, s; join_lines = true)
             elseif join_body
+                n = pretty(style, a, s, ctx, lineage)
                 add_node!(t, n, s; join_lines = true)
             else
-                add_node!(t, n, s; max_padding = 0)
+                # Other statements.
+                node_to_add = if i === last_stmt_idx && add_return_to_last_statement
+                    # Add a return statement to the last statement in the block.
+                    c = cursor_loc(s)
+                    return_fst = FST(Return, nspaces(s))
+                    add_node!(
+                        return_fst,
+                        FST(KEYWORD, c[2], c[1], c[1], "return"),
+                        s;
+                        join_lines = true,
+                    )
+                    add_node!(return_fst, Whitespace(1), s; join_lines = true)
+                    # have to push to lineage to make sure that the return value node is
+                    # formatted properly. See #1125.
+                    push!(lineage, (K"return", false, false))
+                    n = pretty(style, a, s, ctx, lineage)
+                    pop!(lineage)
+                    add_node!(return_fst, n, s; join_lines = true)
+                    return_fst
+                else
+                    pretty(style, a, s, ctx, lineage)
+                end
+                add_node!(t, node_to_add, s; max_padding = 0)
             end
         end
     end
@@ -1267,9 +1392,6 @@ function p_functiondef(
 
             s.indent += s.opts.indent
             n = pretty(style, c, s, newctx(ctx; ignore_single_line = true), lineage)
-            if s.opts.always_use_return
-                prepend_return!(n, s)
-            end
             add_node!(t, n, s; max_padding = s.opts.indent)
             s.indent -= s.opts.indent
         elseif is_func_call(c)
@@ -1915,9 +2037,6 @@ function append_do_nodes!(
         elseif kind(c) === K"block"
             s.indent += s.opts.indent
             n = pretty(style, c, s, newctx(ctx; ignore_single_line = true), lineage)
-            if s.opts.always_use_return
-                prepend_return!(n, s)
-            end
             add_node!(t, n, s; max_padding = s.opts.indent)
             s.indent -= s.opts.indent
         elseif kind(c) === K"tuple"

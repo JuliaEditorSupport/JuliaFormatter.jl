@@ -221,7 +221,7 @@ function short_to_long_function_def!(
 
     # body
 
-    # s.opts.always_use_return && prepend_return!(fst[end], s)
+    s.opts.always_use_return && prepend_return_fst!(fst[end], s)
     if fst[end].typ === Block
         add_node!(funcdef, fst[end], s; max_padding = s.opts.indent)
     elseif fst[end].typ === Begin
@@ -258,7 +258,7 @@ function short_to_long_function_def!(
     add_indent!(funcdef[end], s, s.opts.indent)
 
     if s.opts.always_use_return
-        prepend_return!(funcdef[end], s)
+        prepend_return_fst!(funcdef[end], s)
     end
 
     # end
@@ -424,9 +424,15 @@ function binaryop_to_whereop!(fst::FST, s::State)
 end
 
 """
-    prepend_return!(fst::FST, s::State)
+    prepend_return_fst!(fst::FST, s::State)
 
 Prepends `return` to the last expression of a block if applicable.
+
+*Note*: This function is only called when a short-form function definition is converted to a
+long-form one, AND `always_use_return` is true. For ordinary, pre-existing long-form
+function definitions, the implementation of `always_use_return` is in `p_block` in
+`default/pretty.jl`. This is done to avoid post-FST passes which tend to cause idempotence
+issues.
 
 ```julia
 function foo()
@@ -444,7 +450,7 @@ function foo()
 end
 ```
 """
-function prepend_return!(fst::FST, s::State)
+function prepend_return_fst!(fst::FST, s::State)
     if fst.typ !== Block || length(fst.nodes::Vector{FST}) == 0
         return
     end
@@ -468,13 +474,6 @@ function prepend_return!(fst::FST, s::State)
     if last_idx > 2 && (fst[last_idx-2].typ === MacroStr || is_macrodoc(fst[last_idx-2]))
         return
     end
-    # fix #426
-    # don't add return if the last node is a throw call. throw is a built-in function
-    # that shouldn't be overwritten for over purposes so this should be fine.
-    if ln.typ === Call && ln[1].typ === IDENTIFIER && ln[1].val == "throw"
-        return
-    end
-
     # check to see if the last node already has a return
     found_return = false
     f = (fst::FST, ::State) -> begin
@@ -807,9 +806,18 @@ function short_circuit_to_if_pass!(fst::FST, s::State)
             # (e.g. function body, loop body) or at the top level. Don't expand inside
             # calls, tuples, etc. where the value is being used -- `a && b` and
             # `if a; b; end` have different return values when `a` is falsy.
+            last_expr_idx = findlast(
+                n ->
+                    n.typ !== HASHEQCOMMENT &&
+                    n.typ !== WHITESPACE &&
+                    n.typ !== PLACEHOLDER,
+                fst.nodes::Vector{FST},
+            )
             value_is_needed =
-                i == length(fst.nodes) && (fst.typ === Block || fst.typ === Return)
-            _short_circuit_to_if!(n, s, value_is_needed)
+                i == last_expr_idx && (fst.typ === Block || fst.typ === Return)
+            if !value_is_needed
+                _short_circuit_to_if!(n, s, false)
+            end
         else
             short_circuit_to_if_pass!(n, s)
         end
