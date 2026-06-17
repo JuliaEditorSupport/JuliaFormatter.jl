@@ -1,3 +1,7 @@
+# v2.9.0
+
+Rewrote CLI argument parsing code to avoid code duplication.
+
 # v2.8.5
 
 Fixed more bugs where BlueStyle's chained-ternary-to-if conversion would lead to loss of idempotence. (#1131, #1132)
