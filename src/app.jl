@@ -241,6 +241,12 @@ function print_help()
                    formatting.
                    Default: false
 
+               --conditional_to_if / --no-conditional_to_if
+                   Convert ternary conditional expressions to if/else blocks
+                   when they exceed the line margin. Warning: enabling this
+                   option may lead to idempotence failures in some cases.
+                   Default: false
+
                --normalize_line_endings=<mode>
                    Normalize line endings: "auto", "unix", or "windows".
                    Default: "auto"
@@ -525,6 +531,12 @@ function main(argv::Vector{String})
             i += 1
         elseif x == "--no-v2_stable_multiline_strings"
             format_options[:v2_stable_multiline_strings] = false
+            i += 1
+        elseif x == "--conditional_to_if"
+            format_options[:conditional_to_if] = true
+            i += 1
+        elseif x == "--no-conditional_to_if"
+            format_options[:conditional_to_if] = false
             i += 1
         else
             # Not an option, must be a file or directory

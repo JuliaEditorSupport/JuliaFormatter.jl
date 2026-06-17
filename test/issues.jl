@@ -3160,6 +3160,20 @@ end
         test_format(s, output; always_use_return=true)
         test_format(s, output, BlueStyle())
     end
+
+    @testset "1132 BlueStyle chained ternary expansion idempotence" begin
+        s = "f() = a ? b : c ? d : e"
+        output = """
+        f() =
+            if a
+                b
+            elseif c
+                d
+            else
+                e
+            end"""
+        test_format(s, output, BlueStyle())
+    end
 end
 
 end
