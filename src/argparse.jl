@@ -8,7 +8,7 @@ end
 
 # Enums that are attached to OptSpec that are used purely for help text rendering.
 @enum OptKind FlagKind OptionKind NegatableFlagKind
-@enum OptGroup GeneralGroup FormattingGroup
+@enum OptGroup GeneralGroup FormattingGroup DeprecatedGroup
 
 """
     OptionSpec
@@ -91,21 +91,26 @@ function flag(names; dest::Symbol, help::String, group::OptGroup = GeneralGroup)
         FlagKind, group, "")
 end
 
-# Negatable flag: `--always_for_in` sets dest to true, `--no-always_for_in` sets it to
-# false. The `name` argument is the bare name without `--` prefix, e.g. `"always_for_in"`.
-function negatable_flag(name::String; dest::Symbol, help::String, group::OptGroup = GeneralGroup)
+# Negatable flag (DEPRECATED): `--always_for_in` / `--no-always_for_in`.
+# Deprecated in favour of `--always-for-in=true` / `--always-for-in=false`.
+function negatable_flag(name::String; dest::Symbol)
     pos = "--$name"
     neg = "--no-$name"
-    OptSpec([pos, neg], help, dest,
+    OptSpec([pos, neg], "", dest,
         argv -> (argv[1] == pos, @view argv[2:end]),
-        false, NegatableFlagKind, group, "",
+        false, NegatableFlagKind, DeprecatedGroup, "",
     )
 end
 
 # Option with a value: `--margin=92` or `--margin 92` or `-o file`.
 # `names` is a vector of names, e.g. `["-o", "--output"]`.
+_metavar(::Type{Int}) = "<n>"
+_metavar(::Type{Bool}) = "true|false"
+_metavar(::Type{String}) = "<value>"
+_metavar(::Type) = "<value>"
+
 function option(names; dest::Symbol, type::Type, help::String, multi::Bool = false,
-        group::OptGroup = GeneralGroup, metavar::String = "<value>")
+        group::OptGroup = GeneralGroup, metavar::String = _metavar(type))
     OptSpec(names, help, dest,
         argv -> begin
             x = argv[1]
@@ -162,6 +167,11 @@ function parse_raw(parser::ArgParser, argv::Vector{String})
         token = first(remaining)
         spec = maybe_get_spec(parser, token)
         if spec !== nothing
+            if spec.group == DeprecatedGroup
+                @warn """Options with underscores (e.g. `--always_for_in`) are deprecated \
+                    and will be removed in a future version. \
+                    Use hyphens instead (e.g. `--always-for-in=true`).""" maxlog = 1
+            end
             value, remaining = spec.consume(remaining)
             if spec.multi
                 # append
@@ -244,48 +254,70 @@ const PARSER = ArgParser(
     # --- Formatting options ---
     option("--style"; dest = :style, type = AbstractStyle, metavar = "default|blue|sciml|yas|minimal",
         help = "Formatting style.", group = FormattingGroup),
-    option("--indent"; dest = :indent, type = Int, metavar = "<n>",
-        help = "Indentation width.", group = FormattingGroup),
-    option("--margin"; dest = :margin, type = Int, metavar = "<n>",
-        help = "Maximum line width.", group = FormattingGroup),
-    option("--sciml_margin_overrun"; dest = :sciml_margin_overrun, type = Int, metavar = "<n>",
-        help = "Additional columns SciMLStyle may use.", group = FormattingGroup),
-    option("--normalize_line_endings"; dest = :normalize_line_endings, type = String, metavar = "auto|unix|windows",
-        help = "Normalize line endings.", group = FormattingGroup),
-    negatable_flag("always_for_in"; dest = :always_for_in,
-        help = "Always use 'for x in' instead of 'for x ='.", group = FormattingGroup),
-    negatable_flag("whitespace_typedefs"; dest = :whitespace_typedefs,
-        help = "Add whitespace around '::' in type definitions.", group = FormattingGroup),
-    negatable_flag("remove_extra_newlines"; dest = :remove_extra_newlines,
-        help = "Remove extra newlines.", group = FormattingGroup),
-    negatable_flag("import_to_using"; dest = :import_to_using,
-        help = "Convert 'import' to 'using'.", group = FormattingGroup),
-    negatable_flag("pipe_to_function_call"; dest = :pipe_to_function_call,
-        help = "Convert pipe operator to function calls.", group = FormattingGroup),
-    negatable_flag("short_to_long_function_def"; dest = :short_to_long_function_def,
-        help = "Convert short function definitions to long form.", group = FormattingGroup),
-    negatable_flag("always_use_return"; dest = :always_use_return,
-        help = "Always add explicit 'return' statements.", group = FormattingGroup),
-    negatable_flag("whitespace_in_kwargs"; dest = :whitespace_in_kwargs,
-        help = "Add whitespace in keyword arguments.", group = FormattingGroup),
-    negatable_flag("format_docstrings"; dest = :format_docstrings,
-        help = "Format docstrings.", group = FormattingGroup),
-    negatable_flag("align_struct_field"; dest = :align_struct_field,
-        help = "Align struct field type annotations.", group = FormattingGroup),
-    negatable_flag("align_assignment"; dest = :align_assignment,
+    option("--align-assignment"; dest = :align_assignment, type = Bool,
         help = "Align assignment operators.", group = FormattingGroup),
-    negatable_flag("align_conditional"; dest = :align_conditional,
+    option("--align-conditional"; dest = :align_conditional, type = Bool,
         help = "Align conditional operators.", group = FormattingGroup),
-    negatable_flag("align_pair_arrow"; dest = :align_pair_arrow,
+    option("--align-pair-arrow"; dest = :align_pair_arrow, type = Bool,
         help = "Align pair arrows (=>).", group = FormattingGroup),
-    negatable_flag("trailing_comma"; dest = :trailing_comma,
+    option("--align-struct-field"; dest = :align_struct_field, type = Bool,
+        help = "Align struct field type annotations.", group = FormattingGroup),
+    option("--always-for-in"; dest = :always_for_in, type = Bool,
+        help = "Normalise `in` to/from `=` in for loops.", group = FormattingGroup),
+    option("--always-use-return"; dest = :always_use_return, type = Bool,
+        help = "Add explicit 'return' statements to function definitions.", group = FormattingGroup),
+    option("--conditional-to-if"; dest = :conditional_to_if, type = Bool,
+        help = "Convert ternary expressions to if/else blocks when over margin.", group = FormattingGroup),
+    option("--format-docstrings"; dest = :format_docstrings, type = Bool,
+        help = "Format docstrings.", group = FormattingGroup),
+    option("--import-to-using"; dest = :import_to_using, type = Bool,
+        help = "Convert 'import' to 'using'.", group = FormattingGroup),
+    option("--indent"; dest = :indent, type = Int,
+        help = "Indentation width.", group = FormattingGroup),
+    option("--margin"; dest = :margin, type = Int,
+        help = "Maximum line width.", group = FormattingGroup),
+    option("--normalize-line-endings"; dest = :normalize_line_endings, type = String, metavar = "auto|unix|windows",
+        help = "Normalize line endings.", group = FormattingGroup),
+    option("--pipe-to-function-call"; dest = :pipe_to_function_call, type = Bool,
+        help = "Convert pipe operator to function calls.", group = FormattingGroup),
+    option("--remove-extra-newlines"; dest = :remove_extra_newlines, type = Bool,
+        help = "Remove extra newlines.", group = FormattingGroup),
+    option("--sciml-margin-overrun"; dest = :sciml_margin_overrun, type = Int,
+        help = "Additional columns SciMLStyle may use.", group = FormattingGroup),
+    option("--short-to-long-function-def"; dest = :short_to_long_function_def, type = Bool,
+        help = "Convert short function definitions to long form.", group = FormattingGroup),
+    option("--trailing-comma"; dest = :trailing_comma, type = Bool,
         help = "Add trailing commas.", group = FormattingGroup),
-    negatable_flag("trailing_zero"; dest = :trailing_zero,
+    option("--trailing-zero"; dest = :trailing_zero, type = Bool,
         help = "Add trailing zeros to floats.", group = FormattingGroup),
-    negatable_flag("v2_stable_multiline_strings"; dest = :v2_stable_multiline_strings,
+    option("--v2-stable-multiline-strings"; dest = :v2_stable_multiline_strings, type = Bool,
         help = "Use stable multiline string length calculation.", group = FormattingGroup),
-    negatable_flag("conditional_to_if"; dest = :conditional_to_if,
-        help = "Convert ternary conditional expressions to if/else blocks.", group = FormattingGroup),
+    option("--whitespace-in-kwargs"; dest = :whitespace_in_kwargs, type = Bool,
+        help = "Add whitespace in keyword arguments.", group = FormattingGroup),
+    option("--whitespace-typedefs"; dest = :whitespace_typedefs, type = Bool,
+        help = "Add whitespace around '::' in type definitions.", group = FormattingGroup),
+    # Deprecated options (for backward compatibility)
+    option("--sciml_margin_overrun"; dest = :sciml_margin_overrun, type = Int,
+        help = "", group = DeprecatedGroup),
+    option("--normalize_line_endings"; dest = :normalize_line_endings, type = String,
+        help = "", group = DeprecatedGroup),
+    negatable_flag("always_for_in"; dest = :always_for_in),
+    negatable_flag("whitespace_typedefs"; dest = :whitespace_typedefs),
+    negatable_flag("remove_extra_newlines"; dest = :remove_extra_newlines),
+    negatable_flag("import_to_using"; dest = :import_to_using),
+    negatable_flag("pipe_to_function_call"; dest = :pipe_to_function_call),
+    negatable_flag("short_to_long_function_def"; dest = :short_to_long_function_def),
+    negatable_flag("always_use_return"; dest = :always_use_return),
+    negatable_flag("whitespace_in_kwargs"; dest = :whitespace_in_kwargs),
+    negatable_flag("format_docstrings"; dest = :format_docstrings),
+    negatable_flag("align_struct_field"; dest = :align_struct_field),
+    negatable_flag("align_assignment"; dest = :align_assignment),
+    negatable_flag("align_conditional"; dest = :align_conditional),
+    negatable_flag("align_pair_arrow"; dest = :align_pair_arrow),
+    negatable_flag("trailing_comma"; dest = :trailing_comma),
+    negatable_flag("trailing_zero"; dest = :trailing_zero),
+    negatable_flag("v2_stable_multiline_strings"; dest = :v2_stable_multiline_strings),
+    negatable_flag("conditional_to_if"; dest = :conditional_to_if),
 )
 
 function print_help(parser::ArgParser; io::IO = stdout)
@@ -324,6 +356,7 @@ function print_help(parser::ArgParser; io::IO = stdout)
         """)
 
     for group in instances(OptGroup)
+        group == DeprecatedGroup && continue
         if group == FormattingGroup
             section("FORMATTING OPTIONS")
             println(io, """
@@ -391,7 +424,7 @@ function print_help(parser::ArgParser; io::IO = stdout)
                    jlfmt --style=blue src/file.jl
 
                Combine options:
-                   echo 'for i=1:10; end' | jlfmt --always_for_in
+                   echo 'for i=1:10; end' | jlfmt --always-for-in=true
         """)
     return
 end

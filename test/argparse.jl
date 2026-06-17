@@ -1,6 +1,6 @@
 module ArgparseTests
 
-using Test: @test, @testset, @test_throws
+using Test: @test, @testset, @test_throws, @test_logs
 using JuliaFormatter.ArgParse: ParseArgsError, ParsedArgs, parse_args, parse_raw, PARSER,
     StdoutMode, InplaceMode, CheckMode
 using JuliaFormatter: DefaultStyle, YASStyle, BlueStyle, SciMLStyle, MinimalStyle
@@ -35,10 +35,17 @@ using JuliaFormatter: DefaultStyle, YASStyle, BlueStyle, SciMLStyle, MinimalStyl
             @test raw[:outputfile] == "out.jl"
         end
 
-        @testset "negatable flag" begin
+        @testset "negatable flag (deprecated)" begin
             raw = parse_raw(PARSER, ["--always_for_in"])
             @test raw[:always_for_in] == true
             raw = parse_raw(PARSER, ["--no-always_for_in"])
+            @test raw[:always_for_in] == false
+        end
+
+        @testset "boolean option with = syntax" begin
+            raw = parse_raw(PARSER, ["--always-for-in=true"])
+            @test raw[:always_for_in] == true
+            raw = parse_raw(PARSER, ["--always-for-in=false"])
             @test raw[:always_for_in] == false
         end
 
@@ -190,7 +197,7 @@ using JuliaFormatter: DefaultStyle, YASStyle, BlueStyle, SciMLStyle, MinimalStyl
             @test a.format_options[:margin] == b.format_options[:margin] == 80
         end
 
-        @testset "all formatting options" begin
+        @testset "all formatting options (new-style)" begin
             @test parse_args(["--style=default"]).format_options[:style] == DefaultStyle()
             @test parse_args(["--style=yas"]).format_options[:style] == YASStyle()
             @test parse_args(["--style=blue"]).format_options[:style] == BlueStyle()
@@ -198,8 +205,50 @@ using JuliaFormatter: DefaultStyle, YASStyle, BlueStyle, SciMLStyle, MinimalStyl
             @test parse_args(["--style=minimal"]).format_options[:style] == MinimalStyle()
             @test parse_args(["--indent=2"]).format_options[:indent] == 2
             @test parse_args(["--margin=80"]).format_options[:margin] == 80
+            @test parse_args(["--sciml-margin-overrun=10"]).format_options[:sciml_margin_overrun] == 10
+            @test parse_args(["--normalize-line-endings=unix"]).format_options[:normalize_line_endings] == "unix"
+            @test parse_args(["--always-for-in=true"]).format_options[:always_for_in] == true
+            @test parse_args(["--always-for-in=false"]).format_options[:always_for_in] == false
+            @test parse_args(["--whitespace-typedefs=true"]).format_options[:whitespace_typedefs] == true
+            @test parse_args(["--whitespace-typedefs=false"]).format_options[:whitespace_typedefs] == false
+            @test parse_args(["--remove-extra-newlines=true"]).format_options[:remove_extra_newlines] == true
+            @test parse_args(["--remove-extra-newlines=false"]).format_options[:remove_extra_newlines] == false
+            @test parse_args(["--import-to-using=true"]).format_options[:import_to_using] == true
+            @test parse_args(["--import-to-using=false"]).format_options[:import_to_using] == false
+            @test parse_args(["--pipe-to-function-call=true"]).format_options[:pipe_to_function_call] == true
+            @test parse_args(["--pipe-to-function-call=false"]).format_options[:pipe_to_function_call] == false
+            @test parse_args(["--short-to-long-function-def=true"]).format_options[:short_to_long_function_def] == true
+            @test parse_args(["--short-to-long-function-def=false"]).format_options[:short_to_long_function_def] == false
+            @test parse_args(["--always-use-return=true"]).format_options[:always_use_return] == true
+            @test parse_args(["--always-use-return=false"]).format_options[:always_use_return] == false
+            @test parse_args(["--whitespace-in-kwargs=true"]).format_options[:whitespace_in_kwargs] == true
+            @test parse_args(["--whitespace-in-kwargs=false"]).format_options[:whitespace_in_kwargs] == false
+            @test parse_args(["--format-docstrings=true"]).format_options[:format_docstrings] == true
+            @test parse_args(["--format-docstrings=false"]).format_options[:format_docstrings] == false
+            @test parse_args(["--align-struct-field=true"]).format_options[:align_struct_field] == true
+            @test parse_args(["--align-struct-field=false"]).format_options[:align_struct_field] == false
+            @test parse_args(["--align-assignment=true"]).format_options[:align_assignment] == true
+            @test parse_args(["--align-assignment=false"]).format_options[:align_assignment] == false
+            @test parse_args(["--align-conditional=true"]).format_options[:align_conditional] == true
+            @test parse_args(["--align-conditional=false"]).format_options[:align_conditional] == false
+            @test parse_args(["--align-pair-arrow=true"]).format_options[:align_pair_arrow] == true
+            @test parse_args(["--align-pair-arrow=false"]).format_options[:align_pair_arrow] == false
+            @test parse_args(["--trailing-comma=true"]).format_options[:trailing_comma] == true
+            @test parse_args(["--trailing-comma=false"]).format_options[:trailing_comma] == false
+            @test parse_args(["--trailing-zero=true"]).format_options[:trailing_zero] == true
+            @test parse_args(["--trailing-zero=false"]).format_options[:trailing_zero] == false
+            @test parse_args(["--v2-stable-multiline-strings=true"]).format_options[:v2_stable_multiline_strings] == true
+            @test parse_args(["--v2-stable-multiline-strings=false"]).format_options[:v2_stable_multiline_strings] == false
+            @test parse_args(["--conditional-to-if=true"]).format_options[:conditional_to_if] == true
+            @test parse_args(["--conditional-to-if=false"]).format_options[:conditional_to_if] == false
+        end
+
+        @testset "deprecated underscored options still work" begin
             @test parse_args(["--sciml_margin_overrun=10"]).format_options[:sciml_margin_overrun] == 10
             @test parse_args(["--normalize_line_endings=unix"]).format_options[:normalize_line_endings] == "unix"
+        end
+
+        @testset "all formatting options (deprecated negatable flags still work)" begin
             @test parse_args(["--always_for_in"]).format_options[:always_for_in] == true
             @test parse_args(["--no-always_for_in"]).format_options[:always_for_in] == false
             @test parse_args(["--whitespace_typedefs"]).format_options[:whitespace_typedefs] == true
@@ -234,6 +283,13 @@ using JuliaFormatter: DefaultStyle, YASStyle, BlueStyle, SciMLStyle, MinimalStyl
             @test parse_args(["--no-v2_stable_multiline_strings"]).format_options[:v2_stable_multiline_strings] == false
             @test parse_args(["--conditional_to_if"]).format_options[:conditional_to_if] == true
             @test parse_args(["--no-conditional_to_if"]).format_options[:conditional_to_if] == false
+        end
+
+        @testset "new-style option overrides deprecated flag (last wins)" begin
+            args = parse_args(["--always_for_in", "--always-for-in=false"])
+            @test args.format_options[:always_for_in] == false
+            args = parse_args(["--always-for-in=false", "--always_for_in"])
+            @test args.format_options[:always_for_in] == true
         end
     end
 end

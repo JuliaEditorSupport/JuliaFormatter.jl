@@ -169,14 +169,26 @@ using JuliaFormatter: DefaultStyle, YASStyle, BlueStyle, SciMLStyle, MinimalStyl
             @test args.format_options[:margin] == 80
         end
 
-        @testset "sciml_margin_overrun" begin
+        @testset "sciml-margin-overrun" begin
+            args = parse_args(["--sciml-margin-overrun=10", "foo.jl"])
+            @test args.format_options[:sciml_margin_overrun] == 10
+        end
+
+        @testset "sciml_margin_overrun (deprecated)" begin
             args = parse_args(["--sciml_margin_overrun=10", "foo.jl"])
             @test args.format_options[:sciml_margin_overrun] == 10
         end
     end
 
     @testset "string format options" begin
-        @testset "normalize_line_endings" begin
+        @testset "normalize-line-endings" begin
+            for mode in ["auto", "unix", "windows"]
+                args = parse_args(["--normalize-line-endings=$mode", "foo.jl"])
+                @test args.format_options[:normalize_line_endings] == mode
+            end
+        end
+
+        @testset "normalize_line_endings (deprecated)" begin
             for mode in ["auto", "unix", "windows"]
                 args = parse_args(["--normalize_line_endings=$mode", "foo.jl"])
                 @test args.format_options[:normalize_line_endings] == mode
@@ -184,8 +196,44 @@ using JuliaFormatter: DefaultStyle, YASStyle, BlueStyle, SciMLStyle, MinimalStyl
         end
     end
 
-    @testset "boolean format options" begin
-        boolean_options = [
+    @testset "boolean format options (new-style)" begin
+        boolean_options = Dict(
+            "always-for-in" => :always_for_in,
+            "whitespace-typedefs" => :whitespace_typedefs,
+            "remove-extra-newlines" => :remove_extra_newlines,
+            "import-to-using" => :import_to_using,
+            "pipe-to-function-call" => :pipe_to_function_call,
+            "short-to-long-function-def" => :short_to_long_function_def,
+            "always-use-return" => :always_use_return,
+            "whitespace-in-kwargs" => :whitespace_in_kwargs,
+            "format-docstrings" => :format_docstrings,
+            "align-struct-field" => :align_struct_field,
+            "align-assignment" => :align_assignment,
+            "align-conditional" => :align_conditional,
+            "align-pair-arrow" => :align_pair_arrow,
+            "trailing-comma" => :trailing_comma,
+            "trailing-zero" => :trailing_zero,
+            "v2-stable-multiline-strings" => :v2_stable_multiline_strings,
+            "conditional-to-if" => :conditional_to_if,
+        )
+
+        @testset "$cli_name" for (cli_name, dest) in sort(collect(boolean_options))
+            args = parse_args(["--$cli_name=true", "foo.jl"])
+            @test args.format_options[dest] == true
+
+            args = parse_args(["--$cli_name=false", "foo.jl"])
+            @test args.format_options[dest] == false
+        end
+
+        @testset "only set options appear in format_options" begin
+            args = parse_args(["--always-for-in=true", "foo.jl"])
+            @test haskey(args.format_options, :always_for_in)
+            @test !haskey(args.format_options, :trailing_comma)
+        end
+    end
+
+    @testset "boolean format options (deprecated negatable flags)" begin
+        deprecated_options = [
             :always_for_in,
             :whitespace_typedefs,
             :remove_extra_newlines,
@@ -205,20 +253,12 @@ using JuliaFormatter: DefaultStyle, YASStyle, BlueStyle, SciMLStyle, MinimalStyl
             :conditional_to_if,
         ]
 
-        @testset "$opt" for opt in boolean_options
-            # --flag sets to true
+        @testset "$opt" for opt in deprecated_options
             args = parse_args(["--$opt", "foo.jl"])
             @test args.format_options[opt] == true
 
-            # --no-flag sets to false
             args = parse_args(["--no-$opt", "foo.jl"])
             @test args.format_options[opt] == false
-        end
-
-        @testset "only set options appear in format_options" begin
-            args = parse_args(["--always_for_in", "foo.jl"])
-            @test haskey(args.format_options, :always_for_in)
-            @test !haskey(args.format_options, :trailing_comma)
         end
     end
 
@@ -245,8 +285,14 @@ using JuliaFormatter: DefaultStyle, YASStyle, BlueStyle, SciMLStyle, MinimalStyl
         args = parse_args(["--indent=2", "--indent=4", "foo.jl"])
         @test args.format_options[:indent] == 4
 
-        args = parse_args(["--always_for_in", "--no-always_for_in", "foo.jl"])
+        args = parse_args(["--always-for-in=true", "--always-for-in=false", "foo.jl"])
         @test args.format_options[:always_for_in] == false
+
+        # deprecated and new-style can be mixed, last wins
+        args = parse_args(["--always_for_in", "--always-for-in=false", "foo.jl"])
+        @test args.format_options[:always_for_in] == false
+        args = parse_args(["--always-for-in=false", "--always_for_in", "foo.jl"])
+        @test args.format_options[:always_for_in] == true
     end
 
     @testset "stdin marker" begin
