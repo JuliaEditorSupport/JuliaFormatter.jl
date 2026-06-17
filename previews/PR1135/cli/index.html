@@ -98,20 +98,35 @@ jlfmt --diff src/file.jl</code></pre><h2 id="Options"><a class="docs-heading-anc
        --align-conditional=true|false
            Align conditional operators.
 
+       --align-matrix=true|false
+           Preserve whitespace alignment of matrix elements.
+
        --align-pair-arrow=true|false
            Align pair arrows (=&gt;).
 
        --align-struct-field=true|false
            Align struct field type annotations.
 
-       --always-for-in=true|false
+       --always-for-in=true|false|nothing
            Normalise `in` to/from `=` in for loops.
 
        --always-use-return=true|false
            Add explicit &#39;return&#39; statements to function definitions.
 
+       --annotate-untyped-fields-with-any=true|false
+           Annotate untyped struct fields with &#39;::Any&#39;.
+
        --conditional-to-if=true|false
            Convert ternary expressions to if/else blocks when over margin.
+
+       --disallow-single-arg-nesting=true|false
+           Prevent nesting of a single argument in parentheses.
+
+       --for-in-replacement=in|=|∈
+           Replacement for `=` in for loops when always_for_in is true.
+
+       --force-long-function-def=true|false
+           Force short-to-long function def transformation regardless of length.
 
        --format-docstrings=true|false
            Format docstrings.
@@ -121,6 +136,15 @@ jlfmt --diff src/file.jl</code></pre><h2 id="Options"><a class="docs-heading-anc
 
        --indent=&lt;n&gt;
            Indentation width.
+
+       --indent-submodule=true|false
+           Indent submodules appearing in the same file.
+
+       --join-lines-based-on-source=true|false
+           Join lines as they appear in the original source file.
+
+       --long-to-short-function-def=true|false
+           Convert long function definitions to short form.
 
        --margin=&lt;n&gt;
            Maximum line width.
@@ -137,10 +161,19 @@ jlfmt --diff src/file.jl</code></pre><h2 id="Options"><a class="docs-heading-anc
        --sciml-margin-overrun=&lt;n&gt;
            Additional columns SciMLStyle may use.
 
+       --separate-kwargs-with-semicolon=true|false
+           Separate keyword arguments with a semicolon.
+
+       --short-circuit-to-if=true|false
+           Convert short-circuit operators to if-expressions.
+
        --short-to-long-function-def=true|false
            Convert short function definitions to long form.
 
-       --trailing-comma=true|false
+       --surround-whereop-typeparameters=true|false
+           Add curly braces around where type parameters.
+
+       --trailing-comma=true|false|nothing
            Add trailing commas.
 
        --trailing-zero=true|false
@@ -149,11 +182,20 @@ jlfmt --diff src/file.jl</code></pre><h2 id="Options"><a class="docs-heading-anc
        --v2-stable-multiline-strings=true|false
            Use stable multiline string length calculation.
 
+       --variable-call-indent=&lt;name&gt;
+           Allow variable indentation for calls to this function. Can be repeated.
+
        --whitespace-in-kwargs=true|false
            Add whitespace in keyword arguments.
 
+       --whitespace-ops-in-indices=true|false
+           Add whitespace around binary operations in indices.
+
        --whitespace-typedefs=true|false
            Add whitespace around &#39;::&#39; in type definitions.
+
+       --yas-style-nesting=true|false
+           Use YASStyle nesting rules in SciMLStyle.
 
 <span class="sgr1">EXAMPLES</span>
        Format a file and write to stdout:
@@ -195,4 +237,4 @@ jlfmt --indent=2 src/file.jl</code></pre><p>Use <code>--prioritize-config-file</
 echo &#39;f(x,y)=x+y&#39; | jlfmt --config-dir=./src
 
 # Useful in editor integrations to respect project config
-cat file.jl | jlfmt --config-dir=$(dirname file.jl)</code></pre><p>The formatter will search for <code>.JuliaFormatter.toml</code> in the specified directory and its parent directories, just like it does for regular file inputs.</p><h2 id="Conventions"><a class="docs-heading-anchor" href="#Conventions">Conventions</a><a id="Conventions-1"></a><a class="docs-heading-anchor-permalink" href="#Conventions" title="Permalink"></a></h2><p><code>jlfmt</code> follows standard CLI conventions:</p><ul><li>Exit code 0 on success</li><li>Exit code 1 on formatting errors or when <code>--check</code> detects unformatted files</li><li>Formatted output to stdout (default) or in-place with <code>--inplace</code></li><li>Error messages to stderr</li></ul></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../file_options/">« File Options</a><a class="docs-footer-nextpage" href="../editors/">Editors »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.17.0 on <span class="colophon-date" title="Wednesday 17 June 2026 22:47">Wednesday 17 June 2026</span>. Using Julia version 1.12.6.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+cat file.jl | jlfmt --config-dir=$(dirname file.jl)</code></pre><p>The formatter will search for <code>.JuliaFormatter.toml</code> in the specified directory and its parent directories, just like it does for regular file inputs.</p><h2 id="Conventions"><a class="docs-heading-anchor" href="#Conventions">Conventions</a><a id="Conventions-1"></a><a class="docs-heading-anchor-permalink" href="#Conventions" title="Permalink"></a></h2><p><code>jlfmt</code> follows standard CLI conventions:</p><ul><li>Exit code 0 on success</li><li>Exit code 1 on formatting errors or when <code>--check</code> detects unformatted files</li><li>Formatted output to stdout (default) or in-place with <code>--inplace</code></li><li>Error messages to stderr</li></ul></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../file_options/">« File Options</a><a class="docs-footer-nextpage" href="../editors/">Editors »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.17.0 on <span class="colophon-date" title="Wednesday 17 June 2026 22:59">Wednesday 17 June 2026</span>. Using Julia version 1.12.6.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
