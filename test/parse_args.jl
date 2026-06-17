@@ -1,8 +1,8 @@
 module ParseArgsTests
 
 using Test: @test, @testset, @test_throws
-using JuliaFormatter: ParsedArgs, ParseArgsError, parse_args, OutputMode, StdoutMode, InplaceMode, CheckMode,
-    DefaultStyle, YASStyle, BlueStyle, SciMLStyle, MinimalStyle
+using JuliaFormatter.ArgParse: ParsedArgs, ParseArgsError, parse_args, OutputMode, StdoutMode, InplaceMode, CheckMode
+using JuliaFormatter: DefaultStyle, YASStyle, BlueStyle, SciMLStyle, MinimalStyle
 
 @testset "parse_args" begin
     @testset "empty args" begin
