@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Custom Alignment · JuliaFormatter</title><meta name="title" content="Custom Alignment · JuliaFormatter"/><meta property="og:title" content="Custom Alignment · JuliaFormatter"/><meta property="twitter:title" content="Custom Alignment · JuliaFormatter"/><meta name="description" content="Documentation for JuliaFormatter."/><meta property="og:description" content="Documentation for JuliaFormatter."/><meta property="twitter:description" content="Documentation for JuliaFormatter."/><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../search_index.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../">JuliaFormatter</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../">Overview</a></li><li><span class="tocitem">Options</span><ul><li><a class="tocitem" href="../formatting_options/">Formatting Options</a></li><li class="is-active"><a class="tocitem" href>Custom Alignment</a><ul class="internal"><li><a class="tocitem" href="#Alignment-Options"><span>Alignment Options</span></a></li></ul></li></ul></li><li><span class="tocitem">Styles</span><ul><li><a class="tocitem" href="../default_style/">Default Style</a></li><li><a class="tocitem" href="../yas_style/">YAS Style</a></li><li><a class="tocitem" href="../blue_style/">Blue Style</a></li><li><a class="tocitem" href="../sciml_style/">SciML Style</a></li></ul></li><li><a class="tocitem" href="../skipping_formatting/">Skipping Formatting</a></li><li><span class="tocitem">Configuration File</span><ul><li><a class="tocitem" href="../config/">.JuliaFormatter.toml</a></li><li><a class="tocitem" href="../file_options/">File Options</a></li></ul></li><li><a class="tocitem" href="../cli/">Command-Line Interface</a></li><li><span class="tocitem">Integrations</span><ul><li><a class="tocitem" href="../editors/">Editors</a></li><li><a class="tocitem" href="../github_actions/">GitHub Actions</a></li><li><a class="tocitem" href="../precommit/">pre-commit</a></li><li><a class="tocitem" href="../packagecompiler/">PackageCompiler</a></li></ul></li><li><a class="tocitem" href="../how_it_works/">How It Works</a></li><li><a class="tocitem" href="../api/">API Reference</a></li><li><a class="tocitem" href="../contributing/">Contributing</a></li><li><a class="tocitem" href="../known_issues/">Known Issues</a></li><li><a class="tocitem" href="../status/">Project Status</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Options</a></li><li class="is-active"><a href>Custom Alignment</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Custom Alignment</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/JuliaEditorSupport/JuliaFormatter.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/JuliaEditorSupport/JuliaFormatter.jl/blob/master/docs/src/custom_alignment.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="custom-alignment"><a class="docs-heading-anchor" href="#custom-alignment">Custom Alignment</a><a id="custom-alignment-1"></a><a class="docs-heading-anchor-permalink" href="#custom-alignment" title="Permalink"></a></h1><p>Custom alignment is a scenario where extra whitespace is inserted into the formatted output to make sure that tokens (typically operators, such as <code>=</code>, <code>?</code>, and <code>::</code>) on contiguous lines are vertically aligned. This was implemented as a solution for <a href="https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/179">issue 179</a>.</p><p>Custom alignment is determined by a whitespace heuristic. Since JuliaFormatter usually only outputs either 0 or 1 spaces as separations between tokens, the presence of more than one space between tokens is used as a signal to trigger custom alignment. If a formatter detects that a token is custom-aligned, then all tokens in the same code block (i.e., contiguous lines, not separated by comments or empty lines) will be aligned to the furthest aligned token.</p><div class="admonition is-warning" id="Warning-44ceba29aab7c37a"><header class="admonition-header">Warning<a class="admonition-anchor" href="#Warning-44ceba29aab7c37a" title="Permalink"></a></header><div class="admonition-body"><p>If active, custom alignment will override pre-existing nesting behaviour. This means that lines can exceed the maximum margin.</p></div></div><p>Custom alignment must be opted into via <a href="../formatting_options/#formatting-options">the configuration options</a> <code>align_assignment</code>, <code>align_conditional</code>, <code>align_matrix</code>, <code>align_pair_arrow</code>, and <code>align_struct_field</code>.</p><h3 id="Example"><a class="docs-heading-anchor" href="#Example">Example</a><a id="Example-1"></a><a class="docs-heading-anchor-permalink" href="#Example" title="Permalink"></a></h3><p>Suppose the source text is as follows:</p><pre><code class="language-julia hljs">const variable1 = 1
+const var2      = 2
+const var3 = 3
+const var4 = 4
+const var5          = 5</code></pre><p>If the option <code>align_assignment=true</code> is set, the formatter will detect that <code>var2</code> is aligned to <code>variable1</code> <em>and</em> that <code>var2</code> has more than 1 space prior to its <code>=</code>. Since <code>var3</code>,<code>var4</code>, and <code>var5</code> are part of the same code block (no comments or newlines separating code) their <code>=</code> operators will then be aligned to <code>var2</code>&#39;s <code>=</code>, which is the furthest aligned token.</p><p>The resulting output would be</p><pre><code class="language-julia hljs">const variable1 = 1
+const var2      = 2
+const var3      = 3
+const var4      = 4
+const var5      = 5</code></pre><p>Notice how the <code>=</code> operator for <code>var5</code> is correctly positioned despite it being located further to the right than other <code>=</code> operators in the original source.</p><p>However, if the source code is</p><pre><code class="language-julia hljs">const variable1 = 1
+const variable2 = 2
+const var3 = 3
+const var4 = 4
+const var5 = 5</code></pre><p>it is now not clear whether the user intended for this to be aligned and so the formatter will not inject any custom behaviour.</p><h2 id="Alignment-Options"><a class="docs-heading-anchor" href="#Alignment-Options">Alignment Options</a><a id="Alignment-Options-1"></a><a class="docs-heading-anchor-permalink" href="#Alignment-Options" title="Permalink"></a></h2><p>In order for custom alignment to occur, the corresponding option must be set to <code>true</code>. Available options:</p><ul><li><code>align_assignment</code></li><li><code>align_struct_field</code></li><li><code>align_conditional</code></li><li><code>align_pair_arrow</code></li><li><code>align_matrix</code></li></ul><h3 id="align_assignment"><a class="docs-heading-anchor" href="#align_assignment"><code>align_assignment</code></a><a id="align_assignment-1"></a><a class="docs-heading-anchor-permalink" href="#align_assignment" title="Permalink"></a></h3><p>Align <code>=</code>-like operators. This covers variable assignments and short definition functions.</p><p>Here are some examples of code formatted with <code>align_assignment=true</code>:</p><pre><code class="language-julia hljs">const UTF8PROC_STABLE    = (1 &lt;&lt; 1)
+const UTF8PROC_COMPAT    = (1 &lt;&lt; 2)
+const UTF8PROC_COMPOSE   = (1 &lt;&lt; 3)
+const UTF8PROC_DECOMPOSE = (1 &lt;&lt; 4)
+const UTF8PROC_IGNORE    = (1 &lt;&lt; 5)
+const UTF8PROC_REJECTNA  = (1 &lt;&lt; 6)
+const UTF8PROC_NLF2LS    = (1 &lt;&lt; 7)
+const UTF8PROC_NLF2PS    = (1 &lt;&lt; 8)
+const UTF8PROC_NLF2LF    = (UTF8PROC_NLF2LS | UTF8PROC_NLF2PS)
+const UTF8PROC_STRIPCC   = (1 &lt;&lt; 9)
+const UTF8PROC_CASEFOLD  = (1 &lt;&lt; 10)
+const UTF8PROC_CHARBOUND = (1 &lt;&lt; 11)
+const UTF8PROC_LUMP      = (1 &lt;&lt; 12)
+const UTF8PROC_STRIP     = (1 &lt;&lt; 13)
+
+
+vcat(X::T...) where {T}         = T[X[i] for i = 1:length(X)]
+vcat(X::T...) where {T&lt;:Number} = T[X[i] for i = 1:length(X)]
+hcat(X::T...) where {T}         = T[X[j] for i = 1:1, j = 1:length(X)]
+hcat(X::T...) where {T&lt;:Number} = T[X[j] for i = 1:1, j = 1:length(X)]
+
+a  = 1
+bc = 2
+
+long_variable = 1
+other_var     = 2</code></pre><h3 id="align_struct_field"><a class="docs-heading-anchor" href="#align_struct_field"><code>align_struct_field</code></a><a id="align_struct_field-1"></a><a class="docs-heading-anchor-permalink" href="#align_struct_field" title="Permalink"></a></h3><p>Align struct field definitions to <code>::</code> or <code>=</code>, whichever has higher precedence.</p><pre><code class="language-julia hljs">Base.@kwdef struct Options
+    indent::Int                            = 4
+    margin::Int                            = 92
+    always_for_in::Bool                    = false
+    whitespace_typedefs::Bool              = false
+    whitespace_ops_in_indices::Bool        = false
+    remove_extra_newlines::Bool            = false
+    import_to_using::Bool                  = false
+    pipe_to_function_call::Bool            = false
+    short_to_long_function_def::Bool       = false
+    always_use_return::Bool                = false
+    whitespace_in_kwargs::Bool             = true
+    annotate_untyped_fields_with_any::Bool = true
+    format_docstrings::Bool                = false
+    align_struct_fields::Bool              = false
+
+    # no custom whitespace so this block is not aligned
+    another_field1::BlahBlahBlah = 10
+    field2::Foo = 10
+
+    # no custom whitespace but single line blocks are not aligned
+    # either way
+    Options() = new()
+end
+
+
+mutable struct Foo
+    a             :: T
+    longfieldname :: T
+end</code></pre><h3 id="align_conditional"><a class="docs-heading-anchor" href="#align_conditional"><code>align_conditional</code></a><a id="align_conditional-1"></a><a class="docs-heading-anchor-permalink" href="#align_conditional" title="Permalink"></a></h3><p>Align conditional expressions to either <code>?</code>, <code>:</code>, or both.</p><pre><code class="language-julia hljs"># This will remain like this if using YASStyle
+index = zeros(n &lt;= typemax(Int8)  ? Int8  :
+              n &lt;= typemax(Int16) ? Int16 :
+              n &lt;= typemax(Int32) ? Int32 : Int64, n)
+
+# Using DefaultStyle
+index = zeros(
+    n &lt;= typemax(Int8)  ? Int8  :
+    n &lt;= typemax(Int16) ? Int16 :
+    n &lt;= typemax(Int32) ? Int32 : Int64,
+    n,
+)
+
+# Note even if the maximum margin is set to 1, the alignment remains intact
+index =
+    zeros(
+        n &lt;= typemax(Int8)  ? Int8  :
+        n &lt;= typemax(Int16) ? Int16 :
+        n &lt;= typemax(Int32) ? Int32 : Int64,
+        n,
+    )</code></pre><h3 id="align_pair_arrow"><a class="docs-heading-anchor" href="#align_pair_arrow"><code>align_pair_arrow</code></a><a id="align_pair_arrow-1"></a><a class="docs-heading-anchor-permalink" href="#align_pair_arrow" title="Permalink"></a></h3><p>Align pair arrows (<code>=&gt;</code>).</p><pre><code class="language-julia hljs">pages = [
+    &quot;Introduction&quot;        =&gt; &quot;index.md&quot;,
+    &quot;How It Works&quot;        =&gt; &quot;how_it_works.md&quot;,
+    &quot;Code Style&quot;          =&gt; &quot;style.md&quot;,
+    &quot;Skipping Formatting&quot; =&gt; &quot;skipping_formatting.md&quot;,
+    &quot;Syntax Transforms&quot;   =&gt; &quot;transforms.md&quot;,
+    &quot;Custom Alignment&quot;    =&gt; &quot;custom_alignment.md&quot;,
+    &quot;Custom Styles&quot;       =&gt; &quot;custom_styles.md&quot;,
+    &quot;YAS Style&quot;           =&gt; &quot;yas_style.md&quot;,
+    &quot;Configuration File&quot;  =&gt; &quot;config.md&quot;,
+    &quot;API Reference&quot;       =&gt; &quot;api.md&quot;,
+]</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../formatting_options/">« Formatting Options</a><a class="docs-footer-nextpage" href="../default_style/">Default Style »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.17.0 on <span class="colophon-date" title="Wednesday 17 June 2026 01:44">Wednesday 17 June 2026</span>. Using Julia version 1.12.6.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
