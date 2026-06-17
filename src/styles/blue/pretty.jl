@@ -272,10 +272,7 @@ function p_conditionalopcall(
         return FST(Conditional, nspaces(s))
     end
 
-    # identify rhs of ternary and if it is itself a ternary, generate an if/elseif/else
-    # block instead of a chained ternary
-    rhs = findlast(c -> !JuliaSyntax.is_whitespace(c), children(cst))
-    return if rhs !== nothing && kind(cst[rhs]) == K"?" && haschildren(cst[rhs])
+    return if is_chained_ternary(cst)
         output_fst = FST(If, nspaces(s))
         _ternary_to_ifelse!(output_fst, style, cst, s, ctx, lineage, true, FST[])
         output_fst
