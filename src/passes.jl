@@ -807,7 +807,10 @@ function short_circuit_to_if_pass!(fst::FST, s::State)
             # calls, tuples, etc. where the value is being used -- `a && b` and
             # `if a; b; end` have different return values when `a` is falsy.
             last_expr_idx = findlast(
-                n -> n.typ !== HASHEQCOMMENT && n.typ !== WHITESPACE && n.typ !== PLACEHOLDER,
+                n ->
+                    n.typ !== HASHEQCOMMENT &&
+                    n.typ !== WHITESPACE &&
+                    n.typ !== PLACEHOLDER,
                 fst.nodes::Vector{FST},
             )
             value_is_needed =
