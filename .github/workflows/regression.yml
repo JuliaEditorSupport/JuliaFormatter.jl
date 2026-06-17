@@ -81,7 +81,7 @@ jobs:
             remove_config: true
             # that specific file defines 'expected output' for Documenter purposes,
             # which is not valid Julia
-            args: "--v2-stable-multiline-strings=true"
+            args: "--v2-stable-multiline-strings=true --ignore=test/book/cornerstones/polyhedral-geometry/g-vectors.jl"
             name_suffix: "default"
           - repo: oscar-system/Oscar.jl
             rev: v1.7.3
