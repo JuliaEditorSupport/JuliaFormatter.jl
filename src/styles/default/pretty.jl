@@ -1052,45 +1052,6 @@ end
     should_add_return_to_last_statement(cst, s, lineage)
 
 For a block `cst`, determine whether we should add a `return` to the last statement in the block.
-
-NOTE(penelopeysm): Previously, JuliaFormatter would avoid prepending return if the last
-statement was a call to `throw(...)`. This was possible to detect at the FST level because
-the identifier `throw` was already part of the FST. However, now that the return insertion
-has been moved to the CST level, we don't have access to the identifier (not without doing a
-ton of nasty offset calculation).
-
-Note that prepending return has to be done at the CST level to avoid idempotence issues. In
-general, mutating the FST post-construction will trigger idempotence issues because
-formatting decisions are already encoded in the FST by the time it's been constructed.
-
-In any case, personally, I don't agree that throw() should be exempt from return. Firstly,
-throw() *does* have a type: it's `Union{}`, which is a bottom type. Sure, that type cannot
-be inhabited, i.e., there's no actual value that belongs to that type; however, from a
-theoretical point of view there's absolutely nothing wrong with returning something that has
-type `Union{}`. It is vacuous, much like saying "select an element from an empty set", but
-that doesn't mean it's *wrong*; it's just *meaningless*.
-
-Secondly, from a practical point of view, it is impossible at the syntax level to determine
-what expressions are guaranteed to throw an exception (or more generally, what expressions
-are guaranteed to not return a value). For example, if we special-case `throw`, then one
-could argue that we should also special-case qualified calls like `Base.throw`, and other
-functions like `error` and `exit`, and then user-defined functions like
-
-    mythrow(x) = throw("error: \$x")
-
-or constructs like
-
-    function f()
-        do_other_stuff()
-        f()  # This never returns, so maybe we shouldn't add return?!
-    end
-
-Obviously none of that makes any sense, so the only *principled* approach is not to
-special-case anything.
-
-Indeed, even with semantic analysis about the programme, it's not possible to determine such
-cases, because answering the question "does this expression return a value" amounts to
-exactly the halting problem.
 """
 function should_add_return_to_last_statement(
     cst::JuliaSyntax.GreenNode,

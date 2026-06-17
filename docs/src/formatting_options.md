@@ -50,7 +50,7 @@ Note that, although styles each define a different set of options, they are not 
 | [`always_for_in`](@ref options-always-for-in)                                       | ♻️    | `false`   | **`true`**  | **`true`**  | **`true`**   | **`nothing`** |
 | [`always_use_return`](@ref options-always-use-return)                               | ⚠️    | `false`   | **`true`**  | **`true`**  | `false`      | `false`       |
 | [`annotate_untyped_fields_with_any`](@ref options-annotate-untyped-fields-with-any) | ⚠️    | `true`    | `true`      | **`false`** | `true`       | **`false`**   |
-| [`conditional_to_if`](@ref options-conditional-to-if)                               | ♻️ 🪃 | `false`   | `false`     | **`true`**  | `false`      | `false`       |
+| [`conditional_to_if`](@ref options-conditional-to-if)                               | 🪃 ♻️ | `false`   | `false`     | **`true`**  | `false`      | `false`       |
 | [`disallow_single_arg_nesting`](@ref options-disallow-single-arg-nesting)           | 📐    | `false`   | `false`     | `false`     | **`true`**   | `false`       |
 | [`for_in_replacement`](@ref options-for-in-replacement)                             | ♻️    | `"in"`    | `"in"`      | `"in"`      | `"in"`       | `"in"`        |
 | [`force_long_function_def`](@ref options-force-long-function-def)                   | ⚠️    | `false`   | `false`     | `false`     | `false`      | `false`       |
@@ -72,7 +72,7 @@ Note that, although styles each define a different set of options, they are not 
 | [`trailing_comma`](@ref options-trailing-comma)                                     | ♻️    | `true`    | `true`      | `true`      | **`false`**  | **`nothing`** |
 | [`trailing_zero`](@ref options-trailing-zero)                                       | ♻️    | `true`    | `true`      | `true`      | `true`       | **`false`**   |
 | [`variable_call_indent`](@ref options-variable-call-indent)                         | 📐    | `[]`      | `[]`        | `[]`        | `[]`         | `[]`          |
-| [`v2_stable_multiline_strings`](@ref options-v2-stable-multiline-strings)           | 📐 🪃 | `false`   | `false`     | `false`     | `false`      | `false`       |
+| [`v2_stable_multiline_strings`](@ref options-v2-stable-multiline-strings)           | 🪃 📐 | `false`   | `false`     | `false`     | `false`      | `false`       |
 | [`whitespace_in_kwargs`](@ref options-whitespace-in-kwargs)                         | 📐    | `true`    | **`false`** | **`false`** | `true`       | **`false`**   |
 | [`whitespace_ops_in_indices`](@ref options-whitespace-ops-in-indices)               | 📐    | `false`   | **`true`**  | **`true`**  | **`true`**   | `false`       |
 | [`whitespace_typedefs`](@ref options-whitespace-typedefs)                           | 📐    | `false`   | `false`     | `false`     | **`true`**   | `false`       |
@@ -149,8 +149,69 @@ function foo()
     expr2
 end"""
 
+using JuliaFormatter: format_text
 format_text(s; always_use_return=true) |> println
 ```
+
+A number of cases are skipped over:
+
+- If the final expression is (already) `return`.
+- If the final expression is a macro.
+- If the final expression is a multiline block expression (e.g. `if...end`, `begin...end`, etc.). This includes calls with do blocks.
+- If the final expression contains a `return` statement somewhere in it (e.g. `cond ? (return 1) : (return 2)`).
+- If the final expression has a docstring attached to it.
+
+Note that `return` *is* prepended to calls to functions such as `throw(...)`  and `error()`.
+If you don't want this behaviour, add a `return nothing` at the end of the function (or just disable this option!).
+Click the "Show explanation" toggle below for a more detailed explanation of why I choose *not* to do this.
+(You may also be interested in [the corresponding discussion on Runic.jl](https://github.com/fredrikekre/Runic.jl/issues/202), which has the same behaviour.)
+
+!!! details "Show explanation for always_use_return"
+
+    There are several reasons why I don't want to carve out an exception for `throw(...)`.
+
+    The first is pragmatic.
+    Previous versions of JuliaFormatter implemented `always_use_return` at the FST level, that is to say, it would construct an `FST` and *then* insert `return` in (usually...) the right place.
+    This, however, causes idempotence issues because the formatting of the return value can depend on whether it is prepended with `return` or not.
+    In other words, formatting choices are already baked into the FST before the `return` is inserted, and on the second formatting pass, the formatting choices may be different, which can lead to non-idempotence!
+
+    To fix these bugs I moved the return insertion one stage prior, so that the FST is constructed *with* the `return` keyword from the start.
+    However, this means that we don't have easy access to the identifier `throw`, not without a lot of incredibly finicky code to extract the CST node and then count the offsets carefully to find the identifier in the source text.
+
+    While I *could* have implemented this, I'm unwilling to because of the second reason, which is more philosophical.
+    I don't even really agree that `throw()` should be exempt from `return`.
+    Firstly, `throw()` *does* have a type: it's `Union{}`, which is [a bottom type](https://en.wikipedia.org/wiki/Bottom_type).
+    Sure, that type cannot be inhabited, i.e., there's no actual value that belongs to that type.
+
+    However, from a theoretical point of view there's absolutely nothing wrong with "return"ing something that has type `Union{}`.
+    It is vacuous, much like saying "select an element from an empty set", but that doesn't mean it's *wrong*; it's just *meaningless*.
+
+    Furthermore, Julia's semantics are that the last statement in a block is the value it evaluates to.
+    (This is not unique to Julia: see e.g. Haskell / OCaml / Rust.)
+    If `throw(...)` could not be treated as a value, then following that logic, `throw()` should not even be *allowed* to be the last statement in a block.
+    But clearly it can be!
+    Correspondingly, there's no reason why returning it is wrong.
+
+    The last reason is that it is impossible at the syntax level to determine what expressions are guaranteed to throw an exception (or more generally, what expressions are guaranteed to not return a value).
+    For example, if we special-case `throw`, then one could argue that we should also special-case qualified calls like `Base.throw`, and other functions like `error` and `exit`, and then user-defined functions like
+
+    ```julia
+    mythrow(x) = throw("error: \$x")
+    ```
+
+    or constructs like
+
+    ```julia
+    function f()
+        do_other_stuff()
+        f()  # This never returns, so maybe we shouldn't add return?!
+    end
+    ```
+
+    Obviously it doesn't make any sense to special-case any of that, so the only *principled* approach is not to special-case anything.
+    I don't believe that JuliaFormatter should have an exception list that claims to do the right thing but cannot.
+
+    Indeed, even if we could perform semantic analysis on the programme, it's not possible to determine such cases, because answering the question 'does this expression return a value' amounts to solving the halting problem.
 
 ## [`annotate_untyped_fields_with_any`](@id options-annotate-untyped-fields-with-any)
 
@@ -158,32 +219,28 @@ Default: `true`
 
 Annotates fields in a type definitions with `::Any` if no type annotation is provided:
 
-```julia
+```@example annotate-untyped-fields-with-any
+s = """
 struct A
     arg1
 end
-```
+"""
 
-to
-
-```julia
-struct A
-    arg1::Any
-end
+using JuliaFormatter: format_text
+format_text(s; annotate_untyped_fields_with_any=true) |> println
 ```
 
 ## [`conditional_to_if`](@id options-conditional-to-if)
 
 Default: `false`
 
-If the ternary expression `E ? A : B` exceeds the maximum margin, convert it into the equivalent `if` block:
+If a ternary expression exceeds the margin, convert it into the equivalent `if` block:
 
-```julia
-if E
-    A
-else
-    B
-end
+```@example conditional-to-if
+s = "cond ? trueval : falseval"
+
+using JuliaFormatter: format_text
+format_text(s; margin=20, conditional_to_if=true) |> println
 ```
 
 !!! warning "Enabling this can cause lack of idempotence"
@@ -224,7 +281,6 @@ end
     Collectively, these steps give us the formatting of the first pass:
 
     ```@example conditional-to-if
-    using JuliaFormatter: format_text
     out1 = format_text(s; margin=28, conditional_to_if=true)
     println(out1)
     ```

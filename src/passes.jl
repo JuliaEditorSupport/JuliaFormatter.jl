@@ -474,13 +474,6 @@ function prepend_return_fst!(fst::FST, s::State)
     if last_idx > 2 && (fst[last_idx-2].typ === MacroStr || is_macrodoc(fst[last_idx-2]))
         return
     end
-    # fix #426
-    # don't add return if the last node is a throw call. throw is a built-in function
-    # that shouldn't be overwritten for over purposes so this should be fine.
-    if ln.typ === Call && ln[1].typ === IDENTIFIER && ln[1].val == "throw"
-        return
-    end
-
     # check to see if the last node already has a return
     found_return = false
     f = (fst::FST, ::State) -> begin
