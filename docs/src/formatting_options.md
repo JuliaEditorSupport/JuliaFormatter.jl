@@ -35,43 +35,48 @@ Note that, although styles each define a different set of options, they are not 
       Currently, only [**`pipe_to_function_call`**](@ref options-pipe-to-function-call) is in this category.
       [`separate_kwargs_with_semicolon`](@ref options-separate-kwargs-with-semicolon) is also labelled as a dangerous syntax transformation right now, but [that is because of a bug](https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/625), which will be fixed soon.
 
-| Option                                                                              | Kind | Default   | YAS         | Blue        | SciML        | Minimal       |
-| :-------                                                                            | ---- | --------- | -----       | ------      | -------      | ---------     |
-| [`align_assignment`](@ref options-align-star)                                       | 📐   | `false`   | `false`     | `false`     | `false`      | `false`       |
-| [`align_conditional`](@ref options-align-star)                                      | 📐   | `false`   | `false`     | `false`     | `false`      | `false`       |
-| [`align_matrix`](@ref options-align-matrix)                                         | 📐   | `false`   | `false`     | `false`     | `false`      | `false`       |
-| [`align_pair_arrow`](@ref options-align-star)                                       | 📐   | `false`   | `false`     | `false`     | `false`      | `false`       |
-| [`align_struct_field`](@ref options-align-star)                                     | 📐   | `false`   | `false`     | `false`     | `false`      | `false`       |
-| [`always_for_in`](@ref options-always-for-in)                                       | ♻️   | `false`   | **`true`**  | **`true`**  | **`true`**   | **`nothing`** |
-| [`always_use_return`](@ref options-always-use-return)                               | ⚠️   | `false`   | **`true`**  | **`true`**  | `false`      | `false`       |
-| [`annotate_untyped_fields_with_any`](@ref options-annotate-untyped-fields-with-any) | ⚠️   | `true`    | `true`      | **`false`** | `true`       | **`false`**   |
-| [`conditional_to_if`](@ref options-conditional-to-if)                               | ♻️   | `false`   | `false`     | **`true`**  | `false`      | `false`       |
-| [`disallow_single_arg_nesting`](@ref options-disallow-single-arg-nesting)           | 📐   | `false`   | `false`     | `false`     | **`true`**   | `false`       |
-| [`for_in_replacement`](@ref options-for-in-replacement)                             | ♻️   | `"in"`    | `"in"`      | `"in"`      | `"in"`       | `"in"`        |
-| [`force_long_function_def`](@ref options-force-long-function-def)                   | ⚠️   | `false`   | `false`     | `false`     | `false`      | `false`       |
-| [`format_docstrings`](@ref options-format-docstrings)                               | ⚠️   | `false`   | `false`     | `false`     | `false`      | `false`       |
-| [`import_to_using`](@ref options-import-to-using)                                   | ⚠️   | `false`   | **`true`**  | **`true`**  | `false`      | `false`       |
-| [`indent`](@ref options-indent)                                                     | 📐   | `4`       | `4`         | `4`         | `4`          | `4`           |
-| [`indent_submodule`](@ref options-indent-submodule)                                 | 📐   | `false`   | `false`     | **`true`**  | `false`      | `false`       |
-| [`join_lines_based_on_source`](@ref options-join-lines-based-on-source)             | 📐   | `false`   | **`true`**  | `false`     | **`true`**   | **`true`**    |
-| [`long_to_short_function_def`](@ref options-long-to-short-function-def)             | ⚠️   | `false`   | `false`     | `false`     | `false`      | `false`       |
-| [`margin`](@ref options-margin)                                                     | 📐   | `92`      | `92`        | `92`        | `92`         | **`10_000`**  |
-| [`normalize_line_endings`](@ref options-normalize-line-endings)                     | 📐   | `"auto"`  | `"auto"`    | `"auto"`    | **`"unix"`** | `"auto"`      |
-| [`pipe_to_function_call`](@ref options-pipe-to-function-call)                       | 🔥   | `false`   | **`true`**  | **`true`**  | `false`      | `false`       |
-| [`remove_extra_newlines`](@ref options-remove-extra-newlines)                       | 📐   | `false`   | **`true`**  | **`true`**  | **`true`**   | `false`       |
-| [`sciml_margin_overrun`](@ref options-sciml-margin-overrun)                         | 📐   | unused    | unused      | unused      | **`20`**     | unused        |
-| [`separate_kwargs_with_semicolon`](@ref options-separate-kwargs-with-semicolon)     | 🔥   | `false`   | **`true`**  | **`true`**  | `false`      | `false`       |
-| [`short_circuit_to_if`](@ref options-short-circuit-to-if)                           | ⚠️   | `false`   | `false`     | `false`     | `false`      | `false`       |
-| [`short_to_long_function_def`](@ref options-short-to-long-function-def)             | ⚠️   | `false`   | **`true`**  | **`true`**  | **`true`**   | `false`       |
-| [`surround_whereop_typeparameters`](@ref options-surround-whereop-typeparameters)   | ♻️   | `true`    | `true`      | `true`      | `true`       | **`false`**   |
-| [`trailing_comma`](@ref options-trailing-comma)                                     | ♻️   | `true`    | `true`      | `true`      | **`false`**  | **`nothing`** |
-| [`trailing_zero`](@ref options-trailing-zero)                                       | ♻️   | `true`    | `true`      | `true`      | `true`       | **`false`**   |
-| [`variable_call_indent`](@ref options-variable-call-indent)                         | 📐   | `[]`      | `[]`        | `[]`        | `[]`         | `[]`          |
-| [`v2_stable_multiline_strings`](@ref options-v2-stable-multiline-strings)           | 📐   | `false`   | `false`     | `false`     | `false`      | `false`       |
-| [`whitespace_in_kwargs`](@ref options-whitespace-in-kwargs)                         | 📐   | `true`    | **`false`** | **`false`** | `true`       | **`false`**   |
-| [`whitespace_ops_in_indices`](@ref options-whitespace-ops-in-indices)               | 📐   | `false`   | **`true`**  | **`true`**  | **`true`**   | `false`       |
-| [`whitespace_typedefs`](@ref options-whitespace-typedefs)                           | 📐   | `false`   | `false`     | `false`     | **`true`**   | `false`       |
-| [`yas_style_nesting`](@ref options-yas-style-nesting)                               | 📐   | `false`   | `false`     | `false`     | `false`      | `false`       |
+!!! warning "Options that can spoil idempotence"
+
+    Some of the options below additionally have the potential to cause non-idempotent formatting if enabled (or, in the case of [`v2_stable_multiline_strings`](@ref options-v2-stable-multiline-strings), if disabled).
+    They are marked with a 🪃 emoji.
+
+| Option                                                                              | Kind  | Default   | YAS         | Blue        | SciML        | Minimal       |
+| :-------                                                                            | ----- | --------- | -----       | ------      | -------      | ---------     |
+| [`align_assignment`](@ref options-align-star)                                       | 📐    | `false`   | `false`     | `false`     | `false`      | `false`       |
+| [`align_conditional`](@ref options-align-star)                                      | 📐    | `false`   | `false`     | `false`     | `false`      | `false`       |
+| [`align_matrix`](@ref options-align-matrix)                                         | 📐    | `false`   | `false`     | `false`     | `false`      | `false`       |
+| [`align_pair_arrow`](@ref options-align-star)                                       | 📐    | `false`   | `false`     | `false`     | `false`      | `false`       |
+| [`align_struct_field`](@ref options-align-star)                                     | 📐    | `false`   | `false`     | `false`     | `false`      | `false`       |
+| [`always_for_in`](@ref options-always-for-in)                                       | ♻️    | `false`   | **`true`**  | **`true`**  | **`true`**   | **`nothing`** |
+| [`always_use_return`](@ref options-always-use-return)                               | ⚠️    | `false`   | **`true`**  | **`true`**  | `false`      | `false`       |
+| [`annotate_untyped_fields_with_any`](@ref options-annotate-untyped-fields-with-any) | ⚠️    | `true`    | `true`      | **`false`** | `true`       | **`false`**   |
+| [`conditional_to_if`](@ref options-conditional-to-if)                               | ♻️ 🪃 | `false`   | `false`     | **`true`**  | `false`      | `false`       |
+| [`disallow_single_arg_nesting`](@ref options-disallow-single-arg-nesting)           | 📐    | `false`   | `false`     | `false`     | **`true`**   | `false`       |
+| [`for_in_replacement`](@ref options-for-in-replacement)                             | ♻️    | `"in"`    | `"in"`      | `"in"`      | `"in"`       | `"in"`        |
+| [`force_long_function_def`](@ref options-force-long-function-def)                   | ⚠️    | `false`   | `false`     | `false`     | `false`      | `false`       |
+| [`format_docstrings`](@ref options-format-docstrings)                               | ⚠️    | `false`   | `false`     | `false`     | `false`      | `false`       |
+| [`import_to_using`](@ref options-import-to-using)                                   | ⚠️    | `false`   | **`true`**  | **`true`**  | `false`      | `false`       |
+| [`indent`](@ref options-indent)                                                     | 📐    | `4`       | `4`         | `4`         | `4`          | `4`           |
+| [`indent_submodule`](@ref options-indent-submodule)                                 | 📐    | `false`   | `false`     | **`true`**  | `false`      | `false`       |
+| [`join_lines_based_on_source`](@ref options-join-lines-based-on-source)             | 📐    | `false`   | **`true`**  | `false`     | **`true`**   | **`true`**    |
+| [`long_to_short_function_def`](@ref options-long-to-short-function-def)             | ⚠️    | `false`   | `false`     | `false`     | `false`      | `false`       |
+| [`margin`](@ref options-margin)                                                     | 📐    | `92`      | `92`        | `92`        | `92`         | **`10_000`**  |
+| [`normalize_line_endings`](@ref options-normalize-line-endings)                     | 📐    | `"auto"`  | `"auto"`    | `"auto"`    | **`"unix"`** | `"auto"`      |
+| [`pipe_to_function_call`](@ref options-pipe-to-function-call)                       | 🔥    | `false`   | **`true`**  | **`true`**  | `false`      | `false`       |
+| [`remove_extra_newlines`](@ref options-remove-extra-newlines)                       | 📐    | `false`   | **`true`**  | **`true`**  | **`true`**   | `false`       |
+| [`sciml_margin_overrun`](@ref options-sciml-margin-overrun)                         | 📐    | unused    | unused      | unused      | **`20`**     | unused        |
+| [`separate_kwargs_with_semicolon`](@ref options-separate-kwargs-with-semicolon)     | 🔥    | `false`   | **`true`**  | **`true`**  | `false`      | `false`       |
+| [`short_circuit_to_if`](@ref options-short-circuit-to-if)                           | ⚠️    | `false`   | `false`     | `false`     | `false`      | `false`       |
+| [`short_to_long_function_def`](@ref options-short-to-long-function-def)             | ⚠️    | `false`   | **`true`**  | **`true`**  | **`true`**   | `false`       |
+| [`surround_whereop_typeparameters`](@ref options-surround-whereop-typeparameters)   | ♻️    | `true`    | `true`      | `true`      | `true`       | **`false`**   |
+| [`trailing_comma`](@ref options-trailing-comma)                                     | ♻️    | `true`    | `true`      | `true`      | **`false`**  | **`nothing`** |
+| [`trailing_zero`](@ref options-trailing-zero)                                       | ♻️    | `true`    | `true`      | `true`      | `true`       | **`false`**   |
+| [`variable_call_indent`](@ref options-variable-call-indent)                         | 📐    | `[]`      | `[]`        | `[]`        | `[]`         | `[]`          |
+| [`v2_stable_multiline_strings`](@ref options-v2-stable-multiline-strings)           | 📐 🪃 | `false`   | `false`     | `false`     | `false`      | `false`       |
+| [`whitespace_in_kwargs`](@ref options-whitespace-in-kwargs)                         | 📐    | `true`    | **`false`** | **`false`** | `true`       | **`false`**   |
+| [`whitespace_ops_in_indices`](@ref options-whitespace-ops-in-indices)               | 📐    | `false`   | **`true`**  | **`true`**  | **`true`**   | `false`       |
+| [`whitespace_typedefs`](@ref options-whitespace-typedefs)                           | 📐    | `false`   | `false`     | `false`     | **`true`**   | `false`       |
+| [`yas_style_nesting`](@ref options-yas-style-nesting)                               | 📐    | `false`   | `false`     | `false`     | `false`      | `false`       |
 
 ## [`align_...`](@id options-align-star)
 
@@ -133,25 +138,18 @@ If `nothing`, the choice between `in` and `=` is left to the user, and no normal
 
 Default: `false`
 
-If true, `return` will be prepended to the last expression where
-applicable in function definitions, macro definitions, and do blocks.
+If true, `return` will be prepended to the last expression in function definitions, macro definitions, and do blocks.
 
-Example:
+For example:
 
-```julia
+```@example always-use-return
+s = """
 function foo()
     expr1
     expr2
-end
-```
+end"""
 
-to
-
-```julia
-function foo()
-    expr1
-    return expr2
-end
+format_text(s; always_use_return=true) |> println
 ```
 
 ## [`annotate_untyped_fields_with_any`](@id options-annotate-untyped-fields-with-any)
@@ -178,7 +176,7 @@ end
 
 Default: `false`
 
-If the conditional `E ? A : B` exceeds the maximum margin converts it into the equivalent `if` block:
+If the ternary expression `E ? A : B` exceeds the maximum margin, convert it into the equivalent `if` block:
 
 ```julia
 if E
@@ -187,6 +185,58 @@ else
     B
 end
 ```
+
+!!! warning "Enabling this can cause lack of idempotence"
+    
+    Enabling `conditional_to_if` can cause non-idempotent formatting, because the `if` block may trigger different formatting choices compared to the ternary.
+
+    For more details, click on the "Show explanation" toggle below.
+
+!!! details "Show explanation for conditional_to_if"
+
+    Here is an example of non-idempotence.
+    As you can see it is very easy to trigger!
+
+    ```@example conditional-to-if
+    s = "foo(cond ? trueval : falseval)"
+    length(s)
+    ```
+
+    Let's format this with a margin of 28.
+    (Obviously, this is smaller than typical real-world margins; but this is chosen for the purposes of simplicity.
+    With a margin of 92, you can still hit such cases easily with longer expressions, variable names, or indentation—basically, with real-world code!)
+
+    On the first pass, two things happen:
+
+    1. The function call's arguments are nested because the length of the arguments (including the ternary) exceeds the line margin.
+
+    2. This at first leads to something like
+
+       ```julia
+       foo(
+           cond ? trueval : falseval,
+       )
+       ```
+
+       (this string itself is never materialised, but there is an intermediate data structure that essentially represents this).
+       Now, because the ternary itself is still over the margin, the ternary is converted to `if...end`.
+
+    Collectively, these steps give us the formatting of the first pass:
+
+    ```@example conditional-to-if
+    using JuliaFormatter: format_text
+    out1 = format_text(s; margin=28, conditional_to_if=true)
+    println(out1)
+    ```
+
+    On the second time we format, the function call `foo(...)` sees that it has only one argument which is a block, and thus collapses the nesting (the logic being that the argument can handle the line-breaking itself):
+
+    ```@example conditional-to-if
+    out2 = format_text(out1; margin=28, conditional_to_if=true)
+    println(out2)
+    ```
+
+    Fundamentally, the issue is that formatting choices for the function call `foo(...)` depend on whether or not the ternary is expanded or not, but by the time the ternary is expanded, the function call has already been formatted.
 
 ## [`disallow_single_arg_nesting`](@id options-disallow-single-arg-nesting)
 
