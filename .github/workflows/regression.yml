@@ -34,13 +34,28 @@ jobs:
           - repo: JuliaLang/julia
             rev: v1.12.6
             remove_config: true
+            args: "--v2_stable_multiline_strings"
+            name_suffix: "default"
+          - repo: JuliaLang/julia
+            rev: v1.12.6
+            remove_config: true
             args: "--style=blue --v2_stable_multiline_strings --no-conditional_to_if"
             name_suffix: "blue"
           - repo: SciML/OrdinaryDiffEq.jl
             rev: v7.0.0
             remove_config: true
+            args: "--v2_stable_multiline_strings"
+            name_suffix: "default"
+          - repo: SciML/OrdinaryDiffEq.jl
+            rev: v7.0.0
+            remove_config: true
             args: "--style=blue --v2_stable_multiline_strings --no-conditional_to_if"
             name_suffix: "blue"
+          - repo: MakieOrg/Makie.jl
+            rev: v0.24.11
+            remove_config: true
+            args: "--v2_stable_multiline_strings"
+            name_suffix: "default"
           - repo: MakieOrg/Makie.jl
             rev: v0.24.11
             remove_config: true
@@ -66,6 +81,11 @@ jobs:
             remove_config: true
             # that specific file defines 'expected output' for Documenter purposes,
             # which is not valid Julia
+            args: "--v2_stable_multiline_strings"
+            name_suffix: "default"
+          - repo: oscar-system/Oscar.jl
+            rev: v1.7.3
+            remove_config: true
             args: "--style=blue --v2_stable_multiline_strings --no-conditional_to_if --ignore=test/book/cornerstones/polyhedral-geometry/g-vectors.jl"
             name_suffix: "blue"
           - repo: SciML/ModelingToolkit.jl
