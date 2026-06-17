@@ -1,5 +1,13 @@
-import .ArgParse: ParseArgsError, ParsedArgs, parse_args, parse_raw, PARSER,
-    StdoutMode, InplaceMode, CheckMode, print_help
+import .ArgParse:
+    ParseArgsError,
+    ParsedArgs,
+    parse_args,
+    parse_raw,
+    PARSER,
+    StdoutMode,
+    InplaceMode,
+    CheckMode,
+    print_help
 
 # For thread-safe printing
 const print_lock = ReentrantLock()
@@ -181,46 +189,49 @@ function main(argv::Vector{String})
     end
 
     # Disable verbose if piping from/to stdin/stdout
-    output_is_stdout =
-        !inplace && !check && (outputfile in ("", "-"))
+    output_is_stdout = !inplace && !check && (outputfile in ("", "-"))
     print_progress = args.verbose && !(input_is_stdin || output_is_stdout)
 
     fileargs_to_process = if input_is_stdin
         # Sentinel value representing stdin.
-        [ProcessFileArgs(
-            "",
-            1,
-            "1",
-            print_progress,
-            check,
-            inplace,
-            outputfile,
-            true,
-            args.stdin_filename,
-            args.config_dir,
-            format_options,
-            args.diff,
-            args.format_markdown,
-            args.config_priority,
-        )]
+        [
+            ProcessFileArgs(
+                "",
+                1,
+                "1",
+                print_progress,
+                check,
+                inplace,
+                outputfile,
+                true,
+                args.stdin_filename,
+                args.config_dir,
+                format_options,
+                args.diff,
+                args.format_markdown,
+                args.config_priority,
+            ),
+        ]
     else
         nfiles_str = string(length(inputfiles))
-        [ProcessFileArgs(
-            inputfile,
-            file_counter,
-            nfiles_str,
-            print_progress,
-            check,
-            inplace,
-            outputfile,
-            false,
-            args.stdin_filename,
-            args.config_dir,
-            format_options,
-            args.diff,
-            args.format_markdown,
-            args.config_priority,
-        ) for (file_counter, inputfile) in enumerate(inputfiles)]
+        [
+            ProcessFileArgs(
+                inputfile,
+                file_counter,
+                nfiles_str,
+                print_progress,
+                check,
+                inplace,
+                outputfile,
+                false,
+                args.stdin_filename,
+                args.config_dir,
+                format_options,
+                args.diff,
+                args.format_markdown,
+                args.config_priority,
+            ) for (file_counter, inputfile) in enumerate(inputfiles)
+        ]
     end
 
     # Use multithreading for multiple files (only if multiple threads available)

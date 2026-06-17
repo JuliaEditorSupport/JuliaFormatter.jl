@@ -1,6 +1,7 @@
 module ArgParse
 
-import ..JuliaFormatter: AbstractStyle, DefaultStyle, BlueStyle, SciMLStyle, YASStyle, MinimalStyle
+import ..JuliaFormatter:
+    AbstractStyle, DefaultStyle, BlueStyle, SciMLStyle, YASStyle, MinimalStyle
 
 struct ParseArgsError <: Exception
     message::String
@@ -54,16 +55,20 @@ end
 function parse_value(::Type{Tuple{Int,Int}}, raw::AbstractString, option_name::String)
     m = match(r"^(\d+):(\d+)$", raw)
     if m === nothing
-        throw(ParseArgsError(
-            "invalid value `$raw` for option `$option_name` (expected `<start>:<stop>` with 1-based line numbers)",
-        ))
+        throw(
+            ParseArgsError(
+                "invalid value `$raw` for option `$option_name` (expected `<start>:<stop>` with 1-based line numbers)",
+            ),
+        )
     end
     start_line = Base.parse(Int, m.captures[1]::AbstractString)
     stop_line = Base.parse(Int, m.captures[2]::AbstractString)
     if start_line > stop_line
-        throw(ParseArgsError(
-            "invalid value `$raw` for option `$option_name`: start is greater than stop",
-        ))
+        throw(
+            ParseArgsError(
+                "invalid value `$raw` for option `$option_name`: start is greater than stop",
+            ),
+        )
     end
     return (start_line, stop_line)
 end
@@ -80,15 +85,27 @@ function parse_value(::Type{AbstractStyle}, raw::AbstractString, option_name::St
     style = get(STYLE_MAP, raw, nothing)
     if style === nothing
         valid = join(sort!(collect(keys(STYLE_MAP))), ", ")
-        throw(ParseArgsError("invalid value `$raw` for option `$option_name` (expected one of: $valid)"))
+        throw(
+            ParseArgsError(
+                "invalid value `$raw` for option `$option_name` (expected one of: $valid)",
+            ),
+        )
     end
     return style
 end
 
 # Flag: `--check` / `-c` sets dest to true.
 function flag(names; dest::Symbol, help::String, group::OptGroup = GeneralGroup)
-    OptSpec(names, help, dest, argv -> (true, @view argv[2:end]), false,
-        FlagKind, group, "")
+    OptSpec(
+        names,
+        help,
+        dest,
+        argv -> (true, @view argv[2:end]),
+        false,
+        FlagKind,
+        group,
+        "",
+    )
 end
 
 # Negatable flag (DEPRECATED): `--always_for_in` / `--no-always_for_in`.
@@ -96,9 +113,15 @@ end
 function negatable_flag(name::String; dest::Symbol)
     pos = "--$name"
     neg = "--no-$name"
-    OptSpec([pos, neg], "", dest,
+    OptSpec(
+        [pos, neg],
+        "",
+        dest,
         argv -> (argv[1] == pos, @view argv[2:end]),
-        false, NegatableFlagKind, DeprecatedGroup, "",
+        false,
+        NegatableFlagKind,
+        DeprecatedGroup,
+        "",
     )
 end
 
@@ -109,21 +132,34 @@ _metavar(::Type{Bool}) = "true|false"
 _metavar(::Type{String}) = "<value>"
 _metavar(::Type) = "<value>"
 
-function option(names; dest::Symbol, type::Type, help::String, multi::Bool = false,
-        group::OptGroup = GeneralGroup, metavar::String = _metavar(type))
-    OptSpec(names, help, dest,
+function option(
+    names;
+    dest::Symbol,
+    type::Type,
+    help::String,
+    multi::Bool = false,
+    group::OptGroup = GeneralGroup,
+    metavar::String = _metavar(type),
+)
+    OptSpec(
+        names,
+        help,
+        dest,
         argv -> begin
             x = argv[1]
             eq = findfirst('=', x)
             if eq !== nothing
-                raw = x[eq+1:end]
+                raw = x[(eq+1):end]
                 (parse_value(type, raw, x), @view argv[2:end])
             else
                 length(argv) < 2 && throw(ParseArgsError("expected value after `$x`"))
                 (parse_value(type, argv[2], x), @view argv[3:end])
             end
         end,
-        multi, OptionKind, group, metavar,
+        multi,
+        OptionKind,
+        group,
+        metavar,
     )
 end
 
@@ -216,91 +252,256 @@ end
 
 # All format option keys — these are collected from the raw dict into format_options.
 const FORMAT_OPTION_KEYS = Set{Symbol}([
-    :style, :indent, :margin, :sciml_margin_overrun, :normalize_line_endings,
-    :always_for_in, :whitespace_typedefs, :remove_extra_newlines,
-    :import_to_using, :pipe_to_function_call, :short_to_long_function_def,
-    :always_use_return, :whitespace_in_kwargs, :format_docstrings,
-    :align_struct_field, :align_assignment, :align_conditional, :align_pair_arrow,
-    :trailing_comma, :trailing_zero, :v2_stable_multiline_strings, :conditional_to_if,
+    :style,
+    :indent,
+    :margin,
+    :sciml_margin_overrun,
+    :normalize_line_endings,
+    :always_for_in,
+    :whitespace_typedefs,
+    :remove_extra_newlines,
+    :import_to_using,
+    :pipe_to_function_call,
+    :short_to_long_function_def,
+    :always_use_return,
+    :whitespace_in_kwargs,
+    :format_docstrings,
+    :align_struct_field,
+    :align_assignment,
+    :align_conditional,
+    :align_pair_arrow,
+    :trailing_comma,
+    :trailing_zero,
+    :v2_stable_multiline_strings,
+    :conditional_to_if,
 ])
 
 const PARSER = ArgParser(
-    flag(["-h", "--help"]; dest = :help,
-        help = "Print this message."),
-    flag(["--version"]; dest = :version,
-        help = "Print version information."),
-    flag(["-c", "--check"]; dest = :check,
-        help = "Check formatting without writing."),
-    flag(["-i", "--inplace"]; dest = :inplace,
-        help = "Format files in place."),
-    flag(["-d", "--diff"]; dest = :diff,
-        help = "Print diff to stderr."),
-    option(["-o", "--output"]; dest = :outputfile, type = String, metavar = "<file>",
-        help = "File to write formatted output to."),
-    flag(["-v", "--verbose"]; dest = :verbose,
-        help = "Enable verbose output."),
-    flag(["--format_markdown"]; dest = :format_markdown,
-        help = "Also format code blocks in Markdown files."),
-    flag(["--prioritize-config-file"]; dest = :config_priority,
-        help = "Prioritize config file options over command-line options."),
-    option("--stdin-filename"; dest = :stdin_filename, type = String, metavar = "<name>",
-        help = "Assumed filename when formatting from stdin."),
-    option("--config-dir"; dest = :config_dir, type = String, metavar = "<dir>",
-        help = "Directory path for .JuliaFormatter.toml config lookup."),
-    option("--ignore"; dest = :ignore, type = String, multi = true, metavar = "<pattern>",
-        help = "Ignore files matching the given pattern. Can be repeated."),
-    option("--lines"; dest = :lines, type = Tuple{Int,Int}, multi = true, metavar = "<start:stop>",
-        help = "Only format the given range of lines. Can be repeated."),
+    flag(["-h", "--help"]; dest = :help, help = "Print this message."),
+    flag(["--version"]; dest = :version, help = "Print version information."),
+    flag(["-c", "--check"]; dest = :check, help = "Check formatting without writing."),
+    flag(["-i", "--inplace"]; dest = :inplace, help = "Format files in place."),
+    flag(["-d", "--diff"]; dest = :diff, help = "Print diff to stderr."),
+    option(
+        ["-o", "--output"];
+        dest = :outputfile,
+        type = String,
+        metavar = "<file>",
+        help = "File to write formatted output to.",
+    ),
+    flag(["-v", "--verbose"]; dest = :verbose, help = "Enable verbose output."),
+    flag(
+        ["--format_markdown"];
+        dest = :format_markdown,
+        help = "Also format code blocks in Markdown files.",
+    ),
+    flag(
+        ["--prioritize-config-file"];
+        dest = :config_priority,
+        help = "Prioritize config file options over command-line options.",
+    ),
+    option(
+        "--stdin-filename";
+        dest = :stdin_filename,
+        type = String,
+        metavar = "<name>",
+        help = "Assumed filename when formatting from stdin.",
+    ),
+    option(
+        "--config-dir";
+        dest = :config_dir,
+        type = String,
+        metavar = "<dir>",
+        help = "Directory path for .JuliaFormatter.toml config lookup.",
+    ),
+    option(
+        "--ignore";
+        dest = :ignore,
+        type = String,
+        multi = true,
+        metavar = "<pattern>",
+        help = "Ignore files matching the given pattern. Can be repeated.",
+    ),
+    option(
+        "--lines";
+        dest = :lines,
+        type = Tuple{Int,Int},
+        multi = true,
+        metavar = "<start:stop>",
+        help = "Only format the given range of lines. Can be repeated.",
+    ),
     # --- Formatting options ---
-    option("--style"; dest = :style, type = AbstractStyle, metavar = "default|blue|sciml|yas|minimal",
-        help = "Formatting style.", group = FormattingGroup),
-    option("--align-assignment"; dest = :align_assignment, type = Bool,
-        help = "Align assignment operators.", group = FormattingGroup),
-    option("--align-conditional"; dest = :align_conditional, type = Bool,
-        help = "Align conditional operators.", group = FormattingGroup),
-    option("--align-pair-arrow"; dest = :align_pair_arrow, type = Bool,
-        help = "Align pair arrows (=>).", group = FormattingGroup),
-    option("--align-struct-field"; dest = :align_struct_field, type = Bool,
-        help = "Align struct field type annotations.", group = FormattingGroup),
-    option("--always-for-in"; dest = :always_for_in, type = Bool,
-        help = "Normalise `in` to/from `=` in for loops.", group = FormattingGroup),
-    option("--always-use-return"; dest = :always_use_return, type = Bool,
-        help = "Add explicit 'return' statements to function definitions.", group = FormattingGroup),
-    option("--conditional-to-if"; dest = :conditional_to_if, type = Bool,
-        help = "Convert ternary expressions to if/else blocks when over margin.", group = FormattingGroup),
-    option("--format-docstrings"; dest = :format_docstrings, type = Bool,
-        help = "Format docstrings.", group = FormattingGroup),
-    option("--import-to-using"; dest = :import_to_using, type = Bool,
-        help = "Convert 'import' to 'using'.", group = FormattingGroup),
-    option("--indent"; dest = :indent, type = Int,
-        help = "Indentation width.", group = FormattingGroup),
-    option("--margin"; dest = :margin, type = Int,
-        help = "Maximum line width.", group = FormattingGroup),
-    option("--normalize-line-endings"; dest = :normalize_line_endings, type = String, metavar = "auto|unix|windows",
-        help = "Normalize line endings.", group = FormattingGroup),
-    option("--pipe-to-function-call"; dest = :pipe_to_function_call, type = Bool,
-        help = "Convert pipe operator to function calls.", group = FormattingGroup),
-    option("--remove-extra-newlines"; dest = :remove_extra_newlines, type = Bool,
-        help = "Remove extra newlines.", group = FormattingGroup),
-    option("--sciml-margin-overrun"; dest = :sciml_margin_overrun, type = Int,
-        help = "Additional columns SciMLStyle may use.", group = FormattingGroup),
-    option("--short-to-long-function-def"; dest = :short_to_long_function_def, type = Bool,
-        help = "Convert short function definitions to long form.", group = FormattingGroup),
-    option("--trailing-comma"; dest = :trailing_comma, type = Bool,
-        help = "Add trailing commas.", group = FormattingGroup),
-    option("--trailing-zero"; dest = :trailing_zero, type = Bool,
-        help = "Add trailing zeros to floats.", group = FormattingGroup),
-    option("--v2-stable-multiline-strings"; dest = :v2_stable_multiline_strings, type = Bool,
-        help = "Use stable multiline string length calculation.", group = FormattingGroup),
-    option("--whitespace-in-kwargs"; dest = :whitespace_in_kwargs, type = Bool,
-        help = "Add whitespace in keyword arguments.", group = FormattingGroup),
-    option("--whitespace-typedefs"; dest = :whitespace_typedefs, type = Bool,
-        help = "Add whitespace around '::' in type definitions.", group = FormattingGroup),
+    option(
+        "--style";
+        dest = :style,
+        type = AbstractStyle,
+        metavar = "default|blue|sciml|yas|minimal",
+        help = "Formatting style.",
+        group = FormattingGroup,
+    ),
+    option(
+        "--align-assignment";
+        dest = :align_assignment,
+        type = Bool,
+        help = "Align assignment operators.",
+        group = FormattingGroup,
+    ),
+    option(
+        "--align-conditional";
+        dest = :align_conditional,
+        type = Bool,
+        help = "Align conditional operators.",
+        group = FormattingGroup,
+    ),
+    option(
+        "--align-pair-arrow";
+        dest = :align_pair_arrow,
+        type = Bool,
+        help = "Align pair arrows (=>).",
+        group = FormattingGroup,
+    ),
+    option(
+        "--align-struct-field";
+        dest = :align_struct_field,
+        type = Bool,
+        help = "Align struct field type annotations.",
+        group = FormattingGroup,
+    ),
+    option(
+        "--always-for-in";
+        dest = :always_for_in,
+        type = Bool,
+        help = "Normalise `in` to/from `=` in for loops.",
+        group = FormattingGroup,
+    ),
+    option(
+        "--always-use-return";
+        dest = :always_use_return,
+        type = Bool,
+        help = "Add explicit 'return' statements to function definitions.",
+        group = FormattingGroup,
+    ),
+    option(
+        "--conditional-to-if";
+        dest = :conditional_to_if,
+        type = Bool,
+        help = "Convert ternary expressions to if/else blocks when over margin.",
+        group = FormattingGroup,
+    ),
+    option(
+        "--format-docstrings";
+        dest = :format_docstrings,
+        type = Bool,
+        help = "Format docstrings.",
+        group = FormattingGroup,
+    ),
+    option(
+        "--import-to-using";
+        dest = :import_to_using,
+        type = Bool,
+        help = "Convert 'import' to 'using'.",
+        group = FormattingGroup,
+    ),
+    option(
+        "--indent";
+        dest = :indent,
+        type = Int,
+        help = "Indentation width.",
+        group = FormattingGroup,
+    ),
+    option(
+        "--margin";
+        dest = :margin,
+        type = Int,
+        help = "Maximum line width.",
+        group = FormattingGroup,
+    ),
+    option(
+        "--normalize-line-endings";
+        dest = :normalize_line_endings,
+        type = String,
+        metavar = "auto|unix|windows",
+        help = "Normalize line endings.",
+        group = FormattingGroup,
+    ),
+    option(
+        "--pipe-to-function-call";
+        dest = :pipe_to_function_call,
+        type = Bool,
+        help = "Convert pipe operator to function calls.",
+        group = FormattingGroup,
+    ),
+    option(
+        "--remove-extra-newlines";
+        dest = :remove_extra_newlines,
+        type = Bool,
+        help = "Remove extra newlines.",
+        group = FormattingGroup,
+    ),
+    option(
+        "--sciml-margin-overrun";
+        dest = :sciml_margin_overrun,
+        type = Int,
+        help = "Additional columns SciMLStyle may use.",
+        group = FormattingGroup,
+    ),
+    option(
+        "--short-to-long-function-def";
+        dest = :short_to_long_function_def,
+        type = Bool,
+        help = "Convert short function definitions to long form.",
+        group = FormattingGroup,
+    ),
+    option(
+        "--trailing-comma";
+        dest = :trailing_comma,
+        type = Bool,
+        help = "Add trailing commas.",
+        group = FormattingGroup,
+    ),
+    option(
+        "--trailing-zero";
+        dest = :trailing_zero,
+        type = Bool,
+        help = "Add trailing zeros to floats.",
+        group = FormattingGroup,
+    ),
+    option(
+        "--v2-stable-multiline-strings";
+        dest = :v2_stable_multiline_strings,
+        type = Bool,
+        help = "Use stable multiline string length calculation.",
+        group = FormattingGroup,
+    ),
+    option(
+        "--whitespace-in-kwargs";
+        dest = :whitespace_in_kwargs,
+        type = Bool,
+        help = "Add whitespace in keyword arguments.",
+        group = FormattingGroup,
+    ),
+    option(
+        "--whitespace-typedefs";
+        dest = :whitespace_typedefs,
+        type = Bool,
+        help = "Add whitespace around '::' in type definitions.",
+        group = FormattingGroup,
+    ),
     # Deprecated options (for backward compatibility)
-    option("--sciml_margin_overrun"; dest = :sciml_margin_overrun, type = Int,
-        help = "", group = DeprecatedGroup),
-    option("--normalize_line_endings"; dest = :normalize_line_endings, type = String,
-        help = "", group = DeprecatedGroup),
+    option(
+        "--sciml_margin_overrun";
+        dest = :sciml_margin_overrun,
+        type = Int,
+        help = "",
+        group = DeprecatedGroup,
+    ),
+    option(
+        "--normalize_line_endings";
+        dest = :normalize_line_endings,
+        type = String,
+        help = "",
+        group = DeprecatedGroup,
+    ),
     negatable_flag("always_for_in"; dest = :always_for_in),
     negatable_flag("whitespace_typedefs"; dest = :whitespace_typedefs),
     negatable_flag("remove_extra_newlines"; dest = :remove_extra_newlines),
@@ -330,48 +531,60 @@ function print_help(parser::ArgParser; io::IO = stdout)
     println(io, "       jlfmt - An opinionated code formatter for Julia\n")
 
     section("SYNOPSIS")
-    println(io, """
-               jlfmt [<julia_options> --] [<options>] <path>...
-               jlfmt [<julia_options> --] [<options>] -
-               ... | jlfmt [<julia_options> --] [<options>]
+    println(
+        io,
+        """
+       jlfmt [<julia_options> --] [<options>] <path>...
+       jlfmt [<julia_options> --] [<options>] -
+       ... | jlfmt [<julia_options> --] [<options>]
 
-               where <julia_options> are options passed to the Julia
-               interpreter (e.g. --threads=auto), and <options> are
-               options for JuliaFormatter.
-        """)
+       where <julia_options> are options passed to the Julia
+       interpreter (e.g. --threads=auto), and <options> are
+       options for JuliaFormatter.
+""",
+    )
 
     section("DESCRIPTION")
-    println(io, """
-               `jlfmt` formats Julia source code using JuliaFormatter.jl.
-               This tool can also be invoked as `julia -m JuliaFormatter`.
-        """)
+    println(
+        io,
+        """
+       `jlfmt` formats Julia source code using JuliaFormatter.jl.
+       This tool can also be invoked as `julia -m JuliaFormatter`.
+""",
+    )
 
     section("OPTIONS")
-    println(io, """
-               <path>...
-                   Input path(s) (files and/or directories) to process. For directories,
-                   all files (recursively) with the '*.jl' suffix are used as input files
-                   (also '*.md', '*.jmd', '*.qmd' if --format-markdown is specified).
-                   If no path is given, or if path is `-`, input is read from stdin.
-        """)
+    println(
+        io,
+        """
+       <path>...
+           Input path(s) (files and/or directories) to process. For directories,
+           all files (recursively) with the '*.jl' suffix are used as input files
+           (also '*.md', '*.jmd', '*.qmd' if --format-markdown is specified).
+           If no path is given, or if path is `-`, input is read from stdin.
+""",
+    )
 
     for group in instances(OptGroup)
         group == DeprecatedGroup && continue
         if group == FormattingGroup
             section("FORMATTING OPTIONS")
-            println(io, """
-                   These options control the formatting style. They can also be set in
-                   a `.JuliaFormatter.toml` config file.
+            println(
+                io,
+                """
+           These options control the formatting style. They can also be set in
+           a `.JuliaFormatter.toml` config file.
 
-                   Note that options are merged from the config file and command-line
-                   arguments. If the same option is specified both a config file and
-                   command-line options are specified, the CLI arguments take priority
-                   by default. With `--prioritize-config-file`, the config file takes
-                   priority instead.
+           Note that options are merged from the config file and command-line
+           arguments. If the same option is specified both a config file and
+           command-line options are specified, the CLI arguments take priority
+           by default. With `--prioritize-config-file`, the config file takes
+           priority instead.
 
-                   If the same option is specified multiple times on the command line,
-                   the last value is used.
-            """)
+           If the same option is specified multiple times on the command line,
+           the last value is used.
+    """,
+            )
         end
         for spec in parser.specs
             spec.group != group && continue
@@ -389,43 +602,46 @@ function print_help(parser::ArgParser; io::IO = stdout)
     end
 
     section("EXAMPLES")
-    println(io, """
-               Format a file and write to stdout:
-                   jlfmt src/file.jl
+    println(
+        io,
+        """
+       Format a file and write to stdout:
+           jlfmt src/file.jl
 
-               Format a file in place:
-                   jlfmt --inplace src/file.jl
+       Format a file in place:
+           jlfmt --inplace src/file.jl
 
-               Format all files in a directory with the verbose mode:
-                   jlfmt --inplace --verbose src/
+       Format all files in a directory with the verbose mode:
+           jlfmt --inplace --verbose src/
 
-               Check if a file is formatted:
-                   jlfmt --check src/file.jl
+       Check if a file is formatted:
+           jlfmt --check src/file.jl
 
-               Format only lines 1-10 and 42-47 of a file:
-                   jlfmt --lines=1:10 --lines=42:47 src/file.jl
+       Format only lines 1-10 and 42-47 of a file:
+           jlfmt --lines=1:10 --lines=42:47 src/file.jl
 
-               Check if all files in a directory are formatted with multiple threads:
-                   jlfmt --threads=4 -- --check src/
+       Check if all files in a directory are formatted with multiple threads:
+           jlfmt --threads=4 -- --check src/
 
-               Show diff for formatting with 2-space indentations:
-                   jlfmt --diff --indent=2 src/file.jl
+       Show diff for formatting with 2-space indentations:
+           jlfmt --diff --indent=2 src/file.jl
 
-               Format from stdin (pipe):
-                   echo 'f(x,y)=x+y' | jlfmt
+       Format from stdin (pipe):
+           echo 'f(x,y)=x+y' | jlfmt
 
-               Format from stdin (explicit):
-                   jlfmt - < input.jl
+       Format from stdin (explicit):
+           jlfmt - < input.jl
 
-               Format from stdin using project config:
-                   echo 'f(x,y)=x+y' | jlfmt --config-dir=./src
+       Format from stdin using project config:
+           echo 'f(x,y)=x+y' | jlfmt --config-dir=./src
 
-               Use specific style:
-                   jlfmt --style=blue src/file.jl
+       Use specific style:
+           jlfmt --style=blue src/file.jl
 
-               Combine options:
-                   echo 'for i=1:10; end' | jlfmt --always-for-in=true
-        """)
+       Combine options:
+           echo 'for i=1:10; end' | jlfmt --always-for-in=true
+""",
+    )
     return
 end
 
