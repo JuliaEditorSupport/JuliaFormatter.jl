@@ -621,35 +621,29 @@ f(a; b=1)
 
 ## [`short_circuit_to_if`](@id options-short-circuit-to-if)
 
-If `truer`, converts shortcircuiting expressions to the equivalent if-expression.
+If `true`, converts logical operators to the equivalent if-expression, if it is clear that the value is not used.
 
-```julia
+In particular, `a && f()` is converted to `if a; f(); end`, and `a || f()` is converted to `if !a; f(); end`.
+
+```@example short-circuit-to-if
+s = """
 function foo(a, b)
     a || return "bar"
-
-    "hello"
-
     b && return "ooo"
-end
+    return 5
+end"""
+
+using JuliaFormatter: format_text
+format_text(s; short_circuit_to_if=true) |> println
 ```
 
-becomes
+In general these are only converted if they are a top-level statement inside a block.
+If the value of the logical operator is in any way used, it will not be converted.
+These include:
 
-```julia
-function foo(a, b)
-    if !(a)
-        return "bar"
-    end
-
-    "hello"
-
-    if b
-        return "ooo"
-    else
-        false
-    end
-end
-```
+- Conditions in `if`, `elseif`, and `while` statements.
+- The value being assigned to a variable or otherwise being part of some expression.
+- The value being returned (including implicitly, by being the last statement in a block).
 
 ## [`short_to_long_function_def`](@id options-short-to-long-function-def)
 
