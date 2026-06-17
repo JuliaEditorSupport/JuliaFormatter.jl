@@ -196,25 +196,45 @@ using JuliaFormatter: DefaultStyle, YASStyle, BlueStyle, SciMLStyle, MinimalStyl
         end
     end
 
+    @testset "for-in-replacement" begin
+        for val in ["in", "=", "∈"]
+            args = parse_args(["--for-in-replacement=$val", "foo.jl"])
+            @test args.format_options[:for_in_replacement] == val
+        end
+    end
+
     @testset "boolean format options (new-style)" begin
         boolean_options = Dict(
-            "always-for-in" => :always_for_in,
-            "whitespace-typedefs" => :whitespace_typedefs,
-            "remove-extra-newlines" => :remove_extra_newlines,
-            "import-to-using" => :import_to_using,
-            "pipe-to-function-call" => :pipe_to_function_call,
-            "short-to-long-function-def" => :short_to_long_function_def,
-            "always-use-return" => :always_use_return,
-            "whitespace-in-kwargs" => :whitespace_in_kwargs,
-            "format-docstrings" => :format_docstrings,
-            "align-struct-field" => :align_struct_field,
             "align-assignment" => :align_assignment,
             "align-conditional" => :align_conditional,
+            "align-matrix" => :align_matrix,
             "align-pair-arrow" => :align_pair_arrow,
+            "align-struct-field" => :align_struct_field,
+            "always-for-in" => :always_for_in,
+            "always-use-return" => :always_use_return,
+            "annotate-untyped-fields-with-any" => :annotate_untyped_fields_with_any,
+            "conditional-to-if" => :conditional_to_if,
+            "disallow-single-arg-nesting" => :disallow_single_arg_nesting,
+            "force-long-function-def" => :force_long_function_def,
+            "format-docstrings" => :format_docstrings,
+            "import-to-using" => :import_to_using,
+            "indent-submodule" => :indent_submodule,
+            "join-lines-based-on-source" => :join_lines_based_on_source,
+            "long-to-short-function-def" => :long_to_short_function_def,
+            "pipe-to-function-call" => :pipe_to_function_call,
+            "remove-extra-newlines" => :remove_extra_newlines,
+            "separate-kwargs-with-semicolon" => :separate_kwargs_with_semicolon,
+            "short-circuit-to-if" => :short_circuit_to_if,
+            "short-to-long-function-def" => :short_to_long_function_def,
+            "surround-whereop-typeparameters" => :surround_whereop_typeparameters,
             "trailing-comma" => :trailing_comma,
             "trailing-zero" => :trailing_zero,
             "v2-stable-multiline-strings" => :v2_stable_multiline_strings,
-            "conditional-to-if" => :conditional_to_if,
+            # Note: variable-call-indent is multi/String, tested separately
+            "whitespace-in-kwargs" => :whitespace_in_kwargs,
+            "whitespace-ops-in-indices" => :whitespace_ops_in_indices,
+            "whitespace-typedefs" => :whitespace_typedefs,
+            "yas-style-nesting" => :yas_style_nesting,
         )
 
         @testset "$cli_name" for (cli_name, dest) in sort(collect(boolean_options))
@@ -229,6 +249,24 @@ using JuliaFormatter: DefaultStyle, YASStyle, BlueStyle, SciMLStyle, MinimalStyl
             args = parse_args(["--always-for-in=true", "foo.jl"])
             @test haskey(args.format_options, :always_for_in)
             @test !haskey(args.format_options, :trailing_comma)
+        end
+
+        @testset "variable-call-indent (multi)" begin
+            args = parse_args(["--variable-call-indent=Dict", "foo.jl"])
+            @test args.format_options[:variable_call_indent] == ["Dict"]
+
+            args = parse_args(["--variable-call-indent=Dict", "--variable-call-indent=Foo", "foo.jl"])
+            @test args.format_options[:variable_call_indent] == ["Dict", "Foo"]
+
+            args = parse_args(["foo.jl"])
+            @test !haskey(args.format_options, :variable_call_indent)
+        end
+
+        @testset "nothing values for always-for-in and trailing-comma" begin
+            args = parse_args(["--always-for-in=nothing", "foo.jl"])
+            @test args.format_options[:always_for_in] === nothing
+            args = parse_args(["--trailing-comma=nothing", "foo.jl"])
+            @test args.format_options[:trailing_comma] === nothing
         end
     end
 

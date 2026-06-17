@@ -51,6 +51,13 @@ function parse_value(::Type{T}, raw::AbstractString, option_name::String) where 
     end
 end
 
+function parse_value(::Type{Union{Nothing,Bool}}, raw::AbstractString, option_name::String)
+    raw == "true" && return true
+    raw == "false" && return false
+    raw == "nothing" && return nothing
+    throw(ParseArgsError("invalid value `$raw` for option `$option_name` (expected `true`, `false`, or `nothing`)"))
+end
+
 # Parse (x, y) where x <= y. Used in --lines.
 function parse_value(::Type{Tuple{Int,Int}}, raw::AbstractString, option_name::String)
     m = match(r"^(\d+):(\d+)$", raw)
@@ -129,6 +136,7 @@ end
 # `names` is a vector of names, e.g. `["-o", "--output"]`.
 _metavar(::Type{Int}) = "<n>"
 _metavar(::Type{Bool}) = "true|false"
+_metavar(::Type{Union{Nothing,Bool}}) = "true|false|nothing"
 _metavar(::Type{String}) = "<value>"
 _metavar(::Type) = "<value>"
 
@@ -252,28 +260,42 @@ end
 
 # All format option keys — these are collected from the raw dict into format_options.
 const FORMAT_OPTION_KEYS = Set{Symbol}([
-    :style,
-    :indent,
-    :margin,
-    :sciml_margin_overrun,
-    :normalize_line_endings,
-    :always_for_in,
-    :whitespace_typedefs,
-    :remove_extra_newlines,
-    :import_to_using,
-    :pipe_to_function_call,
-    :short_to_long_function_def,
-    :always_use_return,
-    :whitespace_in_kwargs,
-    :format_docstrings,
-    :align_struct_field,
     :align_assignment,
     :align_conditional,
+    :align_matrix,
     :align_pair_arrow,
+    :align_struct_field,
+    :always_for_in,
+    :always_use_return,
+    :annotate_untyped_fields_with_any,
+    :conditional_to_if,
+    :disallow_single_arg_nesting,
+    :for_in_replacement,
+    :force_long_function_def,
+    :format_docstrings,
+    :import_to_using,
+    :indent,
+    :indent_submodule,
+    :join_lines_based_on_source,
+    :long_to_short_function_def,
+    :margin,
+    :normalize_line_endings,
+    :pipe_to_function_call,
+    :remove_extra_newlines,
+    :sciml_margin_overrun,
+    :separate_kwargs_with_semicolon,
+    :short_circuit_to_if,
+    :short_to_long_function_def,
+    :style,
+    :surround_whereop_typeparameters,
     :trailing_comma,
     :trailing_zero,
     :v2_stable_multiline_strings,
-    :conditional_to_if,
+    :variable_call_indent,
+    :whitespace_in_kwargs,
+    :whitespace_ops_in_indices,
+    :whitespace_typedefs,
+    :yas_style_nesting,
 ])
 
 const PARSER = ArgParser(
@@ -354,6 +376,13 @@ const PARSER = ArgParser(
         group = FormattingGroup,
     ),
     option(
+        "--align-matrix";
+        dest = :align_matrix,
+        type = Bool,
+        help = "Preserve whitespace alignment of matrix elements.",
+        group = FormattingGroup,
+    ),
+    option(
         "--align-pair-arrow";
         dest = :align_pair_arrow,
         type = Bool,
@@ -370,7 +399,7 @@ const PARSER = ArgParser(
     option(
         "--always-for-in";
         dest = :always_for_in,
-        type = Bool,
+        type = Union{Nothing,Bool},
         help = "Normalise `in` to/from `=` in for loops.",
         group = FormattingGroup,
     ),
@@ -382,10 +411,39 @@ const PARSER = ArgParser(
         group = FormattingGroup,
     ),
     option(
+        "--annotate-untyped-fields-with-any";
+        dest = :annotate_untyped_fields_with_any,
+        type = Bool,
+        help = "Annotate untyped struct fields with '::Any'.",
+        group = FormattingGroup,
+    ),
+    option(
         "--conditional-to-if";
         dest = :conditional_to_if,
         type = Bool,
         help = "Convert ternary expressions to if/else blocks when over margin.",
+        group = FormattingGroup,
+    ),
+    option(
+        "--disallow-single-arg-nesting";
+        dest = :disallow_single_arg_nesting,
+        type = Bool,
+        help = "Prevent nesting of a single argument in parentheses.",
+        group = FormattingGroup,
+    ),
+    option(
+        "--for-in-replacement";
+        dest = :for_in_replacement,
+        type = String,
+        metavar = "in|=|∈",
+        help = "Replacement for `=` in for loops when always_for_in is true.",
+        group = FormattingGroup,
+    ),
+    option(
+        "--force-long-function-def";
+        dest = :force_long_function_def,
+        type = Bool,
+        help = "Force short-to-long function def transformation regardless of length.",
         group = FormattingGroup,
     ),
     option(
@@ -407,6 +465,27 @@ const PARSER = ArgParser(
         dest = :indent,
         type = Int,
         help = "Indentation width.",
+        group = FormattingGroup,
+    ),
+    option(
+        "--indent-submodule";
+        dest = :indent_submodule,
+        type = Bool,
+        help = "Indent submodules appearing in the same file.",
+        group = FormattingGroup,
+    ),
+    option(
+        "--join-lines-based-on-source";
+        dest = :join_lines_based_on_source,
+        type = Bool,
+        help = "Join lines as they appear in the original source file.",
+        group = FormattingGroup,
+    ),
+    option(
+        "--long-to-short-function-def";
+        dest = :long_to_short_function_def,
+        type = Bool,
+        help = "Convert long function definitions to short form.",
         group = FormattingGroup,
     ),
     option(
@@ -446,6 +525,20 @@ const PARSER = ArgParser(
         group = FormattingGroup,
     ),
     option(
+        "--separate-kwargs-with-semicolon";
+        dest = :separate_kwargs_with_semicolon,
+        type = Bool,
+        help = "Separate keyword arguments with a semicolon.",
+        group = FormattingGroup,
+    ),
+    option(
+        "--short-circuit-to-if";
+        dest = :short_circuit_to_if,
+        type = Bool,
+        help = "Convert short-circuit operators to if-expressions.",
+        group = FormattingGroup,
+    ),
+    option(
         "--short-to-long-function-def";
         dest = :short_to_long_function_def,
         type = Bool,
@@ -453,9 +546,16 @@ const PARSER = ArgParser(
         group = FormattingGroup,
     ),
     option(
+        "--surround-whereop-typeparameters";
+        dest = :surround_whereop_typeparameters,
+        type = Bool,
+        help = "Add curly braces around where type parameters.",
+        group = FormattingGroup,
+    ),
+    option(
         "--trailing-comma";
         dest = :trailing_comma,
-        type = Bool,
+        type = Union{Nothing,Bool},
         help = "Add trailing commas.",
         group = FormattingGroup,
     ),
@@ -474,6 +574,15 @@ const PARSER = ArgParser(
         group = FormattingGroup,
     ),
     option(
+        "--variable-call-indent";
+        dest = :variable_call_indent,
+        type = String,
+        multi = true,
+        metavar = "<name>",
+        help = "Allow variable indentation for calls to this function. Can be repeated.",
+        group = FormattingGroup,
+    ),
+    option(
         "--whitespace-in-kwargs";
         dest = :whitespace_in_kwargs,
         type = Bool,
@@ -481,10 +590,24 @@ const PARSER = ArgParser(
         group = FormattingGroup,
     ),
     option(
+        "--whitespace-ops-in-indices";
+        dest = :whitespace_ops_in_indices,
+        type = Bool,
+        help = "Add whitespace around binary operations in indices.",
+        group = FormattingGroup,
+    ),
+    option(
         "--whitespace-typedefs";
         dest = :whitespace_typedefs,
         type = Bool,
         help = "Add whitespace around '::' in type definitions.",
+        group = FormattingGroup,
+    ),
+    option(
+        "--yas-style-nesting";
+        dest = :yas_style_nesting,
+        type = Bool,
+        help = "Use YASStyle nesting rules in SciMLStyle.",
         group = FormattingGroup,
     ),
     # Deprecated options (for backward compatibility)
