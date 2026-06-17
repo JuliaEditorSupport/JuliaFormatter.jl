@@ -2544,7 +2544,7 @@ function p_binaryopcall(
 
     nonest = ctx.nonest || opkind === K":"
 
-    nrhs = nest_rhs(cst)
+    nrhs = nest_rhs(cst, style)
     if nrhs
         t.nest_behavior = AlwaysNest
     end

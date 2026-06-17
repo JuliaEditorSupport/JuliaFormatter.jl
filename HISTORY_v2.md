@@ -1,3 +1,7 @@
+# v2.8.5
+
+Fixed more bugs where BlueStyle's chained-ternary-to-if conversion would lead to loss of idempotence. (#1131, #1132)
+
 # v2.8.4
 
 Disabled `short_circuit_to_if` for `x && y` and `x || y` statements at the end of a block (since the value of the expression is in fact being used).

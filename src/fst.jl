@@ -560,6 +560,15 @@ function is_block(x::JuliaSyntax.GreenNode)
         (kind(x) == K"quote" && haschildren(x) && is_block(x[1]))
 end
 
+# A chained ternary `a ? b : c ? d : e` is a K"?" node whose "else" branch (the last
+# non-whitespace child) is itself a K"?" node.
+function is_chained_ternary(cst::JuliaSyntax.GreenNode)
+    kind(cst) !== K"?" && return false
+    haschildren(cst) || return false
+    rhs = findlast(c -> !JuliaSyntax.is_whitespace(c), children(cst))
+    return rhs !== nothing && kind(cst[rhs]) === K"?" && haschildren(cst[rhs])
+end
+
 function is_block(x::FST)
     x.typ in (Block, If, Do, Try, Begin, For, While, Let) ||
         (x.typ === Quote && x[1].val == "quote")
@@ -808,10 +817,18 @@ function is_binaryop_nestable(::AbstractStyle, cst::JuliaSyntax.GreenNode)
     true
 end
 
-function nest_rhs(cst::JuliaSyntax.GreenNode)::Bool
+function nest_rhs(cst::JuliaSyntax.GreenNode, style::AbstractStyle)::Bool
     if defines_function(cst) && haschildren(cst)
         for c in children(cst)
             if is_if(c) || kind(c) in KSet"do try for while let" && haschildren(c)
+                return true
+            end
+            # BlueStyle converts chained ternaries to if/elseif/else blocks at the CST
+            # stage, so we need to treat them as blocks here too. For example, without
+            # this, `f() = a ? b : c ? d : e` would first produce `f() = if a ... end`
+            # (AllowNest), but on the second pass the `if` block triggers AlwaysNest,
+            # producing `f() =\n    if a ... end` instead.
+            if style isa BlueStyle && is_chained_ternary(c)
                 return true
             end
         end
