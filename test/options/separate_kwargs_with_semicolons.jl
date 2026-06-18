@@ -162,6 +162,13 @@ using Test
         end
     end
 
+    @testset "#625: don't convert sneaky positional arguments" begin
+        s = "foo(x, bar = 0, y)"
+        for style in ALL_STYLES
+            test_format(s, s, style; separate_kwargs_with_semicolon = true, whitespace_in_kwargs = true)
+        end
+    end
+
     @testset "#1133: idempotence with short_to_long_function_def" begin
         # https://github.com/MakieOrg/Makie.jl/blob/31de53c4643b41605b3a4e23ad68449e13de14de/Makie/src/basic_recipes/contourf.jl#L53
         s_= "_get_isoband_levels(levels::Int, mi, ma) = collect(range(Float32(mi), nextfloat(Float32(ma)), length = levels + 1))"
