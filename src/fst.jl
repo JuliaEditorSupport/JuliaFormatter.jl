@@ -333,35 +333,13 @@ function contains_macrostr(t::JuliaSyntax.GreenNode)::Bool
     return false
 end
 
-function is_func_call(t::JuliaSyntax.GreenNode)::Bool
-    if kind(t) in KSet"call dotcall"
-        # e.g. `f(...)` or `<=(...)` -- these are ordinary functions
-        return JuliaSyntax.is_prefix_call(t)
-    elseif JuliaSyntax.is_type_operator(t) && haschildren(t)
-        # e.g. `<:(...)` or `>:(...)` -- these have the same syntax as function calls
-        # but JuliaSyntax parses them into [<:] or [>:] nodes rather than [call]
-        #
-        # Note that the dotted versions `.<:(...)` are parsed into [call] so go into
-        # the first branch 
-        return JuliaSyntax.is_prefix_call(t)
-    elseif kind(t) in KSet":: where parens" && haschildren(t)
-        # `f(...)::T` or `f(...) where T` or `(f(...))`
-        # TODO(penelopeysm): Why?
-        childs = children(t)
-        idx =
-            findfirst(n -> !JuliaSyntax.is_whitespace(n) && !(kind(n) in KSet"( )"), childs)
-        return !isnothing(idx) && is_func_call(childs[idx])
-    end
-    return false
-end
-
 function defines_function(x::JuliaSyntax.GreenNode)
     if kind(x) in KSet"function macro" && haschildren(x)
         return true
     elseif is_assignment(x) && haschildren(x)
         childs = children(x)
         idx = findfirst(n -> !JuliaSyntax.is_whitespace(n), childs)
-        return !isnothing(idx) && is_func_call(childs[idx])
+        return !isnothing(idx) && Shims.is_caller_in_function_def(childs[idx])
     end
     return false
 end
@@ -492,14 +470,7 @@ end
 is_opener(t::JuliaSyntax.GreenNode) = kind(t) in KSet"{ ( ["
 
 function is_iterable(t::JuliaSyntax.GreenNode)
-    if !(
-        kind(t) in
-        KSet"parens tuple vect vcat braces curly comprehension typed_comprehension macrocall ref typed_vcat import using export public"
-    )
-        is_func_call(t)
-    else
-        true
-    end
+    kind(t) in KSet"parens tuple vect vcat braces curly comprehension typed_comprehension macrocall ref typed_vcat import using export public" || Shims.is_function_call(t)
 end
 
 function is_iterable(x::FST)
@@ -742,20 +713,17 @@ function is_pairarrow(cst::JuliaSyntax.GreenNode)::Bool
 end
 
 function is_function_or_macro_def(cst::JuliaSyntax.GreenNode)
-    if !haschildren(cst)
-        return false
-    end
+    JuliaSyntax.is_leaf(cst) && return false
     k = kind(cst)
-    if k in KSet"function macro"
-        return true
-    end
-
+    # Long-form definition
+    k in KSet"function macro" && return true
+    # Short-form definition
     if JuliaSyntax.is_operator(cst) && k === K"="
         idx = findfirst(n -> !JuliaSyntax.is_whitespace(n), children(cst))
         if isnothing(idx)
             return false
         end
-        return is_function_like_lhs(cst[idx])
+        return Shims.is_caller_in_function_def(cst[idx])
     end
 
     return false
@@ -764,16 +732,6 @@ end
 function is_short_function_def(cst::JuliaSyntax.GreenNode)
     kind(cst) === K"function" &&
         JuliaSyntax.has_flags(cst, JuliaSyntax.SHORT_FORM_FUNCTION_FLAG)
-end
-
-function is_function_like_lhs(node::JuliaSyntax.GreenNode)
-    k = kind(node)
-    if k in KSet"call dotcall"
-        return true
-    elseif k == K"where" || k == K"::"
-        return haschildren(node) && is_function_like_lhs(node[1])
-    end
-    return false
 end
 
 function has_leading_whitespace(n::JuliaSyntax.GreenNode)

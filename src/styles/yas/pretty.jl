@@ -312,6 +312,8 @@ function p_call(
 
     childs = children(cst)
     can_separate_kwargs = ctx.can_separate_kwargs
+    # Don't propagate `can_separate_kwargs` to children.
+    ctx = newctx(ctx; can_separate_kwargs = true)
 
     # # With `variable_call_indent`, check if the caller is in the list
     # and use `p_call` from `DefaultStyle` instead to allow both

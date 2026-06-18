@@ -58,4 +58,29 @@ function is_function_call(cst::JS.GreenNode)
     end
 end
 
+"""
+    is_caller_in_function_def(t::JuliaSyntax.GreenNode) -> Bool
+
+Identify the caller in a function definition, i.e., the `f(...)` part in
+
+    function f(...)
+        body
+    end
+
+This may be more complicated than just `is_function_call`, because the caller may be
+`f(...)::T`, `f(...) where T`, or (f(...)) (or combinations thereof).
+"""
+function is_caller_in_function_def(t::JuliaSyntax.GreenNode)::Bool
+    return if is_function_call(t)
+        true
+    elseif kind(t) in KSet":: where parens" && !JS.is_leaf(t)
+        childs = JS.children(t)
+        idx = findfirst(n -> !JS.is_whitespace(n) && !(kind(n) in KSet"( )"), childs)
+        !isnothing(idx) && is_caller_in_function_def(childs[idx])
+    else
+        false
+    end
+end
+
+
 end # module
