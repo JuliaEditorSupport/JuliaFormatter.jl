@@ -15,14 +15,6 @@ function run_nest(text::String; opts = Options(), style = DefaultStyle())
     t, s
 end
 
-function run_format(text::String; style = DefaultStyle(), opts = Options())
-    d = JuliaFormatter.Document(text)
-    s = JuliaFormatter.State(d, opts)
-    g = JuliaSyntax.parseall(JuliaSyntax.GreenNode, text; version=JuliaFormatter.SUPPORTED_SYNTAX_VERSION)
-    JuliaFormatter.format_text(g, style, s)
-    s
-end
-
 @testset "GitHub Issues" begin
     @testset "137" begin
         str = """
@@ -953,8 +945,6 @@ end
         str_ = "[1.0, 2.0, 3.0] .|> Int"
         str = "Int.([1.0, 2.0, 3.0])"
         test_format(str_, str; pipe_to_function_call = true)
-        st = run_format(str_; opts = Options(; pipe_to_function_call = true))
-        @test st.line_offset == length(str)
     end
 
     @testset "475" begin

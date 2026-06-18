@@ -1,8 +1,10 @@
 module ParseArgsTests
 
 using Test: @test, @testset, @test_throws
-using JuliaFormatter.ArgParse: ParsedArgs, ParseArgsError, parse_args, OutputMode, StdoutMode, InplaceMode, CheckMode
-using JuliaFormatter: DefaultStyle, YASStyle, BlueStyle, SciMLStyle, MinimalStyle
+using JuliaFormatter.ArgParse:
+    ParsedArgs, ParseArgsError, parse_args, OutputMode, StdoutMode, InplaceMode, CheckMode
+using JuliaFormatter:
+    DefaultStyle, YASStyle, BlueStyle, SciMLStyle, MinimalStyle, Configuration, _Unset
 
 @testset "parse_args" begin
     @testset "empty args" begin
@@ -11,14 +13,14 @@ using JuliaFormatter: DefaultStyle, YASStyle, BlueStyle, SciMLStyle, MinimalStyl
         @test args.mode == StdoutMode
         @test args.diff == false
         @test args.verbose == false
-        @test args.format_markdown == false
         @test args.config_priority == false
         @test args.outputfile === nothing
         @test args.stdin_filename == "stdin"
         @test args.config_dir == ""
-        @test args.ignore_patterns == []
         @test args.line_ranges == []
-        @test args.format_options == Dict{Symbol,Any}()
+        @test args.config.style === nothing
+        @test args.config.ignore === nothing
+        @test args.config.format_markdown === nothing
         @test args.help == false
         @test args.version == false
     end
@@ -79,7 +81,7 @@ using JuliaFormatter: DefaultStyle, YASStyle, BlueStyle, SciMLStyle, MinimalStyl
 
         @testset "format_markdown" begin
             args = parse_args(["--format_markdown", "foo.jl"])
-            @test args.format_markdown == true
+            @test args.config.format_markdown == true
         end
 
         @testset "prioritize-config-file" begin
@@ -121,7 +123,7 @@ using JuliaFormatter: DefaultStyle, YASStyle, BlueStyle, SciMLStyle, MinimalStyl
         )
         for (name, style) in expected
             args = parse_args(["--style=$name", "foo.jl"])
-            @test args.format_options[:style] == style
+            @test args.config.style == style
         end
         @test_throws ParseArgsError parse_args(["--style=nonexistent", "foo.jl"])
     end
@@ -129,12 +131,12 @@ using JuliaFormatter: DefaultStyle, YASStyle, BlueStyle, SciMLStyle, MinimalStyl
     @testset "ignore patterns" begin
         @testset "single pattern" begin
             args = parse_args(["--ignore=*.tmp", "foo.jl"])
-            @test args.ignore_patterns == ["*.tmp"]
+            @test args.config.ignore == ["*.tmp"]
         end
 
         @testset "multiple patterns" begin
             args = parse_args(["--ignore=*.tmp", "--ignore=*/test/*", "foo.jl"])
-            @test args.ignore_patterns == ["*.tmp", "*/test/*"]
+            @test args.config.ignore == ["*.tmp", "*/test/*"]
         end
     end
 
@@ -161,22 +163,22 @@ using JuliaFormatter: DefaultStyle, YASStyle, BlueStyle, SciMLStyle, MinimalStyl
     @testset "integer format options" begin
         @testset "indent" begin
             args = parse_args(["--indent=2", "foo.jl"])
-            @test args.format_options[:indent] == 2
+            @test args.config.options.indent == 2
         end
 
         @testset "margin" begin
             args = parse_args(["--margin=80", "foo.jl"])
-            @test args.format_options[:margin] == 80
+            @test args.config.options.margin == 80
         end
 
         @testset "sciml-margin-overrun" begin
             args = parse_args(["--sciml-margin-overrun=10", "foo.jl"])
-            @test args.format_options[:sciml_margin_overrun] == 10
+            @test args.config.options.sciml_margin_overrun == 10
         end
 
         @testset "sciml_margin_overrun (deprecated)" begin
             args = parse_args(["--sciml_margin_overrun=10", "foo.jl"])
-            @test args.format_options[:sciml_margin_overrun] == 10
+            @test args.config.options.sciml_margin_overrun == 10
         end
     end
 
@@ -184,14 +186,14 @@ using JuliaFormatter: DefaultStyle, YASStyle, BlueStyle, SciMLStyle, MinimalStyl
         @testset "normalize-line-endings" begin
             for mode in ["auto", "unix", "windows"]
                 args = parse_args(["--normalize-line-endings=$mode", "foo.jl"])
-                @test args.format_options[:normalize_line_endings] == mode
+                @test args.config.options.normalize_line_endings == mode
             end
         end
 
         @testset "normalize_line_endings (deprecated)" begin
             for mode in ["auto", "unix", "windows"]
                 args = parse_args(["--normalize_line_endings=$mode", "foo.jl"])
-                @test args.format_options[:normalize_line_endings] == mode
+                @test args.config.options.normalize_line_endings == mode
             end
         end
     end
@@ -199,7 +201,7 @@ using JuliaFormatter: DefaultStyle, YASStyle, BlueStyle, SciMLStyle, MinimalStyl
     @testset "for-in-replacement" begin
         for val in ["in", "=", "∈"]
             args = parse_args(["--for-in-replacement=$val", "foo.jl"])
-            @test args.format_options[:for_in_replacement] == val
+            @test args.config.options.for_in_replacement == val
         end
     end
 
@@ -239,34 +241,34 @@ using JuliaFormatter: DefaultStyle, YASStyle, BlueStyle, SciMLStyle, MinimalStyl
 
         @testset "$cli_name" for (cli_name, dest) in sort(collect(boolean_options))
             args = parse_args(["--$cli_name=true", "foo.jl"])
-            @test args.format_options[dest] == true
+            @test getfield(args.config.options, dest) == true
 
             args = parse_args(["--$cli_name=false", "foo.jl"])
-            @test args.format_options[dest] == false
+            @test getfield(args.config.options, dest) == false
         end
 
-        @testset "only set options appear in format_options" begin
+        @testset "only set options appear in config" begin
             args = parse_args(["--always-for-in=true", "foo.jl"])
-            @test haskey(args.format_options, :always_for_in)
-            @test !haskey(args.format_options, :trailing_comma)
+            @test args.config.options.always_for_in == true
+            @test args.config.options.trailing_comma isa _Unset
         end
 
         @testset "variable-call-indent (multi)" begin
             args = parse_args(["--variable-call-indent=Dict", "foo.jl"])
-            @test args.format_options[:variable_call_indent] == ["Dict"]
+            @test args.config.options.variable_call_indent == ["Dict"]
 
             args = parse_args(["--variable-call-indent=Dict", "--variable-call-indent=Foo", "foo.jl"])
-            @test args.format_options[:variable_call_indent] == ["Dict", "Foo"]
+            @test args.config.options.variable_call_indent == ["Dict", "Foo"]
 
             args = parse_args(["foo.jl"])
-            @test !haskey(args.format_options, :variable_call_indent)
+            @test args.config.options.variable_call_indent isa _Unset
         end
 
         @testset "nothing values for always-for-in and trailing-comma" begin
             args = parse_args(["--always-for-in=nothing", "foo.jl"])
-            @test args.format_options[:always_for_in] === nothing
+            @test args.config.options.always_for_in === nothing
             args = parse_args(["--trailing-comma=nothing", "foo.jl"])
-            @test args.format_options[:trailing_comma] === nothing
+            @test args.config.options.trailing_comma === nothing
         end
     end
 
@@ -293,10 +295,10 @@ using JuliaFormatter: DefaultStyle, YASStyle, BlueStyle, SciMLStyle, MinimalStyl
 
         @testset "$opt" for opt in deprecated_options
             args = parse_args(["--$opt", "foo.jl"])
-            @test args.format_options[opt] == true
+            @test getfield(args.config.options, opt) == true
 
             args = parse_args(["--no-$opt", "foo.jl"])
-            @test args.format_options[opt] == false
+            @test getfield(args.config.options, opt) == false
         end
     end
 
@@ -311,26 +313,26 @@ using JuliaFormatter: DefaultStyle, YASStyle, BlueStyle, SciMLStyle, MinimalStyl
     @testset "mixed flags and paths" begin
         args = parse_args(["--inplace", "--style=blue", "--indent=2", "src/", "lib/"])
         @test args.mode == InplaceMode
-        @test args.format_options[:style] == BlueStyle()
-        @test args.format_options[:indent] == 2
+        @test args.config.style == BlueStyle()
+        @test args.config.options.indent == 2
         @test args.paths == ["src/", "lib/"]
     end
 
     @testset "last value wins for repeated options" begin
         args = parse_args(["--style=blue", "--style=yas", "foo.jl"])
-        @test args.format_options[:style] == YASStyle()
+        @test args.config.style == YASStyle()
 
         args = parse_args(["--indent=2", "--indent=4", "foo.jl"])
-        @test args.format_options[:indent] == 4
+        @test args.config.options.indent == 4
 
         args = parse_args(["--always-for-in=true", "--always-for-in=false", "foo.jl"])
-        @test args.format_options[:always_for_in] == false
+        @test args.config.options.always_for_in == false
 
         # deprecated and new-style can be mixed, last wins
         args = parse_args(["--always_for_in", "--always-for-in=false", "foo.jl"])
-        @test args.format_options[:always_for_in] == false
+        @test args.config.options.always_for_in == false
         args = parse_args(["--always-for-in=false", "--always_for_in", "foo.jl"])
-        @test args.format_options[:always_for_in] == true
+        @test args.config.options.always_for_in == true
     end
 
     @testset "stdin marker" begin

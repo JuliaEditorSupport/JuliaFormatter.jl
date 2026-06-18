@@ -1,7 +1,15 @@
 module ArgParse
 
 import ..JuliaFormatter:
-    AbstractStyle, DefaultStyle, BlueStyle, SciMLStyle, YASStyle, MinimalStyle, STYLE_MAP
+    AbstractStyle,
+    DefaultStyle,
+    BlueStyle,
+    SciMLStyle,
+    YASStyle,
+    MinimalStyle,
+    STYLE_MAP,
+    Configuration,
+    configuration_from_kwargs
 
 struct ParseArgsError <: Exception
     message::String
@@ -217,7 +225,7 @@ function parse_raw(parser::ArgParser, argv::Vector{String})
             if spec.multi
                 # append
                 if !haskey(options, spec.dest)
-                    options[spec.dest] = []
+                    options[spec.dest] = typeof(value)[]
                 end
                 push!(options[spec.dest], value)
             else
@@ -244,15 +252,13 @@ Base.@kwdef struct ParsedArgs
     mode::OutputMode = StdoutMode
     diff::Bool = false
     verbose::Bool = false
-    format_markdown::Bool = false
     config_priority::Bool = false
     ignore_config::Bool = false
     outputfile::Union{String,Nothing} = nothing
     stdin_filename::String = "stdin"
     config_dir::String = ""
-    ignore_patterns::Vector{String} = String[]
     line_ranges::Vector{Tuple{Int,Int}} = Tuple{Int,Int}[]
-    format_options::Dict{Symbol,Any} = Dict{Symbol,Any}()
+    config::Configuration = Configuration()
     paths::Vector{String} = String[]
 end
 
@@ -813,13 +819,24 @@ function parse_args(argv::Vector{String})::ParsedArgs
         )
     end
 
-    # --- Collect format options ---
-    format_options = Dict{Symbol,Any}()
+    # --- Build Configuration from CLI options ---
+    formatting_options = Dict{Symbol,Any}()
     for key in FORMAT_OPTION_KEYS
+        key == :style && continue
         if haskey(raw, key)
-            format_options[key] = raw[key]
+            formatting_options[key] = raw[key]
         end
     end
+    # We leave `verbose` unset because the app uses a separate verbosity flag from
+    # the `verbose` passed to the formatter.
+    config = configuration_from_kwargs(;
+        style = get(raw, :style, nothing),
+        ignore = let v = get(raw, :ignore, String[])
+            isempty(v) ? nothing : v
+        end,
+        format_markdown = get(raw, :format_markdown, false) ? true : nothing,
+        formatting_options...,
+    )
 
     return ParsedArgs(;
         help = get(raw, :help, false),
@@ -827,15 +844,13 @@ function parse_args(argv::Vector{String})::ParsedArgs
         mode,
         diff = get(raw, :diff, false),
         verbose = get(raw, :verbose, false),
-        format_markdown = get(raw, :format_markdown, false),
         config_priority,
         ignore_config,
         outputfile = get(raw, :outputfile, nothing),
         stdin_filename = get(raw, :stdin_filename, "stdin"),
         config_dir = get(raw, :config_dir, ""),
-        ignore_patterns = get(raw, :ignore, String[]),
         line_ranges = get(raw, :lines, Tuple{Int,Int}[]),
-        format_options,
+        config,
         paths = raw[:paths],
     )
 end

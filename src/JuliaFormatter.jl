@@ -171,12 +171,14 @@ function format_text(
     kwargs...,
 )
     isempty(text) && return text
+    opts = merge_options(options(style), Options{_Unset}(; kwargs...))
     # Restrict formatting to the given line ranges (see `line_ranges.jl`). This calls
     # `format_text` without `lines` so the actual formatting doesn't enter an endless loop
-    lines !== nothing && return format_line_ranges(text, style, lines; kwargs...)
-
-    opts = merge_options(options(style), Options{_Unset}(; kwargs...))
-    return _format_text(text, style, opts; check_output = true)
+    return if lines === nothing
+        _format_text(text, style, opts; check_output = true)
+    else
+        _format_line_ranges(text, style, lines, opts)
+    end
 end
 function format_text(text::AbstractString; style::AbstractStyle = DefaultStyle(), kwargs...)
     return format_text(text, style; kwargs...)

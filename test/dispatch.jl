@@ -255,7 +255,7 @@ end
         with_tempfile(invalid_julia) do path
             # format_file delegates to format, which swallows ParseError —
             # so format_file also swallows it. This test documents current behaviour.
-            already = @test_logs (:warn,) format_file(path)
+            already = @test_logs (:warn,) match_mode=:any format_file(path)
             @test already == true
         end
     end

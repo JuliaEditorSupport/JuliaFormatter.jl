@@ -179,15 +179,6 @@ function main(argv::Vector{String})
         end
     end
 
-    # Add ignore patterns and line ranges from command line
-    format_options = copy(args.format_options)
-    if !isempty(args.ignore_patterns)
-        format_options[:ignore] = args.ignore_patterns
-    end
-    if !isempty(args.line_ranges)
-        format_options[:lines] = args.line_ranges
-    end
-
     # Disable verbose if piping from/to stdin/stdout
     output_is_stdout = !inplace && !check && (outputfile in ("", "-"))
     print_progress = args.verbose && !(input_is_stdin || output_is_stdout)
@@ -207,9 +198,9 @@ function main(argv::Vector{String})
                 args.stdin_filename,
                 args.config_dir,
                 args.ignore_config,
-                format_options,
+                args.config,
+                args.line_ranges,
                 args.diff,
-                args.format_markdown,
                 args.config_priority,
             ),
         ]
@@ -228,9 +219,9 @@ function main(argv::Vector{String})
                 args.stdin_filename,
                 args.config_dir,
                 args.ignore_config,
-                format_options,
+                args.config,
+                args.line_ranges,
                 args.diff,
-                args.format_markdown,
                 args.config_priority,
             ) for (file_counter, inputfile) in enumerate(inputfiles)
         ]
@@ -287,9 +278,9 @@ struct ProcessFileArgs
     stdin_filename::String
     config_dir::String
     ignore_config::Bool
-    format_options::Dict{Symbol,Any} # options passed as CLI args
+    config::Configuration
+    line_ranges::Vector{Tuple{Int,Int}}
     diff::Bool
-    format_markdown::Bool
     config_priority::Bool
 end
 
@@ -337,16 +328,10 @@ function process_file(args::ProcessFileArgs)
     inputfile_pretty = args.input_is_stdin ? args.stdin_filename : args.inputfile
     _, ext = splitext(inputfile_pretty)
     is_markdown = ext in (".md", ".jmd", ".qmd")
-    if is_markdown && haskey(args.format_options, :lines)
+    if is_markdown && !isempty(args.line_ranges)
         # Line-range formatting is not (yet) wired through the Markdown path.
         panic("option `--lines` is not supported for Markdown input")
         return 1
-    end
-    if is_markdown && !args.format_markdown
-        report_status() do io
-            okln(io, "skipped (markdown)")
-        end
-        return 0
     end
 
     # Read the input
@@ -404,52 +389,56 @@ function process_file(args::ProcessFileArgs)
         end
     end
 
-    # Look up .JuliaFormatter.toml config. --config-dir overrides the default
-    # (which walks up from the input file's directory, or does nothing for stdin).
-    config_nt = if args.ignore_config
-        (;)
-    elseif args.config_dir != ""
-        config_path = joinpath(args.config_dir, CONFIG_FILE_NAME)
-        if isfile(config_path)
-            parse_config(config_path)
-        else
+    # Look up .JuliaFormatter.toml config
+    file_config = if args.ignore_config
+        Configuration()
+    else
+        config_path = if args.config_dir != ""
             find_config_file(args.config_dir)
+        elseif !args.input_is_stdin
+            find_config_file(args.inputfile)
+        else
+            nothing
         end
-    elseif !args.input_is_stdin
-        find_config_file(args.inputfile)
-    else
-        (;)
+        config_path !== nothing ? configuration_from_file(config_path) : Configuration()
     end
-    config_dict = Dict{Symbol,Any}(Symbol(k) => v for (k, v) in pairs(config_nt))
-    effective_options = if args.config_priority
-        merge(args.format_options, config_dict)
+    # Merge: defaults < file config < CLI args (or defaults < CLI < file with
+    # --prioritize-config-file)
+    defaults = Configuration()
+    config = if args.config_priority
+        merge_config(merge_config(defaults, args.config), file_config)
     else
-        merge(config_dict, args.format_options)
+        merge_config(merge_config(defaults, file_config), args.config)
+    end
+
+    # Skip markdown files unless format_markdown is enabled
+    if is_markdown && !something(config.format_markdown, false)
+        report_status() do io
+            okln(io, "skipped (markdown)")
+        end
+        return 0
     end
 
     # Check if file should be ignored (based on .JuliaFormatter.toml ignore patterns)
-    if !args.input_is_stdin
-        ignore_patterns = get(effective_options, :ignore, String[])
-        # Glob.jl only matches paths that have '/' as the pathsep, so we need to normalise
-        # to that before matching, otherwise ignore patterns won't work on Windows
-        inputfile_posix = replace(args.inputfile, Base.Filesystem.path_separator => "/")
-        if any(
-            pattern -> occursin(Glob.FilenameMatch("*$pattern"), inputfile_posix),
-            ignore_patterns,
-        )
-            # Skip ignored files
-            report_status() do io
-                okln(io, "skipped (ignored)")
-            end
-            return 0
+    if !args.input_is_stdin &&
+       config.ignore !== nothing &&
+       isignored(args.inputfile, config)
+        report_status() do io
+            okln(io, "skipped (ignored)")
         end
+        return 0
     end
+
+    style = config.style
+    merged_options = get_formatting_options(config)
 
     formatted_str = try
         _formatted_str = if is_markdown
-            format_md(sourcetext; effective_options...)
+            _format_md(sourcetext, style, merged_options)
+        elseif !isempty(args.line_ranges)
+            _format_line_ranges(sourcetext, style, args.line_ranges, merged_options)
         else
-            format_text(sourcetext; effective_options...)
+            _format_text(sourcetext, style, merged_options; check_output = true)
         end
         # Since it's a file, presumably we only want one trailing newline, so
         # we normalise it here.
