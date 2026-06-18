@@ -1367,14 +1367,18 @@ function p_functiondef(
         n -> kind(n) in KSet"function macro" && JuliaSyntax.is_leaf(n),
         children(cst)
     )
+
+    # We might want to disable separate_kwargs_with_semicolon for the initial
+    # call in a function/macro definition.
     caller_idx = findnext(
         n -> !JuliaSyntax.is_whitespace(n),
         children(cst),
         function_or_macro_keyword_idx + 1,
     )
     if !Shims.is_caller_in_function_def(cst[caller_idx])
-        # Sanity check
-        error("unreachable: call expression was not found after function/macro keyword")
+        # If that child doesn't look like a function call, then it's an anonymous function.
+        # In that case we can disable the check.
+        caller_idx = nothing
     end
 
     block_has_contents = false
@@ -1408,7 +1412,7 @@ function p_functiondef(
             n = pretty(style, c, s, newctx(ctx; ignore_single_line = true), lineage)
             add_node!(t, n, s; max_padding = s.opts.indent)
             s.indent -= s.opts.indent
-        elseif i == caller_idx
+        elseif i === caller_idx
             n = pretty(style, c, s, newctx(ctx; can_separate_kwargs = false), lineage)
             add_node!(t, n, s; join_lines = true)
         else
