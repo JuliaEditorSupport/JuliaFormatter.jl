@@ -6,6 +6,7 @@ using Pkg: Pkg
 Pkg.develop(; path = dirname(@__DIR__))
 
 @testset "JuliaFormatter" begin
+    include("dispatch.jl")
     include("internal_utils.jl")
     include("default_style.jl")
     include("yas_style.jl")
