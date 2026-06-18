@@ -99,7 +99,7 @@ using Test
              test_format(str_, str, style; always_for_in = true, for_in_replacement = "∈")
         end
 
-        @test_throws AssertionError format_text(
+        @test_throws ArgumentError format_text(
             str_;
             always_for_in = true,
             for_in_replacement = "ni!",
