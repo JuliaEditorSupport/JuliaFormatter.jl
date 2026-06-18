@@ -147,16 +147,12 @@ using Test
             write(sub_code1_path, before)
             write(sub_code2_path, before)
 
-            original_dir = pwd()
-            try
-                cd(dir)
+            cd(dir) do
                 @test format(".") == false
                 @test read(code_path, String) == after2
                 @test read(sub_code1_path, String) == after4
                 @test read(sub_code2_path, String) == after2
                 @test format(".") == true
-            finally
-                cd(original_dir)
             end
         end
     end
