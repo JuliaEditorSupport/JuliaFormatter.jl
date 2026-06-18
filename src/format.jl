@@ -9,6 +9,9 @@ struct FormattingError <: Exception
     column::Int
     original_error::Exception
 end
+function Base.showerror(io::IO, fe::FormattingError)
+    print(io, "\nformatting error at line $(fe.line), column $(fe.column)\n")
+end
 
 """
     InvalidFormattedTextError(msg)
@@ -16,6 +19,9 @@ end
 Error thrown when the formatted text is invalid.
 """
 struct InvalidFormattedTextError <: Exception end
+function Base.showerror(io::IO, ::InvalidFormattedTextError)
+    print(io, "\nformatted text could not be parsed as valid Julia\n")
+end
 
 """
     InvalidFileError(filename)
@@ -24,6 +30,9 @@ Error thrown when the file to be formatted is not a valid Julia or Markdown file
 """
 struct InvalidFileError <: Exception
     filename::AbstractString
+end
+function Base.showerror(io::IO, ::InvalidFileError)
+    print(io, "\nthe file to be formatted was not a Julia or Markdown file\n")
 end
 
 const UNIX_TO_WINDOWS = r"\r?\n" => "\r\n"

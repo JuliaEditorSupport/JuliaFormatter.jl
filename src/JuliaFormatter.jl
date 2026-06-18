@@ -158,11 +158,11 @@ formatted on a best-effort basis.
 
 - If `text` is not valid Julia code, it will throw a `JuliaSyntax.ParseError`.
 
-- If `opts.always_for_in` is true and `opts.for_in_replacement` is not a valid operator, it
-  will throw an `AssertionError`. (NOTE: This check should PROBABLY be moved to the
-  `Options` constructor, but it is here for now.)
+- If any other error happens during the formatting, it will throw a
+  `JuliaFormatter.FormattingError`.
 
-- If the formatted text is not valid Julia code, it will throw an `InvalidFormattedTextError`.
+- If the formatted text is not valid Julia code, it will throw an
+  `JuliaFormatter.InvalidFormattedTextError`.
 """
 function format_text(
     text::AbstractString,
