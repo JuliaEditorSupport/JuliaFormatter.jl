@@ -250,7 +250,13 @@ function main(argv::Vector{String})
                 Threads.atomic_or!(has_error, true)
             end
         end
-        has_error[] ? ERROR_EXIT_CODE : has_unformatted[] ? UNFORMATTED_EXIT_CODE : SUCCESS_EXIT_CODE
+        if has_error[]
+            ERROR_EXIT_CODE
+        elseif has_unformatted[]
+            UNFORMATTED_EXIT_CODE
+        else
+            SUCCESS_EXIT_CODE
+        end
     else
         # Sequential processing
         has_unformatted = false
@@ -263,7 +269,13 @@ function main(argv::Vector{String})
                 has_error = true
             end
         end
-        has_error[] ? ERROR_EXIT_CODE : has_unformatted[] ? UNFORMATTED_EXIT_CODE : SUCCESS_EXIT_CODE
+        if has_error[]
+            ERROR_EXIT_CODE
+        elseif has_unformatted[]
+            UNFORMATTED_EXIT_CODE
+        else
+            SUCCESS_EXIT_CODE
+        end
     end
 
     # Print summary message for check mode
