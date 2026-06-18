@@ -53,12 +53,7 @@ In general the way that CLI options are specified are exactly the same as in `.J
 - To set an option to `nothing`, use `--option=nothing` (in the config file it would have to be `option = "nothing"`).
 - To pass a list of strings for `variable_call_indent`, specify the option multiple times on the CLI, e.g. `--variable-call-indent=foo --variable-call-indent=bar` (in the config file it would be `variable_call_indent = ["foo", "bar"]`).
 
-`jlfmt --help` provides a complete list:
-
-```@repl
-using JuliaFormatter # hide
-JuliaFormatter.main(["--help"]); # hide
-```
+You can run `jlfmt --help` for a full list of available options (the output of this is at the bottom of this page, to avoid clutter).
 
 !!! note "Deprecated options"
 
@@ -111,3 +106,11 @@ The formatter will search for `.JuliaFormatter.toml` in the specified directory 
 - Exit code 1 on formatting errors or when `--check` detects unformatted files
 - Formatted output to stdout (default) or in-place with `--inplace`
 - Error messages to stderr
+
+## Help text
+
+```@repl
+using JuliaFormatter # hide
+JuliaFormatter.main(["--help"]); # hide
+```
+
