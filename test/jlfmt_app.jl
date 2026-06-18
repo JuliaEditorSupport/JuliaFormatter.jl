@@ -422,7 +422,7 @@ else
                     @test output = rstrip(
                         format_text(text, BlueStyle(); whitespace_in_kwargs = true),
                     )
-                    @test output != strip(format_text(text, BlueStyle())
+                    @test output != strip(format_text(text, BlueStyle()))
                 end
             end
 
