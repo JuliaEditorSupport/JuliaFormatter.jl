@@ -84,6 +84,13 @@ Use `--prioritize-config-file` to make configuration file settings take preceden
 jlfmt --prioritize-config-file --indent=2 src/file.jl
 ```
 
+If you want to ignore preexisting configuration files, use `--ignore-config` (this is mostly useful for JuliaFormatter's own testing pipelines):
+
+```bash
+# Ignore any config files and use only CLI args
+jlfmt --ignore-config --indent=2 src/file.jl
+```
+
 ### Configuration with stdin
 
 When formatting from stdin, no configuration file is used by default.
