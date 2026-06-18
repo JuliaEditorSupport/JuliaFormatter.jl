@@ -135,6 +135,7 @@ using JuliaFormatter: DefaultStyle, YASStyle, BlueStyle, SciMLStyle, MinimalStyl
             args = parse_args(["--output=out.jl"])
             @test args.outputfile == "out.jl"
             @test parse_args(["f.jl"]).outputfile === nothing
+            @test_throws ParseArgsError parse_args(["-o"])
         end
 
         @testset "simple flags" begin
@@ -165,13 +166,26 @@ using JuliaFormatter: DefaultStyle, YASStyle, BlueStyle, SciMLStyle, MinimalStyl
             @test parse_args(["--config-dir=/some/path"]).config_dir == "/some/path"
         end
 
+        @testset "style" begin
+            @test parse_args(["--style=default"]).config.style == DefaultStyle()
+            @test parse_args(["--style=yas"]).config.style == YASStyle()
+            @test parse_args(["--style=blue"]).config.style == BlueStyle()
+            @test parse_args(["--style=sciml"]).config.style == SciMLStyle()
+            @test parse_args(["--style=minimal"]).config.style == MinimalStyle()
+            @test_throws ParseArgsError parse_args(["--style=nonexistent"])
+        end
+
         @testset "ignore patterns" begin
+            args = parse_args(["--ignore=*.tmp"])
+            @test args.config.ignore == ["*.tmp"]
             args = parse_args(["--ignore=*.tmp", "--ignore=*/test/*"])
             @test args.config.ignore == ["*.tmp", "*/test/*"]
             @test parse_args(["f.jl"]).config.ignore === nothing
         end
 
         @testset "line ranges" begin
+            args = parse_args(["--lines=1:10"])
+            @test args.line_ranges == [(1, 10)]
             args = parse_args(["--lines=1:10", "--lines=42:47"])
             @test args.line_ranges == [(1, 10), (42, 47)]
             @test parse_args(["f.jl"]).line_ranges == []
@@ -215,20 +229,23 @@ using JuliaFormatter: DefaultStyle, YASStyle, BlueStyle, SciMLStyle, MinimalStyl
             @test a.config.options.margin == b.config.options.margin == 80
         end
 
+        @testset "for-in-replacement" begin
+            for val in ["in", "=", "∈"]
+                @test parse_args(["--for-in-replacement=$val"]).config.options.for_in_replacement == val
+            end
+        end
+
+        @testset "normalize-line-endings" begin
+            for mode in ["auto", "unix", "windows"]
+                @test parse_args(["--normalize-line-endings=$mode"]).config.options.normalize_line_endings == mode
+            end
+        end
+
         @testset "all formatting options (new-style)" begin
-            # style
-            @test parse_args(["--style=default"]).config.style == DefaultStyle()
-            @test parse_args(["--style=yas"]).config.style == YASStyle()
-            @test parse_args(["--style=blue"]).config.style == BlueStyle()
-            @test parse_args(["--style=sciml"]).config.style == SciMLStyle()
-            @test parse_args(["--style=minimal"]).config.style == MinimalStyle()
             # int options
             @test parse_args(["--indent=2"]).config.options.indent == 2
             @test parse_args(["--margin=80"]).config.options.margin == 80
             @test parse_args(["--sciml-margin-overrun=10"]).config.options.sciml_margin_overrun == 10
-            # string options
-            @test parse_args(["--for-in-replacement=∈"]).config.options.for_in_replacement == "∈"
-            @test parse_args(["--normalize-line-endings=unix"]).config.options.normalize_line_endings == "unix"
             # bool options (alphabetical)
             @test parse_args(["--align-assignment=true"]).config.options.align_assignment == true
             @test parse_args(["--align-assignment=false"]).config.options.align_assignment == false
@@ -336,11 +353,27 @@ using JuliaFormatter: DefaultStyle, YASStyle, BlueStyle, SciMLStyle, MinimalStyl
             @test parse_args(["--no-conditional_to_if"]).config.options.conditional_to_if == false
         end
 
-        @testset "new-style option overrides deprecated flag (last wins)" begin
+        @testset "last value wins for repeated options" begin
+            @test parse_args(["--style=blue", "--style=yas"]).config.style == YASStyle()
+            @test parse_args(["--indent=2", "--indent=4"]).config.options.indent == 4
+            # new-style option overrides deprecated flag (and vice versa)
             args = parse_args(["--always_for_in", "--always-for-in=false"])
             @test args.config.options.always_for_in == false
             args = parse_args(["--always-for-in=false", "--always_for_in"])
             @test args.config.options.always_for_in == true
+        end
+
+        @testset "positional paths" begin
+            @test parse_args(["foo.jl"]).paths == ["foo.jl"]
+            @test parse_args(["foo.jl", "bar.jl", "src/"]).paths == ["foo.jl", "bar.jl", "src/"]
+        end
+
+        @testset "stdin marker" begin
+            @test parse_args(["-"]).paths == ["-"]
+        end
+
+        @testset "variable-call-indent unset when not specified" begin
+            @test parse_args(["f.jl"]).config.options.variable_call_indent isa _Unset
         end
     end
 end
