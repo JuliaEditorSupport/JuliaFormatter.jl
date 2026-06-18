@@ -419,7 +419,7 @@ else
                         `$(jlfmt_cmd()) --inplace --whitespace-in-kwargs=true $fname`,
                     )
                     output = readchomp(fname)
-                    @test output = rstrip(
+                    @test output == rstrip(
                         format_text(text, BlueStyle(); whitespace_in_kwargs = true),
                     )
                     @test output != strip(format_text(text, BlueStyle()))
