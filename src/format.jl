@@ -154,7 +154,7 @@ function _format_text(
             )
         catch err
             if err isa JuliaSyntax.ParseError
-                throw(InvalidFormattedTextError())
+                throw(InvalidFormattedTextError(err))
             else
                 rethrow(err)
             end
