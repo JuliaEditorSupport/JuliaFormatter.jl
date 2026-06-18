@@ -292,7 +292,7 @@ else
                     # checking only line 1 passes (it is already formatted)...
                     @test success(`$(jlfmt_cmd()) --check --lines=1:1 $fname`)
                     # ...but checking line 2 fails (it needs formatting)
-                    @test check_exitcode(UNFORMATTED_EXIT_CODE, `$(jlfmt_cmd()) --check --lines=2:2 $fname`)
+                    check_exitcode(UNFORMATTED_EXIT_CODE, `$(jlfmt_cmd()) --check --lines=2:2 $fname`)
                     # --check must not modify the file
                     @test readchomp(fname) == "f(x, y) = 1\ng( a ,b )=2"
                 end
