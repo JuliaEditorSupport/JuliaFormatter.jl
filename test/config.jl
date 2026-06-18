@@ -1,6 +1,6 @@
 module ConfigTests
 
-using JuliaFormatter: format, CONFIG_FILE_NAME
+using JuliaFormatter: format, CONFIG_FILE_NAME, format_text
 using Test
 
 @testset ".JuliaFormatter.toml config" begin
@@ -377,33 +377,67 @@ using Test
     end
 
     @testset "ignore" begin
-        unformatted_text = "( )"
-        tobeignored = (
-            "b.jl",
-            "ignored_directory/a.jl",
-            "other_directory/ignored_directory/a.jl",
-            "other_directory/directory/b.jl",
-            "third_directory/a.jl",
-            "third_directory/ignored_directory/a.jl",
-        )
-        nottobeignored = (
-            "a.jl",
-            "other_directory/a.jl",
-            "other_directory/directory/a.jl",
-            "third_directory/b.jl",
-            "third_directory/ignored_directory/b.jl",
-        )
-        mktempdir() do sandbox_dir
-            cp("files/ignore", sandbox_dir; force = true)
-            @test format(sandbox_dir) == false
-            @test format(sandbox_dir) == true
-            for file in tobeignored
-                code_path = joinpath(sandbox_dir, file)
-                @test startswith(read(code_path, String), unformatted_text)
+        # Root config ignores "b.*" and "ignored_directory".
+        # third_directory has its own config that ignores "a.jl".
+        #
+        # ├─ .JuliaFormatter.toml          ignore = ["b.*", "ignored_directory"]
+        # ├─ a.jl                          formatted
+        # ├─ b.jl                          ignored (b.*)
+        # ├─ ignored_directory/
+        # │  └─ a.jl                       ignored (ignored_directory)
+        # ├─ other_directory/
+        # │  ├─ a.jl                       formatted
+        # │  ├─ directory/
+        # │  │  ├─ a.jl                    formatted
+        # │  │  └─ b.jl                    ignored (b.*)
+        # │  └─ ignored_directory/
+        # │     └─ a.jl                    ignored (ignored_directory)
+        # └─ third_directory/
+        #    ├─ .JuliaFormatter.toml       ignore = ["a.jl"]
+        #    ├─ a.jl                       ignored (a.jl)
+        #    ├─ b.jl                       formatted (third_directory config has no b.*)
+        #    └─ ignored_directory/
+        #       ├─ a.jl                    ignored (a.jl)
+        #       └─ b.jl                    formatted
+        unformatted = "( )"
+        mktempdir() do dir
+            # Helper to write a file, creating parent directories as needed
+            function writefile(path, content)
+                mkpath(dirname(joinpath(dir, path)))
+                write(joinpath(dir, path), content)
             end
-            for file in nottobeignored
-                code_path = joinpath(sandbox_dir, file)
-                @test !startswith(read(code_path, String), unformatted_text)
+
+            # Write configs
+            writefile(CONFIG_FILE_NAME, """ignore = ["b.*", "ignored_directory"]\n""")
+            writefile("third_directory/$CONFIG_FILE_NAME", """ignore = ["a.jl"]\n""")
+
+            # Write unformatted code to all .jl files
+            files_to_be_ignored = [
+                "b.jl",
+                "ignored_directory/a.jl",
+                "other_directory/ignored_directory/a.jl",
+                "other_directory/directory/b.jl",
+                "third_directory/a.jl",
+                "third_directory/ignored_directory/a.jl",
+            ]
+            files_to_be_formatted = [
+                "a.jl",
+                "other_directory/a.jl",
+                "other_directory/directory/a.jl",
+                "third_directory/b.jl",
+                "third_directory/ignored_directory/b.jl",
+            ]
+            for file in (files_to_be_ignored..., files_to_be_formatted...)
+                writefile(file, unformatted)
+            end
+
+            @test format(dir) == false
+            @test format(dir) == true
+            for file in files_to_be_ignored
+                @test readchomp(joinpath(dir, file)) == unformatted
+            end
+            for file in files_to_be_formatted
+                @test readchomp(joinpath(dir, file)) == format_text(unformatted)
             end
         end
     end
