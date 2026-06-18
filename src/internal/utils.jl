@@ -71,7 +71,7 @@ function format_to_stage(
     stage in (:gn, :cst) && return cst[1]
 
     # :fst
-    opts = JF.Options(; merge(JF.options(style), options)...)
+    opts = JF.merge_options(JF.options(style), JF.Options{JF._Unset}(; options...))
     state = JF.State(JF.Document(text), opts)
     fst = JF.pretty(style, cst, state)
     stage === :fst && return fst

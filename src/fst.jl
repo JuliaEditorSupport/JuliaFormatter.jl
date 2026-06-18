@@ -930,9 +930,6 @@ function eq_to_in_normalization!(fst::FST, always_for_in::Bool, for_in_replaceme
             return
         end
         op = fst[idx]
-        if !(valid_for_in_op(op.val))
-            return
-        end
 
         # surround op with ws
         if for_in_replacement != "=" && fst[idx-1].typ !== WHITESPACE

@@ -1,6 +1,6 @@
 # [Blue Style](@id blue-style)
 
-```@docs
+```@docs; canonical=false
 BlueStyle
 ```
 

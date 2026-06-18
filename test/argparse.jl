@@ -3,7 +3,7 @@ module ArgparseTests
 using Test: @test, @testset, @test_throws, @test_logs
 using JuliaFormatter.ArgParse: ParseArgsError, ParsedArgs, parse_args, parse_raw, PARSER,
     StdoutMode, InplaceMode, CheckMode
-using JuliaFormatter: DefaultStyle, YASStyle, BlueStyle, SciMLStyle, MinimalStyle
+using JuliaFormatter: DefaultStyle, YASStyle, BlueStyle, SciMLStyle, MinimalStyle, _Unset, Options
 
 @testset "argparse" begin
     @testset "parse_raw" begin
@@ -95,16 +95,17 @@ using JuliaFormatter: DefaultStyle, YASStyle, BlueStyle, SciMLStyle, MinimalStyl
             @test args.version == false
             @test args.mode == StdoutMode
             @test args.diff == false
-            @test args.verbose == false
-            @test args.format_markdown == false
             @test args.config_priority == false
             @test args.ignore_config == false
             @test args.outputfile === nothing
             @test args.stdin_filename == "stdin"
             @test args.config_dir == ""
-            @test args.ignore_patterns == []
             @test args.line_ranges == []
-            @test args.format_options == Dict{Symbol,Any}()
+            @test args.config.options == Options{_Unset}()
+            @test args.config.ignore === nothing
+            @test args.config.verbose === nothing
+            @test args.config.format_markdown === nothing
+            @test args.config.overwrite === nothing
             @test args.paths == []
         end
 
@@ -134,14 +135,25 @@ using JuliaFormatter: DefaultStyle, YASStyle, BlueStyle, SciMLStyle, MinimalStyl
             args = parse_args(["--output=out.jl"])
             @test args.outputfile == "out.jl"
             @test parse_args(["f.jl"]).outputfile === nothing
+            @test_throws ParseArgsError parse_args(["-o"])
         end
 
         @testset "simple flags" begin
             @test parse_args(["-d"]).diff == true
             @test parse_args(["-v"]).verbose == true
-            @test parse_args(["--format_markdown"]).format_markdown == true
             @test parse_args(["--prioritize-config-file"]).config_priority == true
             @test parse_args(["--ignore-config"]).ignore_config == true
+        end
+
+        @testset "format-markdown" begin
+            # Not passed: nothing (defer to config file)
+            @test parse_args(["f.jl"]).config.format_markdown === nothing
+            # Explicit true
+            @test parse_args(["--format-markdown=true"]).config.format_markdown === true
+            # Explicit false (can override config file)
+            @test parse_args(["--format-markdown=false"]).config.format_markdown === false
+            # Deprecated flag (still works, sets true)
+            @test parse_args(["--format_markdown"]).config.format_markdown === true
         end
 
         @testset "config file options mutual exclusion" begin
@@ -154,13 +166,26 @@ using JuliaFormatter: DefaultStyle, YASStyle, BlueStyle, SciMLStyle, MinimalStyl
             @test parse_args(["--config-dir=/some/path"]).config_dir == "/some/path"
         end
 
+        @testset "style" begin
+            @test parse_args(["--style=default"]).config.style == DefaultStyle()
+            @test parse_args(["--style=yas"]).config.style == YASStyle()
+            @test parse_args(["--style=blue"]).config.style == BlueStyle()
+            @test parse_args(["--style=sciml"]).config.style == SciMLStyle()
+            @test parse_args(["--style=minimal"]).config.style == MinimalStyle()
+            @test_throws ParseArgsError parse_args(["--style=nonexistent"])
+        end
+
         @testset "ignore patterns" begin
+            args = parse_args(["--ignore=*.tmp"])
+            @test args.config.ignore == ["*.tmp"]
             args = parse_args(["--ignore=*.tmp", "--ignore=*/test/*"])
-            @test args.ignore_patterns == ["*.tmp", "*/test/*"]
-            @test parse_args(["f.jl"]).ignore_patterns == []
+            @test args.config.ignore == ["*.tmp", "*/test/*"]
+            @test parse_args(["f.jl"]).config.ignore === nothing
         end
 
         @testset "line ranges" begin
+            args = parse_args(["--lines=1:10"])
+            @test args.line_ranges == [(1, 10)]
             args = parse_args(["--lines=1:10", "--lines=42:47"])
             @test args.line_ranges == [(1, 10), (42, 47)]
             @test parse_args(["f.jl"]).line_ranges == []
@@ -168,22 +193,22 @@ using JuliaFormatter: DefaultStyle, YASStyle, BlueStyle, SciMLStyle, MinimalStyl
 
         @testset "format options from value options" begin
             args = parse_args(["--indent=2", "--margin=80"])
-            @test args.format_options[:indent] == 2
-            @test args.format_options[:margin] == 80
+            @test args.config.options.indent == 2
+            @test args.config.options.margin == 80
         end
 
         @testset "format options from negatable flags" begin
             args = parse_args(["--always_for_in"])
-            @test args.format_options[:always_for_in] == true
+            @test args.config.options.always_for_in == true
 
             args = parse_args(["--no-always_for_in"])
-            @test args.format_options[:always_for_in] == false
+            @test args.config.options.always_for_in == false
         end
 
         @testset "unset format options are absent" begin
             args = parse_args(["--always_for_in"])
-            @test haskey(args.format_options, :always_for_in)
-            @test !haskey(args.format_options, :trailing_comma)
+            @test args.config.options.always_for_in == true
+            @test args.config.options.trailing_comma === _Unset()
         end
 
         @testset "mixed flags and paths" begin
@@ -191,8 +216,8 @@ using JuliaFormatter: DefaultStyle, YASStyle, BlueStyle, SciMLStyle, MinimalStyl
             @test args.mode == InplaceMode
             @test args.diff == true
             @test args.verbose == true
-            @test args.format_options[:style] == BlueStyle()
-            @test args.format_options[:margin] == 80
+            @test args.config.style == BlueStyle()
+            @test args.config.options.margin == 80
             @test args.paths == ["src/", "lib/"]
         end
 
@@ -201,135 +226,154 @@ using JuliaFormatter: DefaultStyle, YASStyle, BlueStyle, SciMLStyle, MinimalStyl
             b = parse_args(["--margin=80", "-d", "-c"])
             @test a.mode == b.mode == CheckMode
             @test a.diff == b.diff == true
-            @test a.format_options[:margin] == b.format_options[:margin] == 80
+            @test a.config.options.margin == b.config.options.margin == 80
+        end
+
+        @testset "for-in-replacement" begin
+            for val in ["in", "=", "∈"]
+                @test parse_args(["--for-in-replacement=$val"]).config.options.for_in_replacement == val
+            end
+        end
+
+        @testset "normalize-line-endings" begin
+            for mode in ["auto", "unix", "windows"]
+                @test parse_args(["--normalize-line-endings=$mode"]).config.options.normalize_line_endings == mode
+            end
         end
 
         @testset "all formatting options (new-style)" begin
-            # style
-            @test parse_args(["--style=default"]).format_options[:style] == DefaultStyle()
-            @test parse_args(["--style=yas"]).format_options[:style] == YASStyle()
-            @test parse_args(["--style=blue"]).format_options[:style] == BlueStyle()
-            @test parse_args(["--style=sciml"]).format_options[:style] == SciMLStyle()
-            @test parse_args(["--style=minimal"]).format_options[:style] == MinimalStyle()
             # int options
-            @test parse_args(["--indent=2"]).format_options[:indent] == 2
-            @test parse_args(["--margin=80"]).format_options[:margin] == 80
-            @test parse_args(["--sciml-margin-overrun=10"]).format_options[:sciml_margin_overrun] == 10
-            # string options
-            @test parse_args(["--for-in-replacement=∈"]).format_options[:for_in_replacement] == "∈"
-            @test parse_args(["--normalize-line-endings=unix"]).format_options[:normalize_line_endings] == "unix"
+            @test parse_args(["--indent=2"]).config.options.indent == 2
+            @test parse_args(["--margin=80"]).config.options.margin == 80
+            @test parse_args(["--sciml-margin-overrun=10"]).config.options.sciml_margin_overrun == 10
             # bool options (alphabetical)
-            @test parse_args(["--align-assignment=true"]).format_options[:align_assignment] == true
-            @test parse_args(["--align-assignment=false"]).format_options[:align_assignment] == false
-            @test parse_args(["--align-conditional=true"]).format_options[:align_conditional] == true
-            @test parse_args(["--align-conditional=false"]).format_options[:align_conditional] == false
-            @test parse_args(["--align-matrix=true"]).format_options[:align_matrix] == true
-            @test parse_args(["--align-matrix=false"]).format_options[:align_matrix] == false
-            @test parse_args(["--align-pair-arrow=true"]).format_options[:align_pair_arrow] == true
-            @test parse_args(["--align-pair-arrow=false"]).format_options[:align_pair_arrow] == false
-            @test parse_args(["--align-struct-field=true"]).format_options[:align_struct_field] == true
-            @test parse_args(["--align-struct-field=false"]).format_options[:align_struct_field] == false
-            @test parse_args(["--always-for-in=true"]).format_options[:always_for_in] == true
-            @test parse_args(["--always-for-in=false"]).format_options[:always_for_in] == false
-            @test parse_args(["--always-for-in=nothing"]).format_options[:always_for_in] === nothing
-            @test parse_args(["--always-use-return=true"]).format_options[:always_use_return] == true
-            @test parse_args(["--always-use-return=false"]).format_options[:always_use_return] == false
-            @test parse_args(["--annotate-untyped-fields-with-any=true"]).format_options[:annotate_untyped_fields_with_any] == true
-            @test parse_args(["--annotate-untyped-fields-with-any=false"]).format_options[:annotate_untyped_fields_with_any] == false
-            @test parse_args(["--conditional-to-if=true"]).format_options[:conditional_to_if] == true
-            @test parse_args(["--conditional-to-if=false"]).format_options[:conditional_to_if] == false
-            @test parse_args(["--disallow-single-arg-nesting=true"]).format_options[:disallow_single_arg_nesting] == true
-            @test parse_args(["--disallow-single-arg-nesting=false"]).format_options[:disallow_single_arg_nesting] == false
-            @test parse_args(["--force-long-function-def=true"]).format_options[:force_long_function_def] == true
-            @test parse_args(["--force-long-function-def=false"]).format_options[:force_long_function_def] == false
-            @test parse_args(["--format-docstrings=true"]).format_options[:format_docstrings] == true
-            @test parse_args(["--format-docstrings=false"]).format_options[:format_docstrings] == false
-            @test parse_args(["--import-to-using=true"]).format_options[:import_to_using] == true
-            @test parse_args(["--import-to-using=false"]).format_options[:import_to_using] == false
-            @test parse_args(["--indent-submodule=true"]).format_options[:indent_submodule] == true
-            @test parse_args(["--indent-submodule=false"]).format_options[:indent_submodule] == false
-            @test parse_args(["--join-lines-based-on-source=true"]).format_options[:join_lines_based_on_source] == true
-            @test parse_args(["--join-lines-based-on-source=false"]).format_options[:join_lines_based_on_source] == false
-            @test parse_args(["--long-to-short-function-def=true"]).format_options[:long_to_short_function_def] == true
-            @test parse_args(["--long-to-short-function-def=false"]).format_options[:long_to_short_function_def] == false
-            @test parse_args(["--pipe-to-function-call=true"]).format_options[:pipe_to_function_call] == true
-            @test parse_args(["--pipe-to-function-call=false"]).format_options[:pipe_to_function_call] == false
-            @test parse_args(["--remove-extra-newlines=true"]).format_options[:remove_extra_newlines] == true
-            @test parse_args(["--remove-extra-newlines=false"]).format_options[:remove_extra_newlines] == false
-            @test parse_args(["--separate-kwargs-with-semicolon=true"]).format_options[:separate_kwargs_with_semicolon] == true
-            @test parse_args(["--separate-kwargs-with-semicolon=false"]).format_options[:separate_kwargs_with_semicolon] == false
-            @test parse_args(["--short-circuit-to-if=true"]).format_options[:short_circuit_to_if] == true
-            @test parse_args(["--short-circuit-to-if=false"]).format_options[:short_circuit_to_if] == false
-            @test parse_args(["--short-to-long-function-def=true"]).format_options[:short_to_long_function_def] == true
-            @test parse_args(["--short-to-long-function-def=false"]).format_options[:short_to_long_function_def] == false
-            @test parse_args(["--surround-whereop-typeparameters=true"]).format_options[:surround_whereop_typeparameters] == true
-            @test parse_args(["--surround-whereop-typeparameters=false"]).format_options[:surround_whereop_typeparameters] == false
-            @test parse_args(["--trailing-comma=true"]).format_options[:trailing_comma] == true
-            @test parse_args(["--trailing-comma=false"]).format_options[:trailing_comma] == false
-            @test parse_args(["--trailing-comma=nothing"]).format_options[:trailing_comma] === nothing
-            @test parse_args(["--trailing-zero=true"]).format_options[:trailing_zero] == true
-            @test parse_args(["--trailing-zero=false"]).format_options[:trailing_zero] == false
-            @test parse_args(["--v2-stable-multiline-strings=true"]).format_options[:v2_stable_multiline_strings] == true
-            @test parse_args(["--v2-stable-multiline-strings=false"]).format_options[:v2_stable_multiline_strings] == false
-            @test parse_args(["--variable-call-indent=Dict"]).format_options[:variable_call_indent] == ["Dict"]
-            @test parse_args(["--variable-call-indent=Dict", "--variable-call-indent=Foo"]).format_options[:variable_call_indent] == ["Dict", "Foo"]
-            @test parse_args(["--whitespace-in-kwargs=true"]).format_options[:whitespace_in_kwargs] == true
-            @test parse_args(["--whitespace-in-kwargs=false"]).format_options[:whitespace_in_kwargs] == false
-            @test parse_args(["--whitespace-ops-in-indices=true"]).format_options[:whitespace_ops_in_indices] == true
-            @test parse_args(["--whitespace-ops-in-indices=false"]).format_options[:whitespace_ops_in_indices] == false
-            @test parse_args(["--whitespace-typedefs=true"]).format_options[:whitespace_typedefs] == true
-            @test parse_args(["--whitespace-typedefs=false"]).format_options[:whitespace_typedefs] == false
-            @test parse_args(["--yas-style-nesting=true"]).format_options[:yas_style_nesting] == true
-            @test parse_args(["--yas-style-nesting=false"]).format_options[:yas_style_nesting] == false
+            @test parse_args(["--align-assignment=true"]).config.options.align_assignment == true
+            @test parse_args(["--align-assignment=false"]).config.options.align_assignment == false
+            @test parse_args(["--align-conditional=true"]).config.options.align_conditional == true
+            @test parse_args(["--align-conditional=false"]).config.options.align_conditional == false
+            @test parse_args(["--align-matrix=true"]).config.options.align_matrix == true
+            @test parse_args(["--align-matrix=false"]).config.options.align_matrix == false
+            @test parse_args(["--align-pair-arrow=true"]).config.options.align_pair_arrow == true
+            @test parse_args(["--align-pair-arrow=false"]).config.options.align_pair_arrow == false
+            @test parse_args(["--align-struct-field=true"]).config.options.align_struct_field == true
+            @test parse_args(["--align-struct-field=false"]).config.options.align_struct_field == false
+            @test parse_args(["--always-for-in=true"]).config.options.always_for_in == true
+            @test parse_args(["--always-for-in=false"]).config.options.always_for_in == false
+            @test parse_args(["--always-for-in=nothing"]).config.options.always_for_in === nothing
+            @test parse_args(["--always-use-return=true"]).config.options.always_use_return == true
+            @test parse_args(["--always-use-return=false"]).config.options.always_use_return == false
+            @test parse_args(["--annotate-untyped-fields-with-any=true"]).config.options.annotate_untyped_fields_with_any == true
+            @test parse_args(["--annotate-untyped-fields-with-any=false"]).config.options.annotate_untyped_fields_with_any == false
+            @test parse_args(["--conditional-to-if=true"]).config.options.conditional_to_if == true
+            @test parse_args(["--conditional-to-if=false"]).config.options.conditional_to_if == false
+            @test parse_args(["--disallow-single-arg-nesting=true"]).config.options.disallow_single_arg_nesting == true
+            @test parse_args(["--disallow-single-arg-nesting=false"]).config.options.disallow_single_arg_nesting == false
+            @test parse_args(["--force-long-function-def=true"]).config.options.force_long_function_def == true
+            @test parse_args(["--force-long-function-def=false"]).config.options.force_long_function_def == false
+            @test parse_args(["--format-docstrings=true"]).config.options.format_docstrings == true
+            @test parse_args(["--format-docstrings=false"]).config.options.format_docstrings == false
+            @test parse_args(["--import-to-using=true"]).config.options.import_to_using == true
+            @test parse_args(["--import-to-using=false"]).config.options.import_to_using == false
+            @test parse_args(["--indent-submodule=true"]).config.options.indent_submodule == true
+            @test parse_args(["--indent-submodule=false"]).config.options.indent_submodule == false
+            @test parse_args(["--join-lines-based-on-source=true"]).config.options.join_lines_based_on_source == true
+            @test parse_args(["--join-lines-based-on-source=false"]).config.options.join_lines_based_on_source == false
+            @test parse_args(["--long-to-short-function-def=true"]).config.options.long_to_short_function_def == true
+            @test parse_args(["--long-to-short-function-def=false"]).config.options.long_to_short_function_def == false
+            @test parse_args(["--pipe-to-function-call=true"]).config.options.pipe_to_function_call == true
+            @test parse_args(["--pipe-to-function-call=false"]).config.options.pipe_to_function_call == false
+            @test parse_args(["--remove-extra-newlines=true"]).config.options.remove_extra_newlines == true
+            @test parse_args(["--remove-extra-newlines=false"]).config.options.remove_extra_newlines == false
+            @test parse_args(["--separate-kwargs-with-semicolon=true"]).config.options.separate_kwargs_with_semicolon == true
+            @test parse_args(["--separate-kwargs-with-semicolon=false"]).config.options.separate_kwargs_with_semicolon == false
+            @test parse_args(["--short-circuit-to-if=true"]).config.options.short_circuit_to_if == true
+            @test parse_args(["--short-circuit-to-if=false"]).config.options.short_circuit_to_if == false
+            @test parse_args(["--short-to-long-function-def=true"]).config.options.short_to_long_function_def == true
+            @test parse_args(["--short-to-long-function-def=false"]).config.options.short_to_long_function_def == false
+            @test parse_args(["--surround-whereop-typeparameters=true"]).config.options.surround_whereop_typeparameters == true
+            @test parse_args(["--surround-whereop-typeparameters=false"]).config.options.surround_whereop_typeparameters == false
+            @test parse_args(["--trailing-comma=true"]).config.options.trailing_comma == true
+            @test parse_args(["--trailing-comma=false"]).config.options.trailing_comma == false
+            @test parse_args(["--trailing-comma=nothing"]).config.options.trailing_comma === nothing
+            @test parse_args(["--trailing-zero=true"]).config.options.trailing_zero == true
+            @test parse_args(["--trailing-zero=false"]).config.options.trailing_zero == false
+            @test parse_args(["--v2-stable-multiline-strings=true"]).config.options.v2_stable_multiline_strings == true
+            @test parse_args(["--v2-stable-multiline-strings=false"]).config.options.v2_stable_multiline_strings == false
+            @test parse_args(["--variable-call-indent=Dict"]).config.options.variable_call_indent == ["Dict"]
+            @test parse_args(["--variable-call-indent=Dict", "--variable-call-indent=Foo"]).config.options.variable_call_indent == ["Dict", "Foo"]
+            @test parse_args(["--whitespace-in-kwargs=true"]).config.options.whitespace_in_kwargs == true
+            @test parse_args(["--whitespace-in-kwargs=false"]).config.options.whitespace_in_kwargs == false
+            @test parse_args(["--whitespace-ops-in-indices=true"]).config.options.whitespace_ops_in_indices == true
+            @test parse_args(["--whitespace-ops-in-indices=false"]).config.options.whitespace_ops_in_indices == false
+            @test parse_args(["--whitespace-typedefs=true"]).config.options.whitespace_typedefs == true
+            @test parse_args(["--whitespace-typedefs=false"]).config.options.whitespace_typedefs == false
+            @test parse_args(["--yas-style-nesting=true"]).config.options.yas_style_nesting == true
+            @test parse_args(["--yas-style-nesting=false"]).config.options.yas_style_nesting == false
         end
 
         @testset "deprecated underscored options still work" begin
-            @test parse_args(["--sciml_margin_overrun=10"]).format_options[:sciml_margin_overrun] == 10
-            @test parse_args(["--normalize_line_endings=unix"]).format_options[:normalize_line_endings] == "unix"
+            @test parse_args(["--sciml_margin_overrun=10"]).config.options.sciml_margin_overrun == 10
+            @test parse_args(["--normalize_line_endings=unix"]).config.options.normalize_line_endings == "unix"
         end
 
         @testset "all formatting options (deprecated negatable flags still work)" begin
-            @test parse_args(["--always_for_in"]).format_options[:always_for_in] == true
-            @test parse_args(["--no-always_for_in"]).format_options[:always_for_in] == false
-            @test parse_args(["--whitespace_typedefs"]).format_options[:whitespace_typedefs] == true
-            @test parse_args(["--no-whitespace_typedefs"]).format_options[:whitespace_typedefs] == false
-            @test parse_args(["--remove_extra_newlines"]).format_options[:remove_extra_newlines] == true
-            @test parse_args(["--no-remove_extra_newlines"]).format_options[:remove_extra_newlines] == false
-            @test parse_args(["--import_to_using"]).format_options[:import_to_using] == true
-            @test parse_args(["--no-import_to_using"]).format_options[:import_to_using] == false
-            @test parse_args(["--pipe_to_function_call"]).format_options[:pipe_to_function_call] == true
-            @test parse_args(["--no-pipe_to_function_call"]).format_options[:pipe_to_function_call] == false
-            @test parse_args(["--short_to_long_function_def"]).format_options[:short_to_long_function_def] == true
-            @test parse_args(["--no-short_to_long_function_def"]).format_options[:short_to_long_function_def] == false
-            @test parse_args(["--always_use_return"]).format_options[:always_use_return] == true
-            @test parse_args(["--no-always_use_return"]).format_options[:always_use_return] == false
-            @test parse_args(["--whitespace_in_kwargs"]).format_options[:whitespace_in_kwargs] == true
-            @test parse_args(["--no-whitespace_in_kwargs"]).format_options[:whitespace_in_kwargs] == false
-            @test parse_args(["--format_docstrings"]).format_options[:format_docstrings] == true
-            @test parse_args(["--no-format_docstrings"]).format_options[:format_docstrings] == false
-            @test parse_args(["--align_struct_field"]).format_options[:align_struct_field] == true
-            @test parse_args(["--no-align_struct_field"]).format_options[:align_struct_field] == false
-            @test parse_args(["--align_assignment"]).format_options[:align_assignment] == true
-            @test parse_args(["--no-align_assignment"]).format_options[:align_assignment] == false
-            @test parse_args(["--align_conditional"]).format_options[:align_conditional] == true
-            @test parse_args(["--no-align_conditional"]).format_options[:align_conditional] == false
-            @test parse_args(["--align_pair_arrow"]).format_options[:align_pair_arrow] == true
-            @test parse_args(["--no-align_pair_arrow"]).format_options[:align_pair_arrow] == false
-            @test parse_args(["--trailing_comma"]).format_options[:trailing_comma] == true
-            @test parse_args(["--no-trailing_comma"]).format_options[:trailing_comma] == false
-            @test parse_args(["--trailing_zero"]).format_options[:trailing_zero] == true
-            @test parse_args(["--no-trailing_zero"]).format_options[:trailing_zero] == false
-            @test parse_args(["--v2_stable_multiline_strings"]).format_options[:v2_stable_multiline_strings] == true
-            @test parse_args(["--no-v2_stable_multiline_strings"]).format_options[:v2_stable_multiline_strings] == false
-            @test parse_args(["--conditional_to_if"]).format_options[:conditional_to_if] == true
-            @test parse_args(["--no-conditional_to_if"]).format_options[:conditional_to_if] == false
+            @test parse_args(["--always_for_in"]).config.options.always_for_in == true
+            @test parse_args(["--no-always_for_in"]).config.options.always_for_in == false
+            @test parse_args(["--whitespace_typedefs"]).config.options.whitespace_typedefs == true
+            @test parse_args(["--no-whitespace_typedefs"]).config.options.whitespace_typedefs == false
+            @test parse_args(["--remove_extra_newlines"]).config.options.remove_extra_newlines == true
+            @test parse_args(["--no-remove_extra_newlines"]).config.options.remove_extra_newlines == false
+            @test parse_args(["--import_to_using"]).config.options.import_to_using == true
+            @test parse_args(["--no-import_to_using"]).config.options.import_to_using == false
+            @test parse_args(["--pipe_to_function_call"]).config.options.pipe_to_function_call == true
+            @test parse_args(["--no-pipe_to_function_call"]).config.options.pipe_to_function_call == false
+            @test parse_args(["--short_to_long_function_def"]).config.options.short_to_long_function_def == true
+            @test parse_args(["--no-short_to_long_function_def"]).config.options.short_to_long_function_def == false
+            @test parse_args(["--always_use_return"]).config.options.always_use_return == true
+            @test parse_args(["--no-always_use_return"]).config.options.always_use_return == false
+            @test parse_args(["--whitespace_in_kwargs"]).config.options.whitespace_in_kwargs == true
+            @test parse_args(["--no-whitespace_in_kwargs"]).config.options.whitespace_in_kwargs == false
+            @test parse_args(["--format_docstrings"]).config.options.format_docstrings == true
+            @test parse_args(["--no-format_docstrings"]).config.options.format_docstrings == false
+            @test parse_args(["--align_struct_field"]).config.options.align_struct_field == true
+            @test parse_args(["--no-align_struct_field"]).config.options.align_struct_field == false
+            @test parse_args(["--align_assignment"]).config.options.align_assignment == true
+            @test parse_args(["--no-align_assignment"]).config.options.align_assignment == false
+            @test parse_args(["--align_conditional"]).config.options.align_conditional == true
+            @test parse_args(["--no-align_conditional"]).config.options.align_conditional == false
+            @test parse_args(["--align_pair_arrow"]).config.options.align_pair_arrow == true
+            @test parse_args(["--no-align_pair_arrow"]).config.options.align_pair_arrow == false
+            @test parse_args(["--trailing_comma"]).config.options.trailing_comma == true
+            @test parse_args(["--no-trailing_comma"]).config.options.trailing_comma == false
+            @test parse_args(["--trailing_zero"]).config.options.trailing_zero == true
+            @test parse_args(["--no-trailing_zero"]).config.options.trailing_zero == false
+            @test parse_args(["--v2_stable_multiline_strings"]).config.options.v2_stable_multiline_strings == true
+            @test parse_args(["--no-v2_stable_multiline_strings"]).config.options.v2_stable_multiline_strings == false
+            @test parse_args(["--conditional_to_if"]).config.options.conditional_to_if == true
+            @test parse_args(["--no-conditional_to_if"]).config.options.conditional_to_if == false
         end
 
-        @testset "new-style option overrides deprecated flag (last wins)" begin
+        @testset "last value wins for repeated options" begin
+            @test parse_args(["--style=blue", "--style=yas"]).config.style == YASStyle()
+            @test parse_args(["--indent=2", "--indent=4"]).config.options.indent == 4
+            # new-style option overrides deprecated flag (and vice versa)
             args = parse_args(["--always_for_in", "--always-for-in=false"])
-            @test args.format_options[:always_for_in] == false
+            @test args.config.options.always_for_in == false
             args = parse_args(["--always-for-in=false", "--always_for_in"])
-            @test args.format_options[:always_for_in] == true
+            @test args.config.options.always_for_in == true
+        end
+
+        @testset "positional paths" begin
+            @test parse_args(["foo.jl"]).paths == ["foo.jl"]
+            @test parse_args(["foo.jl", "bar.jl", "src/"]).paths == ["foo.jl", "bar.jl", "src/"]
+        end
+
+        @testset "stdin marker" begin
+            @test parse_args(["-"]).paths == ["-"]
+        end
+
+        @testset "variable-call-indent unset when not specified" begin
+            @test parse_args(["f.jl"]).config.options.variable_call_indent isa _Unset
         end
     end
 end

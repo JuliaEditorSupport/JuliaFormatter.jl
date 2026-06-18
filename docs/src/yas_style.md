@@ -1,6 +1,6 @@
 # [YAS Style](@id yas-style)
 
-```@docs
+```@docs; canonical=false
 YASStyle
 ```
 

@@ -1,14 +1,5 @@
-"""
-    MinimalStyle()
-"""
-struct MinimalStyle <: AbstractStyle
-    innerstyle::Union{Nothing,AbstractStyle}
-end
-MinimalStyle() = MinimalStyle(NoopStyle())
-getstyle(s::MinimalStyle) = s.innerstyle isa NoopStyle ? s : s.innerstyle
-
 function options(::MinimalStyle)
-    return (;
+    return Options(;
         indent = 4,
         annotate_untyped_fields_with_any = false,
         join_lines_based_on_source = true,

@@ -8,7 +8,6 @@ end
 using PrecompileTools: @setup_workload, @compile_workload
 using JuliaSyntax
 using JuliaSyntax: children, span, @K_str, kind, @KSet_str
-using TOML: parsefile
 using Glob
 import CommonMark: block_modifier
 import Base: get, pairs, show, push!, @kwdef
@@ -34,37 +33,16 @@ export format,
     SciMLStyle,
     MinimalStyle
 
-haschildren(node::JuliaSyntax.GreenNode) = !JuliaSyntax.is_leaf(node)
-
 # The Julia syntax version we pass to JuliaSyntax.parseall. This should be kept
 # at the latest stable Julia release so that JuliaSyntax can parse all valid
 # syntax up to that version.
 const SUPPORTED_SYNTAX_VERSION = v"1.12"
 
-struct Configuration
-    args::Dict{String,Any}
-    file::Dict{String,Any}
-end
-Configuration() = Configuration(Dict{String,Any}(), Dict{String,Any}())
-Configuration(args) = Configuration(args, Dict{String,Any}())
-function get(config::Configuration, s::String, default)
-    if haskey(config.args, s)
-        return config.args[s]
-    end
-    if haskey(config.file, s)
-        return config.file[s]
-    end
-    return default
-end
-function pairs(conf::Configuration)
-    pairs(merge(conf.file, conf.args))
-end
-
 abstract type AbstractStyle end
-
-options(::AbstractStyle) = NamedTuple()
-
+options(style::AbstractStyle) = error("options not implemented for $(typeof(style))")
 struct NoopStyle <: AbstractStyle end
+getstyle(::NoopStyle) = error("unreachable")
+getstyle(s::AbstractStyle) = s.innerstyle isa NoopStyle ? s : s.innerstyle
 
 """
     DefaultStyle
@@ -79,63 +57,65 @@ struct DefaultStyle <: AbstractStyle
 end
 DefaultStyle() = DefaultStyle(NoopStyle())
 
-getstyle(s::NoopStyle) = s
-getstyle(s::DefaultStyle) = s.innerstyle isa NoopStyle ? s : s.innerstyle
+"""
+    YASStyle()
 
-function options(::DefaultStyle)
-    return (;
-        indent = 4,
-        margin = 92,
-        always_for_in = false,
-        whitespace_typedefs = false,
-        whitespace_ops_in_indices = false,
-        remove_extra_newlines = false,
-        import_to_using = false,
-        pipe_to_function_call = false,
-        short_to_long_function_def = false,
-        long_to_short_function_def = false,
-        always_use_return = false,
-        whitespace_in_kwargs = true,
-        annotate_untyped_fields_with_any = true,
-        format_docstrings = false,
-        align_struct_field = false,
-        align_assignment = false,
-        align_conditional = false,
-        align_pair_arrow = false,
-        conditional_to_if = false,
-        normalize_line_endings = "auto",
-        align_matrix = false,
-        join_lines_based_on_source = false,
-        trailing_comma = true,
-        trailing_zero = true,
-        indent_submodule = false,
-        separate_kwargs_with_semicolon = false,
-        surround_whereop_typeparameters = true,
-        variable_call_indent = [],
-        short_circuit_to_if = false,
-        disallow_single_arg_nesting = false,
-    )
+Formatting style based on [YASGuide](https://github.com/jrevels/YASGuide) and
+[JuliaFormatter#198](https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/198).
+"""
+struct YASStyle <: AbstractStyle
+    innerstyle::AbstractStyle
 end
+YASStyle() = YASStyle(NoopStyle())
+
+"""
+    BlueStyle()
+
+Formatting style based on [BlueStyle](https://github.com/invenia/BlueStyle) and
+[JuliaFormatter#283](https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/283).
+"""
+struct BlueStyle <: AbstractStyle
+    innerstyle::AbstractStyle
+end
+BlueStyle() = BlueStyle(NoopStyle())
+
+"""
+    SciMLStyle()
+
+Formatting style based on [SciMLStyle](https://github.com/SciML/SciMLStyle).
+"""
+struct SciMLStyle <: AbstractStyle
+    innerstyle::AbstractStyle
+end
+SciMLStyle() = SciMLStyle(NoopStyle())
+
+"""
+    MinimalStyle()
+"""
+struct MinimalStyle <: AbstractStyle
+    innerstyle::Union{Nothing,AbstractStyle}
+end
+MinimalStyle() = MinimalStyle(NoopStyle())
+
+# Used in parsing config files & CLI arguments
+const STYLE_MAP = Dict{String,AbstractStyle}(
+    "default" => DefaultStyle(),
+    "yas" => YASStyle(),
+    "blue" => BlueStyle(),
+    "sciml" => SciMLStyle(),
+    "minimal" => MinimalStyle(),
+)
 
 include("document.jl")
 include("options.jl")
+include("config.jl")
 include("state.jl")
 include("fst.jl")
 include("passes.jl")
 include("align.jl")
 include("shims.jl")
-
-function list_different_defaults(style)
-    options_style = pairs(options(style))
-    options_default = pairs(options(DefaultStyle()))
-    options_changed = setdiff(options_style, options_default)
-    sort!(options_changed; by = first)
-    io = IOBuffer()
-    for (key, val) in options_changed
-        println(io, "- `$key` = $val")
-    end
-    String(take!(io))
-end
+# TODO(penelopeysm) This is used everywhere. Get rid of it
+haschildren(cst::JuliaSyntax.GreenNode) = !JuliaSyntax.is_leaf(cst)
 
 include("styles/default/pretty.jl")
 include("styles/default/nest.jl")
@@ -153,448 +133,192 @@ include("print.jl")
 include("markdown.jl")
 include("copied_from_documenter.jl")
 include("line_ranges.jl")
-
-const UNIX_TO_WINDOWS = r"\r?\n" => "\r\n"
-const WINDOWS_TO_UNIX = "\r\n" => "\n"
-function choose_line_ending_replacer(text)
-    rn = count("\r\n", text)
-    n = count(r"(?<!\r)\n", text)
-    n >= rn ? WINDOWS_TO_UNIX : UNIX_TO_WINDOWS
-end
-normalize_line_ending(s::AbstractString, replacer = WINDOWS_TO_UNIX) = replace(s, replacer)
+include("format.jl")
 
 """
-    format_text(
-        text::AbstractString;
-        style::AbstractStyle = DefaultStyle(),
-        indent::Int = 4,
-        margin::Int = 92,
+    JuliaFormatter.format_text(
+        text::AbstractString,
+        style::AbstractStyle = DefaultStyle();
         lines::Union{Nothing,Vector{Tuple{Int,Int}}} = nothing,
         options...,
     )::String
 
-Formats a Julia source passed in as a string, returning the formatted
-code as another string.
+Formats a string containing Julia code, returning the formatted code as another string. See
+[Formatting Options](@ref formatting-options) for details on available options.
 
-See [Formatting Options](@ref formatting-options) for details on available options.
-
-# Line-range formatting
+## Line-range formatting
 
 Pass `lines` to restrict formatting to a set of line ranges, emitting everything else
 verbatim. `lines` is a `Vector{Tuple{Int,Int}}` of inclusive, 1-based `(start, stop)` line
 ranges, e.g. `format_text(text; lines = [(1, 10), (42, 47)])`. Overlapping and adjacent
 ranges are merged. A range that begins or ends in the middle of a multi-line expression is
 formatted on a best-effort basis.
-"""
-function format_text(text::AbstractString; style::AbstractStyle = DefaultStyle(), kwargs...)
-    return format_text(text, style; kwargs...)
-end
 
+## This function can throw the following errors
+
+- If `text` is not valid Julia code, it will throw a `JuliaSyntax.ParseError`.
+
+- If any other error happens during the formatting, it will throw a
+  `JuliaFormatter.FormattingError`.
+
+- If the formatted text is not valid Julia code, it will throw an
+  `JuliaFormatter.InvalidFormattedTextError`.
+"""
 function format_text(
     text::AbstractString,
     style::AbstractStyle;
     lines::Union{Nothing,Vector{Tuple{Int,Int}}} = nothing,
     kwargs...,
 )
-    if isempty(text)
-        return text
-    end
-    if lines !== nothing
-        # Restrict formatting to the given line ranges (see `line_ranges.jl`). This re-enters
-        # `format_text` without `lines` for the actual formatting, so it works for any style.
-        return format_line_ranges(text, style, lines; kwargs...)
-    end
-    opts = Options(; merge(options(style), kwargs)...)
-    return format_text(text, style, opts)
-end
-
-function format_text(
-    text::AbstractString,
-    style::SciMLStyle;
-    maxiters = 3,
-    lines::Union{Nothing,Vector{Tuple{Int,Int}}} = nothing,
-    kwargs...,
-)
-    if isempty(text)
-        return text
-    end
-    if lines !== nothing
-        return format_line_ranges(text, style, lines; maxiters, kwargs...)
-    end
-    opts = Options(; merge(options(style), kwargs)...)
-    # We need to iterate to a fixpoint because the result of short to long
-    # form isn't properly formatted
-    formatted_text = format_text(text, style, opts)
-    if maxiters == 0
-        return formatted_text
-    end
-    iter = 1
-    while formatted_text != text
-        if iter > maxiters
-            error("formatted_text hasn't reached to a fixpoint in $iter iterations")
-        end
-        text = formatted_text
-        formatted_text = format_text(text, style, opts)
-        iter += 1
-    end
-    return formatted_text
-end
-
-function format_text(text::AbstractString, style::AbstractStyle, opts::Options)
-    if opts.always_for_in == true
-        @assert valid_for_in_op(opts.for_in_replacement) "`for_in_replacement` is set to an invalid operator \"$(opts.for_in_replacement)\", valid operators are $(VALID_FOR_IN_OPERATORS). Change it to one of the valid operators and then reformat."
-    end
-    t = JuliaSyntax.parseall(
-        JuliaSyntax.GreenNode,
-        text;
-        ignore_warnings = true,
-        version = SUPPORTED_SYNTAX_VERSION,
-    )
-    state = State(Document(text), opts)
-    text = format_text(t, style, state)
-    return text
-end
-
-function format_text(node::JuliaSyntax.GreenNode, style::AbstractStyle, s::State)
-    fst::FST = try
-        pretty(style, node, s)
-    catch e
-        loc = cursor_loc(s, s.offset)
-        @warn "Error occurred during prettification" line = loc[1] offset = loc[2] goffset =
-            s.offset
-        rethrow(e)
-    end
-    if hascomment(s.doc, fst.endline)
-        add_node!(fst, InlineComment(fst.endline), s)
-    end
-
-    flatten_fst!(fst)
-
-    if s.opts.short_circuit_to_if
-        short_circuit_to_if_pass!(fst, s)
-    end
-
-    if needs_alignment(s.opts)
-        align_fst!(fst, s.doc, s.opts)
-    end
-
-    nest!(style, fst, s)
-
-    # ignore maximum width can be extra whitespace at the end of lines
-    # remove it all before we print.
-    if s.opts.join_lines_based_on_source
-        remove_superfluous_whitespace!(fst)
-    end
-
-    s.line_offset = 0
-    io = IOBuffer()
-
-    # Print comments and whitespace before code.
-    if fst.startline > 1
-        format_check(io, Notcode(1, fst.startline - 1), s)
-        print_leaf(io, Newline(), s)
-    end
-    print_tree(io, fst, s)
-    nlines = numlines(s.doc)
-    if fst.endline < nlines
-        if s.on
-            print_leaf(io, Newline(), s)
-        end
-        format_check(io, Notcode(fst.endline + 1, nlines), s)
-    end
-    if s.doc.ends_on_nl
-        print_leaf(io, Newline(), s)
-    end
-    text = String(take!(io))
-
-    replacer = if s.opts.normalize_line_endings == "unix"
-        WINDOWS_TO_UNIX
-    elseif s.opts.normalize_line_endings == "windows"
-        UNIX_TO_WINDOWS
+    isempty(text) && return text
+    opts = merge_options(options(style), Options{_Unset}(; kwargs...))
+    # Restrict formatting to the given line ranges (see `line_ranges.jl`). This calls
+    # `format_text` without `lines` so the actual formatting doesn't enter an endless loop
+    return if lines === nothing
+        _format_text(text, style, opts; check_output = true)
     else
-        choose_line_ending_replacer(s.doc.srcfile.code)
+        _format_line_ranges(text, style, lines, opts)
     end
-    text = normalize_line_ending(text, replacer)
-
-    try
-        _ = JuliaSyntax.parseall(
-            JuliaSyntax.GreenNode,
-            text;
-            ignore_warnings = true,
-            version = SUPPORTED_SYNTAX_VERSION,
-        )
-    catch err
-        @warn "Formatted text is not parsable ... no change made."
-        rethrow(err)
-    end
-
-    return text
 end
-
-function _format_file(
-    filename::AbstractString;
-    overwrite::Bool = true,
-    verbose::Bool = false,
-    format_markdown::Bool = false,
-    format_options...,
-)::Bool
-    _, ext = splitext(filename)
-    shebang_pattern = r"^#!\s*/.*\bjulia[0-9.-]*\b"
-    formatted_str = if match(r"^\.[jq]*md$", ext) ≠ nothing
-        if !(format_markdown)
-            return true
-        end
-        if verbose
-            println("Formatting $filename")
-        end
-        str = String(read(filename))
-        format_md(str; format_options...)
-    elseif ext == ".jl" || match(shebang_pattern, readline(filename)) !== nothing
-        if verbose
-            println("Formatting $filename")
-        end
-        str = String(read(filename))
-        format_text(str; format_options...)
-    else
-        error("$filename must be a Julia (.jl) or Markdown (.md, .jmd or .qmd) source file")
-    end
-    formatted_str = replace(formatted_str, r"\n*$" => "\n")
-    already_formatted = (formatted_str == str)
-    if overwrite && !already_formatted
-        write(filename, formatted_str)
-    end
-    return already_formatted
+function format_text(text::AbstractString; style::AbstractStyle = DefaultStyle(), kwargs...)
+    return format_text(text, style; kwargs...)
 end
-
-function _format_file(filename::AbstractString, style::AbstractStyle; kwargs...)
-    return _format_file(filename; style = style, kwargs...)
-end
-
-const CONFIG_FILE_NAME = ".JuliaFormatter.toml"
 
 """
-    format_file(
-        filename::AbstractString;
-        overwrite::Bool = true,
-        verbose::Bool = false,
-        format_markdown::Bool = false,
-        format_options...,
+    JuliaFormatter.format_file(args...; kwargs...)
+
+!!! warning "Deprecated"
+    `format_file` is deprecated. Use [`format`](@ref) instead, which has the same behaviour
+    but handles both files and directories.
+"""
+JuliaFormatter.format_file
+Base.@deprecate format_file(args...; kwargs...) format(args...; kwargs...)
+
+"""
+    JuliaFormatter.format(
+        path,
+        style::Union{Nothing,AbstractStyle} = nothing;
+        format_markdown::Union{Nothing,Bool} = nothing,
+        ignore::Union{Nothing,Vector{String}} = nothing,
+        overwrite::Union{Nothing,Bool} = nothing,
+        verbose::Union{Nothing,Bool} = nothing,
+        formatting_options...,
     )::Bool
 
-Formats the contents of `filename` assuming it's a `.jl`, `.md`, `.jmd` or `.qmd` file.
+Recursively traverse `path` and format all Julia source files inside, or format `path` if it
+is itself a Julia source file.
 
-See [File Options](@ref file-options) for details on available options.
+Returns `true` if no files were modified (**NOTE**: this can include the case where
+formatting errorred, in which case files will not be modified!), and `false` if any files
+were modified.
 
-## Output
+See [Formatting Options](@ref formatting-options) for details on the formatting options.
+Extra keyword arguments are the following. Note that the default values documented here are
+only used if they are not specified in either a configuration file or as keyword arguments
+to `format()`.
 
-Returns a boolean indicating whether the file was already formatted (`true`) or not (`false`).
-"""
-function format_file(
-    filename::AbstractString;
-    overwrite::Bool = true,
-    verbose::Bool = false,
-    format_markdown::Bool = false,
-    format_options...,
-)
-    format(
-        filename;
-        overwrite = overwrite,
-        verbose = verbose,
-        format_markdown = format_markdown,
-        format_options...,
-    )
-end
+- `format_markdown`: If `true`, additionally formats Julia code blocks inside `.md`, `.jmd`,
+  and `.qmd` files. Defaults to `false`.
 
-function format_file(filename::AbstractString, style::AbstractStyle; kwargs...)
-    return format_file(filename; style = style, kwargs...)
-end
+- `ignore`: A vector of glob patterns to ignore. Default is `String[]`.
 
-"""
-    format(
-        paths; # a path or collection of paths
-        options...,
-    )::Bool
+- `overwrite`: If `true`, overwrite the original files with the formatted code. Default is
+  `true`.
 
-Recursively descend into files and directories, formatting any `.jl`, `.md`, `.jmd`,
-or `.qmd` files.
+- `verbose`: If `true`, print the names of files being formatted. Default is `false`.
 
-See [`format_file`](@ref) and [`format_text`](@ref) for a description of the options.
+## Errors
 
-This function will look for `.JuliaFormatter.toml` in the location of the file being
-formatted, and searching *up* the file tree until a config file is (or isn't) found.
-When found, the configurations in the file will overwrite the given `options`.
-See [Configuration File](@ref config) for more details.
+`format()` does not throw errors. It is intended for "batch" use where you just want to
+format a bunch of files at a go.
+
+Warnings will be issued in lieu of any errors.
+
+## Configuration files
+
+`format()` will automatically search for `$CONFIG_FILE_NAME` configuration files upwards
+from the directory of each file being formatted.
+
+Options specified as keyword arguments to `format()` will *override* any options specified
+in configuration files. Likewise if the `style` positional argument is specified, it will
+override any style specified in configuration files.
 
 ### Output
 
-Returns a boolean indicating whether the file was already formatted (`true`)
-or not (`false`).
+Returns a boolean indicating whether the files were already formatted (`true`) or not
+(`false`).
 """
-function format(paths; options...)
-    format(paths, Configuration(Dict{String,Any}(String(k) => v for (k, v) in options)))
-end
-function format(paths, options::Configuration)::Bool
-    already_formatted = true
-    # Don't parallelize this, since there could be a race condition on a
-    # subdirectory that is included in both paths
-    for path in paths
-        if !(path isa AbstractString) && !(path isa Module)
-            error(
-                "`format()` only accepts paths, modules, or collections thereof, but got an element of type $(typeof(path))",
-            )
-        end
-        already_formatted &= format(path, options)
+function format(path::AbstractString, style::Union{Nothing,AbstractStyle}; options...)
+    ispath(path) || throw(ArgumentError("`path` must be a directory or a file"))
+    # Set up configuration.
+    config = Configuration()
+    # Merge in .JuliaFormatter.toml configs.
+    config_filename = find_config_file(path)
+    config = if config_filename !== nothing
+        file_config = configuration_from_file(config_filename)
+        merge_config(config, file_config)
+    else
+        config
     end
-    return already_formatted
-end
+    # Merge in keyword arguments.
+    kw_config = configuration_from_kwargs(; style = style, options...)
+    config = merge_config(config, kw_config)
 
-function format(path::AbstractString; verbose::Bool = false, options...)
-    config = Dict{String,Any}(String(k) => v for (k, v) in options)
-    config["verbose"] = verbose
-    formatted = format(path, Configuration(config))
-    if verbose && formatted
-        println("Well done! ✨ 🍰 ✨")
-    end
-    return formatted
-end
+    # If the path is ignored, then the file is considered trivially formatted.
+    isignored(path, config) && return true
 
-function format(path::AbstractString, options::Configuration)
-    path = realpath(path)
-    if !get(options, "config_applied", false)
-        # Run recursive search upward *once*
-        options =
-            Configuration(copy(options.args), Dict{String,Any}(find_config_file(path)))
-        options.args["config_applied"] = true
-    end
-    if isignored(path, options)
-        return true
-    end
-    if isdir(path)
-        configpath = joinpath(path, CONFIG_FILE_NAME)
-        if isfile(configpath)
-            options = Configuration(copy(options.args), parse_config(configpath))
-        end
+    return if isdir(path)
         formatted = Threads.Atomic{Bool}(true)
-        Threads.@threads for subpath in readdir(path)
-            subpath = joinpath(path, subpath)
+        Threads.@threads for subpath in readdir(path; join = true)
             if !ispath(subpath) || islink(subpath)
                 continue
             end
-            is_formatted = format(subpath, options)
+            is_formatted = format(subpath, style; options...)
             Threads.atomic_and!(formatted, is_formatted)
         end
-        return formatted.value
-    end
-    # `path` is not a directory but a file
-    _, ext = splitext(path)
-    if !in(ext, (".jl", ".md", ".jmd", ".qmd"))
-        return true
-    end
-    try
-        formatted = _format_file(path; [Symbol(k) => v for (k, v) in pairs(options)]...)
-        return formatted
-    catch err
-        if err isa JuliaSyntax.ParseError
-            @warn "Failed to format file $path due to a parsing error, skipping file" error =
-                err
-            return true
+        formatted.value
+    elseif isfile(path)
+        try
+            _format_file(path, config)
+        catch err
+            if !(err isa InvalidFileError)
+                @warn "Failed to format file $path" error = err
+            end
+            true
         end
-        @info "Error in formatting file $path"
-        @debug "formatting failed due to" exception = (err, catch_backtrace())
-        return _format_file(path; [Symbol(k) => v for (k, v) in pairs(options)]...)
+    else
+        true
     end
 end
-
-"""
-    format(path, style::AbstractStyle; options...)::Bool
-"""
-function format(path::AbstractString, style::AbstractStyle; options...)
-    formatted = format(path; style = style, options...)
-    formatted
+function format(
+    path::AbstractString;
+    style::Union{Nothing,AbstractStyle} = nothing,
+    options...,
+)
+    format(path, style; options...)
 end
-
-"""
-    format(mod::Module, args...; options...)
-"""
-format(mod::Module; options...) = _format_module(mod; options...)
-function format(mod::Module, style::AbstractStyle; options...)
-    _format_module(mod, style; options...)
-end
-function format(mod::Module, config::Configuration; options...)
-    _format_module(mod, config; options...)
-end
-
-# This separate is needed to remove ambiguity in `format` without code duplication
-function _format_module(mod::Module, args...; options...)
+function format(mod::Module, args...; options...)
     path = pkgdir(mod)
     if path === nothing
         throw(ArgumentError("couldn't find a directory of module `$mod`"))
     end
     format(path, args...; options...)
 end
-
-function kwargs(dict)
-    ns = (Symbol.(keys(dict))...,)
-    vs = (collect(values(dict))...,)
-    return pairs(NamedTuple{ns}(vs))
-end
-
-fieldnts(T::Type) = ((fieldname(T, i), fieldtype(T, i)) for i in 1:fieldcount(T))
-
-function parse_config(tomlfile)
-    config_dict = parsefile(tomlfile)
-    for (field, type) in fieldnts(Options)
-        if type == Union{Bool,Nothing}
-            field = string(field)
-            if get(config_dict, field, "") == "nothing"
-                config_dict[field] = nothing
-            end
-        end
-    end
-    if (style = get(config_dict, "style", nothing)) !== nothing
-        if style ∉ ("default", "yas", "blue", "sciml", "minimal")
-            error(
-                "currently $(CONFIG_FILE_NAME) accepts only \"default\" or \"yas\", \"blue\", \"sciml\", or \"minimal\" for the style configuration",
-            )
-        end
-        config_dict["style"] = if style == "yas"
-            YASStyle()
-        elseif style == "blue"
-            BlueStyle()
-        elseif style == "sciml"
-            SciMLStyle()
-        elseif style == "minimal"
-            MinimalStyle()
+function format(paths, style::Union{Nothing,AbstractStyle} = nothing; options...)
+    already_formatted = true
+    for path in paths
+        # Avoid infinite recursion by checking the type of `path`.
+        if path isa AbstractString || path isa Module
+            already_formatted &= format(path, style; options...)
         else
-            DefaultStyle()
+            throw(ArgumentError("`paths` must be a collection of strings or modules"))
         end
     end
-    return config_dict
-end
-
-function find_config_file(path)
-    dir = dirname(path)
-    if (path == dir || isempty(path))
-        return NamedTuple()
-    end
-    configpath = joinpath(dir, CONFIG_FILE_NAME)
-    if isfile(configpath)
-        return parse_config(configpath)
-    end
-    return find_config_file(dir)
-end
-
-function isignored(path, options)
-    ignore = get(options, "ignore", String[])
-    # Glob.jl only matches paths that have '/' as the pathsep, so we need to normalise to
-    # that before matching, otherwise ignore patterns won't work on Windows
-    path_posix = replace(path, Base.Filesystem.path_separator => "/")
-    return any(x -> occursin(Glob.FilenameMatch("*$x"), path_posix), ignore)
+    return already_formatted
 end
 
 include("argparse.jl")
 include("app.jl")
-
 include("internal/utils.jl")
 
 @setup_workload let

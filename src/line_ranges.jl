@@ -170,7 +170,7 @@ function remove_line_range_markers(marked_src::AbstractString, formatted::Abstra
 end
 
 """
-    format_line_ranges(
+    _format_line_ranges(
         text::AbstractString,
         style::AbstractStyle,
         lines::Vector{Tuple{Int,Int}};
@@ -181,16 +181,16 @@ Format only the lines of `text` covered by `lines` (a vector of inclusive, 1-bas
 `(start, stop)` line ranges), emitting all other lines verbatim. See the comment at the top
 of this file for the overall strategy.
 """
-function format_line_ranges(
+function _format_line_ranges(
     text::AbstractString,
     style::AbstractStyle,
-    lines::Vector{Tuple{Int,Int}};
-    kwargs...,
+    lines::Vector{Tuple{Int,Int}},
+    opts::Options{Union{}},
 )
     ranges = normalize_line_ranges(lines)
     isempty(ranges) && return text  # nothing requested -> nothing formatted
     marked = add_line_range_markers(text, ranges)
-    formatted = format_text(marked, style; kwargs...)
+    formatted = _format_text(marked, style, opts)
     spliced = remove_line_range_markers(marked, formatted)
     # When the range reaches the final line, `add_line_range_markers` may have appended a
     # trailing newline (so the END marker lands on its own line). Match the input's

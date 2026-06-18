@@ -1,8 +1,8 @@
 struct FormatRule
     style::AbstractStyle
-    opts::Options
+    opts::Options{Union{}}
 end
-format_text(text::AbstractString, fr::FormatRule) = format_text(text, fr.style, fr.opts)
+format_text(text::AbstractString, fr::FormatRule) = _format_text(text, fr.style, fr.opts)
 
 function block_modifier(rule::FormatRule)
     Rule(1) do _, block

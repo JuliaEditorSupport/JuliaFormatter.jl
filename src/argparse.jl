@@ -1,7 +1,16 @@
 module ArgParse
 
 import ..JuliaFormatter:
-    AbstractStyle, DefaultStyle, BlueStyle, SciMLStyle, YASStyle, MinimalStyle
+    AbstractStyle,
+    DefaultStyle,
+    BlueStyle,
+    SciMLStyle,
+    YASStyle,
+    MinimalStyle,
+    STYLE_MAP,
+    Configuration,
+    configuration_from_kwargs,
+    Options
 
 struct ParseArgsError <: Exception
     message::String
@@ -85,13 +94,6 @@ function parse_value(::Type{Tuple{Int,Int}}, raw::AbstractString, option_name::S
 end
 
 # Parse styles.
-const STYLE_MAP = Dict{String,AbstractStyle}(
-    "default" => DefaultStyle(),
-    "yas" => YASStyle(),
-    "blue" => BlueStyle(),
-    "sciml" => SciMLStyle(),
-    "minimal" => MinimalStyle(),
-)
 function parse_value(::Type{AbstractStyle}, raw::AbstractString, option_name::String)
     style = get(STYLE_MAP, raw, nothing)
     if style === nothing
@@ -224,7 +226,7 @@ function parse_raw(parser::ArgParser, argv::Vector{String})
             if spec.multi
                 # append
                 if !haskey(options, spec.dest)
-                    options[spec.dest] = []
+                    options[spec.dest] = typeof(value)[]
                 end
                 push!(options[spec.dest], value)
             else
@@ -251,57 +253,18 @@ Base.@kwdef struct ParsedArgs
     mode::OutputMode = StdoutMode
     diff::Bool = false
     verbose::Bool = false
-    format_markdown::Bool = false
     config_priority::Bool = false
     ignore_config::Bool = false
     outputfile::Union{String,Nothing} = nothing
     stdin_filename::String = "stdin"
     config_dir::String = ""
-    ignore_patterns::Vector{String} = String[]
     line_ranges::Vector{Tuple{Int,Int}} = Tuple{Int,Int}[]
-    format_options::Dict{Symbol,Any} = Dict{Symbol,Any}()
+    config::Configuration = Configuration()
     paths::Vector{String} = String[]
 end
 
 # All format option keys — these are collected from the raw dict into format_options.
-const FORMAT_OPTION_KEYS = Set{Symbol}([
-    :align_assignment,
-    :align_conditional,
-    :align_matrix,
-    :align_pair_arrow,
-    :align_struct_field,
-    :always_for_in,
-    :always_use_return,
-    :annotate_untyped_fields_with_any,
-    :conditional_to_if,
-    :disallow_single_arg_nesting,
-    :for_in_replacement,
-    :force_long_function_def,
-    :format_docstrings,
-    :import_to_using,
-    :indent,
-    :indent_submodule,
-    :join_lines_based_on_source,
-    :long_to_short_function_def,
-    :margin,
-    :normalize_line_endings,
-    :pipe_to_function_call,
-    :remove_extra_newlines,
-    :sciml_margin_overrun,
-    :separate_kwargs_with_semicolon,
-    :short_circuit_to_if,
-    :short_to_long_function_def,
-    :style,
-    :surround_whereop_typeparameters,
-    :trailing_comma,
-    :trailing_zero,
-    :v2_stable_multiline_strings,
-    :variable_call_indent,
-    :whitespace_in_kwargs,
-    :whitespace_ops_in_indices,
-    :whitespace_typedefs,
-    :yas_style_nesting,
-])
+const FORMAT_OPTION_KEYS = Set{Symbol}(fieldnames(Options))
 
 const PARSER = ArgParser(
     flag(["-h", "--help"]; dest = :help, help = "Print this message."),
@@ -324,9 +287,10 @@ const PARSER = ArgParser(
         metavar = "<dir>",
         help = "Directory path for .JuliaFormatter.toml config lookup.",
     ),
-    flag(
-        ["--format_markdown"];
+    option(
+        "--format-markdown";
         dest = :format_markdown,
+        type = Bool,
         help = "Also format code blocks in Markdown files.",
     ),
     option(
@@ -635,6 +599,12 @@ const PARSER = ArgParser(
         help = "",
         group = DeprecatedGroup,
     ),
+    flag(
+        ["--format_markdown"];
+        dest = :format_markdown,
+        help = "",
+        group = DeprecatedGroup,
+    ),
     negatable_flag("always_for_in"; dest = :always_for_in),
     negatable_flag("whitespace_typedefs"; dest = :whitespace_typedefs),
     negatable_flag("remove_extra_newlines"; dest = :remove_extra_newlines),
@@ -820,13 +790,28 @@ function parse_args(argv::Vector{String})::ParsedArgs
         )
     end
 
-    # --- Collect format options ---
-    format_options = Dict{Symbol,Any}()
+    # --- Build Configuration from CLI options ---
+    formatting_options = Dict{Symbol,Any}()
     for key in FORMAT_OPTION_KEYS
+        key == :style && continue
         if haskey(raw, key)
-            format_options[key] = raw[key]
+            formatting_options[key] = raw[key]
         end
     end
+    # We leave `verbose` unset because the app uses a separate verbosity flag from
+    # the `verbose` passed to the formatter.
+    config = configuration_from_kwargs(;
+        style = get(raw, :style, nothing),
+        ignore = let v = get(raw, :ignore, String[])
+            isempty(v) ? nothing : v
+        end,
+        format_markdown = if haskey(raw, :format_markdown)
+            raw[:format_markdown]::Bool
+        else
+            nothing
+        end,
+        formatting_options...,
+    )
 
     return ParsedArgs(;
         help = get(raw, :help, false),
@@ -834,15 +819,13 @@ function parse_args(argv::Vector{String})::ParsedArgs
         mode,
         diff = get(raw, :diff, false),
         verbose = get(raw, :verbose, false),
-        format_markdown = get(raw, :format_markdown, false),
         config_priority,
         ignore_config,
         outputfile = get(raw, :outputfile, nothing),
         stdin_filename = get(raw, :stdin_filename, "stdin"),
         config_dir = get(raw, :config_dir, ""),
-        ignore_patterns = get(raw, :ignore, String[]),
         line_ranges = get(raw, :lines, Tuple{Int,Int}[]),
-        format_options,
+        config,
         paths = raw[:paths],
     )
 end

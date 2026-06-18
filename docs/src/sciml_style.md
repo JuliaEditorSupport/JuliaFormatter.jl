@@ -7,7 +7,7 @@
     JuliaFormatter's `SciMLStyle()` represents a collection of styles that predated this recommendation, and is being kept in v2 for compatibility.
     In a future major release this style may be renamed to avoid confusion.
 
-```@docs
+```@docs; canonical=false
 SciMLStyle
 ```
 

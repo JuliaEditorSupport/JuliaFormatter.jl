@@ -1,3 +1,5 @@
+options(::DefaultStyle) = Options()
+
 @kwdef struct PrettyContext
     # If true, ensure that no whitespace is added around binary operators.
     # In general, this can be inferred from the source. However, this is

@@ -2,6 +2,7 @@ module JlfmtAppTests
 
 using Test: @test, @testset
 using JuliaFormatter
+using JuliaFormatter: UNFORMATTED_EXIT_CODE, ERROR_EXIT_CODE
 using UUIDs: uuid4
 
 const PROJECT_DIR = dirname(abspath(Base.active_project()))
@@ -33,6 +34,10 @@ function capture_stderr(f)
     end
 end
 
+function check_exitcode(expected::Int, cmd::Cmd)
+    @test run(ignorestatus(cmd)).exitcode == expected
+end
+
 @static if VERSION < v"1.12"
     @info "Skipping jlfmt app tests for pre-v1.12 Julia."
 else
@@ -50,9 +55,17 @@ else
                 )
 
                 threaded_cmd = jlfmt_cmd(`--threads=3`)
-                @test !success(`$threaded_cmd --check .`)
+                check_exitcode(UNFORMATTED_EXIT_CODE, `$threaded_cmd --check .`)
                 @test success(`$threaded_cmd --inplace .`)
                 @test success(`$threaded_cmd --check .`)
+            end
+        end
+
+        @testset "doesn't crash on empty files" begin
+            with_sandbox() do _
+                write("empty.jl", "")
+                run(`$(jlfmt_cmd()) --inplace empty.jl`)
+                @test isempty(readchomp("empty.jl"))
             end
         end
 
@@ -125,7 +138,7 @@ else
                 errno, stderr = capture_stderr() do
                     JuliaFormatter.main(["--check", fname])
                 end
-                @test errno == 1
+                @test errno == UNFORMATTED_EXIT_CODE
                 @test occursin(
                     "Some files are not formatted correctly. Run again with `--inplace` instead of `--check` to format them.",
                     stderr,
@@ -143,7 +156,7 @@ else
                 errno, stderr = capture_stderr() do
                     JuliaFormatter.main(["."])
                 end
-                @test errno == 1
+                @test errno == ERROR_EXIT_CODE
                 @test occursin(
                     "multiple input files require either `--inplace` to write changes or `--check` to verify formatting",
                     stderr,
@@ -279,7 +292,7 @@ else
                     # checking only line 1 passes (it is already formatted)...
                     @test success(`$(jlfmt_cmd()) --check --lines=1:1 $fname`)
                     # ...but checking line 2 fails (it needs formatting)
-                    @test !success(`$(jlfmt_cmd()) --check --lines=2:2 $fname`)
+                    check_exitcode(UNFORMATTED_EXIT_CODE, `$(jlfmt_cmd()) --check --lines=2:2 $fname`)
                     # --check must not modify the file
                     @test readchomp(fname) == "f(x, y) = 1\ng( a ,b )=2"
                 end
@@ -295,7 +308,7 @@ else
                     errno, stderr = capture_stderr() do
                         JuliaFormatter.main(["--check", "--lines=1:1", "a.jl", "b.jl"])
                     end
-                    @test errno == 1
+                    @test errno == ERROR_EXIT_CODE
                     @test occursin(
                         "option `--lines` cannot be used together with multiple input files",
                         stderr,
@@ -305,21 +318,21 @@ else
                     errno, stderr = capture_stderr() do
                         JuliaFormatter.main(["--lines=abc", "a.jl"])
                     end
-                    @test errno == 1
+                    @test errno == ERROR_EXIT_CODE
                     @test occursin("invalid value `abc` for option `--lines=abc`", stderr)
 
                     # start greater than stop
                     errno, stderr = capture_stderr() do
                         JuliaFormatter.main(["--lines=5:2", "a.jl"])
                     end
-                    @test errno == 1
+                    @test errno == ERROR_EXIT_CODE
                     @test occursin("start is greater than stop", stderr)
 
                     # out of bounds (reported cleanly, no backtrace)
                     errno, stderr = capture_stderr() do
                         JuliaFormatter.main(["--lines=1:99", "a.jl"])
                     end
-                    @test errno == 1
+                    @test errno == ERROR_EXIT_CODE
                     @test occursin("out of bounds", stderr)
                     @test !occursin("Stacktrace", stderr)
 
@@ -327,7 +340,7 @@ else
                     errno, stderr = capture_stderr() do
                         JuliaFormatter.main(["--format_markdown", "--lines=1:1", "a.md"])
                     end
-                    @test errno == 1
+                    @test errno == ERROR_EXIT_CODE
                     @test occursin(
                         "option `--lines` is not supported for Markdown input",
                         stderr,
@@ -453,6 +466,28 @@ else
                     run(`$(jlfmt_cmd()) --inplace --ignore=skip.jl .`)
                     @test readchomp("keep.jl") == formatted
                     @test readchomp("skip.jl") == text
+                end
+            end
+
+            @testset "nested config files" begin
+                with_sandbox() do _
+                    # root/
+                    # ├── .JuliaFormatter.toml  (indent = 2)
+                    # ├── a.jl
+                    # └── sub/
+                    #     ├── .JuliaFormatter.toml  (indent = 8)
+                    #     └── b.jl
+                    text = "if true\nx = 1\nend\n"
+                    write(CONFIG_FILE_NAME, "indent = 2")
+                    write("a.jl", text)
+                    mkdir("sub")
+                    write(joinpath("sub", CONFIG_FILE_NAME), "indent = 8")
+                    write(joinpath("sub", "b.jl"), text)
+
+                    run(`$(jlfmt_cmd()) --inplace .`)
+                    @test readchomp("a.jl") == rstrip(format_text(text; indent = 2))
+                    @test readchomp(joinpath("sub", "b.jl")) ==
+                          rstrip(format_text(text; indent = 8))
                 end
             end
 
