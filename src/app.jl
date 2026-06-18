@@ -237,31 +237,37 @@ function main(argv::Vector{String})
     # Single file or stdin or single thread: process sequentially
     use_threading = length(inputfiles) > 1 && Threads.nthreads() > 1
 
-    if use_threading
+    exit_code = if use_threading
         # Parallel processing for multiple files
         # Use Threads.Atomic to track errors across threads
+        has_unformatted = Threads.Atomic{Bool}(false)
         has_error = Threads.Atomic{Bool}(false)
         Threads.@threads for fileargs in fileargs_to_process
             err = process_file(fileargs)
-            if err != 0
+            if err == UNFORMATTED_EXIT_CODE
+                Threads.atomic_or!(has_unformatted, true)
+            elseif err == ERROR_EXIT_CODE
                 Threads.atomic_or!(has_error, true)
             end
         end
-        if has_error[]
-            errno = 1
-        end
+        has_error[] ? ERROR_EXIT_CODE : has_unformatted[] ? UNFORMATTED_EXIT_CODE : SUCCESS_EXIT_CODE
     else
         # Sequential processing
+        has_unformatted = false
+        has_error = false
         for opts in fileargs_to_process
             err = process_file(opts)
-            if err != 0
-                errno = err
+            if err == UNFORMATTED_EXIT_CODE
+                has_unformatted = true
+            elseif err == ERROR_EXIT_CODE
+                has_error = true
             end
         end
+        has_error[] ? ERROR_EXIT_CODE : has_unformatted[] ? UNFORMATTED_EXIT_CODE : SUCCESS_EXIT_CODE
     end
 
     # Print summary message for check mode
-    if check && errno == UNFORMATTED_EXIT_CODE
+    if check && exit_code == UNFORMATTED_EXIT_CODE
         printstyled(
             stderr,
             "Some files are not formatted correctly. Run again with `--inplace` instead of `--check` to format them.\n";
@@ -269,7 +275,7 @@ function main(argv::Vector{String})
         )
     end
 
-    return errno
+    return exit_code
 end
 
 struct ProcessFileArgs
