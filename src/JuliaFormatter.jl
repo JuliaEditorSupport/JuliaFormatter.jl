@@ -282,7 +282,9 @@ function format(
         try
             _format_file(path, config)
         catch err
-            @warn "Failed to format file $path" error = err
+            if !(err isa InvalidFileError)
+                @warn "Failed to format file $path" error = err
+            end
             true
         end
     else

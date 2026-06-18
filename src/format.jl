@@ -18,6 +18,15 @@ Error thrown when the formatted text is invalid.
 """
 struct InvalidFormattedTextError <: Exception end
 
+"""
+    InvalidFileError(filename)
+
+Error thrown when the file to be formatted is not a valid Julia or Markdown file.
+"""
+struct InvalidFileError <: Exception
+    filename::AbstractString
+end
+
 const UNIX_TO_WINDOWS = r"\r?\n" => "\r\n"
 const WINDOWS_TO_UNIX = "\r\n" => "\n"
 function choose_line_ending_replacer(text)
@@ -164,7 +173,7 @@ function _format_file(
         str = String(read(filename))
         _format_text(str, config.style, merged_options)
     else
-        error("$filename must be a Julia (.jl) or Markdown (.md, .jmd or .qmd) source file")
+        throw(InvalidFileError(filename))
     end
     formatted_str = replace(formatted_str, r"\n*$" => "\n")
 
