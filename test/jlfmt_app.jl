@@ -306,7 +306,7 @@ else
                         JuliaFormatter.main(["--lines=abc", "a.jl"])
                     end
                     @test errno == 1
-                    @test occursin("invalid `--lines` argument", stderr)
+                    @test occursin("invalid value `abc` for option `--lines=abc`", stderr)
 
                     # start greater than stop
                     errno, stderr = capture_stderr() do
@@ -332,6 +332,145 @@ else
                         "option `--lines` is not supported for Markdown input",
                         stderr,
                     )
+                end
+            end
+        end
+
+        @testset "config file vs CLI argument interaction" begin
+            @testset "CLI overrides config file by default" begin
+                with_sandbox() do _
+                    fname = "a.jl"
+                    text = "if true\nx = 1\nend\n"
+                    write(fname, text)
+                    write(CONFIG_FILE_NAME, "indent = 8")
+
+                    # CLI --indent=2 should win over config indent=8
+                    run(`$(jlfmt_cmd()) --inplace --indent=2 $fname`)
+                    @test readchomp(fname) == rstrip(format_text(text; indent = 2))
+                    # Sanity check: the config value (8) would give different output
+                    @test format_text(text; indent = 2) != format_text(text; indent = 8)
+                end
+            end
+
+            @testset "config provides defaults for options not on CLI" begin
+                with_sandbox() do _
+                    fname = "a.jl"
+                    text = "if true\nx = 1\nend\n"
+                    write(fname, text)
+                    # Config sets indent=8; CLI does not specify --indent
+                    write(CONFIG_FILE_NAME, "indent = 8")
+
+                    run(`$(jlfmt_cmd()) --inplace $fname`)
+                    @test readchomp(fname) == rstrip(format_text(text; indent = 8))
+                end
+            end
+
+            @testset "config and CLI options merge (different keys)" begin
+                with_sandbox() do _
+                    fname = "a.jl"
+                    text = "f(a = 1)\n"
+                    write(fname, text)
+                    # Config sets whitespace_in_kwargs=false; CLI sets indent=2
+                    # Both should take effect since they control different things
+                    write(CONFIG_FILE_NAME, "whitespace_in_kwargs = false")
+
+                    run(`$(jlfmt_cmd()) --inplace --indent=2 $fname`)
+                    @test readchomp(fname) ==
+                          rstrip(format_text(text; whitespace_in_kwargs = false, indent = 2))
+                end
+            end
+
+            @testset "--config-dir loads config from specified directory" begin
+                with_sandbox() do dir
+                    fname = "a.jl"
+                    text = "if true\nx = 1\nend\n"
+                    write(fname, text)
+
+                    # Put the config in a subdirectory, not the file's own directory
+                    config_subdir = joinpath(dir, "config")
+                    mkdir(config_subdir)
+                    write(joinpath(config_subdir, CONFIG_FILE_NAME), "indent = 8")
+
+                    # Without --config-dir, no config is found (file is in sandbox root)
+                    run(`$(jlfmt_cmd()) --inplace $fname`)
+                    default_result = readchomp(fname)
+
+                    # Reset the file
+                    write(fname, text)
+
+                    # With --config-dir, config from subdirectory is used
+                    run(`$(jlfmt_cmd()) --inplace --config-dir=$config_subdir $fname`)
+                    @test readchomp(fname) == rstrip(format_text(text; indent = 8))
+                    @test readchomp(fname) != default_result
+                end
+            end
+
+            @testset "config style with CLI option override" begin
+                with_sandbox() do _
+                    fname = "a.jl"
+                    # BlueStyle sets f(a = 1) -> f(; a=1)
+                    text = "f(a = 1)\n"
+                    write(fname, text)
+                    # But we also want to test that a CLI option can override a style default
+                    # CLI overrides whitespace_in_kwargs=true
+                    write(CONFIG_FILE_NAME, "style = \"blue\"")
+
+                    run(
+                        `$(jlfmt_cmd()) --inplace --whitespace-in-kwargs=true $fname`,
+                    )
+                    output = readchomp(fname)
+                    @test output == rstrip(
+                        format_text(text, BlueStyle(); whitespace_in_kwargs = true),
+                    )
+                    @test output != strip(format_text(text, BlueStyle()))
+                end
+            end
+
+            @testset "no config file uses only CLI args" begin
+                with_sandbox() do _
+                    fname = "a.jl"
+                    text = "if true\nx = 1\nend\n"
+                    write(fname, text)
+                    # No config file written in sandbox
+
+                    run(`$(jlfmt_cmd()) --inplace --indent=8 $fname`)
+                    @test readchomp(fname) == rstrip(format_text(text; indent = 8))
+                end
+            end
+
+            @testset "CLI --ignore replaces config ignore" begin
+                text = "a+ b"
+                formatted = format_text(text)
+                @assert text != formatted
+
+                with_sandbox() do _
+                    write("keep.jl", text)
+                    write("skip.jl", text)
+                    # Config ignores "keep.jl", but CLI ignores "skip.jl" instead.
+                    # Since merge replaces the :ignore key, only CLI's pattern applies.
+                    write(CONFIG_FILE_NAME, """ignore = ["keep.jl"]\n""")
+
+                    run(`$(jlfmt_cmd()) --inplace --ignore=skip.jl .`)
+                    @test readchomp("keep.jl") == formatted
+                    @test readchomp("skip.jl") == text
+                end
+            end
+
+            @testset "--prioritize-config-file with --config-dir" begin
+                with_sandbox() do dir
+                    fname = "a.jl"
+                    text = "if true\nx = 1\nend\n"
+                    write(fname, text)
+
+                    config_subdir = joinpath(dir, "config")
+                    mkdir(config_subdir)
+                    write(joinpath(config_subdir, CONFIG_FILE_NAME), "indent = 8")
+
+                    # CLI says indent=2, but --prioritize-config-file makes config win
+                    run(
+                        `$(jlfmt_cmd()) --inplace --prioritize-config-file --config-dir=$config_subdir --indent=2 $fname`,
+                    )
+                    @test readchomp(fname) == rstrip(format_text(text; indent = 8))
                 end
             end
         end

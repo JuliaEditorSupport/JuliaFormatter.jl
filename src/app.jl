@@ -1,4 +1,13 @@
-# SPDX-License-Identifier: MIT
+import .ArgParse:
+    ParseArgsError,
+    ParsedArgs,
+    parse_args,
+    parse_raw,
+    PARSER,
+    StdoutMode,
+    InplaceMode,
+    CheckMode,
+    print_help
 
 # For thread-safe printing
 const print_lock = ReentrantLock()
@@ -73,231 +82,6 @@ function errln(io::IO, msg::String = "✗")
     return
 end
 
-function print_help()
-    io = stdout
-    printstyled(io, "NAME"; bold = true)
-    println(io)
-    println(io, "       jlfmt - An opinionated code formatter for Julia.")
-    println(io)
-    printstyled(io, "SYNOPSIS"; bold = true)
-    println(io)
-    println(io, "       jlfmt [<options>] <path>...")
-    println(io, "       jlfmt [<options>] -")
-    println(io, "       ... | jlfmt [<options>]")
-    println(io)
-    printstyled(io, "DESCRIPTION"; bold = true)
-    println(io)
-    println(
-        io,
-        """
-               `jlfmt` formats Julia source code using JuliaFormatter.jl.
-               This tool can also be invoked as `julia -m JuliaFormatter`.
-        """,
-    )
-    printstyled(io, "OPTIONS"; bold = true)
-    println(io)
-    println(
-        io,
-        """
-               <path>...
-                   Input path(s) (files and/or directories) to process. For directories,
-                   all files (recursively) with the '*.jl' suffix are used as input files
-                   (also '*.md', '*.jmd', '*.qmd' if --format-markdown is specified).
-                   If no path is given, or if path is `-`, input is read from stdin.
-
-               -c, --check
-                   Do not write output and exit with a non-zero code if the input is not
-                   formatted correctly.
-
-               -d, --diff
-                   Print the diff between the input and formatted output to stderr.
-                   Requires `git` to be installed.
-
-               -h, --help
-                   Print this message.
-
-               -i, --inplace
-                   Format files in place.
-
-               -o <file>, --output=<file>
-                   File to write formatted output to. If no output is given, or if the file
-                   is `-`, output is written to stdout.
-
-               --stdin-filename=<filename>
-                   Assumed filename when formatting from stdin. Used for error messages.
-
-               --config-dir=<path>
-                   Directory path to use for .JuliaFormatter.toml config file lookup when
-                   formatting from stdin. By default, stdin input does not use config files.
-                   With this option, the formatter will search for .JuliaFormatter.toml in
-                   the specified directory and its parent directories.
-
-               -v, --verbose
-                   Enable verbose output.
-
-               --version
-                   Print JuliaFormatter and julia version information.
-
-               --prioritize-config-file
-                   Prioritize .JuliaFormatter.toml config file options over command-line options.
-                   By default, command-line options override config file options. This flag
-                   reverses that precedence, useful for language server integration where
-                   project configuration should take precedence over editor settings.
-
-               FORMATTING OPTIONS
-
-               --style=<style>
-                   Formatting style: "default", "yas", "blue", "sciml", or "minimal".
-                   Default: "default"
-
-               --indent=<n>
-                   Indentation width. Default: 4
-
-               --margin=<n>
-                   Maximum line width. Default: 92
-
-               --sciml_margin_overrun=<n>
-                   Additional columns SciMLStyle may use when a slightly
-                   over-margin line is more readable. Default: 20
-
-               --format_markdown
-                   Also format code blocks in Markdown files (.md, .jmd, .qmd).
-
-               --ignore=<pattern>
-                   Ignore files matching the given pattern. Can be specified multiple times.
-                   Patterns use glob-style matching (e.g., "*/test/*", "*.tmp").
-
-               --lines=<start>:<stop>
-                   Only format the given range of lines (1-based, inclusive); all other
-                   lines are emitted verbatim. Can be specified multiple times to format
-                   several ranges (e.g., --lines=1:10 --lines=42:47). Overlapping and
-                   adjacent ranges are merged. Requires a single input file (or stdin);
-                   it cannot be combined with multiple input files or directories, nor
-                   with Markdown input. A range that begins or ends in the middle of a
-                   multi-line expression is formatted on a best-effort basis.
-
-               --always_for_in / --no-always_for_in
-                   Always use 'for x in' instead of 'for x =' or 'for x '.
-                   Default: false
-
-               --whitespace_typedefs / --no-whitespace_typedefs
-                   Add whitespace around '::' in type definitions.
-                   Default: false
-
-               --remove_extra_newlines / --no-remove_extra_newlines
-                   Remove extra newlines.
-                   Default: false
-
-               --import_to_using / --no-import_to_using
-                   Convert 'import' to 'using'.
-                   Default: false
-
-               --pipe_to_function_call / --no-pipe_to_function_call
-                   Convert pipe operator to function calls.
-                   Default: false
-
-               --short_to_long_function_def / --no-short_to_long_function_def
-                   Convert short function definitions to long form.
-                   Default: false
-
-               --always_use_return / --no-always_use_return
-                   Always add explicit 'return' statements.
-                   Default: false
-
-               --whitespace_in_kwargs / --no-whitespace_in_kwargs
-                   Add whitespace in keyword arguments.
-                   Default: true
-
-               --format_docstrings / --no-format_docstrings
-                   Format docstrings.
-                   Default: false
-
-               --align_struct_field / --no-align_struct_field
-                   Align struct field type annotations.
-                   Default: false
-
-               --align_assignment / --no-align_assignment
-                   Align assignment operators.
-                   Default: false
-
-               --align_conditional / --no-align_conditional
-                   Align conditional operators.
-                   Default: false
-
-               --align_pair_arrow / --no-align_pair_arrow
-                   Align pair arrows (=>).
-                   Default: false
-
-               --trailing_comma / --no-trailing_comma
-                   Add trailing commas.
-                   Default: true
-
-               --trailing_zero / --no-trailing_zero
-                   Add trailing zeros to floats.
-                   Default: true
-
-               --v2_stable_multiline_strings / --no-v2_stable_multiline_strings
-                   Use stable multiline string length calculation for idempotent
-                   formatting.
-                   Default: false
-
-               --conditional_to_if / --no-conditional_to_if
-                   Convert ternary conditional expressions to if/else blocks
-                   when they exceed the line margin. Warning: enabling this
-                   option may lead to idempotence failures in some cases.
-                   Default: false
-
-               --normalize_line_endings=<mode>
-                   Normalize line endings: "auto", "unix", or "windows".
-                   Default: "auto"
-        """,
-    )
-    println(io)
-    printstyled(io, "EXAMPLES"; bold = true)
-    println(io)
-    println(
-        io,
-        """
-               Format a file and write to stdout:
-                   jlfmt src/file.jl
-
-               Format a file in place:
-                   jlfmt --inplace src/file.jl
-
-               Format all files in a directory with the verbose mode:
-                   jlfmt --inplace --verbose src/
-
-               Check if a file is formatted:
-                   jlfmt --check src/file.jl
-
-               Format only lines 1-10 and 42-47 of a file:
-                   jlfmt --lines=1:10 --lines=42:47 src/file.jl
-
-               Check if all files in a directory are formatted with multiple threads:
-                   jlfmt --threads=4 -- --check src/
-
-               Show diff for formatting wtih 2-space indentations:
-                    jlfmt --diff --indent=2 src/file.jl
-
-               Format from stdin (pipe):
-                   echo 'f(x,y)=x+y' | jlfmt
-
-               Format from stdin (explicit):
-                   jlfmt - < input.jl
-
-               Format from stdin using project config:
-                   echo 'f(x,y)=x+y' | jlfmt --config-dir=./src
-
-               Use specific style:
-                   jlfmt --style=blue src/file.jl
-
-               Combine options:
-                   echo 'for i=1:10; end' | jlfmt --always_for_in
-        """,
-    )
-    return
-end
-
 function print_version()
     print(stdout, "jlfmt (JuliaFormatter) version ")
     print(stdout, string(pkgversion(JuliaFormatter)))
@@ -327,235 +111,43 @@ function writeo(output::Output, content::String)
 end
 
 function main(argv::Vector{String})
+    args = try
+        parse_args(argv)
+    catch err
+        err isa ParseArgsError || rethrow()
+        return panic(err.message)
+    end
+
+    if args.help
+        print_help(PARSER)
+        return Cint(0)
+    end
+    if args.version
+        print_version()
+        return Cint(0)
+    end
+
+    inplace = args.mode == InplaceMode
+    check = args.mode == CheckMode
+    outputfile = something(args.outputfile, "")
+
     errno::Cint = 0
 
     inputfiles = String[]
-    outputfile = ""
-    stdin_filename = "stdin"
-    config_dir = ""
-    verbose = false
-    inplace = false
-    diff = false
-    check = false
     input_is_stdin = true
-    multiple_inputs = false
-    format_markdown = false
-    config_priority = false
-    style_name = nothing
-    format_options = Dict{Symbol,Any}()
-    ignore_patterns = String[]
-    line_ranges = Tuple{Int,Int}[]
+    # There might be multiple inputs if either more than one path is given, or if a single
+    # directory is given. This catches the first case
+    multiple_inputs = length(args.paths) > 1
 
-    paths = String[]
-    i = 1
-    while i <= length(argv)
-        x = argv[i]
-        if x == "-i" || x == "--inplace"
-            inplace = true
-            i += 1
-        elseif x == "-h" || x == "--help"
-            print_help()
-            return errno
-        elseif x == "--version"
-            print_version()
-            return errno
-        elseif x == "-v" || x == "--verbose"
-            verbose = true
-            i += 1
-        elseif x == "-d" || x == "--diff"
-            diff = true
-            i += 1
-        elseif x == "-c" || x == "--check"
-            check = true
-            i += 1
-        elseif x == "--prioritize-config-file"
-            config_priority = true
-            i += 1
-        elseif startswith(x, "--stdin-filename=")
-            m = match(r"^--stdin-filename=(.+)$", x)
-            stdin_filename = String(m.captures[1]::AbstractString)
-            i += 1
-        elseif startswith(x, "--config-dir=")
-            m = match(r"^--config-dir=(.+)$", x)
-            config_dir = String(m.captures[1]::AbstractString)
-            i += 1
-        elseif x == "-o"
-            if i >= length(argv)
-                return panic("expected output file argument after `-o`")
-            end
-            outputfile = argv[i+1]
-            i += 2
-        elseif startswith(x, "--output=")
-            m = match(r"^--output=(.+)$", x)
-            outputfile = String(m.captures[1]::AbstractString)
-            i += 1
-        elseif x == "--format_markdown"
-            format_markdown = true
-            i += 1
-        elseif startswith(x, "--ignore=")
-            m = match(r"^--ignore=(.+)$", x)
-            push!(ignore_patterns, String(m.captures[1]::AbstractString))
-            i += 1
-        elseif startswith(x, "--lines=")
-            # Repeatable: `--lines=1:10 --lines=42:47` restricts formatting to those line
-            # ranges (1-based, inclusive). Forwarded to the `lines` kwarg of `format_text`.
-            m = match(r"^--lines=(\d+):(\d+)$", x)
-            if m === nothing
-                return panic(
-                    "invalid `--lines` argument `$x`, expected `--lines=<start>:<stop>` with 1-based line numbers",
-                )
-            end
-            start_line = Base.parse(Int, m.captures[1]::AbstractString)
-            stop_line = Base.parse(Int, m.captures[2]::AbstractString)
-            # out-of-bounds line ranges are caught directly in `format_text`
-            if start_line > stop_line
-                return panic(
-                    "invalid `--lines` range `$start_line:$stop_line`: start is greater than stop",
-                )
-            end
-            push!(line_ranges, (start_line, stop_line))
-            i += 1
-        elseif startswith(x, "--style=")
-            m = match(r"^--style=(.+)$", x)
-            style_name = String(m.captures[1]::AbstractString)
-            i += 1
-        elseif startswith(x, "--indent=")
-            m = match(r"^--indent=(\d+)$", x)
-            format_options[:indent] = Base.parse(Int, m.captures[1]::AbstractString)
-            i += 1
-        elseif startswith(x, "--margin=")
-            m = match(r"^--margin=(\d+)$", x)
-            format_options[:margin] = Base.parse(Int, m.captures[1]::AbstractString)
-            i += 1
-        elseif startswith(x, "--sciml_margin_overrun=")
-            m = match(r"^--sciml_margin_overrun=(\d+)$", x)
-            format_options[:sciml_margin_overrun] =
-                Base.parse(Int, m.captures[1]::AbstractString)
-            i += 1
-        elseif startswith(x, "--normalize_line_endings=")
-            m = match(r"^--normalize_line_endings=(.+)$", x)
-            format_options[:normalize_line_endings] = String(m.captures[1]::AbstractString)
-            i += 1
-        elseif x == "--always_for_in"
-            format_options[:always_for_in] = true
-            i += 1
-        elseif x == "--no-always_for_in"
-            format_options[:always_for_in] = false
-            i += 1
-        elseif x == "--whitespace_typedefs"
-            format_options[:whitespace_typedefs] = true
-            i += 1
-        elseif x == "--no-whitespace_typedefs"
-            format_options[:whitespace_typedefs] = false
-            i += 1
-        elseif x == "--remove_extra_newlines"
-            format_options[:remove_extra_newlines] = true
-            i += 1
-        elseif x == "--no-remove_extra_newlines"
-            format_options[:remove_extra_newlines] = false
-            i += 1
-        elseif x == "--import_to_using"
-            format_options[:import_to_using] = true
-            i += 1
-        elseif x == "--no-import_to_using"
-            format_options[:import_to_using] = false
-            i += 1
-        elseif x == "--pipe_to_function_call"
-            format_options[:pipe_to_function_call] = true
-            i += 1
-        elseif x == "--no-pipe_to_function_call"
-            format_options[:pipe_to_function_call] = false
-            i += 1
-        elseif x == "--short_to_long_function_def"
-            format_options[:short_to_long_function_def] = true
-            i += 1
-        elseif x == "--no-short_to_long_function_def"
-            format_options[:short_to_long_function_def] = false
-            i += 1
-        elseif x == "--always_use_return"
-            format_options[:always_use_return] = true
-            i += 1
-        elseif x == "--no-always_use_return"
-            format_options[:always_use_return] = false
-            i += 1
-        elseif x == "--whitespace_in_kwargs"
-            format_options[:whitespace_in_kwargs] = true
-            i += 1
-        elseif x == "--no-whitespace_in_kwargs"
-            format_options[:whitespace_in_kwargs] = false
-            i += 1
-        elseif x == "--format_docstrings"
-            format_options[:format_docstrings] = true
-            i += 1
-        elseif x == "--no-format_docstrings"
-            format_options[:format_docstrings] = false
-            i += 1
-        elseif x == "--align_struct_field"
-            format_options[:align_struct_field] = true
-            i += 1
-        elseif x == "--no-align_struct_field"
-            format_options[:align_struct_field] = false
-            i += 1
-        elseif x == "--align_assignment"
-            format_options[:align_assignment] = true
-            i += 1
-        elseif x == "--no-align_assignment"
-            format_options[:align_assignment] = false
-            i += 1
-        elseif x == "--align_conditional"
-            format_options[:align_conditional] = true
-            i += 1
-        elseif x == "--no-align_conditional"
-            format_options[:align_conditional] = false
-            i += 1
-        elseif x == "--align_pair_arrow"
-            format_options[:align_pair_arrow] = true
-            i += 1
-        elseif x == "--no-align_pair_arrow"
-            format_options[:align_pair_arrow] = false
-            i += 1
-        elseif x == "--trailing_comma"
-            format_options[:trailing_comma] = true
-            i += 1
-        elseif x == "--no-trailing_comma"
-            format_options[:trailing_comma] = false
-            i += 1
-        elseif x == "--trailing_zero"
-            format_options[:trailing_zero] = true
-            i += 1
-        elseif x == "--no-trailing_zero"
-            format_options[:trailing_zero] = false
-            i += 1
-        elseif x == "--v2_stable_multiline_strings"
-            format_options[:v2_stable_multiline_strings] = true
-            i += 1
-        elseif x == "--no-v2_stable_multiline_strings"
-            format_options[:v2_stable_multiline_strings] = false
-            i += 1
-        elseif x == "--conditional_to_if"
-            format_options[:conditional_to_if] = true
-            i += 1
-        elseif x == "--no-conditional_to_if"
-            format_options[:conditional_to_if] = false
-            i += 1
-        else
-            # Not an option, must be a file or directory
-            push!(paths, x)
-            i += 1
-        end
-    end
-
-    for x in paths
+    for x in args.paths
         if x == "-"
-            # `-` is only allowed once and as the only input
-            if length(paths) > 1
+            if length(args.paths) > 1
                 return panic("input `-` cannot be combined with other input")
             end
-            push!(inputfiles, x)
-            input_is_stdin = true
         else
             input_is_stdin = false
             if isdir(x)
+                # This catches the second case (single-directory)
                 scandir!(inputfiles, x)
                 multiple_inputs = true
             else
@@ -564,26 +156,7 @@ function main(argv::Vector{String})
         end
     end
 
-    if length(paths) > 1 || (length(paths) == 1 && isdir(paths[1]))
-        multiple_inputs = true
-    end
-
-    # Insert `-` as the input if there were no input files/directories on the command line
-    if input_is_stdin && length(inputfiles) == 0
-        @assert !multiple_inputs
-        push!(inputfiles, "-")
-    end
-
     # Validate the arguments
-    if inplace && check
-        return panic("options `--inplace` and `--check` are mutually exclusive")
-    end
-    if inplace && outputfile != ""
-        return panic("options `--inplace` and `--output` are mutually exclusive")
-    end
-    if check && outputfile != ""
-        return panic("options `--check` and `--output` are mutually exclusive")
-    end
     if inplace && input_is_stdin
         return panic("option `--inplace` cannot be used together with stdin input")
     end
@@ -595,54 +168,54 @@ function main(argv::Vector{String})
             "multiple input files require either `--inplace` to write changes or `--check` to verify formatting",
         )
     end
-    if !isempty(line_ranges) && multiple_inputs
+    if !isempty(args.line_ranges) && multiple_inputs
         return panic(
             "option `--lines` cannot be used together with multiple input files or directories",
         )
     end
-
-    if diff
+    if args.diff
         if Sys.which("git") === nothing
             return panic("option `--diff` requires `git` to be installed")
         end
     end
 
-    # Set the style if it was specified as a CLI arg
-    if style_name !== nothing
-        format_options[:style] = if style_name == "default"
-            DefaultStyle()
-        elseif style_name == "yas"
-            YASStyle()
-        elseif style_name == "blue"
-            BlueStyle()
-        elseif style_name == "sciml"
-            SciMLStyle()
-        elseif style_name == "minimal"
-            MinimalStyle()
-        else
-            return panic("unknown style: \"$style_name\"")
-        end
+    # Add ignore patterns and line ranges from command line
+    format_options = copy(args.format_options)
+    if !isempty(args.ignore_patterns)
+        format_options[:ignore] = args.ignore_patterns
     end
-
-    # Add ignore patterns from command line
-    if !isempty(ignore_patterns)
-        format_options[:ignore] = ignore_patterns
-    end
-
-    # Add line ranges from command line
-    if !isempty(line_ranges)
-        format_options[:lines] = line_ranges
+    if !isempty(args.line_ranges)
+        format_options[:lines] = args.line_ranges
     end
 
     # Disable verbose if piping from/to stdin/stdout
-    output_is_stdout = !inplace && !check && (outputfile == "" || outputfile == "-")
-    print_progress = verbose && !(input_is_stdin || output_is_stdout)
+    output_is_stdout = !inplace && !check && (outputfile in ("", "-"))
+    print_progress = args.verbose && !(input_is_stdin || output_is_stdout)
 
-    nfiles_str = string(length(inputfiles))
-    options_list = ProcessFileArgs[]
-    for (file_counter, inputfile) in enumerate(inputfiles)
-        push!(
-            options_list,
+    fileargs_to_process = if input_is_stdin
+        # Sentinel value representing stdin.
+        [
+            ProcessFileArgs(
+                "",
+                1,
+                "1",
+                print_progress,
+                check,
+                inplace,
+                outputfile,
+                true,
+                args.stdin_filename,
+                args.config_dir,
+                args.ignore_config,
+                format_options,
+                args.diff,
+                args.format_markdown,
+                args.config_priority,
+            ),
+        ]
+    else
+        nfiles_str = string(length(inputfiles))
+        [
             ProcessFileArgs(
                 inputfile,
                 file_counter,
@@ -651,15 +224,16 @@ function main(argv::Vector{String})
                 check,
                 inplace,
                 outputfile,
-                input_is_stdin,
-                stdin_filename,
-                config_dir,
+                false,
+                args.stdin_filename,
+                args.config_dir,
+                args.ignore_config,
                 format_options,
-                diff,
-                format_markdown,
-                config_priority,
-            ),
-        )
+                args.diff,
+                args.format_markdown,
+                args.config_priority,
+            ) for (file_counter, inputfile) in enumerate(inputfiles)
+        ]
     end
 
     # Use multithreading for multiple files (only if multiple threads available)
@@ -670,8 +244,8 @@ function main(argv::Vector{String})
         # Parallel processing for multiple files
         # Use Threads.Atomic to track errors across threads
         has_error = Threads.Atomic{Bool}(false)
-        Threads.@threads for opts in options_list
-            err = process_file(opts)
+        Threads.@threads for fileargs in fileargs_to_process
+            err = process_file(fileargs)
             if err != 0
                 Threads.atomic_or!(has_error, true)
             end
@@ -681,7 +255,7 @@ function main(argv::Vector{String})
         end
     else
         # Sequential processing
-        for opts in options_list
+        for opts in fileargs_to_process
             err = process_file(opts)
             if err != 0
                 errno = err
@@ -712,6 +286,7 @@ struct ProcessFileArgs
     input_is_stdin::Bool
     stdin_filename::String
     config_dir::String
+    ignore_config::Bool
     format_options::Dict{Symbol,Any} # options passed as CLI args
     diff::Bool
     format_markdown::Bool
@@ -723,7 +298,7 @@ function process_file(args::ProcessFileArgs)
 
     # Build progress message if needed
     progress_prefix = if args.print_progress
-        @assert args.inputfile != "-"
+        @assert !args.input_is_stdin
         input_pretty = relpath(args.inputfile)
         if Sys.iswindows()
             input_pretty = replace(input_pretty, "\\" => "/")
@@ -759,7 +334,7 @@ function process_file(args::ProcessFileArgs)
     end
 
     # Check if we should skip markdown files
-    inputfile_pretty = args.inputfile == "-" ? args.stdin_filename : args.inputfile
+    inputfile_pretty = args.input_is_stdin ? args.stdin_filename : args.inputfile
     _, ext = splitext(inputfile_pretty)
     is_markdown = ext in (".md", ".jmd", ".qmd")
     if is_markdown && haskey(args.format_options, :lines)
@@ -775,8 +350,7 @@ function process_file(args::ProcessFileArgs)
     end
 
     # Read the input
-    sourcetext = if args.inputfile == "-"
-        @assert args.input_is_stdin
+    sourcetext = if args.input_is_stdin
         try
             read(stdin, String)
         catch err
@@ -787,7 +361,6 @@ function process_file(args::ProcessFileArgs)
             return 1
         end
     elseif isfile(args.inputfile)
-        @assert !args.input_is_stdin
         try
             read(args.inputfile, String)
         catch err
@@ -823,7 +396,7 @@ function process_file(args::ProcessFileArgs)
                 errln(io, "✗ invalid output")
             end
             panic(
-                "cannot use same file for input and output, use `-i` to modify a file in place",
+                "cannot use same file for input and output, use `--inplace` to modify a file in place",
             )
             return 1
         else
@@ -831,40 +404,31 @@ function process_file(args::ProcessFileArgs)
         end
     end
 
-    # For files (not stdin), merge with .JuliaFormatter.toml config if it exists
-    # Also merge config if --config-dir is specified for stdin input
-    effective_options = if args.inputfile != "-"
-        # Find and load .JuliaFormatter.toml config
-        config_nt = find_config_file(args.inputfile)
-        config_dict = Dict{Symbol,Any}(Symbol(k) => v for (k, v) in pairs(config_nt))
-        # Merge: by default, command line options override config file
-        # If --prioritize-config-file is set, config file options override command line
-        if args.config_priority
-            merge(args.format_options, config_dict)
-        else
-            merge(config_dict, args.format_options)
-        end
+    # Look up .JuliaFormatter.toml config. --config-dir overrides the default
+    # (which walks up from the input file's directory, or does nothing for stdin).
+    config_nt = if args.ignore_config
+        (;)
     elseif args.config_dir != ""
-        # For stdin input with --config-dir specified, use the directory for config lookup
-        config_path = joinpath(args.config_dir, ".JuliaFormatter.toml")
-        config_nt = if isfile(config_path)
+        config_path = joinpath(args.config_dir, CONFIG_FILE_NAME)
+        if isfile(config_path)
             parse_config(config_path)
         else
-            # Try to find config file recursively from the directory
             find_config_file(args.config_dir)
         end
-        config_dict = Dict{Symbol,Any}(Symbol(k) => v for (k, v) in pairs(config_nt))
-        if args.config_priority
-            merge(args.format_options, config_dict)
-        else
-            merge(config_dict, args.format_options)
-        end
+    elseif !args.input_is_stdin
+        find_config_file(args.inputfile)
     else
-        args.format_options
+        (;)
+    end
+    config_dict = Dict{Symbol,Any}(Symbol(k) => v for (k, v) in pairs(config_nt))
+    effective_options = if args.config_priority
+        merge(args.format_options, config_dict)
+    else
+        merge(config_dict, args.format_options)
     end
 
     # Check if file should be ignored (based on .JuliaFormatter.toml ignore patterns)
-    if args.inputfile != "-"
+    if !args.input_is_stdin
         ignore_patterns = get(effective_options, :ignore, String[])
         # Glob.jl only matches paths that have '/' as the pathsep, so we need to normalise
         # to that before matching, otherwise ignore patterns won't work on Windows
@@ -882,12 +446,14 @@ function process_file(args::ProcessFileArgs)
     end
 
     formatted_str = try
-        local formatted_str = if is_markdown
+        _formatted_str = if is_markdown
             format_md(sourcetext; effective_options...)
         else
             format_text(sourcetext; effective_options...)
         end
-        replace(formatted_str, r"\n*$" => "\n")
+        # Since it's a file, presumably we only want one trailing newline, so
+        # we normalise it here.
+        replace(_formatted_str, r"\n*$" => "\n")
     catch err
         if err isa JuliaSyntax.ParseError
             report_status() do io
@@ -956,7 +522,7 @@ function process_file(args::ProcessFileArgs)
         mktempdir() do dir
             a = mkdir(joinpath(dir, "a"))
             b = mkdir(joinpath(dir, "b"))
-            file = basename(args.inputfile == "-" ? args.stdin_filename : args.inputfile)
+            file = basename(inputfile_pretty)
             A = joinpath(a, file)
             B = joinpath(b, file)
             write(A, sourcetext)
@@ -966,6 +532,7 @@ function process_file(args::ProcessFileArgs)
                 Sys.which("git"),
                 "--no-pager",
                 "diff",
+                "--diff-algorithm=patience",
                 "--color=$(color)",
                 "--no-index",
                 "--no-prefix",

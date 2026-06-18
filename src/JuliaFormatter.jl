@@ -592,6 +592,7 @@ function isignored(path, options)
     return any(x -> occursin(Glob.FilenameMatch("*$x"), path_posix), ignore)
 end
 
+include("argparse.jl")
 include("app.jl")
 
 include("internal/utils.jl")

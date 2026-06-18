@@ -1,3 +1,18 @@
+# v2.9.0
+
+Rewrote CLI argument parsing code to avoid code duplication. (#1031, #1135)
+
+For all old formatting options, added aliases that used hyphens instead of underscores, and expect the actual value on the right-hand side of the `=` sign.
+For example, what was previously `--always_use_return` and `--no-always_use_return` should now be specified as `--always-use-return=true` and `--always-use-return=false`.
+This is done to improve consistency with `.JuliaFormatter.toml` and also generalisability to other types of options.
+The underscore versions are still supported for backwards compatibility, but the hyphenated versions should be preferred going forwards. (#1135)
+
+For all formatting options that require a value (e.g. `--margin=80`), also allow the value to be space-separated (i.e. `--margin 80`). (#1135)
+
+Added missing formatting options to the CLI app (previously only a subset of these could be specified on the command line). (#1135)
+
+Added an `--ignore-config` option to the CLI app, which will ignore any `.JuliaFormatter.toml` files and use only the options specified on the command line. (#1135)
+
 # v2.8.5
 
 Fixed more bugs where BlueStyle's chained-ternary-to-if conversion would lead to loss of idempotence. (#1131, #1132)
