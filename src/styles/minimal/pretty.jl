@@ -1,12 +1,3 @@
-"""
-    MinimalStyle()
-"""
-struct MinimalStyle <: AbstractStyle
-    innerstyle::Union{Nothing,AbstractStyle}
-end
-MinimalStyle() = MinimalStyle(NoopStyle())
-getstyle(s::MinimalStyle) = s.innerstyle isa NoopStyle ? s : s.innerstyle
-
 function options(::MinimalStyle)
     return (;
         indent = 4,

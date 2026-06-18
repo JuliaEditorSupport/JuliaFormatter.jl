@@ -1,7 +1,7 @@
 module ArgParse
 
 import ..JuliaFormatter:
-    AbstractStyle, DefaultStyle, BlueStyle, SciMLStyle, YASStyle, MinimalStyle
+    AbstractStyle, DefaultStyle, BlueStyle, SciMLStyle, YASStyle, MinimalStyle, STYLE_MAP
 
 struct ParseArgsError <: Exception
     message::String
@@ -85,13 +85,6 @@ function parse_value(::Type{Tuple{Int,Int}}, raw::AbstractString, option_name::S
 end
 
 # Parse styles.
-const STYLE_MAP = Dict{String,AbstractStyle}(
-    "default" => DefaultStyle(),
-    "yas" => YASStyle(),
-    "blue" => BlueStyle(),
-    "sciml" => SciMLStyle(),
-    "minimal" => MinimalStyle(),
-)
 function parse_value(::Type{AbstractStyle}, raw::AbstractString, option_name::String)
     style = get(STYLE_MAP, raw, nothing)
     if style === nothing

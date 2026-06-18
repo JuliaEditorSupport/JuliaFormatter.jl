@@ -1,9 +1,3 @@
-struct SciMLStyle <: AbstractStyle
-    innerstyle::AbstractStyle
-end
-SciMLStyle() = SciMLStyle(NoopStyle())
-getstyle(s::SciMLStyle) = s.innerstyle isa NoopStyle ? s : s.innerstyle
-
 function options(::SciMLStyle)
     return (;
         always_for_in = true,
@@ -43,16 +37,6 @@ end
 function is_binaryop_nestable(::SciMLStyle, cst::JuliaSyntax.GreenNode)
     !defines_function(cst) && !is_assignment(cst) && !(op_kind(cst) in KSet"=> -> in")
 end
-
-@doc """
-    SciMLStyle()
-
-Formatting style based on [SciMLStyle](https://github.com/SciML/SciMLStyle).
-
-Configurable options with different defaults to [`DefaultStyle`](@ref) are:
-$(list_different_defaults(SciMLStyle()))
-"""
-SciMLStyle
 
 const CST_T = [JuliaSyntax.GreenNode]
 const TUPLE_T = [JuliaSyntax.GreenNode, Vector{JuliaSyntax.GreenNode}]

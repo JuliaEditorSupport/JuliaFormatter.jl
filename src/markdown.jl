@@ -1,23 +1,24 @@
 """
-    format_md(text::AbstractString; style::AbstractStyle = DefaultStyle(), kwargs...)
+    JuliaFormatter.format_md(
+        text::AbstractString,
+        style::AbstractStyle = DefaultStyle();
+        formatting_options...
+    )
 
 Normalizes the Markdown source and formats Julia code blocks.
 
-See [`format_text`](@ref) for description of formatting options.
+See [Formatting Options](@ref formatting-options) for a list of available formatting options.
 """
 function format_md(text::AbstractString; style::AbstractStyle = DefaultStyle(), kwargs...)
     return format_md(text, style; kwargs...)
 end
-
 function format_md(text::AbstractString, style::AbstractStyle; kwargs...)
-    if isempty(text)
-        return text
-    end
+    isempty(text) && return text
     opts = Options(; merge(options(style), kwargs)...)
-    return format_md(text, style, opts)
+    return _format_md(text, style, opts)
 end
 
-function format_md(text::AbstractString, style::AbstractStyle, opts::Options)
+function _format_md(text::AbstractString, style::AbstractStyle, opts::Options)
     markdown(
         enable!(
             Parser(),

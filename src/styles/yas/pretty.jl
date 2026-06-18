@@ -1,9 +1,3 @@
-struct YASStyle <: AbstractStyle
-    innerstyle::AbstractStyle
-end
-YASStyle() = YASStyle(NoopStyle())
-getstyle(s::YASStyle) = s.innerstyle isa NoopStyle ? s : s.innerstyle
-
 function options(::YASStyle)
     return (;
         always_for_in = true,
@@ -41,16 +35,6 @@ end
 function is_binaryop_nestable(::YASStyle, cst::JuliaSyntax.GreenNode)
     return !(defines_function(cst) || is_assignment(cst) || op_kind(cst) in KSet"=> ->")
 end
-@doc """
-    YASStyle()
-
-Formatting style based on [YASGuide](https://github.com/jrevels/YASGuide)
-and [JuliaFormatter#198](https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/198).
-
-Configurable options with different defaults to [`DefaultStyle`](@ref) are:
-$(list_different_defaults(YASStyle()))
-"""
-YASStyle
 
 # Implementation of p_import for YAS is the same as for DefaultStyle, except that we don't
 # add a linebreak after the colon in `import Foo: X, Y, Z`.

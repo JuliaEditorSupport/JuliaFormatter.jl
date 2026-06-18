@@ -1,9 +1,3 @@
-struct BlueStyle <: AbstractStyle
-    innerstyle::AbstractStyle
-end
-BlueStyle() = BlueStyle(NoopStyle())
-getstyle(s::BlueStyle) = s.innerstyle isa NoopStyle ? s : s.innerstyle
-
 function options(::BlueStyle)
     return (;
         always_use_return = true,
@@ -45,20 +39,6 @@ function is_binaryop_nestable(::BlueStyle, cst::JuliaSyntax.GreenNode)
     return is_binaryop_nestable(DefaultStyle(), cst)
 end
 
-@doc """
-    BlueStyle()
-
-Formatting style based on [BlueStyle](https://github.com/invenia/BlueStyle)
-and [JuliaFormatter#283](https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/283).
-
-!!! note
-    This style is still work-in-progress, and does not yet implement all of the
-    BlueStyle guide.
-
-Configurable options with different defaults to [`DefaultStyle`](@ref) are:
-$(list_different_defaults(BlueStyle()))
-"""
-BlueStyle
 
 function p_return(
     bs::BlueStyle,
