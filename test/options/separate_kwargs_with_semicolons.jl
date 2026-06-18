@@ -167,6 +167,23 @@ using Test
         for style in ALL_STYLES
             test_format(s, s, style; separate_kwargs_with_semicolon = true, whitespace_in_kwargs = true)
         end
+        
+        # try with comments all over the place just to be safe
+        s = "foo(x, #=hi=# bar = 0 #=hi=#, #=hi=# y #=hi=#)"
+        for style in ALL_STYLES
+            test_format(s, s, style; separate_kwargs_with_semicolon = true, whitespace_in_kwargs = true)
+        end
+
+        s = """
+        foo(
+            x,
+            bar = 0, # hi
+            z, # hi
+        )"""
+        for style in ALL_STYLES
+            # indentation & trailing comma differs, just check that AST is same
+            test_format(s, nothing, style; ast=true)
+        end
     end
 
     @testset "#1133: idempotence with short_to_long_function_def" begin
