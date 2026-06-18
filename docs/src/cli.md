@@ -45,16 +45,36 @@ jlfmt --diff src/file.jl
 
 ## Options
 
-Run `jlfmt --help` for a complete list:
+All formatting options can be passed to `jlfmt` as command-line arguments, e.g. `--indent=2 --always-use-return=true`.
+
+In general the way that CLI options are specified are exactly the same as in `.JuliaFormatter.toml`, with some exceptions:
+
+- When specified on the CLI options are hyphenated (e.g. `--always-use-return`), while in the config file they are underscored (e.g. `always_use_return`).
+- To set an option to `nothing`, use `--option=nothing` (in the config file it would have to be `option = "nothing"`).
+- To pass a list of strings for `variable_call_indent`, specify the option multiple times on the CLI, e.g. `--variable-call-indent=foo --variable-call-indent=bar` (in the config file it would be `variable_call_indent = ["foo", "bar"]`).
+
+`jlfmt --help` provides a complete list:
 
 ```@repl
 using JuliaFormatter # hide
 JuliaFormatter.main(["--help"]); # hide
 ```
 
+!!! note "Deprecated options"
+
+    In previous versions of `jlfmt`, some (but not all) Boolean options could be specified using `--option_name` or `--no-option_name` flags (e.g. `--always-use-return` or `--no-always-use-return`).
+    This is now deprecated in favor of `--option-name=true` or `--option-name=false` (note hyphens instead of underscores, and the value must be explicitly supplied!), and will be removed in a future release.
+
 ## Configuration Files
 
 `jlfmt` searches for [`.JuliaFormatter.toml` configuration](@ref config) files starting from each input file's directory and walking up the directory tree.
+
+A specific directory containing a configuration file can be specified with `--config-dir`:
+
+```bash
+# Search upwards from home directory for a config file
+jlfmt --config-dir=~ src/file.jl
+```
 
 By default, command-line options override configuration file settings:
 
