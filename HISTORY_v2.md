@@ -1,7 +1,11 @@
 # v2.9.0
 
-Improved CLI exit codes (and error messages): now if the app _errors_, an exit code of 2 is returned.
-An exit code of 1 is reserved for when originally unformatted files were formatted successfully, and exit code 0 is when all files are already formatted. (#1137)
+Improved CLI exit codes (and error messages):
+
+ - if the app errors, returns 2
+ - if `--check` is enabled and files are not currently formatted, returns 1
+ - if `--check` is enabled and files are already formatted, returns 0
+ - otherwise returns 0.
 
 Deprecated `format_file(args...; kwargs...)`; `format(args...; kwargs...)` has exactly the same behaviour and can be used as a drop-in substitute. (#1137)
 

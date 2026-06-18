@@ -137,8 +137,6 @@ function main(argv::Vector{String})
     check = args.mode == CheckMode
     outputfile = something(args.outputfile, "")
 
-    errno::Cint = 0
-
     inputfiles = String[]
     input_is_stdin = true
     # There might be multiple inputs if either more than one path is given, or if a single
@@ -287,7 +285,7 @@ function main(argv::Vector{String})
         )
     end
 
-    return exit_code
+    return Cint(exit_code)
 end
 
 struct ProcessFileArgs
@@ -309,8 +307,6 @@ struct ProcessFileArgs
 end
 
 function process_file(args::ProcessFileArgs)
-    local_errno = SUCCESS_EXIT_CODE
-
     # Build progress message if needed
     progress_prefix = if args.print_progress
         @assert !args.input_is_stdin
@@ -505,7 +501,6 @@ function process_file(args::ProcessFileArgs)
             report_status() do io
                 errln(io, "✗ needs formatting")
             end
-            local_errno = UNFORMATTED_EXIT_CODE
         else
             report_status() do io
                 okln(io, "✓ already formatted")
@@ -565,7 +560,7 @@ function process_file(args::ProcessFileArgs)
         end
     end
 
-    return local_errno
+    return (changed && args.check) ? UNFORMATTED_EXIT_CODE : SUCCESS_EXIT_CODE
 end
 
 @static if isdefined(Base, Symbol("@main"))
