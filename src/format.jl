@@ -33,7 +33,7 @@ _maxiters(::SciMLStyle) = 4
 
 """
     _format_text(
-        text::AbstractString, style::AbstractStyle, opts::Options;
+        text::AbstractString, style::AbstractStyle, opts::Options{Union{}};
         check_output::Bool=true, maxiters::Int=1)
 
 The lower-level entry point for text formatting.
@@ -51,15 +51,11 @@ default `maxiters` is set to 1, i.e., only one pass.
 function _format_text(
     text::AbstractString,
     style::AbstractStyle,
-    opts::Options;
+    opts::Options{Union{}};
     check_output::Bool=true,
     maxiters::Int=_maxiters(style)
 )
     maxiters <= 0 && return text
-
-    if opts.always_for_in == true
-        @assert valid_for_in_op(opts.for_in_replacement) "`for_in_replacement` is set to an invalid operator \"$(opts.for_in_replacement)\", valid operators are $(VALID_FOR_IN_OPERATORS). Change it to one of the valid operators and then reformat."
-    end
 
     node = JuliaSyntax.parseall(
         JuliaSyntax.GreenNode,

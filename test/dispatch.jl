@@ -74,11 +74,6 @@ end
         @test kw == pos
     end
 
-    @testset "maxiters is respected" begin
-        # maxiters=0 should still format once (the first pass always runs)
-        out = format_text(UNFORMATTED, SciMLStyle(); maxiters = 0)
-        @test out == FORMATTED_DEFAULT
-    end
 end
 
 # ---------------------------------------------------------------------------

@@ -62,7 +62,7 @@ Base.@kwdef struct Options{T<:_Unset}
     yas_style_nesting::Union{T,Bool} = false
 
     Options(args...) = verify_options(new{Union{}}(args...))
-    Options{_Unset}(args...) = verify_options(new{_Unset}(args...))
+    Options{_Unset}(args...) = new{_Unset}(args...)
 end
 function Options{_Unset}(; kwargs...)
     # Has to be an outer constructor because @kwdef messes things up
@@ -70,7 +70,7 @@ function Options{_Unset}(; kwargs...)
     return Options{_Unset}((get(kw, f, _Unset()) for f in fieldnames(Options))...)
 end
 
-function verify_options(opts::Options)::Options
+function verify_options(opts::Options{Union{}})::Options{Union{}}
     if (opts.force_long_function_def === true) &&
        (opts.short_to_long_function_def === false)
         msg = """
@@ -78,7 +78,7 @@ function verify_options(opts::Options)::Options
         """
         throw(ArgumentError(msg))
     end
-    if !(opts.sciml_margin_overrun isa _Unset) && opts.sciml_margin_overrun < 0
+    if opts.sciml_margin_overrun < 0
         throw(
             ArgumentError("`sciml_margin_overrun` must be greater than or equal to 0."),
         )
@@ -123,12 +123,12 @@ end
 
 function merge_options(opts1::Options{T1}, opts2::Options{T2}) where {T1<:_Unset, T2<:_Unset}
     # Merge two Options objects, with any set values in opts2 taking precedence over opts1.
-    Tout = T1 === _Unset || T2 === _Unset ? _Unset : Union{}
+    Tout = T1 === _Unset && T2 === _Unset ? _Unset : Union{}
     kwargs = Dict{Symbol,Any}()
     for f in fieldnames(Options)
         v1 = getfield(opts1, f)
         v2 = getfield(opts2, f)
         kwargs[f] = v2 isa _Unset ? v1 : v2
     end
-    return Options{Tout}(; kwargs...)
+    return Tout === Union{} ? Options(; kwargs...) : Options{Tout}(; kwargs...)
 end

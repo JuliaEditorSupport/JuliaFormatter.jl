@@ -1,5 +1,5 @@
 function options(::BlueStyle)
-    return (;
+    return Options(;
         always_use_return = true,
         short_to_long_function_def = true,
         long_to_short_function_def = false,

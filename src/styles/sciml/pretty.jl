@@ -1,5 +1,5 @@
 function options(::SciMLStyle)
-    return (;
+    return Options(;
         always_for_in = true,
         always_use_return = false,
         annotate_untyped_fields_with_any = true,

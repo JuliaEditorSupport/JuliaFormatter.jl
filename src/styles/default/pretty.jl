@@ -1,5 +1,5 @@
 function options(::DefaultStyle)
-    return (;
+    return Options(;
         indent = 4,
         margin = 92,
         always_for_in = false,

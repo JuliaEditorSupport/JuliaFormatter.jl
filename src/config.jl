@@ -25,49 +25,47 @@ struct Configuration
     verbose::Union{Nothing,Bool}
     overwrite::Union{Nothing,Bool}
     format_markdown::Union{Nothing,Bool}
-
-    # Overrides from keyword arguments passed to `format()`.
-    function Configuration(; style=nothing, ignore=nothing, verbose=nothing, overwrite=nothing, format_markdown=nothing, formatting_options...)
-        options = Options{_Unset}(; formatting_options...)
-        return new(options, style, ignore, verbose, overwrite, format_markdown)
-    end
-
-    # Overrides from a .JuliaFormatter.toml configuration file.
-    function Configuration(tomlfile::AbstractString)
-        config_dict::Dict{String,Any} = TOML.parsefile(tomlfile)
-
-        options_kws = Dict{Symbol,Any}()
-        for field in fieldnames(Options)
-            val = get(config_dict, string(field), _Unset())
-            # TOML doesn't have a null value, so we use the string "nothing" to represent
-            # it.
-            if val == "nothing"
-                val = nothing
-            end
-            options_kws[field] = val
-        end
-        options = Options{_Unset}(; options_kws...)
-
-        style = get(config_dict, "style", nothing)
-        if style !== nothing
-            if haskey(STYLE_MAP, style)
-                style = STYLE_MAP[style]
-            else
-                error("Unknown style: $style. Valid styles are: $(keys(STYLE_MAP))")
-            end
-        end
-
-        ignore = get(config_dict, "ignore", nothing)
-        verbose = get(config_dict, "verbose", nothing)
-        overwrite = get(config_dict, "overwrite", nothing)
-        format_markdown = get(config_dict, "format_markdown", nothing)
-        return new(options, style, ignore, verbose, overwrite, format_markdown)
-    end
-end
-function default_configuration()
-    return Configuration(; options=Options{_Unset}(), style=DefaultStyle(), ignore=[], verbose=false, overwrite=true, format_markdown=false)
 end
 
+function Configuration()
+    return Configuration(Options{_Unset}(), DefaultStyle(), [], false, true, false)
+end
+
+function configuration_from_kwargs(; style=nothing, ignore=nothing, verbose=nothing, overwrite=nothing, format_markdown=nothing, formatting_options...)
+    options = Options{_Unset}(; formatting_options...)
+    return Configuration(options, style, ignore, verbose, overwrite, format_markdown)
+end
+
+function configuration_from_file(tomlfile::AbstractString)
+    config_dict::Dict{String,Any} = TOML.parsefile(tomlfile)
+
+    options_kws = Dict{Symbol,Any}()
+    for field in fieldnames(Options)
+        val = get(config_dict, string(field), _Unset())
+        # TOML doesn't have a null value, so we use the string "nothing" to represent
+        # it.
+        if val == "nothing"
+            val = nothing
+        end
+        options_kws[field] = val
+    end
+    options = Options{_Unset}(; options_kws...)
+
+    style = get(config_dict, "style", nothing)
+    if style !== nothing
+        if haskey(STYLE_MAP, style)
+            style = STYLE_MAP[style]
+        else
+            error("Unknown style: $style. Valid styles are: $(keys(STYLE_MAP))")
+        end
+    end
+
+    ignore = get(config_dict, "ignore", nothing)
+    verbose = get(config_dict, "verbose", nothing)
+    overwrite = get(config_dict, "overwrite", nothing)
+    format_markdown = get(config_dict, "format_markdown", nothing)
+    return Configuration(options, style, ignore, verbose, overwrite, format_markdown)
+end
 
 """
     find_config_file(path::AbstractString)::Union{Nothing,AbstractString}
@@ -117,12 +115,12 @@ function merge_config(config1::Configuration, config2::Configuration)::Configura
     merged_overwrite = config2.overwrite === nothing ? config1.overwrite : config2.overwrite
     merged_format_markdown = config2.format_markdown === nothing ? config1.format_markdown : config2.format_markdown
     return Configuration(
-        options=merged_options,
-        style=merged_style,
-        ignore=merged_ignore,
-        verbose=merged_verbose,
-        overwrite=merged_overwrite,
-        format_markdown=merged_format_markdown,
+        merged_options,
+        merged_style,
+        merged_ignore,
+        merged_verbose,
+        merged_overwrite,
+        merged_format_markdown,
     )
 end
 

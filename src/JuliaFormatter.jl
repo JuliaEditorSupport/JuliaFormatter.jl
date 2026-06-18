@@ -39,9 +39,9 @@ export format,
 const SUPPORTED_SYNTAX_VERSION = v"1.12"
 
 abstract type AbstractStyle end
-options(::AbstractStyle) = NamedTuple()
+options(style::AbstractStyle) = error("options not implemented for $(typeof(style))")
 struct NoopStyle <: AbstractStyle end
-getstyle(s::NoopStyle) = s
+getstyle(::NoopStyle) = error("unreachable")
 getstyle(s::AbstractStyle) = s.innerstyle isa NoopStyle ? s : s.innerstyle
 
 """
@@ -175,7 +175,7 @@ function format_text(
     # `format_text` without `lines` so the actual formatting doesn't enter an endless loop
     lines !== nothing && return format_line_ranges(text, style, lines; kwargs...)
 
-    opts = Options(; merge(options(style), kwargs)...)
+    opts = merge_options(options(style), Options{_Unset}(; kwargs...))
     return _format_text(text, style, opts; check_output = true)
 end
 function format_text(text::AbstractString; style::AbstractStyle = DefaultStyle(), kwargs...)
@@ -252,17 +252,17 @@ function format(
     options...
 )
     # Set up configuration.
-    config = default_configuration()
+    config = Configuration()
     # Merge in .JuliaFormatter.toml configs.
     config_filename = find_config_file(path)
     config = if config_filename !== nothing
-        file_config = Configuration(config_filename)
+        file_config = configuration_from_file(config_filename)
         merge_config(config, file_config)
     else
         config
     end
     # Merge in keyword arguments.
-    kw_config = Configuration(; style=style, options...)
+    kw_config = configuration_from_kwargs(; style=style, options...)
     config = merge_config(config, kw_config)
 
     # If the path is ignored, then the file is considered trivially formatted.
@@ -298,6 +298,18 @@ function format(mod::Module, args...; options...)
         throw(ArgumentError("couldn't find a directory of module `$mod`"))
     end
     format(path, args...; options...)
+end
+function format(paths, style::Union{Nothing,AbstractStyle} = nothing; options...)
+    already_formatted = true
+    for path in paths
+        # Avoid infinite recursion by checking the type of `path`.
+        if path isa AbstractString || path isa Module
+            already_formatted &= format(path, style; options...)
+        else
+            throw(ArgumentError("`paths` must be a collection of strings or modules"))
+        end
+    end
+    return already_formatted
 end
 
 include("argparse.jl")

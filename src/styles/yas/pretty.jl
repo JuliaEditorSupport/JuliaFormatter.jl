@@ -1,5 +1,5 @@
 function options(::YASStyle)
-    return (;
+    return Options(;
         always_for_in = true,
         whitespace_ops_in_indices = true,
         remove_extra_newlines = true,

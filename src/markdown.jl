@@ -14,11 +14,11 @@ function format_md(text::AbstractString; style::AbstractStyle = DefaultStyle(), 
 end
 function format_md(text::AbstractString, style::AbstractStyle; kwargs...)
     isempty(text) && return text
-    opts = Options(; merge(options(style), kwargs)...)
+    opts = merge_options(options(style), Options{_Unset}(; kwargs...))
     return _format_md(text, style, opts)
 end
 
-function _format_md(text::AbstractString, style::AbstractStyle, opts::Options)
+function _format_md(text::AbstractString, style::AbstractStyle, opts::Options{Union{}})
     markdown(
         enable!(
             Parser(),
