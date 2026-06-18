@@ -261,6 +261,22 @@ end
             @test already == true
         end
     end
+
+    @testset "throw_on_error rethrows instead of warning" begin
+        with_tempfile(invalid_julia) do path
+            @test_throws Exception format(path; throw_on_error = true)
+            # file is not modified
+            @test read(path, String) == invalid_julia
+        end
+    end
+
+    @testset "throw_on_error works on directories" begin
+        mktempdir() do dir
+            write(joinpath(dir, "good.jl"), "x = 1\n")
+            write(joinpath(dir, "bad.jl"), invalid_julia)
+            @test_throws Exception format(dir; throw_on_error = true)
+        end
+    end
 end
 
 # ---------------------------------------------------------------------------

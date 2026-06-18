@@ -198,6 +198,7 @@ Base.@deprecate format_file(args...; kwargs...) format(args...; kwargs...)
     JuliaFormatter.format(
         path,
         style::Union{Nothing,AbstractStyle} = nothing;
+        throw_on_error::Bool = false,
         format_markdown::Union{Nothing,Bool} = nothing,
         ignore::Union{Nothing,Vector{String}} = nothing,
         overwrite::Union{Nothing,Bool} = nothing,
@@ -208,14 +209,17 @@ Base.@deprecate format_file(args...; kwargs...) format(args...; kwargs...)
 Recursively traverse `path` and format all Julia source files inside, or format `path` if it
 is itself a Julia source file.
 
-Returns `true` if no files were modified (**NOTE**: this can include the case where
-formatting errorred, in which case files will not be modified!), and `false` if any files
-were modified.
+Returns `true` if no files were modified (**NOTE**: when `throw_on_error` is `false`
+(the default), this can include the case where formatting errored, in which case files will
+not be modified!), and `false` if any files were modified.
 
 See [Formatting Options](@ref formatting-options) for details on the formatting options.
 Extra keyword arguments are the following. Note that the default values documented here are
 only used if they are not specified in either a configuration file or as keyword arguments
 to `format()`.
+
+- `throw_on_error`: If `true`, errors encountered while formatting individual files will be
+  rethrown instead of being caught and logged as warnings. Default is `false`.
 
 - `format_markdown`: If `true`, additionally formats Julia code blocks inside `.md`, `.jmd`,
   and `.qmd` files. Defaults to `false`.
@@ -229,10 +233,10 @@ to `format()`.
 
 ## Errors
 
-`format()` does not throw errors. It is intended for "batch" use where you just want to
-format a bunch of files at a go.
+By default, `format()` does not throw errors. It is intended for "batch" use where you just
+want to format a bunch of files at a go. Warnings will be issued in lieu of any errors.
 
-Warnings will be issued in lieu of any errors.
+Set `throw_on_error = true` to let errors propagate instead.
 
 ## Configuration files
 
@@ -248,7 +252,12 @@ override any style specified in configuration files.
 Returns a boolean indicating whether the files were already formatted (`true`) or not
 (`false`).
 """
-function format(path::AbstractString, style::Union{Nothing,AbstractStyle}; options...)
+function format(
+    path::AbstractString,
+    style::Union{Nothing,AbstractStyle};
+    throw_on_error::Bool = false,
+    options...,
+)
     ispath(path) || throw(ArgumentError("`path` must be a directory or a file"))
     # Set up configuration.
     config = Configuration()
@@ -273,7 +282,7 @@ function format(path::AbstractString, style::Union{Nothing,AbstractStyle}; optio
             if !ispath(subpath) || islink(subpath)
                 continue
             end
-            is_formatted = format(subpath, style; options...)
+            is_formatted = format(subpath, style; throw_on_error, options...)
             Threads.atomic_and!(formatted, is_formatted)
         end
         formatted.value
@@ -281,6 +290,7 @@ function format(path::AbstractString, style::Union{Nothing,AbstractStyle}; optio
         try
             _format_file(path, config)
         catch err
+            throw_on_error && rethrow()
             if !(err isa InvalidFileError)
                 @warn "Failed to format file $path" error = err
             end
@@ -293,23 +303,29 @@ end
 function format(
     path::AbstractString;
     style::Union{Nothing,AbstractStyle} = nothing,
+    throw_on_error::Bool = false,
     options...,
 )
-    format(path, style; options...)
+    format(path, style; throw_on_error, options...)
 end
-function format(mod::Module, args...; options...)
+function format(mod::Module, args...; throw_on_error::Bool = false, options...)
     path = pkgdir(mod)
     if path === nothing
         throw(ArgumentError("couldn't find a directory of module `$mod`"))
     end
-    format(path, args...; options...)
+    format(path, args...; throw_on_error, options...)
 end
-function format(paths, style::Union{Nothing,AbstractStyle} = nothing; options...)
+function format(
+    paths,
+    style::Union{Nothing,AbstractStyle} = nothing;
+    throw_on_error::Bool = false,
+    options...,
+)
     already_formatted = true
     for path in paths
         # Avoid infinite recursion by checking the type of `path`.
         if path isa AbstractString || path isa Module
-            already_formatted &= format(path, style; options...)
+            already_formatted &= format(path, style; throw_on_error, options...)
         else
             throw(ArgumentError("`paths` must be a collection of strings or modules"))
         end
