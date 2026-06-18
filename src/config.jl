@@ -12,8 +12,7 @@ A `Configuration` represents a collection of both formatting options and file op
 - default values.
 - keyword arguments passed to `format()`;
 - a `$CONFIG_FILE_NAME` configuration file; or
-
-The CLI app can in principle also use this but it hasn't been wired up yet.
+- arguments passed on the command-line to `jlfmt`.
 """
 struct Configuration
     options::Options{_Unset}
