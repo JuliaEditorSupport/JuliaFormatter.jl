@@ -253,6 +253,7 @@ Base.@kwdef struct ParsedArgs
     verbose::Bool = false
     format_markdown::Bool = false
     config_priority::Bool = false
+    ignore_config::Bool = false
     outputfile::Union{String,Nothing} = nothing
     stdin_filename::String = "stdin"
     config_dir::String = ""
@@ -325,6 +326,11 @@ const PARSER = ArgParser(
         ["--prioritize-config-file"];
         dest = :config_priority,
         help = "Prioritize config file options over command-line options.",
+    ),
+    flag(
+        ["--ignore-config"];
+        dest = :ignore_config,
+        help = "Do not use .JuliaFormatter.toml config files.",
     ),
     option(
         "--stdin-filename";
@@ -796,6 +802,16 @@ function parse_args(argv::Vector{String})::ParsedArgs
         StdoutMode
     end
 
+    # --- ignore-config is mutually exclusive with config-related options ---
+    ignore_config = get(raw, :ignore_config, false)
+    config_priority = get(raw, :config_priority, false)
+    if ignore_config && config_priority
+        throw(ParseArgsError("options `--ignore-config` and `--prioritize-config-file` are mutually exclusive"))
+    end
+    if ignore_config && get(raw, :config_dir, "") != ""
+        throw(ParseArgsError("options `--ignore-config` and `--config-dir` are mutually exclusive"))
+    end
+
     # --- Collect format options ---
     format_options = Dict{Symbol,Any}()
     for key in FORMAT_OPTION_KEYS
@@ -811,7 +827,8 @@ function parse_args(argv::Vector{String})::ParsedArgs
         diff = get(raw, :diff, false),
         verbose = get(raw, :verbose, false),
         format_markdown = get(raw, :format_markdown, false),
-        config_priority = get(raw, :config_priority, false),
+        config_priority,
+        ignore_config,
         outputfile = get(raw, :outputfile, nothing),
         stdin_filename = get(raw, :stdin_filename, "stdin"),
         config_dir = get(raw, :config_dir, ""),

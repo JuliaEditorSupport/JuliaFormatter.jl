@@ -206,6 +206,7 @@ function main(argv::Vector{String})
                 true,
                 args.stdin_filename,
                 args.config_dir,
+                args.ignore_config,
                 format_options,
                 args.diff,
                 args.format_markdown,
@@ -226,6 +227,7 @@ function main(argv::Vector{String})
                 false,
                 args.stdin_filename,
                 args.config_dir,
+                args.ignore_config,
                 format_options,
                 args.diff,
                 args.format_markdown,
@@ -284,6 +286,7 @@ struct ProcessFileArgs
     input_is_stdin::Bool
     stdin_filename::String
     config_dir::String
+    ignore_config::Bool
     format_options::Dict{Symbol,Any} # options passed as CLI args
     diff::Bool
     format_markdown::Bool
@@ -403,7 +406,9 @@ function process_file(args::ProcessFileArgs)
 
     # Look up .JuliaFormatter.toml config. --config-dir overrides the default
     # (which walks up from the input file's directory, or does nothing for stdin).
-    config_nt = if args.config_dir != ""
+    config_nt = if args.ignore_config
+        (;)
+    elseif args.config_dir != ""
         config_path = joinpath(args.config_dir, CONFIG_FILE_NAME)
         if isfile(config_path)
             parse_config(config_path)

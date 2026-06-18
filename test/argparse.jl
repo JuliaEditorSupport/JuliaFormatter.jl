@@ -98,6 +98,7 @@ using JuliaFormatter: DefaultStyle, YASStyle, BlueStyle, SciMLStyle, MinimalStyl
             @test args.verbose == false
             @test args.format_markdown == false
             @test args.config_priority == false
+            @test args.ignore_config == false
             @test args.outputfile === nothing
             @test args.stdin_filename == "stdin"
             @test args.config_dir == ""
@@ -140,6 +141,12 @@ using JuliaFormatter: DefaultStyle, YASStyle, BlueStyle, SciMLStyle, MinimalStyl
             @test parse_args(["-v"]).verbose == true
             @test parse_args(["--format_markdown"]).format_markdown == true
             @test parse_args(["--prioritize-config-file"]).config_priority == true
+            @test parse_args(["--ignore-config"]).ignore_config == true
+        end
+
+        @testset "config file options mutual exclusion" begin
+            @test_throws ParseArgsError parse_args(["--prioritize-config-file", "--ignore-config"])
+            @test_throws ParseArgsError parse_args(["--ignore-config", "--config-dir", "foo"])
         end
 
         @testset "string options" begin

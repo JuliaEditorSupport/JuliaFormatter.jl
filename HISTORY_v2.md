@@ -11,6 +11,7 @@ For all formatting options that require a value (e.g. `--margin=80`), also allow
 
 Added missing formatting options to the CLI app (previously only a subset of these could be specified on the command line). (#1135)
 
+Added an `--ignore-config` option to the CLI app, which will ignore any `.JuliaFormatter.toml` files and use only the options specified on the command line. (#1135)
 
 # v2.8.5
 
