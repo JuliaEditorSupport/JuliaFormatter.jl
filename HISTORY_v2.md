@@ -5,6 +5,8 @@ Fixed a bug where `separate_kwargs_with_semicolon` would cause a change in the m
 Fixed a bug where `separate_kwargs_with_semicolon` would not be triggered in certain cases, for example in the RHS of a short-form function definition, or in the default values of a function definition.
 This bug also led to lack of idempotence in a number of cases (e.g. when a short-form function definition `f(x, y) = g(x, y=z)` was expanded to a long-form function definition, the second pass would then reformat the body of the function). (#1133, #1140, #1141)
 
+Fixed a bug where comments in chained ternary expressions were not being handled correctly when expanded with BlueStyle, leading to invalid Julia code. (#1142, #1143)
+
 # v2.9.0
 
 Improved CLI exit codes (and error messages):

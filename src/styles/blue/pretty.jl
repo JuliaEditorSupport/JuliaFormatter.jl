@@ -123,7 +123,25 @@ function _ternary_to_ifelse!(
                 max_padding = 0,
             )
             add_node!(output_fst, Whitespace(1), s)
-            add_node!(output_fst, pretty(style, c, s, ctx, lineage), s; join_lines = true)
+            # If the condition begins with a line comment, we need to parenthesise it...
+            # https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/1142
+            if JuliaSyntax.is_leaf(c)
+                add_node!(output_fst, pretty(style, c, s, ctx, lineage), s; join_lines = true)
+            else
+                first_nonws_idx = findfirst(cc -> !JuliaSyntax.is_whitespace(cc), children(c))
+                node = if any(cc -> kind(cc) === K"Comment", children(c)[1:first_nonws_idx])
+                    paren_fst = FST(Brackets, nspaces(s))
+                    add_node!(paren_fst, FST(PUNCTUATION, loc[2], loc[1], loc[1], "("), s; join_lines = true)
+                    add_node!(paren_fst, Placeholder(0), s)
+                    add_node!(paren_fst, pretty(style, c, s, ctx, lineage), s; join_lines = true)
+                    add_node!(paren_fst, Placeholder(0), s)
+                    add_node!(paren_fst, FST(PUNCTUATION, loc[2], loc[1], loc[1], ")"), s; join_lines = true)
+                    paren_fst
+                else
+                    pretty(style, c, s, ctx, lineage)
+                end
+                add_node!(output_fst, node, s; join_lines = true)
+            end
         elseif i > question_mark_idx && i < colon_idx
             # True branch — wrap in a Block if not already one.
             s.indent += s.opts.indent

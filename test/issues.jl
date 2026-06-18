@@ -3164,6 +3164,53 @@ end
             end"""
         test_format(s, output, BlueStyle())
     end
+
+    @testset "1142 chained ternary expansion comments in condition" begin
+        # the elseif condition needs to be parenthesised, otherwise the
+        # comment ruins the day
+        for expr in ("c && d", "c + d")
+            s = """
+            begin
+                a ? b :
+                # comment
+                $(expr) ? e : f
+            end"""
+            output = """
+            begin
+                if a
+                    b
+                elseif (
+                    # comment
+                    $(expr)
+                )
+                    e
+                else
+                    f
+                end
+            end"""
+            test_format(s, output, BlueStyle())
+        end
+
+        # if expr is c(d), it gets shifted above. Just don't ask. It's a JuliaSyntax thing.
+        s = """
+        begin
+            a ? b :
+            # comment
+            c(d) ? e : f
+        end"""
+        output = """
+        begin
+            if a
+                b
+                # comment
+            elseif c(d)
+                e
+            else
+                f
+            end
+        end"""
+        test_format(s, output, BlueStyle())
+    end
 end
 
 end
