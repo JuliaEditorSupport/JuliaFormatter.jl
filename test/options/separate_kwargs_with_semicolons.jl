@@ -27,6 +27,20 @@ using Test
         end
     end
 
+    @testset "fancy caller" begin
+        for caller in (
+            "(obj)",
+            "(obj::T)",
+            "(x + y)",
+        )
+            s_ = "$(caller)(a, b = 1)"
+            s = "$(caller)(a; b = 1)"
+            for style in ALL_STYLES
+                test_format(s_, s, style; separate_kwargs_with_semicolon = true, whitespace_in_kwargs = true)
+            end
+        end
+    end
+
     @testset "addition of semicolon at start" begin
         for str_ in ("xy = f(x=1, y=2)", "xy = f(x = 1; y = 2)")
             str = "xy = f(; x = 1, y = 2)"
@@ -112,6 +126,37 @@ using Test
         # g should be changed but not f
         s_ = "f(x, y=z) = g(p, q=r)"
         s = "f(x, y = z) = g(p; q = r)"
+        for style in ALL_STYLES
+            test_format(s_, s, style; separate_kwargs_with_semicolon = true, whitespace_in_kwargs = true)
+        end
+    end
+
+    @testset "anonymous functions definitions are untouched" begin
+        for str in (
+            """function (x, y = 1)
+                return x + y
+            end""",
+            """function (x, y = 1)::T
+                return x + y
+            end""",
+            """function (x::T, y = 1) where {T}
+                return x + y
+            end""",
+        )
+            for style in ALL_STYLES
+                test_format(str, str, style; separate_kwargs_with_semicolon = true, whitespace_in_kwargs = true)
+            end
+        end
+
+        # This lhs is K"tuple" not K"call" anyway so should be fine, but just to be sure
+        s = "(x, y = 1) -> x + y"
+        for style in ALL_STYLES
+            test_format(s, s, style; separate_kwargs_with_semicolon = true, whitespace_in_kwargs = true)
+        end
+
+        # change f but not the inner one
+        s_ = "f(x, callback = (a, b = 1) -> a + b)"
+        s = "f(x; callback = (a, b = 1) -> a + b)"
         for style in ALL_STYLES
             test_format(s_, s, style; separate_kwargs_with_semicolon = true, whitespace_in_kwargs = true)
         end
