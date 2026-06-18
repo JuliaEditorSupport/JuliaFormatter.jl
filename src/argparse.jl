@@ -323,9 +323,10 @@ const PARSER = ArgParser(
         metavar = "<dir>",
         help = "Directory path for .JuliaFormatter.toml config lookup.",
     ),
-    flag(
-        ["--format_markdown"];
+    option(
+        "--format-markdown";
         dest = :format_markdown,
+        type = Bool,
         help = "Also format code blocks in Markdown files.",
     ),
     option(
@@ -634,6 +635,12 @@ const PARSER = ArgParser(
         help = "",
         group = DeprecatedGroup,
     ),
+    flag(
+        ["--format_markdown"];
+        dest = :format_markdown,
+        help = "",
+        group = DeprecatedGroup,
+    ),
     negatable_flag("always_for_in"; dest = :always_for_in),
     negatable_flag("whitespace_typedefs"; dest = :whitespace_typedefs),
     negatable_flag("remove_extra_newlines"; dest = :remove_extra_newlines),
@@ -834,7 +841,11 @@ function parse_args(argv::Vector{String})::ParsedArgs
         ignore = let v = get(raw, :ignore, String[])
             isempty(v) ? nothing : v
         end,
-        format_markdown = get(raw, :format_markdown, false) ? true : nothing,
+        format_markdown = if haskey(raw, :format_markdown)
+            raw[:format_markdown]::Bool
+        else
+            nothing
+        end,
         formatting_options...,
     )
 

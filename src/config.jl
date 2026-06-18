@@ -81,9 +81,16 @@ Search for a `.JuliaFormatter.toml` configuration file in the directory of `path
 ancestors. Returns the path to the configuration file if found, or `nothing` if not found.
 """
 function find_config_file(path::AbstractString)::Union{Nothing,AbstractString}
-    # Convert to absolute path
-    path = realpath(path)
-    # dirname(path) == path indicates filesystem root.
+    # If asked to find a config file for a file, look in the containing directory.
+    # Convert to absolute path while we're at it.
+    path = if isfile(path)
+        dirname(realpath(path))
+    elseif isdir(path)
+        realpath(path)
+    else
+        throw(ArgumentError("config search path $path does not exist"))
+    end
+    # Search upwards. dirname(path) == path indicates filesystem root.
     while dirname(path) != path
         maybe_config_path = joinpath(path, CONFIG_FILE_NAME)
         if isfile(maybe_config_path)

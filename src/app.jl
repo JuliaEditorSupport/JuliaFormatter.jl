@@ -12,6 +12,12 @@ import .ArgParse:
 # For thread-safe printing
 const print_lock = ReentrantLock()
 
+const SUCCESS_EXIT_CODE = 0
+# If files were not correctly formatted.
+const UNFORMATTED_EXIT_CODE = 1
+# If an error occurred during formatting (e.g. parse error, invalid input, etc.)
+const ERROR_EXIT_CODE = 2
+
 supports_color(io) = get(io, :color, false)
 
 macro tryx(ex, fallback)
@@ -67,7 +73,7 @@ function panic(
         Base.show_backtrace(stderr, bt)
     end
     println(stderr)
-    return 1
+    return ERROR_EXIT_CODE
 end
 
 function okln(io::IO, msg::String = "✓")
@@ -255,7 +261,7 @@ function main(argv::Vector{String})
     end
 
     # Print summary message for check mode
-    if check && errno != 0
+    if check && errno == UNFORMATTED_EXIT_CODE
         printstyled(
             stderr,
             "Some files are not formatted correctly. Run again with `--inplace` instead of `--check` to format them.\n";
@@ -285,7 +291,7 @@ struct ProcessFileArgs
 end
 
 function process_file(args::ProcessFileArgs)
-    local_errno = 0
+    local_errno = SUCCESS_EXIT_CODE
 
     # Build progress message if needed
     progress_prefix = if args.print_progress
@@ -330,8 +336,7 @@ function process_file(args::ProcessFileArgs)
     is_markdown = ext in (".md", ".jmd", ".qmd")
     if is_markdown && !isempty(args.line_ranges)
         # Line-range formatting is not (yet) wired through the Markdown path.
-        panic("option `--lines` is not supported for Markdown input")
-        return 1
+        return panic("option `--lines` is not supported for Markdown input")
     end
 
     # Read the input
@@ -342,8 +347,7 @@ function process_file(args::ProcessFileArgs)
             report_status() do io
                 errln(io, "✗ read failed")
             end
-            panic("could not read input from stdin: ", err)
-            return 1
+            return panic("could not read input from stdin: ", err)
         end
     elseif isfile(args.inputfile)
         try
@@ -352,15 +356,13 @@ function process_file(args::ProcessFileArgs)
             report_status() do io
                 errln(io, "✗ read failed")
             end
-            panic("could not read input from file `$(args.inputfile)`: ", err)
-            return 1
+            return panic("could not read input from file `$(args.inputfile)`: ", err)
         end
     else
         report_status() do io
             errln(io, "✗ not found")
         end
-        panic("input path is not a file or directory: `$(args.inputfile)`")
-        return 1
+        return panic("input path is not a file or directory: `$(args.inputfile)`")
     end
 
     output = if args.inplace
@@ -380,10 +382,9 @@ function process_file(args::ProcessFileArgs)
             report_status() do io
                 errln(io, "✗ invalid output")
             end
-            panic(
+            return panic(
                 "cannot use same file for input and output, use `--inplace` to modify a file in place",
             )
-            return 1
         else
             Output(:file, args.outputfile, stdout, true, false)
         end
@@ -393,12 +394,22 @@ function process_file(args::ProcessFileArgs)
     file_config = if args.ignore_config
         Configuration()
     else
-        config_path = if args.config_dir != ""
-            find_config_file(args.config_dir)
-        elseif !args.input_is_stdin
-            find_config_file(args.inputfile)
-        else
-            nothing
+        config_path = try
+            if args.config_dir != ""
+                find_config_file(args.config_dir)
+            elseif !args.input_is_stdin
+                find_config_file(args.inputfile)
+            else
+                nothing
+            end
+        catch e
+            # find_config_file returns `nothing` if there isn't a config file,
+            # but it can still throw (for example if --config-dir doesn't exist).
+            if e isa ArgumentError
+                return panic(e.msg)
+            else
+                rethrow()
+            end
         end
         config_path !== nothing ? configuration_from_file(config_path) : Configuration()
     end
@@ -448,8 +459,7 @@ function process_file(args::ProcessFileArgs)
             report_status() do io
                 errln(io, "✗ parse error")
             end
-            panic(string("failed to parse input from ", inputfile_pretty, ": "), err)
-            return 1
+            return panic(string("failed to parse input from ", inputfile_pretty, ": "), err)
         end
         if err isa ArgumentError
             # User input error (e.g. an out-of-bounds `--lines` range). Report it cleanly,
@@ -457,8 +467,10 @@ function process_file(args::ProcessFileArgs)
             report_status() do io
                 errln(io, "✗ invalid input")
             end
-            panic(string("failed to format input from ", inputfile_pretty, ": "), err)
-            return 1
+            return panic(
+                string("failed to format input from ", inputfile_pretty, ": "),
+                err,
+            )
         end
         report_status() do io
             errln(io, "✗ format failed")
@@ -466,8 +478,7 @@ function process_file(args::ProcessFileArgs)
         msg = string("failed to format input from ", inputfile_pretty, ": ")
         bt = stacktrace(catch_backtrace())
         bt = bt[1:min(5, length(bt))]
-        panic(msg, err, bt)
-        return 1
+        return panic(msg, err, bt)
     end
 
     changed = (formatted_str != sourcetext)
@@ -476,7 +487,7 @@ function process_file(args::ProcessFileArgs)
             report_status() do io
                 errln(io, "✗ needs formatting")
             end
-            local_errno = 1
+            local_errno = UNFORMATTED_EXIT_CODE
         else
             report_status() do io
                 okln(io, "✓ already formatted")

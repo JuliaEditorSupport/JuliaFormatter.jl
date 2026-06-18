@@ -249,6 +249,7 @@ Returns a boolean indicating whether the files were already formatted (`true`) o
 (`false`).
 """
 function format(path::AbstractString, style::Union{Nothing,AbstractStyle}; options...)
+    ispath(path) || throw(ArgumentError("`path` must be a directory or a file"))
     # Set up configuration.
     config = Configuration()
     # Merge in .JuliaFormatter.toml configs.

@@ -140,9 +140,19 @@ using JuliaFormatter: DefaultStyle, YASStyle, BlueStyle, SciMLStyle, MinimalStyl
         @testset "simple flags" begin
             @test parse_args(["-d"]).diff == true
             @test parse_args(["-v"]).verbose == true
-            @test parse_args(["--format_markdown"]).config.format_markdown == true
             @test parse_args(["--prioritize-config-file"]).config_priority == true
             @test parse_args(["--ignore-config"]).ignore_config == true
+        end
+
+        @testset "format-markdown" begin
+            # Not passed: nothing (defer to config file)
+            @test parse_args(["f.jl"]).config.format_markdown === nothing
+            # Explicit true
+            @test parse_args(["--format-markdown=true"]).config.format_markdown === true
+            # Explicit false (can override config file)
+            @test parse_args(["--format-markdown=false"]).config.format_markdown === false
+            # Deprecated flag (still works, sets true)
+            @test parse_args(["--format_markdown"]).config.format_markdown === true
         end
 
         @testset "config file options mutual exclusion" begin
