@@ -267,9 +267,9 @@ function main(argv::Vector{String})
                 has_error = true
             end
         end
-        if has_error[]
+        if has_error
             ERROR_EXIT_CODE
-        elseif has_unformatted[]
+        elseif has_unformatted
             UNFORMATTED_EXIT_CODE
         else
             SUCCESS_EXIT_CODE
