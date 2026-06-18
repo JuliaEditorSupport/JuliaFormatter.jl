@@ -9,7 +9,8 @@ import ..JuliaFormatter:
     MinimalStyle,
     STYLE_MAP,
     Configuration,
-    configuration_from_kwargs
+    configuration_from_kwargs,
+    Options
 
 struct ParseArgsError <: Exception
     message::String
@@ -263,44 +264,7 @@ Base.@kwdef struct ParsedArgs
 end
 
 # All format option keys — these are collected from the raw dict into format_options.
-const FORMAT_OPTION_KEYS = Set{Symbol}([
-    :align_assignment,
-    :align_conditional,
-    :align_matrix,
-    :align_pair_arrow,
-    :align_struct_field,
-    :always_for_in,
-    :always_use_return,
-    :annotate_untyped_fields_with_any,
-    :conditional_to_if,
-    :disallow_single_arg_nesting,
-    :for_in_replacement,
-    :force_long_function_def,
-    :format_docstrings,
-    :import_to_using,
-    :indent,
-    :indent_submodule,
-    :join_lines_based_on_source,
-    :long_to_short_function_def,
-    :margin,
-    :normalize_line_endings,
-    :pipe_to_function_call,
-    :remove_extra_newlines,
-    :sciml_margin_overrun,
-    :separate_kwargs_with_semicolon,
-    :short_circuit_to_if,
-    :short_to_long_function_def,
-    :style,
-    :surround_whereop_typeparameters,
-    :trailing_comma,
-    :trailing_zero,
-    :v2_stable_multiline_strings,
-    :variable_call_indent,
-    :whitespace_in_kwargs,
-    :whitespace_ops_in_indices,
-    :whitespace_typedefs,
-    :yas_style_nesting,
-])
+const FORMAT_OPTION_KEYS = Set{Symbol}(fieldnames(Options))
 
 const PARSER = ArgParser(
     flag(["-h", "--help"]; dest = :help, help = "Print this message."),

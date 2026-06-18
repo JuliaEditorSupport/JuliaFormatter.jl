@@ -1,6 +1,11 @@
 # v2.9.0
 
-Rewrote CLI argument parsing code to avoid code duplication. (#1031, #1135)
+Improved CLI exit codes (and error messages): now if the app _errors_, an exit code of 2 is returned.
+An exit code of 1 is reserved for when originally unformatted files were formatted successfully, and exit code 0 is when all files are already formatted. (#1137)
+
+Deprecated `format_file(args...; kwargs...)`; `format(args...; kwargs...)` has exactly the same behaviour and can be used as a drop-in substitute. (#1137)
+
+Added missing formatting options to the CLI app (previously only a subset of these could be specified on the command line). (#1135)
 
 For all old formatting options, added aliases that used hyphens instead of underscores, and expect the actual value on the right-hand side of the `=` sign.
 For example, what was previously `--always_use_return` and `--no-always_use_return` should now be specified as `--always-use-return=true` and `--always-use-return=false`.
@@ -8,8 +13,6 @@ This is done to improve consistency with `.JuliaFormatter.toml` and also general
 The underscore versions are still supported for backwards compatibility, but the hyphenated versions should be preferred going forwards. (#1135)
 
 For all formatting options that require a value (e.g. `--margin=80`), also allow the value to be space-separated (i.e. `--margin 80`). (#1135)
-
-Added missing formatting options to the CLI app (previously only a subset of these could be specified on the command line). (#1135)
 
 Added an `--ignore-config` option to the CLI app, which will ignore any `.JuliaFormatter.toml` files and use only the options specified on the command line. (#1135)
 

@@ -55,7 +55,7 @@ else
                 )
 
                 threaded_cmd = jlfmt_cmd(`--threads=3`)
-                @test check_exitcode(UNFORMATTED_EXIT_CODE, success(`$threaded_cmd --check .`))
+                @test check_exitcode(UNFORMATTED_EXIT_CODE, `$threaded_cmd --check .`)
                 @test success(`$threaded_cmd --inplace .`)
                 @test success(`$threaded_cmd --check .`)
             end
