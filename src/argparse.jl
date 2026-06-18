@@ -806,10 +806,18 @@ function parse_args(argv::Vector{String})::ParsedArgs
     ignore_config = get(raw, :ignore_config, false)
     config_priority = get(raw, :config_priority, false)
     if ignore_config && config_priority
-        throw(ParseArgsError("options `--ignore-config` and `--prioritize-config-file` are mutually exclusive"))
+        throw(
+            ParseArgsError(
+                "options `--ignore-config` and `--prioritize-config-file` are mutually exclusive",
+            ),
+        )
     end
     if ignore_config && get(raw, :config_dir, "") != ""
-        throw(ParseArgsError("options `--ignore-config` and `--config-dir` are mutually exclusive"))
+        throw(
+            ParseArgsError(
+                "options `--ignore-config` and `--config-dir` are mutually exclusive",
+            ),
+        )
     end
 
     # --- Collect format options ---
