@@ -1365,7 +1365,7 @@ function p_functiondef(
 
     function_or_macro_keyword_idx = findfirst(
         n -> kind(n) in KSet"function macro" && JuliaSyntax.is_leaf(n),
-        children(cst)
+        children(cst),
     )
 
     # We might want to disable separate_kwargs_with_semicolon for the initial
@@ -2579,7 +2579,7 @@ function p_binaryopcall(
     is_short_func = defines_function(cst)
     is_expandable_short_func = is_short_func && !ctx.from_let
     standalone_binary_circuit = ctx.standalone_binary_circuit
-    
+
     # For the lhs of a short-form function, we can't enable separate_kwargs_with_semicolon.
     # Find its index now.
     lhs_of_short_func_idx = if is_short_func

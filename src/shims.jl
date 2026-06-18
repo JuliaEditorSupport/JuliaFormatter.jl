@@ -82,5 +82,4 @@ function is_caller_in_function_def(t::JuliaSyntax.GreenNode)::Bool
     end
 end
 
-
 end # module

@@ -470,7 +470,9 @@ end
 is_opener(t::JuliaSyntax.GreenNode) = kind(t) in KSet"{ ( ["
 
 function is_iterable(t::JuliaSyntax.GreenNode)
-    kind(t) in KSet"parens tuple vect vcat braces curly comprehension typed_comprehension macrocall ref typed_vcat import using export public" || Shims.is_function_call(t)
+    kind(t) in
+    KSet"parens tuple vect vcat braces curly comprehension typed_comprehension macrocall ref typed_vcat import using export public" ||
+        Shims.is_function_call(t)
 end
 
 function is_iterable(x::FST)
