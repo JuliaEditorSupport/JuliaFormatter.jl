@@ -13,12 +13,12 @@ using JuliaFormatter:
     MinimalStyle
 
 # A simple unformatted string and its expected output, used throughout.
-const UNFORMATTED = "f( x,y )\n"
-const FORMATTED_DEFAULT = "f(x, y)\n"
+const UNFORMATTED = "f( x,y )"
+const FORMATTED_DEFAULT = "f(x, y)"
 
 # BlueStyle removes spaces around kwargs `=`
-const UNFORMATTED_KW = "foo(; k = v)\n"
-const FORMATTED_BLUE_KW = "foo(; k=v)\n"
+const UNFORMATTED_KW = "foo(; k = v)"
+const FORMATTED_BLUE_KW = "foo(; k=v)"
 
 # ---------------------------------------------------------------------------
 # format_text
@@ -111,13 +111,10 @@ end
 # ---------------------------------------------------------------------------
 
 function with_tempfile(f, content; ext = ".jl")
-    dir = mktempdir()
-    path = joinpath(dir, "test$ext")
-    write(path, content)
-    try
+    mktempdir() do dir
+        path = joinpath(dir, "test$ext")
+        write(path, content)
         f(path)
-    finally
-        rm(dir; recursive = true)
     end
 end
 
@@ -126,7 +123,7 @@ end
         with_tempfile(UNFORMATTED) do path
             already = format_file(path)
             @test already == false
-            @test strip(read(path, String)) == strip(FORMATTED_DEFAULT)
+            @test readchomp(path) == FORMATTED_DEFAULT
             # second call: already formatted
             @test format_file(path) == true
         end
@@ -135,14 +132,14 @@ end
     @testset "keyword style" begin
         with_tempfile(UNFORMATTED_KW) do path
             format_file(path; style = BlueStyle())
-            @test strip(read(path, String)) == strip(FORMATTED_BLUE_KW)
+            @test readchomp(path) == FORMATTED_BLUE_KW
         end
     end
 
     @testset "positional style" begin
         with_tempfile(UNFORMATTED_KW) do path
             format_file(path, BlueStyle())
-            @test strip(read(path, String)) == strip(FORMATTED_BLUE_KW)
+            @test readchomp(path) == FORMATTED_BLUE_KW
         end
     end
 
@@ -150,7 +147,7 @@ end
         with_tempfile(UNFORMATTED) do path
             already = format_file(path; overwrite = false)
             @test already == false
-            @test read(path, String) == UNFORMATTED
+            @test readchomp(path) == UNFORMATTED
         end
     end
 end
@@ -160,21 +157,29 @@ end
         with_tempfile(UNFORMATTED) do path
             already = format(path)
             @test already == false
-            @test strip(read(path, String)) == strip(FORMATTED_DEFAULT)
+            @test readchomp(path) == FORMATTED_DEFAULT
+        end
+
+        # Check that it doesn't fail on empty files
+        with_tempfile("") do path
+            already = format(path)
+            @test already == false # format() will add a newline
+            @test readchomp(path) == ""
+            @test format(path) # already formatted
         end
     end
 
     @testset "keyword style" begin
         with_tempfile(UNFORMATTED_KW) do path
             format(path; style = BlueStyle())
-            @test strip(read(path, String)) == strip(FORMATTED_BLUE_KW)
+            @test readchomp(path) == FORMATTED_BLUE_KW
         end
     end
 
     @testset "positional style" begin
         with_tempfile(UNFORMATTED_KW) do path
             format(path, BlueStyle())
-            @test strip(read(path, String)) == strip(FORMATTED_BLUE_KW)
+            @test readchomp(path) == FORMATTED_BLUE_KW
         end
     end
 end
@@ -188,8 +193,8 @@ end
 
         already = format(dir; style = BlueStyle())
         @test already == false
-        @test strip(read(joinpath(dir, "a.jl"), String)) == strip(FORMATTED_DEFAULT)
-        @test strip(read(joinpath(dir, "b.jl"), String)) == strip(FORMATTED_BLUE_KW)
+        @test readchomp(joinpath(dir, "a.jl")) == FORMATTED_DEFAULT
+        @test readchomp(joinpath(dir, "b.jl")) == FORMATTED_BLUE_KW
         # Non-Julia files are left alone
         @test read(joinpath(dir, "c.txt"), String) == "not julia"
     finally
@@ -198,8 +203,7 @@ end
 end
 
 @testset "format (collection of paths)" begin
-    dir = mktempdir()
-    try
+    mktempdir() do dir
         p1 = joinpath(dir, "a.jl")
         p2 = joinpath(dir, "b.jl")
         write(p1, UNFORMATTED)
@@ -207,10 +211,8 @@ end
 
         already = format([p1, p2])
         @test already == false
-        @test strip(read(p1, String)) == strip(FORMATTED_DEFAULT)
-        @test strip(read(p2, String)) == strip(FORMATTED_DEFAULT)
-    finally
-        rm(dir; recursive = true)
+        @test readchomp(p1) == FORMATTED_DEFAULT
+        @test readchomp(p2) == FORMATTED_DEFAULT
     end
 end
 

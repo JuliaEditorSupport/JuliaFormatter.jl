@@ -64,6 +64,7 @@ function _format_text(
     maxiters::Int = _maxiters(style),
 )
     maxiters <= 0 && return text
+    isempty(text) && return text
 
     node = JuliaSyntax.parseall(
         JuliaSyntax.GreenNode,

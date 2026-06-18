@@ -56,6 +56,14 @@ else
             end
         end
 
+        @testset "doesn't crash on empty files" begin
+            with_sandbox() do _
+                write("empty.jl", "")
+                run(`$(jlfmt_cmd()) --inplace empty.jl`)
+                @test isempty(readchomp("empty.jl"))
+            end
+        end
+
         @testset "DefaultStyle is used if not configured" begin
             with_sandbox() do _
                 text = "(; a=1)"
