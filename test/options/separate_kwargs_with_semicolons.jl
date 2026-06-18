@@ -163,6 +163,7 @@ using Test
     end
 
     @testset "#1133: idempotence with short_to_long_function_def" begin
+        # https://github.com/MakieOrg/Makie.jl/blob/31de53c4643b41605b3a4e23ad68449e13de14de/Makie/src/basic_recipes/contourf.jl#L53
         s_= "_get_isoband_levels(levels::Int, mi, ma) = collect(range(Float32(mi), nextfloat(Float32(ma)), length = levels + 1))"
         s = """
         function _get_isoband_levels(levels::Int, mi, ma)
@@ -170,6 +171,7 @@ using Test
         end"""
         test_format(s_, s, BlueStyle())
 
+        # minimised version of the above
         s_ = "foo(x) = goo(x, k=v)"
         s = """
         function foo(
@@ -181,6 +183,22 @@ using Test
             )
         end"""
         test_format(s_, s, BlueStyle(); margin=10)
+
+        # https://github.com/SciML/OrdinaryDiffEq.jl/blob/0bda3109a1b9581450776b0e5f9607c2dd5e5281/test/AD/ad_tests.jl#L29-L34
+        s_ = """
+        begin
+            get_gradient_backends() = [AutoForwardDiff(), AutoEnzyme(mode = Enzyme.set_runtime_activity(Enzyme.Reverse))]
+        end"""
+        s = """
+        begin
+            function get_gradient_backends()
+                return [
+                    AutoForwardDiff(),
+                    AutoEnzyme(; mode=Enzyme.set_runtime_activity(Enzyme.Reverse)),
+                ]
+            end
+        end"""
+        test_format(s_, s, BlueStyle())
     end
 end
 
