@@ -404,7 +404,12 @@ function process_file(args::ProcessFileArgs)
     # Look up .JuliaFormatter.toml config. --config-dir overrides the default
     # (which walks up from the input file's directory, or does nothing for stdin).
     config_nt = if args.config_dir != ""
-        find_config_file(args.config_dir)
+        config_path = joinpath(args.config_dir, CONFIG_FILE_NAME)
+        if isfile(config_path)
+            parse_config(config_path)
+        else
+            find_config_file(args.config_dir)
+        end
     elseif !args.input_is_stdin
         find_config_file(args.inputfile)
     else
