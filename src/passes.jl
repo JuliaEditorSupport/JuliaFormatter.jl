@@ -629,7 +629,22 @@ function separate_kwargs_with_semicolon!(fst::FST)
     nodes = fst.nodes::Vector{FST}
     first_kw_idx = findfirst(n -> n.typ === Kw, nodes)
     # who knows if this list is exhaustive... would be much easier at the CST level
-    last_nonkw_idx = findlast(n -> !(n.typ in (Kw, PUNCTUATION, SEMICOLON, WHITESPACE, PLACEHOLDER, TRAILINGCOMMA, NEWLINE, INLINECOMMENT, HASHEQCOMMENT)), nodes)
+    last_nonkw_idx = findlast(
+        n -> !(
+            n.typ in (
+                Kw,
+                PUNCTUATION,
+                SEMICOLON,
+                WHITESPACE,
+                PLACEHOLDER,
+                TRAILINGCOMMA,
+                NEWLINE,
+                INLINECOMMENT,
+                HASHEQCOMMENT,
+            )
+        ),
+        nodes,
+    )
     # No keyword arguments
     isnothing(first_kw_idx) && return
 
