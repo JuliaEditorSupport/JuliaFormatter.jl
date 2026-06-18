@@ -32,6 +32,9 @@ options(::DefaultStyle) = Options()
     join_body::Bool = false
     from_module::Bool = false
     from_docstring::Bool = false
+
+    # Indicates a context in which we are allowed to rewrite f(x, y=z) to f(x; y=z).
+    # This is disabled in macros as well as in function definitions.
     can_separate_kwargs::Bool = true
 end
 
@@ -932,10 +935,7 @@ function p_macrocall(
 )
     style = getstyle(ds)
     t = FST(MacroCall, nspaces(s))
-
-    if !haschildren(cst)
-        return t
-    end
+    JuliaSyntax.is_leaf(cst) && return t
 
     args = get_args(cst)
     nest = should_allow_nesting_call_args(args, s.opts.disallow_single_arg_nesting)
@@ -1361,14 +1361,30 @@ function p_functiondef(
 )
     style = getstyle(ds)
     t = FST(FunctionN, nspaces(s))
-    if !haschildren(cst)
-        return t
+    JuliaSyntax.is_leaf(cst) && return t
+
+    function_or_macro_keyword_idx = findfirst(
+        n -> kind(n) in KSet"function macro" && JuliaSyntax.is_leaf(n),
+        children(cst),
+    )
+
+    # We might want to disable separate_kwargs_with_semicolon for the initial
+    # call in a function/macro definition.
+    caller_idx = findnext(
+        n -> !JuliaSyntax.is_whitespace(n),
+        children(cst),
+        function_or_macro_keyword_idx + 1,
+    )
+    if !Shims.is_caller_in_function_def(cst[caller_idx])
+        # If that child doesn't look like a function call, then it's an anonymous function.
+        # In that case we can disable the check.
+        caller_idx = nothing
     end
 
     block_has_contents = false
     childs = children(cst)
     for (i, c) in enumerate(childs)
-        if i == 1
+        if i == function_or_macro_keyword_idx
             n = pretty(style, c, s, ctx, lineage)
             add_node!(t, n, s)
             add_node!(t, Whitespace(1), s)
@@ -1396,7 +1412,7 @@ function p_functiondef(
             n = pretty(style, c, s, newctx(ctx; ignore_single_line = true), lineage)
             add_node!(t, n, s; max_padding = s.opts.indent)
             s.indent -= s.opts.indent
-        elseif is_func_call(c)
+        elseif i === caller_idx
             n = pretty(style, c, s, newctx(ctx; can_separate_kwargs = false), lineage)
             add_node!(t, n, s; join_lines = true)
         else
@@ -2558,9 +2574,19 @@ function p_binaryopcall(
         end
     end
 
-    is_short_form_function = defines_function(cst) && !ctx.from_let
+    # Catches e.g. `f(x) = x + 1`; but _not_ `let f(x) = x + 1; body; end` since expanding
+    # that would lead to invalid Julia code.
+    is_short_func = defines_function(cst)
+    is_expandable_short_func = is_short_func && !ctx.from_let
     standalone_binary_circuit = ctx.standalone_binary_circuit
-    can_separate_kwargs = ctx.can_separate_kwargs && !is_function_or_macro_def(cst)
+
+    # For the lhs of a short-form function, we can't enable separate_kwargs_with_semicolon.
+    # Find its index now.
+    lhs_of_short_func_idx = if is_short_func
+        findfirst(Shims.is_caller_in_function_def, childs)
+    else
+        nothing
+    end
 
     lazy_op = is_lazy_op(opkind)
     # Check if expression is a lazy circuit. If it is, this does two things: first it causes
@@ -2594,7 +2620,7 @@ function p_binaryopcall(
     t.metadata = Metadata(
         opkind,
         lazy_op && standalone_binary_circuit,
-        is_short_form_function,
+        is_expandable_short_func,
         is_assignment(cst) || defines_function(cst),
         false,
         false,
@@ -2618,7 +2644,7 @@ function p_binaryopcall(
         from_colon = true
     elseif opkind === K"::"
         nospace = true
-    elseif is_short_form_function && opkind === K"="
+    elseif is_short_func && opkind === K"="
         nospace = false
         has_ws = true
     elseif kind(cst) === K"comparison"
@@ -2658,6 +2684,19 @@ function p_binaryopcall(
     skip_until = 0
     for (i, c) in enumerate(childs)
         i <= skip_until && continue
+
+        # Determine whether we can separate kwargs with a semicolon.
+        can_separate_kwargs = if opkind === K"::"
+            # Pass through to children, since `::` might be used in function definitions.
+            ctx.can_separate_kwargs
+        elseif is_short_func && i === lhs_of_short_func_idx
+            # Not for the lhs of a function definition.
+            false
+        else
+            # Everywhere else is fine.
+            true
+        end
+
         if kind(cst) === K"op=" && !isempty(op_indices) && i == first(op_indices)
             loc = cursor_loc(s)
             op_span = sum(span, childs[first(op_indices):last(op_indices)]; init = 0)
@@ -2680,6 +2719,7 @@ function p_binaryopcall(
             skip_until = last(op_indices)
             continue
         end
+
         offset = s.offset
         n = pretty(
             style,
@@ -2723,7 +2763,6 @@ function p_binaryopcall(
                 end
             end
             after_op = true
-            # elseif (kind(c) === opkind || kind(c) === K".") && !haschildren(c)
         elseif is_op && !haschildren(c)
             # there are some weird cases where we can assign an operator a value so that
             # the arguments are operators as well.
@@ -3027,6 +3066,22 @@ function p_call(
         return t
     end
 
+    # If `ctx.can_separate_kwargs` is false, we don't want to modify the semicolon in this
+    # particular call expression; but we CAN re-enable it for its children. For example, in
+    #
+    #     function foo(
+    #         a,
+    #         b=goo(x, y=z)
+    #     )
+    #         body
+    #     end
+    #
+    # we don't want to change the comma between `a` and `b`, but we can change the comma
+    # between `x` and `y=z`. So we reset `can_separate_kwargs` to true for the children of
+    # this call expression.
+    can_separate_kwargs_for_this_call = ctx.can_separate_kwargs
+    ctx = newctx(ctx; can_separate_kwargs = true)
+
     childs = children(cst)
     if !isnothing(do_block_idx)
         if !checkbounds(Bool, childs, do_block_idx) ||
@@ -3070,8 +3125,9 @@ function p_call(
         else
             # If the caller is parenthesised (usually callable struct, but not necessarily),
             # avoid inserting placeholders after ( and before ), because that causes
-            # JuliaSyntax@1.0.2 to parse it wrongly. Hopefully this will be fixed
-            # https://github.com/JuliaLang/julia/issues/62124
+            # JuliaSyntax@1.0.2 to parse it wrongly. Hopefully this will be fixed one day
+            # https://github.com/JuliaLang/julia/issues/62124 but we have to keep it in
+            # for now since it's already broken on Julia 1.12.6.
             ctx2 = if i == caller_idx && k === K"parens" && haschildren(a)
                 newctx(ctx; is_parenthesised_caller = true)
             else
@@ -3082,7 +3138,7 @@ function p_call(
         end
     end
 
-    if s.opts.separate_kwargs_with_semicolon && ctx.can_separate_kwargs
+    if s.opts.separate_kwargs_with_semicolon && can_separate_kwargs_for_this_call
         separate_kwargs_with_semicolon!(t)
     end
 

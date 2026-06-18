@@ -627,42 +627,64 @@ a = f(; x = 1, y = 2)
 """
 function separate_kwargs_with_semicolon!(fst::FST)
     nodes = fst.nodes::Vector{FST}
-    kw_idx = findfirst(n -> n.typ === Kw, nodes)
-    if isnothing(kw_idx)
-        return
-    end
-    sc_idx = findfirst(n -> n.typ === SEMICOLON, nodes)
-    # first "," prior to a kwarg
-    comma_idx = findlast(is_comma, nodes[1:(kw_idx-1)])
-    ph_idx = findlast(n -> n.typ === PLACEHOLDER, nodes[1:(kw_idx-1)])
+    first_kw_idx = findfirst(n -> n.typ === Kw, nodes)
+    # who knows if this list is exhaustive... would be much easier at the CST level
+    last_nonkw_idx = findlast(
+        n -> !(
+            n.typ in (
+                Kw,
+                PUNCTUATION,
+                SEMICOLON,
+                WHITESPACE,
+                PLACEHOLDER,
+                TRAILINGCOMMA,
+                NEWLINE,
+                INLINECOMMENT,
+                HASHEQCOMMENT,
+            )
+        ),
+        nodes,
+    )
+    # No keyword arguments
+    isnothing(first_kw_idx) && return
 
-    if !isnothing(sc_idx) && sc_idx > kw_idx
+    semicolon_index = findfirst(n -> n.typ === SEMICOLON, nodes)
+    # first "," prior to a kwarg
+    last_comma_idx = findprev(is_comma, nodes, first_kw_idx - 1)
+    last_ph_idx = findprev(n -> n.typ === PLACEHOLDER, nodes, first_kw_idx - 1)
+
+    if !isnothing(semicolon_index) && semicolon_index > first_kw_idx
         # move ; prior to first kwarg
-        fst[sc_idx].val = ","
-        fst[sc_idx].typ = PUNCTUATION
-        if isnothing(comma_idx)
-            if !isnothing(ph_idx)
-                fst[ph_idx] = Placeholder(1)
-                insert!(fst, ph_idx, Semicolon())
+        fst[semicolon_index].val = ","
+        fst[semicolon_index].typ = PUNCTUATION
+        if isnothing(last_comma_idx)
+            if !isnothing(last_ph_idx)
+                fst[last_ph_idx] = Placeholder(1)
+                insert!(fst, last_ph_idx, Semicolon())
             else
-                insert!(fst, kw_idx, Placeholder(1))
-                insert!(fst, kw_idx, Semicolon())
+                insert!(fst, first_kw_idx, Placeholder(1))
+                insert!(fst, first_kw_idx, Semicolon())
             end
         else
-            fst[comma_idx].val = ";"
-            fst[comma_idx].typ = SEMICOLON
+            fst[last_comma_idx].val = ";"
+            fst[last_comma_idx].typ = SEMICOLON
         end
-    elseif isnothing(sc_idx) && isnothing(comma_idx)
-        if !isnothing(ph_idx)
-            fst[ph_idx] = Placeholder(1)
-            insert!(fst, ph_idx, Semicolon())
+    elseif isnothing(semicolon_index) && isnothing(last_comma_idx)
+        if !isnothing(last_ph_idx)
+            fst[last_ph_idx] = Placeholder(1)
+            insert!(fst, last_ph_idx, Semicolon())
         else
-            insert!(fst, kw_idx, Placeholder(1))
-            insert!(fst, kw_idx, Semicolon())
+            insert!(fst, first_kw_idx, Placeholder(1))
+            insert!(fst, first_kw_idx, Semicolon())
         end
-    elseif isnothing(sc_idx)
-        fst[comma_idx].val = ";"
-        fst[comma_idx].typ = SEMICOLON
+    elseif isnothing(semicolon_index)
+        # Don't convert f(x, y=z, q) to f(x; y=z, q); i.e., if there is any positional
+        # argument after the first keyword argument, don't convert it
+        if last_nonkw_idx > first_kw_idx
+            return
+        end
+        fst[last_comma_idx].val = ";"
+        fst[last_comma_idx].typ = SEMICOLON
     end
 
     return
