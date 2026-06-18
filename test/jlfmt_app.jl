@@ -408,21 +408,21 @@ else
             @testset "config style with CLI option override" begin
                 with_sandbox() do _
                     fname = "a.jl"
-                    # BlueStyle changes formatting of named tuples: (; a = 1) -> (;a = 1)
-                    # But we also want to test that a CLI option can override a style default
+                    # BlueStyle sets f(a = 1) -> f(; a=1)
                     text = "f(a = 1)\n"
                     write(fname, text)
-                    # Config sets style=blue (which sets whitespace_in_kwargs=false by default)
+                    # But we also want to test that a CLI option can override a style default
                     # CLI overrides whitespace_in_kwargs=true
                     write(CONFIG_FILE_NAME, "style = \"blue\"")
 
                     run(
                         `$(jlfmt_cmd()) --inplace --whitespace-in-kwargs=true $fname`,
                     )
-                    @test readchomp(fname) ==
-                          rstrip(
+                    output = readchomp(fname)
+                    @test output = rstrip(
                         format_text(text, BlueStyle(); whitespace_in_kwargs = true),
                     )
+                    @test output != strip(format_text(text, BlueStyle())
                 end
             end
 
