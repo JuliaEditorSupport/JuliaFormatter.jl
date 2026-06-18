@@ -1,14 +1,13 @@
 """
-    FormattingError(line, column, global_offset)
+    FormattingError(line, column, original_error)
 
 Error thrown when formatting fails. The `line` and `column` fields indicate the location of
-the error in the source code, while `global_offset` indicates the position of the error in
-the entire text.
+the error in the source code.
 """
 struct FormattingError <: Exception
     line::Int
     column::Int
-    global_offset::Int
+    original_error::Exception
 end
 
 """
@@ -61,8 +60,8 @@ function _format_text(
     text::AbstractString,
     style::AbstractStyle,
     opts::Options{Union{}};
-    check_output::Bool=true,
-    maxiters::Int=_maxiters(style)
+    check_output::Bool = true,
+    maxiters::Int = _maxiters(style),
 )
     maxiters <= 0 && return text
 
@@ -76,9 +75,9 @@ function _format_text(
     s = State(Document(text), opts)
     fst::FST = try
         pretty(style, node, s)
-    catch
+    catch e
         loc = cursor_loc(s, s.offset)
-        throw(FormattingError(loc[1], loc[2], s.offset))
+        throw(FormattingError(loc[1], loc[2], e))
     end
     if hascomment(s.doc, fst.endline)
         add_node!(fst, InlineComment(fst.endline), s)
@@ -151,14 +150,17 @@ function _format_text(
     return if output == text
         output
     else
-        _format_text(output, style, opts; check_output=check_output, maxiters=maxiters - 1)
+        _format_text(
+            output,
+            style,
+            opts;
+            check_output = check_output,
+            maxiters = maxiters - 1,
+        )
     end
 end
 
-function _format_file(
-    filename::AbstractString,
-    config::Configuration,
-)::Bool
+function _format_file(filename::AbstractString, config::Configuration)::Bool
     _, ext = splitext(filename)
     shebang_pattern = r"^#!\s*/.*\bjulia[0-9.-]*\b"
     merged_options = get_formatting_options(config)

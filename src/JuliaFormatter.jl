@@ -246,11 +246,7 @@ override any style specified in configuration files.
 Returns a boolean indicating whether the files were already formatted (`true`) or not
 (`false`).
 """
-function format(
-    path::AbstractString,
-    style::Union{Nothing,AbstractStyle};
-    options...
-)
+function format(path::AbstractString, style::Union{Nothing,AbstractStyle}; options...)
     # Set up configuration.
     config = Configuration()
     # Merge in .JuliaFormatter.toml configs.
@@ -262,7 +258,7 @@ function format(
         config
     end
     # Merge in keyword arguments.
-    kw_config = configuration_from_kwargs(; style=style, options...)
+    kw_config = configuration_from_kwargs(; style = style, options...)
     config = merge_config(config, kw_config)
 
     # If the path is ignored, then the file is considered trivially formatted.
@@ -270,7 +266,7 @@ function format(
 
     return if isdir(path)
         formatted = Threads.Atomic{Bool}(true)
-        Threads.@threads for subpath in readdir(path; join=true)
+        Threads.@threads for subpath in readdir(path; join = true)
             if !ispath(subpath) || islink(subpath)
                 continue
             end
@@ -291,7 +287,11 @@ function format(
         true
     end
 end
-function format(path::AbstractString; style::Union{Nothing,AbstractStyle} = nothing, options...)
+function format(
+    path::AbstractString;
+    style::Union{Nothing,AbstractStyle} = nothing,
+    options...,
+)
     format(path, style; options...)
 end
 function format(mod::Module, args...; options...)

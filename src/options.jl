@@ -79,12 +79,14 @@ function verify_options(opts::Options{Union{}})::Options{Union{}}
         throw(ArgumentError(msg))
     end
     if opts.sciml_margin_overrun < 0
-        throw(
-            ArgumentError("`sciml_margin_overrun` must be greater than or equal to 0."),
-        )
+        throw(ArgumentError("`sciml_margin_overrun` must be greater than or equal to 0."))
     end
     if opts.always_for_in == true && !(opts.for_in_replacement in VALID_FOR_IN_OPERATORS)
-        throw(ArgumentError("`for_in_replacement` is set to an invalid operator \"$(opts.for_in_replacement)\", valid operators are $(VALID_FOR_IN_OPERATORS). Change it to one of the valid operators and then reformat."))
+        throw(
+            ArgumentError(
+                "`for_in_replacement` is set to an invalid operator \"$(opts.for_in_replacement)\", valid operators are $(VALID_FOR_IN_OPERATORS). Change it to one of the valid operators and then reformat.",
+            ),
+        )
     end
     return opts
 end
@@ -121,7 +123,7 @@ function needs_alignment(opts::Options{Union{}})::Bool
     end
 end
 
-function merge_options(opts1::Options{T1}, opts2::Options{T2}) where {T1<:_Unset, T2<:_Unset}
+function merge_options(opts1::Options{T1}, opts2::Options{T2}) where {T1<:_Unset,T2<:_Unset}
     # Merge two Options objects, with any set values in opts2 taking precedence over opts1.
     Tout = T1 === _Unset && T2 === _Unset ? _Unset : Union{}
     kwargs = Dict{Symbol,Any}()

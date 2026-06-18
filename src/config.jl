@@ -31,7 +31,14 @@ function Configuration()
     return Configuration(Options{_Unset}(), DefaultStyle(), [], false, true, false)
 end
 
-function configuration_from_kwargs(; style=nothing, ignore=nothing, verbose=nothing, overwrite=nothing, format_markdown=nothing, formatting_options...)
+function configuration_from_kwargs(;
+    style = nothing,
+    ignore = nothing,
+    verbose = nothing,
+    overwrite = nothing,
+    format_markdown = nothing,
+    formatting_options...,
+)
     options = Options{_Unset}(; formatting_options...)
     return Configuration(options, style, ignore, verbose, overwrite, format_markdown)
 end
@@ -113,7 +120,11 @@ function merge_config(config1::Configuration, config2::Configuration)::Configura
     merged_ignore = config2.ignore === nothing ? config1.ignore : config2.ignore
     merged_verbose = config2.verbose === nothing ? config1.verbose : config2.verbose
     merged_overwrite = config2.overwrite === nothing ? config1.overwrite : config2.overwrite
-    merged_format_markdown = config2.format_markdown === nothing ? config1.format_markdown : config2.format_markdown
+    merged_format_markdown = if config2.format_markdown === nothing
+        config1.format_markdown
+    else
+        config2.format_markdown
+    end
     return Configuration(
         merged_options,
         merged_style,
@@ -125,6 +136,7 @@ function merge_config(config1::Configuration, config2::Configuration)::Configura
 end
 
 function get_formatting_options(config::Configuration)::Options
-    config.style === nothing && error("Configuration style is not set. This is a bug in JuliaFormatter.")
+    config.style === nothing &&
+        error("Configuration style is not set. This is a bug in JuliaFormatter.")
     return merge_options(options(config.style), config.options)
 end

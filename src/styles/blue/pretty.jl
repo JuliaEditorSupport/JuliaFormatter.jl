@@ -39,7 +39,6 @@ function is_binaryop_nestable(::BlueStyle, cst::JuliaSyntax.GreenNode)
     return is_binaryop_nestable(DefaultStyle(), cst)
 end
 
-
 function p_return(
     bs::BlueStyle,
     cst::JuliaSyntax.GreenNode,
