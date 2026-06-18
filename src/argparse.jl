@@ -55,7 +55,11 @@ function parse_value(::Type{Union{Nothing,Bool}}, raw::AbstractString, option_na
     raw == "true" && return true
     raw == "false" && return false
     raw == "nothing" && return nothing
-    throw(ParseArgsError("invalid value `$raw` for option `$option_name` (expected `true`, `false`, or `nothing`)"))
+    throw(
+        ParseArgsError(
+            "invalid value `$raw` for option `$option_name` (expected `true`, `false`, or `nothing`)",
+        ),
+    )
 end
 
 # Parse (x, y) where x <= y. Used in --lines.
