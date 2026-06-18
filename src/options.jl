@@ -1,6 +1,7 @@
 const VALID_FOR_IN_OPERATORS = ("in", "=", "∈")
 
 struct _Unset end
+Base.convert(::Type{Union{_Unset,T}}, x) where {T} = convert(T, x)
 
 """
     Options{T<:_Unset}
