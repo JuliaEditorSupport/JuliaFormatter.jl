@@ -20,6 +20,8 @@ For all formatting options that require a value (e.g. `--margin=80`), also allow
 
 Added an `--ignore-config` option to the CLI app, which will ignore any `.JuliaFormatter.toml` files and use only the options specified on the command line. (#1135)
 
+Added a `throw_on_error` keyword argument to `JuliaFormatter.format()`, which causes any formatting errors to propagate to the caller. (#1130, #1136, #1138)
+
 # v2.8.5
 
 Fixed more bugs where BlueStyle's chained-ternary-to-if conversion would lead to loss of idempotence. (#1131, #1132)

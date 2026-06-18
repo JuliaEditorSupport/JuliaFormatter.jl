@@ -181,7 +181,7 @@ jobs:
                   "minimal": "MinimalStyle()",
               }
               style = None
-              kwargs = []
+              kwargs = ["throw_on_error=true"]
               for token in opts:
                   if token.startswith("style="):
                       val = token.split("=", 1)[1]
