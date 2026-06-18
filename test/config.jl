@@ -11,46 +11,32 @@ using Test
     after4 = "begin\n    rand()\nend\n"
 
     @testset "basic configuration" begin
-        # test basic configuration case
-        # test_basic_config
         # ├─ .JuliaFormatter.toml (config2)
         # └─ code.jl (before -> after2)
-        sandbox_dir = joinpath(tempdir(), "test_basic_config")
-        mkdir(sandbox_dir)
-        try
-            config_path = joinpath(sandbox_dir, CONFIG_FILE_NAME)
-            code_path = joinpath(sandbox_dir, "code.jl")
-            open(io -> write(io, config2), config_path, "w")
-            open(io -> write(io, before), code_path, "w")
+        mktempdir() do dir
+            code_path = joinpath(dir, "code.jl")
+            write(joinpath(dir, CONFIG_FILE_NAME), config2)
+            write(code_path, before)
 
             @test format(code_path) == false
             @test read(code_path, String) == after2
-        finally
-            rm(sandbox_dir; recursive = true)
         end
     end
 
     @testset "upward config search" begin
-        # test upward config search
-        # test_search
         # ├─ .JuliaFormatter.toml (config2)
         # └─ sub
         #    ├─ sub_code.jl (before -> after2)
         #    └─ subsub
         #       └─ subsub_code.jl (before -> after2)
-        sandbox_dir = joinpath(tempdir(), "test_search")
-        mkdir(sandbox_dir)
-        try
-            config_path = joinpath(sandbox_dir, CONFIG_FILE_NAME)
-            sub_dir = joinpath(sandbox_dir, "sub")
-            mkdir(sub_dir)
+        mktempdir() do dir
+            sub_dir = mkdir(joinpath(dir, "sub"))
+            subsub_dir = mkdir(joinpath(sub_dir, "sub"))
             sub_code_path = joinpath(sub_dir, "sub_code.jl")
-            subsub_dir = joinpath(sub_dir, "sub")
-            mkdir(subsub_dir)
             subsub_code_path = joinpath(subsub_dir, "sub_code.jl")
-            open(io -> write(io, config2), config_path, "w")
-            open(io -> write(io, before), sub_code_path, "w")
-            open(io -> write(io, before), subsub_code_path, "w")
+            write(joinpath(dir, CONFIG_FILE_NAME), config2)
+            write(sub_code_path, before)
+            write(subsub_code_path, before)
 
             @test format(sub_code_path) == false
             @test read(sub_code_path, String) == after2
@@ -58,42 +44,30 @@ using Test
             @test read(subsub_code_path, String) == after2
             @test format(sub_code_path) == true
             @test format(subsub_code_path) == true
-        finally
-            rm(sandbox_dir; recursive = true)
         end
     end
 
     @testset "basic directory walk" begin
-        # test basic directory walk
-        # test_basic_walk
         # ├─ .JuliaFormatter.toml (config2)
         # ├─ code.jl (before -> after2)
         # └─ sub
         #    └─ sub_code.jl (before -> after2)
-        sandbox_dir = joinpath(tempdir(), "test_basic_walk")
-        mkdir(sandbox_dir)
-        try
-            config_path = joinpath(sandbox_dir, CONFIG_FILE_NAME)
-            code_path = joinpath(sandbox_dir, "code.jl")
-            sub_dir = joinpath(sandbox_dir, "sub")
-            mkdir(sub_dir)
+        mktempdir() do dir
+            sub_dir = mkdir(joinpath(dir, "sub"))
+            code_path = joinpath(dir, "code.jl")
             sub_code_path = joinpath(sub_dir, "sub_code.jl")
-            open(io -> write(io, config2), config_path, "w")
-            open(io -> write(io, before), code_path, "w")
-            open(io -> write(io, before), sub_code_path, "w")
+            write(joinpath(dir, CONFIG_FILE_NAME), config2)
+            write(code_path, before)
+            write(sub_code_path, before)
 
-            @test format(sandbox_dir) == false
+            @test format(dir) == false
             @test read(code_path, String) == after2
             @test read(sub_code_path, String) == after2
-            @test format(sandbox_dir) == true
-        finally
-            rm(sandbox_dir; recursive = true)
+            @test format(dir) == true
         end
     end
 
     @testset "directory walk with nested configs" begin
-        # test directory walk with nested configs
-        # test_nested_config
         # ├─ .JuliaFormatter.toml (config2)
         # ├─ code.jl (before -> after2)
         # ├─ sub1
@@ -101,75 +75,89 @@ using Test
         # │  └─ sub_code1.jl (before -> after4)
         # └─ sub2
         #    └─ sub_code2.jl (before -> after2)
-        sandbox_dir = joinpath(tempdir(), "test_nested_config")
-        mkdir(sandbox_dir)
-        try
-            sub1_dir = joinpath(sandbox_dir, "sub1")
-            sub2_dir = joinpath(sandbox_dir, "sub2")
-            mkdir(sub1_dir)
-            mkdir(sub2_dir)
-            config_path = joinpath(sandbox_dir, CONFIG_FILE_NAME)
-            code_path = joinpath(sandbox_dir, "code.jl")
-            sub_config1_path = joinpath(sub1_dir, CONFIG_FILE_NAME)
+        mktempdir() do dir
+            sub1_dir = mkdir(joinpath(dir, "sub1"))
+            sub2_dir = mkdir(joinpath(dir, "sub2"))
+            code_path = joinpath(dir, "code.jl")
             sub_code1_path = joinpath(sub1_dir, "sub_code1.jl")
             sub_code2_path = joinpath(sub2_dir, "sub_code2.jl")
-            open(io -> write(io, config2), config_path, "w")
-            open(io -> write(io, before), code_path, "w")
-            open(io -> write(io, config4), sub_config1_path, "w")
-            open(io -> write(io, before), sub_code1_path, "w")
-            open(io -> write(io, before), sub_code2_path, "w")
+            write(joinpath(dir, CONFIG_FILE_NAME), config2)
+            write(joinpath(sub1_dir, CONFIG_FILE_NAME), config4)
+            write(code_path, before)
+            write(sub_code1_path, before)
+            write(sub_code2_path, before)
 
-            @test format(sandbox_dir) == false
+            @test format(dir) == false
             @test read(code_path, String) == after2
             @test read(sub_code1_path, String) == after4
             @test read(sub_code2_path, String) == after2
-            @test format(sandbox_dir) == true
-        finally
-            rm(sandbox_dir; recursive = true)
+            @test format(dir) == true
+        end
+    end
+
+    @testset "per-file format with nested configs" begin
+        # Same layout as the directory walk test, but format() each file individually.
+        # ├─ .JuliaFormatter.toml (config2)
+        # ├─ code.jl (before -> after2)
+        # ├─ sub1
+        # │  ├─ .JuliaFormatter.toml (config4)
+        # │  └─ sub_code1.jl (before -> after4)
+        # └─ sub2
+        #    └─ sub_code2.jl (before -> after2)
+        mktempdir() do dir
+            sub1_dir = mkdir(joinpath(dir, "sub1"))
+            sub2_dir = mkdir(joinpath(dir, "sub2"))
+            code_path = joinpath(dir, "code.jl")
+            sub_code1_path = joinpath(sub1_dir, "sub_code1.jl")
+            sub_code2_path = joinpath(sub2_dir, "sub_code2.jl")
+            write(joinpath(dir, CONFIG_FILE_NAME), config2)
+            write(joinpath(sub1_dir, CONFIG_FILE_NAME), config4)
+            write(code_path, before)
+            write(sub_code1_path, before)
+            write(sub_code2_path, before)
+
+            # Root file picks up root config (indent=2)
+            @test format(code_path) == false
+            @test read(code_path, String) == after2
+            # sub1 file picks up sub1 config (indent=4), not root
+            @test format(sub_code1_path) == false
+            @test read(sub_code1_path, String) == after4
+            # sub2 file has no local config, walks up to root (indent=2)
+            @test format(sub_code2_path) == false
+            @test read(sub_code2_path, String) == after2
+            # Idempotence
+            @test format(code_path) == true
+            @test format(sub_code1_path) == true
+            @test format(sub_code2_path) == true
         end
     end
 
     @testset "directory walk with nested configs toplevel" begin
-        # test directory walk with nested configs
-        # same as above except format from within the
+        # Same as "directory walk with nested configs" except format from within the
         # top level directory, i.e. `format(".")`
-        #
-        # test_nested_config
-        # ├─ .JuliaFormatter.toml (config2)
-        # ├─ code.jl (before -> after2)
-        # ├─ sub1
-        # │  ├─ .JuliaFormatter.toml (config4)
-        # │  └─ sub_code1.jl (before -> after4)
-        # └─ sub2
-        #    └─ sub_code2.jl (before -> after2)
-        sandbox_dir = joinpath(tempdir(), "test_nested_config")
-        mkdir(sandbox_dir)
-        original_dir = pwd()
-        try
-            sub1_dir = joinpath(sandbox_dir, "sub1")
-            sub2_dir = joinpath(sandbox_dir, "sub2")
-            mkdir(sub1_dir)
-            mkdir(sub2_dir)
-            config_path = joinpath(sandbox_dir, CONFIG_FILE_NAME)
-            code_path = joinpath(sandbox_dir, "code.jl")
-            sub_config1_path = joinpath(sub1_dir, CONFIG_FILE_NAME)
+        mktempdir() do dir
+            sub1_dir = mkdir(joinpath(dir, "sub1"))
+            sub2_dir = mkdir(joinpath(dir, "sub2"))
+            code_path = joinpath(dir, "code.jl")
             sub_code1_path = joinpath(sub1_dir, "sub_code1.jl")
             sub_code2_path = joinpath(sub2_dir, "sub_code2.jl")
-            open(io -> write(io, config2), config_path, "w")
-            open(io -> write(io, before), code_path, "w")
-            open(io -> write(io, config4), sub_config1_path, "w")
-            open(io -> write(io, before), sub_code1_path, "w")
-            open(io -> write(io, before), sub_code2_path, "w")
+            write(joinpath(dir, CONFIG_FILE_NAME), config2)
+            write(joinpath(sub1_dir, CONFIG_FILE_NAME), config4)
+            write(code_path, before)
+            write(sub_code1_path, before)
+            write(sub_code2_path, before)
 
-            cd(sandbox_dir)
-            @test format(".") == false
-            @test read(code_path, String) == after2
-            @test read(sub_code1_path, String) == after4
-            @test read(sub_code2_path, String) == after2
-            @test format(".") == true
-        finally
-            cd(original_dir)
-            rm(sandbox_dir; recursive = true)
+            original_dir = pwd()
+            try
+                cd(dir)
+                @test format(".") == false
+                @test read(code_path, String) == after2
+                @test read(sub_code1_path, String) == after4
+                @test read(sub_code2_path, String) == after2
+                @test format(".") == true
+            finally
+                cd(original_dir)
+            end
         end
     end
 
@@ -200,22 +188,15 @@ using Test
           - a
           -             b
         """
-        # test formatting a markdown file
-        # test_basic_markdown_format
         # ├─ .JuliaFormatter.toml (config2)
         # └─ file.md (before -> after2)
-        sandbox_dir = joinpath(tempdir(), "test_basic_markdown_format")
-        mkdir(sandbox_dir)
-        try
-            config_path = joinpath(sandbox_dir, CONFIG_FILE_NAME)
-            md_path = joinpath(sandbox_dir, "file.md")
-            open(io -> write(io, config2), config_path, "w")
-            open(io -> write(io, before), md_path, "w")
+        mktempdir() do dir
+            md_path = joinpath(dir, "file.md")
+            write(joinpath(dir, CONFIG_FILE_NAME), config2)
+            write(md_path, before)
 
             @test format(md_path) == false
             @test read(md_path, String) == after2
-        finally
-            rm(sandbox_dir; recursive = true)
         end
     end
 
@@ -256,22 +237,15 @@ using Test
           - a
           -             b
         """
-        # test formatting a Julia markdown file
-        # test_basic_juliamarkdown_format
         # ├─ .JuliaFormatter.toml (config2)
         # └─ file.jmd (before -> after2)
-        sandbox_dir = joinpath(tempdir(), "test_basic_juliamarkdown_format")
-        mkdir(sandbox_dir)
-        try
-            config_path = joinpath(sandbox_dir, CONFIG_FILE_NAME)
-            md_path = joinpath(sandbox_dir, "file.jmd")
-            open(io -> write(io, config2), config_path, "w")
-            open(io -> write(io, before), md_path, "w")
+        mktempdir() do dir
+            md_path = joinpath(dir, "file.jmd")
+            write(joinpath(dir, CONFIG_FILE_NAME), config2)
+            write(md_path, before)
 
             @test format(md_path) == false
             @test read(md_path, String) == after2
-        finally
-            rm(sandbox_dir; recursive = true)
         end
     end
 
@@ -312,22 +286,15 @@ using Test
           - a
           -             b
         """
-        # test formatting a Quarto markdown file
-        # test_basic_quartomarkdown_format
         # ├─ .JuliaFormatter.toml (config2)
         # └─ file.qmd (before -> after2)
-        sandbox_dir = joinpath(tempdir(), "test_basic_quartomarkdown_format")
-        mkdir(sandbox_dir)
-        try
-            config_path = joinpath(sandbox_dir, CONFIG_FILE_NAME)
-            md_path = joinpath(sandbox_dir, "file.qmd")
-            open(io -> write(io, config2), config_path, "w")
-            open(io -> write(io, before), md_path, "w")
+        mktempdir() do dir
+            md_path = joinpath(dir, "file.qmd")
+            write(joinpath(dir, CONFIG_FILE_NAME), config2)
+            write(md_path, before)
 
             @test format(md_path) == false
             @test read(md_path, String) == after2
-        finally
-            rm(sandbox_dir; recursive = true)
         end
     end
 
@@ -372,22 +339,15 @@ using Test
             :val_to_string
         ])
         """
-        # test `trailing_comma = "nothing"` in config (#539)
-        # test_trailing_comma_nothing_config
         # ├─ .JuliaFormatter.toml (config_trailing_comma_nothing)
         # └─ code.jl (code_trailing_comma -> code_trailing_comma_after)
-        sandbox_dir = joinpath(tempdir(), "test_trailing_comma_nothing_config")
-        mkdir(sandbox_dir)
-        try
-            config_path = joinpath(sandbox_dir, CONFIG_FILE_NAME)
-            code_path = joinpath(sandbox_dir, "code.jl")
-            open(io -> write(io, config_trailing_comma_nothing), config_path, "w")
-            open(io -> write(io, code_trailing_comma), code_path, "w")
+        mktempdir() do dir
+            code_path = joinpath(dir, "code.jl")
+            write(joinpath(dir, CONFIG_FILE_NAME), config_trailing_comma_nothing)
+            write(code_path, code_trailing_comma)
 
             @test format(code_path) == false
             @test read(code_path, String) == code_trailing_comma_after
-        finally
-            rm(sandbox_dir; recursive = true)
         end
     end
 
@@ -408,28 +368,20 @@ using Test
         end
         """
 
-        # test `always_for_in = "nothing"` in config (#539)
-        # test_always_for_in_nothing_config
         # ├─ .JuliaFormatter.toml (always_for_in_nothing)
         # └─ code.jl (code_always_for_in -> code_always_for_in_after)
-        sandbox_dir = joinpath(tempdir(), "test_always_for_in_nothing_config")
-        mkdir(sandbox_dir)
-        try
-            config_path = joinpath(sandbox_dir, CONFIG_FILE_NAME)
-            code_path = joinpath(sandbox_dir, "code.jl")
-            open(io -> write(io, config_always_for_in_nothing), config_path, "w")
-            open(io -> write(io, code_always_for_in), code_path, "w")
+        mktempdir() do dir
+            code_path = joinpath(dir, "code.jl")
+            write(joinpath(dir, CONFIG_FILE_NAME), config_always_for_in_nothing)
+            write(code_path, code_always_for_in)
 
             @test format(code_path) == false
             @test read(code_path, String) == code_always_for_in_after
-        finally
-            rm(sandbox_dir; recursive = true)
         end
     end
 
     @testset "ignore" begin
         unformatted_text = "( )"
-        sandbox_dir = joinpath(tempdir(), "test_ignored_config")
         tobeignored = (
             "b.jl",
             "ignored_directory/a.jl",
@@ -445,8 +397,8 @@ using Test
             "third_directory/b.jl",
             "third_directory/ignored_directory/b.jl",
         )
-        try
-            cp("files/ignore", sandbox_dir)
+        mktempdir() do sandbox_dir
+            cp("files/ignore", sandbox_dir; force = true)
             @test format(sandbox_dir) == false
             @test format(sandbox_dir) == true
             for file in tobeignored
@@ -457,8 +409,6 @@ using Test
                 code_path = joinpath(sandbox_dir, file)
                 @test !startswith(read(code_path, String), unformatted_text)
             end
-        finally
-            rm(sandbox_dir; recursive = true)
         end
     end
 end

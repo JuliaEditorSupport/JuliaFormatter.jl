@@ -456,6 +456,28 @@ else
                 end
             end
 
+            @testset "nested config files" begin
+                with_sandbox() do _
+                    # root/
+                    # ├── .JuliaFormatter.toml  (indent = 2)
+                    # ├── a.jl
+                    # └── sub/
+                    #     ├── .JuliaFormatter.toml  (indent = 8)
+                    #     └── b.jl
+                    text = "if true\nx = 1\nend\n"
+                    write(CONFIG_FILE_NAME, "indent = 2")
+                    write("a.jl", text)
+                    mkdir("sub")
+                    write(joinpath("sub", CONFIG_FILE_NAME), "indent = 8")
+                    write(joinpath("sub", "b.jl"), text)
+
+                    run(`$(jlfmt_cmd()) --inplace .`)
+                    @test readchomp("a.jl") == rstrip(format_text(text; indent = 2))
+                    @test readchomp(joinpath("sub", "b.jl")) ==
+                          rstrip(format_text(text; indent = 8))
+                end
+            end
+
             @testset "--prioritize-config-file with --config-dir" begin
                 with_sandbox() do dir
                     fname = "a.jl"
