@@ -18,9 +18,12 @@ end
 
 Error thrown when the formatted text is invalid.
 """
-struct InvalidFormattedTextError <: Exception end
-function Base.showerror(io::IO, ::InvalidFormattedTextError)
+struct InvalidFormattedTextError <: Exception
+    juliasyntax_error::JuliaSyntax.ParseError
+end
+function Base.showerror(io::IO, ie::InvalidFormattedTextError)
     print(io, "\nformatted text could not be parsed as valid Julia\n")
+    showerror(io, ie.juliasyntax_error)
 end
 
 """
