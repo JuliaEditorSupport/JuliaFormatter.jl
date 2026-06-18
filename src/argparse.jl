@@ -317,34 +317,17 @@ const PARSER = ArgParser(
         help = "File to write formatted output to.",
     ),
     flag(["-v", "--verbose"]; dest = :verbose, help = "Enable verbose output."),
-    flag(
-        ["--format_markdown"];
-        dest = :format_markdown,
-        help = "Also format code blocks in Markdown files.",
-    ),
-    flag(
-        ["--prioritize-config-file"];
-        dest = :config_priority,
-        help = "Prioritize config file options over command-line options.",
-    ),
-    flag(
-        ["--ignore-config"];
-        dest = :ignore_config,
-        help = "Do not use .JuliaFormatter.toml config files.",
-    ),
-    option(
-        "--stdin-filename";
-        dest = :stdin_filename,
-        type = String,
-        metavar = "<name>",
-        help = "Assumed filename when formatting from stdin.",
-    ),
     option(
         "--config-dir";
         dest = :config_dir,
         type = String,
         metavar = "<dir>",
         help = "Directory path for .JuliaFormatter.toml config lookup.",
+    ),
+    flag(
+        ["--format_markdown"];
+        dest = :format_markdown,
+        help = "Also format code blocks in Markdown files.",
     ),
     option(
         "--ignore";
@@ -354,6 +337,11 @@ const PARSER = ArgParser(
         metavar = "<pattern>",
         help = "Ignore files matching the given pattern. Can be repeated.",
     ),
+    flag(
+        ["--ignore-config"];
+        dest = :ignore_config,
+        help = "Do not use .JuliaFormatter.toml config files.",
+    ),
     option(
         "--lines";
         dest = :lines,
@@ -361,6 +349,18 @@ const PARSER = ArgParser(
         multi = true,
         metavar = "<start:stop>",
         help = "Only format the given range of lines. Can be repeated.",
+    ),
+    flag(
+        ["--prioritize-config-file"];
+        dest = :config_priority,
+        help = "Prioritize config file options over command-line options.",
+    ),
+    option(
+        "--stdin-filename";
+        dest = :stdin_filename,
+        type = String,
+        metavar = "<name>",
+        help = "Assumed filename when formatting from stdin.",
     ),
     # --- Formatting options ---
     option(
