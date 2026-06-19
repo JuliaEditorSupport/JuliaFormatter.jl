@@ -129,6 +129,11 @@ function _ternary_to_ifelse!(
                 add_node!(output_fst, pretty(style, c, s, ctx, lineage), s; join_lines = true)
             else
                 first_nonws_idx = findfirst(cc -> !JuliaSyntax.is_whitespace(cc), children(c))
+                # Note: this catches inline comments as well -- not just line comments, so
+                # the parenthesisation is over-conservative, but it's just really annoying
+                # to figure out whether a comment is inline or not, so this is a reasonable
+                # compromise. (We can't reliably check for the presence of a newline after
+                # the comment because that isn't unique to line comments.)
                 node = if any(cc -> kind(cc) === K"Comment", children(c)[1:first_nonws_idx])
                     paren_fst = FST(Brackets, nspaces(s))
                     add_node!(paren_fst, FST(PUNCTUATION, loc[2], loc[1], loc[1], "("), s; join_lines = true)
