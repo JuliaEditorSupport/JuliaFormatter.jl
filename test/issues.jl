@@ -3221,6 +3221,21 @@ end
                 test_format(s, nothing, style; ast=true)
             end
         end
+
+        # Don't need to parenthesise if there are comments to help us separate
+        s = "f(x; < #= comment =# = >)"
+        out = "f(x; < #= comment =# =(>))"
+        test_format(s, out, BlueStyle())
+        for style in (DefaultStyle(), SciMLStyle(), YASStyle(), MinimalStyle())
+            test_format(s, nothing, style; ast=true)
+        end
+
+        s = "f(x; < = #= comment =# >)"
+        out = "f(x; (<)= #= comment =# >)"
+        test_format(s, out, BlueStyle())
+        for style in (DefaultStyle(), SciMLStyle(), YASStyle(), MinimalStyle())
+            test_format(s, nothing, style; ast=true)
+        end
     end
 end
 
