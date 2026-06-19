@@ -981,7 +981,6 @@ function p_macrocall(
         t.typ = MacroBlock
     end
 
-    ctx = newctx(ctx; can_separate_kwargs = false)
     for (i, a) in enumerate(childs)
         n = pretty(style, a, s, ctx, lineage)::FST
         if JuliaSyntax.is_macro_name(a)
@@ -3172,7 +3171,7 @@ function p_call(
         end
     end
 
-    if s.opts.separate_kwargs_with_semicolon && can_separate_kwargs_for_this_call
+    if (s.opts.separate_kwargs_with_semicolon && can_separate_kwargs_for_this_call && !s.disable_syntax_transformations)
         separate_kwargs_with_semicolon!(t)
     end
 

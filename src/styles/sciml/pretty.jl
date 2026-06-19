@@ -141,7 +141,7 @@ function p_macrocall(
             style,
             a,
             s,
-            newctx(ctx; nospace = nospace, can_separate_kwargs = false),
+            newctx(ctx; nospace = nospace),
             lineage,
         )::FST
 
