@@ -3304,6 +3304,16 @@ end
             end
         end"""
         test_format(s, out, BlueStyle())
+
+        s = """begin
+            DifferencePolyRingElem{T}(dpr::DifferencePolyRing{T}) where {T} = new{T}(zero(dpr.upoly_ring), dpr, true, Int[])
+        end"""
+        out = """begin
+            function DifferencePolyRingElem{T}(dpr::DifferencePolyRing{T}) where {T}
+                return new{T}(zero(dpr.upoly_ring), dpr, true, Int[])
+            end
+        end"""
+        test_format(s, out, BlueStyle())
     end
 end
 
