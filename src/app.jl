@@ -463,7 +463,13 @@ function process_file(args::ProcessFileArgs)
         elseif !isempty(args.line_ranges)
             _format_line_ranges(sourcetext, style, args.line_ranges, merged_options)
         else
-            _format_text(sourcetext, style, merged_options; check_output = true, ensure_trailing_newline = true)
+            _format_text(
+                sourcetext,
+                style,
+                merged_options;
+                check_output = true,
+                ensure_trailing_newline = true,
+            )
         end
     catch err
         if err isa JuliaSyntax.ParseError

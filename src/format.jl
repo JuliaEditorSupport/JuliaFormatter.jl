@@ -158,7 +158,7 @@ function _format_text(
         choose_line_ending_replacer(s.doc.srcfile.code)
     end
     output = normalize_line_ending(output, replacer)
-    
+
     output = if ensure_trailing_newline
         if replacer == WINDOWS_TO_UNIX
             replace(output, r"\n*$" => "\n")
