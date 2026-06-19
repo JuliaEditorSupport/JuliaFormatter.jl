@@ -7,6 +7,10 @@ This bug also led to lack of idempotence in a number of cases (e.g. when a short
 
 Fixed a bug where comments in chained ternary expressions were not being handled correctly when expanded with BlueStyle, leading to invalid Julia code. (#1142, #1143)
 
+Fixed a bug where keyword argument names that were operators were not being parenthesised when `whitespace_in_kwargs = false`, leading to invalid Julia code. (#1144, #1145)
+
+Fixed a bug where `short_to_long_function` would trigger even inside macros or `Expr` objects, leading to a change in the meaning of the code. (#1124, #1145)
+
 # v2.9.0
 
 Improved CLI exit codes (and error messages):

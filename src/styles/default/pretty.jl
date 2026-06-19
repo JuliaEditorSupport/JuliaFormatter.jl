@@ -2288,42 +2288,62 @@ function p_kw(
     push!(lineage, (kind(cst), false, true))
 
     # We need to process the LHS and RHS slightly differently in the loop below.
-    is_rhs_of_equal = false
+    equal_idx = findfirst(n -> kind(n) === K"=", children(cst))
+    equal_idx === nothing && error("unreachable: kw node without an equal sign")
+    # Can't use JuliaSyntax.is_whitespace since that includes comments.
+    is_not_whitespace(n) = !(kind(n) in KSet"Whitespace NewlineWs")
+    immediate_rhs_idx = findnext(is_not_whitespace, children(cst), equal_idx + 1)
+    immediate_lhs_idx = findprev(is_not_whitespace, children(cst), equal_idx - 1)
+    immediate_rhs_idx === nothing && error("unreachable: kw node without a RHS")
+    immediate_lhs_idx === nothing && error("unreachable: kw node without a LHS")
 
-    for c in children(cst)
+    for (i, c) in enumerate(children(cst))
         if kind(c) === K"="
             s.opts.whitespace_in_kwargs && add_node!(t, Whitespace(1), s)
             add_node!(t, pretty(style, c, s, ctx, lineage), s; join_lines = true)
             s.opts.whitespace_in_kwargs && add_node!(t, Whitespace(1), s)
-            # Now that we've seen the equal, we know that what comes after it must
-            # be the RHS.
-            is_rhs_of_equal = true
         else
             child_offset = s.offset
             n = pretty(style, c, s, ctx, lineage)
-            # Check if the value of the kwarg begins with an operator, or if the name ends
-            # with an exclamation mark. If so, then we should parenthesise it to avoid
-            # ambiguity.
-            lhs_ends_with_bang =
-                !is_rhs_of_equal && kind(c) === K"Identifier" && endswith(n.val, "!")
-            rhs_begins_with_op =
-                is_rhs_of_equal && source_begins_with_op_needing_parens(s, c, child_offset)
+            # Check if the name of the kwarg ends with an exclamation mark, or if the name
+            # of the kwarg is an op (note that the name has to be a single identifier so
+            # checking that it begins with an op is equivalent to checking that is an op),
+            # or if the value of the kwarg begins with an op.
+            #
+            # In all of these cases, we need to parenthesise it to avoid ambiguity.
             parenthesise =
-                (lhs_ends_with_bang || rhs_begins_with_op) && !s.opts.whitespace_in_kwargs
+                !s.opts.whitespace_in_kwargs && begin
+                    if i == immediate_rhs_idx && kind(c) !== K"Comment"
+                        source_begins_with_op_needing_parens(s, c, child_offset)
+                    elseif i === immediate_lhs_idx && kind(c) === K"Identifier"
+                        endswith(n.val, "!") || Shims.is_valid_nonword_operator(n.val)
+                    else
+                        false
+                    end
+                end
 
-            parenthesise && add_node!(
-                t,
-                FST(PUNCTUATION, -1, n.startline, n.startline, "("),
-                s;
-                join_lines = true,
-            )
-            add_node!(t, n, s; join_lines = true)
-            parenthesise && add_node!(
-                t,
-                FST(PUNCTUATION, -1, n.startline, n.startline, ")"),
-                s;
-                join_lines = true,
-            )
+            node = if parenthesise
+                paren_fst = FST(Brackets, nspaces(s))
+                add_node!(
+                    paren_fst,
+                    FST(PUNCTUATION, -1, n.startline, n.startline, "("),
+                    s;
+                    join_lines = true,
+                )
+                add_node!(paren_fst, Placeholder(0), s)
+                add_node!(paren_fst, n, s; join_lines = true)
+                add_node!(paren_fst, Placeholder(0), s)
+                add_node!(
+                    paren_fst,
+                    FST(PUNCTUATION, -1, n.startline, n.startline, ")"),
+                    s;
+                    join_lines = true,
+                )
+                paren_fst
+            else
+                n
+            end
+            add_node!(t, node, s; join_lines = true)
         end
     end
 
@@ -2575,9 +2595,12 @@ function p_binaryopcall(
     end
 
     # Catches e.g. `f(x) = x + 1`; but _not_ `let f(x) = x + 1; body; end` since expanding
-    # that would lead to invalid Julia code.
+    # that would lead to invalid Julia code, and also disable it if it's in a macro/Expr.
     is_short_func = defines_function(cst)
-    is_expandable_short_func = is_short_func && !ctx.from_let
+    is_expandable_short_func =
+        is_short_func &&
+        !ctx.from_let &&
+        all(t -> !(t[1] in KSet"macrocall quote"), lineage)
     standalone_binary_circuit = ctx.standalone_binary_circuit
 
     # For the lhs of a short-form function, we can't enable separate_kwargs_with_semicolon.

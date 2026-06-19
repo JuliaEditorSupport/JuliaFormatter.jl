@@ -3123,6 +3123,20 @@ end
         test_format("a && b", "if a\n    b\nend"; short_circuit_to_if=true)
     end
 
+    @testset "1124 do not change syntax in Exprs" begin
+        @testset "short to long funcdef" begin
+            for s in (
+                ":(f(x) = 1)",
+                "@macro f(x) = 1",
+                "@macro(f(x) = 1)",
+            )
+                for style in ALL_STYLES
+                    test_format(s, s, style; short_to_long_function_def=true, force_long_function_def=true)
+                end
+            end
+        end
+    end
+
     @testset "1125 always_use_return idempotence" begin
         s = """
         function f()
@@ -3210,6 +3224,32 @@ end
             end
         end"""
         test_format(s, output, BlueStyle())
+    end
+
+    @testset "1144 ops as keyword names" begin
+        for s in (
+            "Compiler.sort!(v; by = x -> -x, < = >) === v == [1,2,3]",
+            "sort(v; by, lt) == Compiler.sort!(copy(v); by, < = lt)",
+        )
+            for style in ALL_STYLES
+                test_format(s, nothing, style; ast=true)
+            end
+        end
+
+        # Don't need to parenthesise if there are comments to help us separate
+        s = "f(x; < #= comment =# = >)"
+        out = "f(x; < #= comment =# =(>))"
+        test_format(s, out, BlueStyle())
+        for style in (DefaultStyle(), SciMLStyle(), YASStyle(), MinimalStyle())
+            test_format(s, nothing, style; ast=true)
+        end
+
+        s = "f(x; < = #= comment =# >)"
+        out = "f(x; (<)= #= comment =# >)"
+        test_format(s, out, BlueStyle())
+        for style in (DefaultStyle(), SciMLStyle(), YASStyle(), MinimalStyle())
+            test_format(s, nothing, style; ast=true)
+        end
     end
 end
 

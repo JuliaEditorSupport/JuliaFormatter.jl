@@ -82,4 +82,20 @@ function is_caller_in_function_def(t::JuliaSyntax.GreenNode)::Bool
     end
 end
 
+"""
+    is_valid_nonword_operator(s::AbstractString) -> Bool
+
+Check whether the string `s` is a valid operator in Julia, via JuliaSyntax.
+
+Excludes word operators (i.e., `in`, `isa`, and `where`)..
+"""
+function is_valid_nonword_operator(s::AbstractString)
+    try
+        k = JS.Kind(s)
+        return JS.is_operator(k) && !JS.is_word_operator(k)
+    catch
+        return false
+    end
+end
+
 end # module
