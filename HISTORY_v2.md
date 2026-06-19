@@ -1,6 +1,8 @@
 # v2.9.3
 
-Fixed a bug where even if Windows line endings were specified (either via `normalize_line_endings="windows"` or if the original file had Windows line endings), calling `format()` on the file would still append a final Unix trailing newline to the file. (#1155)
+Fixed a bug where even if Windows line endings were specified (either via `normalize_line_endings="windows"` or if the original file had Windows line endings), calling `format()` on the file would still append a final Unix trailing newline to the file. (#1156)
+
+Improved the output of `jlfmt --diff` to show the full name of the file being formatted, instead of just the base name. (#1152, #1157)
 
 # v2.9.2
 
