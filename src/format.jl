@@ -54,7 +54,10 @@ _maxiters(::SciMLStyle) = 4
 """
     _format_text(
         text::AbstractString, style::AbstractStyle, opts::Options{Union{}};
-        check_output::Bool=true, maxiters::Int=1)
+        check_output::Bool=true,
+        maxiters::Int=1,
+        ensure_trailing_newline::Bool=false
+    )
 
 The lower-level entry point for text formatting.
 
@@ -67,6 +70,12 @@ The `maxiters` keyword argument is specified in order to allow the formatting al
 iterate to a fixed point. This is a hack and should really not be used, but currently
 SciMLStyle is not idempotent and requires multiple iterations to reach a fixed point. By
 default `maxiters` is set to 1, i.e., only one pass.
+
+If `ensure_trailing_newline` is set to `true`, the function will ensure that the formatted
+text ends with a single newline character. This might be either CRLF or LF depending on the
+line ending normalization settings. If set to `false`, the function will not modify the
+trailing newline character(s) in the formatted text. This option is useful when formatting
+files.
 """
 function _format_text(
     text::AbstractString,
@@ -74,9 +83,15 @@ function _format_text(
     opts::Options{Union{}};
     check_output::Bool = true,
     maxiters::Int = _maxiters(style),
+    ensure_trailing_newline::Bool = false,
 )
     maxiters <= 0 && return text
-    isempty(text) && return text
+    if isempty(text)
+        if ensure_trailing_newline
+            return opts.normalize_line_endings == "windows" ? "\r\n" : "\n"
+        end
+        return text
+    end
 
     node = JuliaSyntax.parseall(
         JuliaSyntax.GreenNode,
@@ -144,6 +159,16 @@ function _format_text(
     end
     output = normalize_line_ending(output, replacer)
 
+    output = if ensure_trailing_newline
+        if replacer == WINDOWS_TO_UNIX
+            replace(output, r"\n*$" => "\n")
+        else
+            replace(output, r"(\r\n)*$" => "\r\n")
+        end
+    else
+        output
+    end
+
     if check_output
         try
             JuliaSyntax.parseall(
@@ -182,15 +207,16 @@ function _format_file(filename::AbstractString, config::Configuration)::Bool
         config.format_markdown || return true
         config.verbose && println("Formatting $filename")
         str = String(read(filename))
+        # Already guarantees trailing newline, although newlines in Markdown are not
+        # normalised (that's a CommonMark thing, not JuliaFormatter).
         _format_md(str, config.style, merged_options)
     elseif ext == ".jl" || match(shebang_pattern, readline(filename)) !== nothing
         config.verbose && println("Formatting $filename")
         str = String(read(filename))
-        _format_text(str, config.style, merged_options)
+        _format_text(str, config.style, merged_options; ensure_trailing_newline = true)
     else
         throw(InvalidFileError(filename))
     end
-    formatted_str = replace(formatted_str, r"\n*$" => "\n")
 
     already_formatted = (formatted_str == str)
     if config.overwrite && !already_formatted

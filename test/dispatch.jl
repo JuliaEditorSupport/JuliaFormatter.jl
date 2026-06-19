@@ -169,6 +169,22 @@ end
         end
     end
 
+    @testset "newline handling" begin
+        for nls in ("", "\n", "\n\n")
+            with_tempfile(nls) do path
+                already = format(path)
+                @test read(path, String) == "\n"
+            end
+        end
+
+        for nls in ("\r\n", "\r\n\r\n")
+            with_tempfile(nls) do path
+                already = format(path)
+                @test read(path, String) == "\r\n"
+            end
+        end
+    end
+
     @testset "keyword style" begin
         with_tempfile(UNFORMATTED_KW) do path
             format(path; style = BlueStyle())
