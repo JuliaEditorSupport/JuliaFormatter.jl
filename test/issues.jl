@@ -3318,12 +3318,14 @@ end
 
     @testset "1153 empty blocks" begin
         for prefix in ("", "@testset ")
-            s = "$(prefix)begin\n\nend"
-            test_format(s, "$(prefix)begin end", DefaultStyle())
-            test_format(s, "$(prefix)begin end", BlueStyle())
-            test_format(s, "$(prefix)begin\nend", SciMLStyle())
-            test_format(s, "$(prefix)begin\nend", YASStyle())
-            test_format(s, "$(prefix)begin\n\nend", MinimalStyle())
+            for nls in ("\n\n", "\n\n\n")
+                s = "$(prefix)begin$(nls)end"
+                test_format(s, "$(prefix)begin end", DefaultStyle())
+                test_format(s, "$(prefix)begin end", BlueStyle())
+                test_format(s, "$(prefix)begin\nend", SciMLStyle())
+                test_format(s, "$(prefix)begin\nend", YASStyle())
+                test_format(s, "$(prefix)begin$(nls)end", MinimalStyle())
+            end
         end
 
         s_ = "begin\n#= hi =#\nend"
