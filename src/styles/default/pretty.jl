@@ -2578,23 +2578,15 @@ function p_binaryopcall(
     # Intercept piped function calls and construct a normal function call FST instead. NOTE:
     # If overloading `p_binaryopcall` for a custom style you will have to make sure to
     # include this logic!
-    if opkind === K"|>" && s.opts.pipe_to_function_call
-        # We purposely exclude three cases:
-        # 
-        # 1. `x |> f` inside a macro. It's too dangerous to change that inside a macro as
-        #    the macro may well be handling `|>` in a custom way.
-        #
-        # 2. `:(x |> f)` or `quote x |> f end`. Changing the code inside an `Expr` makes
-        #    it a different `Expr`.
-        #
-        # 3. `x .|> (f1, f2)`. This is a very weird Julia quirk where you can broadcast
-        #    over the _caller_ rather than the callee. There's no equivalent way to express
-        #    this in function call form, so we shouldn't try to transform it. See
-        #    https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/647.
-        inside_macro_or_quote = any(t -> t[1] in KSet"macrocall quote", lineage)
+    if opkind === K"|>" && s.opts.pipe_to_function_call && !s.disable_syntax_transformations
+        # We purposely exclude one more case: `x .|> (f1, f2)`. This is a very weird Julia
+        # quirk where you can broadcast over the _caller_ rather than the callee. There's no
+        # equivalent way to express this in function call form, so we shouldn't try to
+        # transform it.
+        # See https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/647
         rhs_cst = childs[findlast(n -> !JuliaSyntax.is_whitespace(n), childs)]
         dotted_tuple = kind(cst) === K"dotcall" && kind(rhs_cst) === K"tuple"
-        if !inside_macro_or_quote && !dotted_tuple
+        if !dotted_tuple
             return p_pipe_to_call(ds, cst, s, ctx, lineage)
         end
     end
@@ -2619,7 +2611,7 @@ function p_binaryopcall(
     is_expandable_short_func =
         is_short_func &&
         !ctx.from_let &&
-        all(t -> !(t[1] in KSet"macrocall quote"), lineage)
+        !s.disable_syntax_transformations
     standalone_binary_circuit = ctx.standalone_binary_circuit
 
     # For the lhs of a short-form function, we can't enable separate_kwargs_with_semicolon.
@@ -4290,9 +4282,7 @@ function p_generator(
 )
     style = getstyle(ds)
     t = FST(Generator, nspaces(s))
-    if !haschildren(cst)
-        return t
-    end
+    JuliaSyntax.is_leaf(cst) && return t
 
     has_for_kw = false
     from_iterable = false
