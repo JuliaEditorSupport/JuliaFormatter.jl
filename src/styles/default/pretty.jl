@@ -2419,11 +2419,14 @@ function p_pipe_to_call(
     lhs, rhs = nothing, nothing
     for (i, c) in enumerate(childs)
         if i == lhs_idx
-            if kind(c) === K"parens" && haschildren(c)
+            if kind(c) === K"parens" && haschildren(c) && !any(is_assignment, children(c))
                 # If the lhs is a parenthesised expression, we can strip the parentheses.
                 # For example
                 #     (x) |> f
-                # can just become f(x) rather than f((x)).
+                # can just become f(x) rather than f((x)). However, we need to make sure
+                # we don't do this for assignments, because
+                #     (x = y) |> f
+                # is not the same as f(x = y)!
                 for pc in children(c)
                     if kind(pc) in KSet"( )" || JuliaSyntax.is_whitespace(pc)
                         s.offset += span(pc)
@@ -2506,19 +2509,28 @@ function p_pipe_to_call(
     end
 
     # Add the function, parenthesising if needed.
-    caller_needs_parens && add_node!(
-        call_node,
-        FST(PUNCTUATION, -1, rhs.startline, rhs.startline, "("),
-        s;
-        join_lines = true,
-    )
-    add_node!(call_node, rhs, s; join_lines = true)
-    caller_needs_parens && add_node!(
-        call_node,
-        FST(PUNCTUATION, -1, rhs.startline, rhs.startline, ")"),
-        s;
-        join_lines = true,
-    )
+    maybe_parenthesised_caller_node = if caller_needs_parens
+        parens_fst = FST(Brackets, nspaces(s))
+        add_node!(
+            parens_fst,
+            FST(PUNCTUATION, -1, rhs.startline, rhs.startline, "("),
+            s;
+            join_lines = true,
+        )
+        add_node!(parens_fst, Placeholder(0), s; join_lines = true)
+        add_node!(parens_fst, rhs, s; join_lines = true)
+        add_node!(parens_fst, Placeholder(0), s; join_lines = true)
+        add_node!(
+            parens_fst,
+            FST(PUNCTUATION, -1, rhs.startline, rhs.startline, ")"),
+            s;
+            join_lines = true,
+        )
+        parens_fst
+    else
+        rhs
+    end
+    add_node!(call_node, maybe_parenthesised_caller_node, s; join_lines = true)
 
     # Add a dot *after* the function if needed.
     if kind(cst) === K"dotcall" && !is_dotted_operator
