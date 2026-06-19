@@ -3222,6 +3222,29 @@ end
             test_format(s, nothing, style; ast=true)
         end
     end
+
+    @testset "1147 pipe_to_function_call with assignment" begin
+        for parens in (
+            "(a = b)",
+            "(#= 1 =# a #= 2 =# = #= 3 =# b #= 4 =#)",
+        )
+            s = "$(parens) |> f"
+            expected_out = "f($(parens))"
+            for style in ALL_STYLES
+                test_format(s, expected_out, style; pipe_to_function_call=true)
+            end
+        end
+
+        s = """(
+            a = b # why
+        ) |> f"""
+        expected_out = """f((
+            a = b # why
+        ))"""
+        for style in (DefaultStyle(), BlueStyle())
+            test_format(s, expected_out, style; pipe_to_function_call=true)
+        end
+    end
 end
 
 end

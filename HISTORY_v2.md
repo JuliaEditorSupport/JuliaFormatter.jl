@@ -1,3 +1,7 @@
+# v2.9.2
+
+Fixed a bug where `pipe_to_function_call` would remove parentheses from the argument of a function call even if the argument was an assignment, changing the meaning of the code. (#1147, #1148)
+
 # v2.9.1
 
 Fixed a bug where `separate_kwargs_with_semicolon` would cause a change in the meaning of function calls such as `f(p, q=r, s)`. (#625, #1141)
