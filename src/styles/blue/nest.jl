@@ -40,7 +40,15 @@ function n_tuple!(
         nested = true
 
         nest_to_oneline =
-            if can_nest(fst) && (indent + s.opts.indent + args_margin <= s.opts.margin)
+        # Vcat/Ncat types set AlwaysNest in default/pretty's `p_vcat` when the source is
+        # multi-line. We have to disable nest_to_oneline for these because if it gets
+        # nested to oneline (i.e., `[\n1;2;3;4\n]`), the next pass through p_vcat will
+        # set AlwaysNest, which then causes nest_to_oneline to be disabled when we hit
+        # this function again, causing the output to be reformatted to
+        # `[\n1;\n2;\n3;\n4\n]`...... oh well.
+            if fst.typ in (Vcat, TypedVcat, Ncat, TypedNcat)
+                false
+            elseif can_nest(fst) && (indent + s.opts.indent + args_margin <= s.opts.margin)
                 !contains_comment(nodes[args_range])
             else
                 false
