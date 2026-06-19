@@ -3259,6 +3259,38 @@ end
             test_format(s, nothing, style; ast=true)
         end
     end
+
+    @testset "1127 short to long function indentation" begin
+        s = """begin
+            a() = b
+        end"""
+        for always_use_return in (true, false)
+            maybe_return = always_use_return ? "return " : ""
+            output = """begin
+                function a()
+                    $(maybe_return)b
+                end
+            end"""
+            for style in ALL_STYLES
+                test_format(s, output, style; always_use_return=always_use_return, short_to_long_function_def=true, force_long_function_def=true)
+            end
+        end
+
+        # With one more level
+        s = """begin
+            begin
+            a() = b
+            end
+        end"""
+        out = """begin
+            begin
+                function a()
+                    return b
+                end
+            end
+        end"""
+        test_format(s, out, BlueStyle(); margin=10)
+    end
 end
 
 end

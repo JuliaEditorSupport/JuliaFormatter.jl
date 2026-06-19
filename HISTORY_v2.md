@@ -4,6 +4,8 @@ Fixed a bug where `pipe_to_function_call` would remove parentheses from the argu
 
 Fixed a bug where BlueStyle formatting of array literals which exceeded the margin was not idempotent. (#1149, #1150)
 
+Fixed a bug where `short_to_long_function_def` would not apply the correct indentation to the function body, leading to non-idempotent formatting. (#1127, #1151)
+
 # v2.9.1
 
 Fixed a bug where `separate_kwargs_with_semicolon` would cause a change in the meaning of function calls such as `f(p, q=r, s)`. (#625, #1141)

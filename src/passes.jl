@@ -224,6 +224,7 @@ function short_to_long_function_def!(
     s.opts.always_use_return && prepend_return_fst!(fst[end], s)
     if fst[end].typ === Block
         add_node!(funcdef, fst[end], s; max_padding = s.opts.indent)
+        add_indent!(funcdef[end], s, s.opts.indent)
     elseif fst[end].typ === Begin
         # case where body is wrapped in a `begin` block
         # which becomes superfluous when converted to a
@@ -242,20 +243,18 @@ function short_to_long_function_def!(
         bnode = fst[end][idx]
         add_indent!(bnode, s, -s.opts.indent)
         add_node!(funcdef, bnode, s; max_padding = s.opts.indent)
+        add_indent!(funcdef[end], s, s.opts.indent)
     else
-        # ```
-        # function
-        #     body
-        # end
-        # ```
-        #
-        # `body` is parsed wrapped block node. Wrapping it in
-        # a `Block` node ensures the indent is correct.
+        # The body is a single expression (not a Block or Begin). Wrap it
+        # in a Block so the indentation logic works. Because the expression
+        # was inline (indent=0 in the FST), we need to add the full
+        # absolute indent: funcdef.indent (parent nesting) + opts.indent
+        # (one level for the function body).
         bl = FST(Block, fst[end].indent)
         add_node!(bl, fst[end], s)
         add_node!(funcdef, bl, s; max_padding = s.opts.indent)
+        add_indent!(funcdef[end], s, funcdef.indent + s.opts.indent)
     end
-    add_indent!(funcdef[end], s, s.opts.indent)
 
     if s.opts.always_use_return
         prepend_return_fst!(funcdef[end], s)
