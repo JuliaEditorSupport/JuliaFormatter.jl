@@ -1,3 +1,7 @@
+# v2.9.3
+
+Fixed a bug where even if Windows line endings were specified (either via `normalize_line_endings="windows"` or if the original file had Windows line endings), calling `format()` on the file would still append a final Unix trailing newline to the file. (#1155)
+
 # v2.9.2
 
 Fixed a bug where `pipe_to_function_call` would remove parentheses from the argument of a function call even if the argument was an assignment, changing the meaning of the code. (#1147, #1148)
