@@ -2330,7 +2330,7 @@ function p_kw(
                     join_lines = true,
                 )
                 add_node!(paren_fst, Placeholder(0), s)
-                add_node!(t, n, s; join_lines = true)
+                add_node!(paren_fst, n, s; join_lines = true)
                 add_node!(paren_fst, Placeholder(0), s)
                 add_node!(
                     paren_fst,
