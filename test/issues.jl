@@ -3123,6 +3123,20 @@ end
         test_format("a && b", "if a\n    b\nend"; short_circuit_to_if=true)
     end
 
+    @testset "1124 do not change syntax in Exprs" begin
+        @testset "short to long funcdef" begin
+            for s in (
+                ":(f(x) = 1)",
+                "@macro f(x) = 1",
+                "@macro(f(x) = 1)",
+            )
+                for style in ALL_STYLES
+                    test_format(s, s, style; short_to_long_function_def=true, force_long_function_def=true)
+                end
+            end
+        end
+    end
+
     @testset "1125 always_use_return idempotence" begin
         s = """
         function f()
