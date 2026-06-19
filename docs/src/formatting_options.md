@@ -357,11 +357,13 @@ using JuliaFormatter: format_text
 format_text(s; import_to_using=true) |> println
 ```
 
-There are some exceptions to this:
+There are some exceptions to this, which makes this transformation quite conservative:
 
 - This transformation is disabled inside macros or `Expr`s.
 
 - `import X as Y` cannot be rewritten in a semantically equivalent way, so is skipped.
+
+- `import A.b` cannot be properly resolved (it may either be `using A: b` or `using A.b: b`), so is skipped.
 
 - `import ..X` cannot be rewritten because `X` may not necessarily be a module.
   See e.g. [this issue](https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/723).
