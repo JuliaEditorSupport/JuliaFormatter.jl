@@ -40,4 +40,14 @@ cst(s::String) = JuliaSyntax.parseall(JuliaSyntax.GreenNode, s)[1]
     @test S.is_function_call(cst("<:(x, y#=hi=#)"))
 end
 
+@testset "is_valid_nonword_operator" begin
+    @test S.is_valid_nonword_operator("+")
+    @test S.is_valid_nonword_operator("<")
+    @test S.is_valid_nonword_operator("::")
+    @test !S.is_valid_nonword_operator("in")
+    @test !S.is_valid_nonword_operator("isa")
+    @test !S.is_valid_nonword_operator("where")
+    @test !S.is_valid_nonword_operator("foo")
+end
+
 end

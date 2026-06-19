@@ -2288,16 +2288,20 @@ function p_kw(
     push!(lineage, (kind(cst), false, true))
 
     # We need to process the LHS and RHS slightly differently in the loop below.
-    is_rhs_of_equal = false
+    equal_idx = findfirst(n -> kind(n) === K"=", children(cst))
+    equal_idx === nothing && error("unreachable: kw node without an equal sign")
+    # Can't use JuliaSyntax.is_whitespace since that includes comments.
+    is_not_whitespace(n) = !(kind(n) in KSet"Whitespace NewlineWs")
+    immediate_rhs_idx = findnext(is_not_whitespace, children(cst), equal_idx + 1)
+    immediate_lhs_idx = findprev(is_not_whitespace, children(cst), equal_idx - 1)
+    immediate_rhs_idx === nothing && error("unreachable: kw node without a RHS")
+    immediate_lhs_idx === nothing && error("unreachable: kw node without a LHS")
 
-    for c in children(cst)
+    for (i, c) in enumerate(children(cst))
         if kind(c) === K"="
             s.opts.whitespace_in_kwargs && add_node!(t, Whitespace(1), s)
             add_node!(t, pretty(style, c, s, ctx, lineage), s; join_lines = true)
             s.opts.whitespace_in_kwargs && add_node!(t, Whitespace(1), s)
-            # Now that we've seen the equal, we know that what comes after it must
-            # be the RHS.
-            is_rhs_of_equal = true
         else
             child_offset = s.offset
             n = pretty(style, c, s, ctx, lineage)
@@ -2307,11 +2311,15 @@ function p_kw(
             # or if the value of the kwarg begins with an op.
             #
             # In all of these cases, we need to parenthesise it to avoid ambiguity.
-            lhs_ends_with_bang =
-                !is_rhs_of_equal && kind(c) === K"Identifier" && endswith(n.val, "!")
-            begins_with_op = source_begins_with_op_needing_parens(s, c, child_offset)
-            parenthesise =
-                (lhs_ends_with_bang || begins_with_op) && !s.opts.whitespace_in_kwargs
+            parenthesise = !s.opts.whitespace_in_kwargs && begin
+                if i == immediate_rhs_idx && kind(c) !== K"Comment"
+                    source_begins_with_op_needing_parens(s, c, child_offset)
+                elseif i === immediate_lhs_idx && kind(c) === K"Identifier"
+                    endswith(n.val, "!") || Shims.is_valid_nonword_operator(n.val)
+                else
+                    false
+                end
+            end
 
             parenthesise && add_node!(
                 t,
@@ -2326,6 +2334,7 @@ function p_kw(
                 s;
                 join_lines = true,
             )
+            is_rhs_of_equal = false
         end
     end
 
