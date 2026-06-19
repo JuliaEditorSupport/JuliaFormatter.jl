@@ -8,8 +8,13 @@ mutable struct State
     # it's source text
     on::Bool
     opts::Options
+
+    # When true, syntax transformations (e.g. import_to_using) are suppressed.
+    # Set inside quote, quotenode, and macro nodes, where transforming the code
+    # would change the semantics of the expression.
+    disable_syntax_transformations::Bool
 end
-State(doc, opts) = State(doc, 0, 1, 0, true, opts)
+State(doc, opts) = State(doc, 0, 1, 0, true, opts, false)
 
 nspaces(s::State) = s.indent
 hascomment(d::Document, line::Integer) = haskey(d.comments, line)

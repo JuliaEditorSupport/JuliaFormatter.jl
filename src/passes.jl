@@ -89,25 +89,25 @@ function import_to_usings(fst::FST, s::State)
     if !(findfirst(n -> is_colon(n) || n.typ === As, nodes) === nothing)
         return FST[]
     end
-    if !(findfirst(n -> n.typ === PUNCTUATION && n.val == ".", fst[3].nodes) === nothing)
-        return FST[]
-    end
-
-    # handle #723 "import ..f" should not become "using ..f: f"
-    if length(nodes) == 3 && nodes[3].typ === ImportPath && length(nodes[3].nodes) > 1
-        return FST[]
+    # Skip if any import path has dots (relative imports like `..A` or submodule
+    # paths like `A.B`). An ImportPath with only an identifier has one child;
+    # anything with dots has more.
+    idxs = findall(n -> !is_leaf(n), nodes)
+    for i in idxs
+        n = fst[i]
+        if n.typ === ImportPath && length(n.nodes::Vector{FST}) > 1
+            return FST[]
+        end
     end
 
     usings = FST[]
-    idxs = findall(n -> !is_leaf(n), nodes)
-
     for i in idxs
         n = fst[i]
         sl = n.startline
         el = n.endline
         use = FST(Using, fst.indent)
-        use.startline = n.startline
-        use.endline = n.endline
+        use.startline = sl
+        use.endline = el
 
         add_node!(use, FST(KEYWORD, -1, sl, el, "using"), s)
         add_node!(use, Whitespace(1), s)

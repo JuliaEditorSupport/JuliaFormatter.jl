@@ -322,6 +322,19 @@ function iteration_has_comma(cst::JuliaSyntax.GreenNode)
     haschildren(cst) && any(n -> kind(n) === K",", children(cst))
 end
 
+"""
+    _with_no_transforms(f, s::State)
+
+Run `f` with a modified state where syntax transformations are disabled.
+"""
+function _with_no_transforms(f, s::State)
+    prev = s.disable_syntax_transformations
+    s.disable_syntax_transformations = true
+    ret = f()
+    s.disable_syntax_transformations = prev
+    ret
+end
+
 function pretty(
     ds::AbstractStyle,
     node::JuliaSyntax.GreenNode,
@@ -397,9 +410,13 @@ function pretty(
     elseif k === K"toplevel"
         p_toplevel(style, node, s, ctx, lineage)
     elseif k === K"quote" && haschildren(node) && kind(node[1]) === K":"
-        p_quotenode(style, node, s, ctx, lineage)
+        _with_no_transforms(s) do
+            p_quotenode(style, node, s, ctx, lineage)
+        end
     elseif k === K"quote" && haschildren(node)
-        p_quote(style, node, s, ctx, lineage)
+        _with_no_transforms(s) do
+            p_quote(style, node, s, ctx, lineage)
+        end
     elseif k === K"let"
         p_let(style, node, s, ctx, lineage)
     elseif k === K"vect"
@@ -426,10 +443,12 @@ function pretty(
     elseif k === K"doc"
         p_globalrefdoc(style, node, s, ctx, lineage)
     elseif k === K"macrocall"
-        if !isnothing(do_block_idx)
-            p_do_call(style, node, s, ctx, lineage, do_block_idx)
-        else
-            p_macrocall(style, node, s, ctx, lineage)
+        _with_no_transforms(s) do
+            if !isnothing(do_block_idx)
+                p_do_call(style, node, s, ctx, lineage, do_block_idx)
+            else
+                p_macrocall(style, node, s, ctx, lineage)
+            end
         end
     elseif k === K"where"
         p_whereopcall(style, node, s, ctx, lineage)
