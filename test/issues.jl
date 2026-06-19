@@ -3341,6 +3341,27 @@ end
         end
     end
 
+    @testset "1159 chained ternary block with parens" begin
+        s = "x ? y : p ? (q; r) : s"
+        out = """if x
+            y
+        elseif p
+            (q; r)
+        else
+            s
+        end"""
+        test_format(s, out, BlueStyle())
+
+        s = "p ? (q; r) : s ? t : u"
+        out = """if p
+            (q; r)
+        elseif s
+            t
+        else
+            u
+        end"""
+        test_format(s, out, BlueStyle())
+    end
 end
 
 end

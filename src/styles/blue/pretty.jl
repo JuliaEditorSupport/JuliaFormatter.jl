@@ -171,7 +171,7 @@ function _ternary_to_ifelse!(
         elseif i > question_mark_idx && i < colon_idx
             # True branch — wrap in a Block if not already one.
             s.indent += s.opts.indent
-            if is_block(c)
+            if is_block(c) && !JuliaSyntax.has_flags(c, JuliaSyntax.PARENS_FLAG)
                 for n in [comment_nodes_from_parent..., comment_nodes...]
                     add_node!(output_fst, n, s)
                 end
