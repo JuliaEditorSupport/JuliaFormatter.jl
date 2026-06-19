@@ -3245,6 +3245,20 @@ end
             test_format(s, expected_out, style; pipe_to_function_call=true)
         end
     end
+
+    @testset "1149 array literal idempotence" begin
+        s = """begin
+            @test [-1m -1y -1y-1m + 1w -1y-1m + 1d; -1y-1m + 1h -1y-1m + 1mi -1y-1m + 1s -1y-1m + 1ms]
+        end"""
+        for style in ALL_STYLES
+            test_format(s, nothing, style; ast=true)
+        end
+
+        s = "@f [a b c; d e f]"
+        for style in ALL_STYLES
+            test_format(s, nothing, style; ast=true)
+        end
+    end
 end
 
 end
