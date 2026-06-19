@@ -4,6 +4,8 @@ Fixed a bug where even if Windows line endings were specified (either via `norma
 
 Improved the output of `jlfmt --diff` to show the full name of the file being formatted, instead of just the base name. (#1152, #1157)
 
+Fixed a bug where expansion of chained ternary expressions with BlueStyle would cause incorrect indentation for parenthesised blocks (e.g. `(p; q)`). (#1159, #1158)
+
 # v2.9.2
 
 Fixed a bug where `pipe_to_function_call` would remove parentheses from the argument of a function call even if the argument was an assignment, changing the meaning of the code. (#1147, #1148)
