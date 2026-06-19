@@ -2321,20 +2321,28 @@ function p_kw(
                 end
             end
 
-            parenthesise && add_node!(
-                t,
-                FST(PUNCTUATION, -1, n.startline, n.startline, "("),
-                s;
-                join_lines = true,
-            )
-            add_node!(t, n, s; join_lines = true)
-            parenthesise && add_node!(
-                t,
-                FST(PUNCTUATION, -1, n.startline, n.startline, ")"),
-                s;
-                join_lines = true,
-            )
-            is_rhs_of_equal = false
+            node = if parenthesise
+                paren_fst = FST(Brackets, nspaces(s))
+                add_node!(
+                    paren_fst,
+                    FST(PUNCTUATION, -1, n.startline, n.startline, "("),
+                    s;
+                    join_lines = true,
+                )
+                add_node!(paren_fst, Placeholder(0), s)
+                add_node!(t, n, s; join_lines = true)
+                add_node!(paren_fst, Placeholder(0), s)
+                add_node!(
+                    paren_fst,
+                    FST(PUNCTUATION, -1, n.startline, n.startline, ")"),
+                    s;
+                    join_lines = true,
+                )
+                paren_fst
+            else
+                n
+            end
+            add_node!(t, node, s; join_lines = true)
         end
     end
 
