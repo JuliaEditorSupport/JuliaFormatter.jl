@@ -2608,9 +2608,7 @@ function p_binaryopcall(
     # that would lead to invalid Julia code, and also disable it if it's in a macro/Expr.
     is_short_func = defines_function(cst)
     is_expandable_short_func =
-        is_short_func &&
-        !ctx.from_let &&
-        !s.disable_syntax_transformations
+        is_short_func && !ctx.from_let && !s.disable_syntax_transformations
     standalone_binary_circuit = ctx.standalone_binary_circuit
 
     # For the lhs of a short-form function, we can't enable separate_kwargs_with_semicolon.
@@ -3171,7 +3169,11 @@ function p_call(
         end
     end
 
-    if (s.opts.separate_kwargs_with_semicolon && can_separate_kwargs_for_this_call && !s.disable_syntax_transformations)
+    if (
+        s.opts.separate_kwargs_with_semicolon &&
+        can_separate_kwargs_for_this_call &&
+        !s.disable_syntax_transformations
+    )
         separate_kwargs_with_semicolon!(t)
     end
 
