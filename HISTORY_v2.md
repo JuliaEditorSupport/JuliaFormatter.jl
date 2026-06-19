@@ -1,3 +1,10 @@
+# v2.9.2
+
+Fixed a bug where `import_to_using` would be triggered inside macros or `Expr` objects, leading to a change in the meaning of the code. (#1124, #1146)
+
+Fixed a bug where `import_to_using` would be triggered for relative imports (e.g. `import ..x, ..y`), leading to a change in the meaning of the code.
+This was previously fixed for single imports (e.g. `import ..x`), but not for multiple imports (e.g. `import ..x, ..y`). (#664, #723, #1146)
+
 # v2.9.1
 
 Fixed a bug where `separate_kwargs_with_semicolon` would cause a change in the meaning of function calls such as `f(p, q=r, s)`. (#625, #1141)
