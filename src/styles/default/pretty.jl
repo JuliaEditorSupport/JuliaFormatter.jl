@@ -2311,15 +2311,16 @@ function p_kw(
             # or if the value of the kwarg begins with an op.
             #
             # In all of these cases, we need to parenthesise it to avoid ambiguity.
-            parenthesise = !s.opts.whitespace_in_kwargs && begin
-                if i == immediate_rhs_idx && kind(c) !== K"Comment"
-                    source_begins_with_op_needing_parens(s, c, child_offset)
-                elseif i === immediate_lhs_idx && kind(c) === K"Identifier"
-                    endswith(n.val, "!") || Shims.is_valid_nonword_operator(n.val)
-                else
-                    false
+            parenthesise =
+                !s.opts.whitespace_in_kwargs && begin
+                    if i == immediate_rhs_idx && kind(c) !== K"Comment"
+                        source_begins_with_op_needing_parens(s, c, child_offset)
+                    elseif i === immediate_lhs_idx && kind(c) === K"Identifier"
+                        endswith(n.val, "!") || Shims.is_valid_nonword_operator(n.val)
+                    else
+                        false
+                    end
                 end
-            end
 
             node = if parenthesise
                 paren_fst = FST(Brackets, nspaces(s))
