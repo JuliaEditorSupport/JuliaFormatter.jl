@@ -536,11 +536,12 @@ function process_file(args::ProcessFileArgs)
 
     if changed && args.diff
         mktempdir() do dir
-            a = mkdir(joinpath(dir, "a"))
-            b = mkdir(joinpath(dir, "b"))
-            file = basename(inputfile_pretty)
-            A = joinpath(a, file)
-            B = joinpath(b, file)
+            a = joinpath(dir, "original")
+            b = joinpath(dir, "formatted")
+            A = joinpath(a, inputfile_pretty)
+            B = joinpath(b, inputfile_pretty)
+            mkpath(dirname(A))
+            mkpath(dirname(B))
             write(A, sourcetext)
             write(B, formatted_str)
             color = supports_color(stderr) ? "always" : "never"
