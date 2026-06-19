@@ -246,14 +246,16 @@ function short_to_long_function_def!(
         add_indent!(funcdef[end], s, s.opts.indent)
     else
         # The body is a single expression (not a Block or Begin). Wrap it
-        # in a Block so the indentation logic works. Because the expression
-        # was inline (indent=0 in the FST), we need to add the full
-        # absolute indent: funcdef.indent (parent nesting) + opts.indent
-        # (one level for the function body).
-        bl = FST(Block, fst[end].indent)
+        # in a Block so the indentation logic works. The body node may
+        # already carry some indent from the original context (e.g. a Vect
+        # inherits the Binary's indent=4, but a plain identifier has
+        # indent=0). We target funcdef.indent + opts.indent and subtract
+        # what the body already has.
+        body_indent = fst[end].indent
+        bl = FST(Block, body_indent)
         add_node!(bl, fst[end], s)
         add_node!(funcdef, bl, s; max_padding = s.opts.indent)
-        add_indent!(funcdef[end], s, funcdef.indent + s.opts.indent)
+        add_indent!(funcdef[end], s, funcdef.indent + s.opts.indent - body_indent)
     end
 
     if s.opts.always_use_return

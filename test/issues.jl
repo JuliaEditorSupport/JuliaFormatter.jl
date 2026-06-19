@@ -3290,6 +3290,20 @@ end
             end
         end"""
         test_format(s, out, BlueStyle(); margin=10)
+
+        # Avoid over-indenting expressions that already have their own indent
+        s = """begin
+            get_gradient_backends() = [AutoForwardDiff(), AutoEnzyme(mode = Enzyme.set_runtime_activity(Enzyme.Reverse))]
+        end"""
+        out = """begin
+            function get_gradient_backends()
+                return [
+                    AutoForwardDiff(),
+                    AutoEnzyme(; mode=Enzyme.set_runtime_activity(Enzyme.Reverse)),
+                ]
+            end
+        end"""
+        test_format(s, out, BlueStyle())
     end
 end
 
