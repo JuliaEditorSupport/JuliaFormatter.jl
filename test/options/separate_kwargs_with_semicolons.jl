@@ -27,6 +27,17 @@ using Test
         end
     end
 
+    @testset "not in macro or expr" begin
+        for str in (
+            "@f(x, y=3)",
+            ":(f(x, y=3))",
+        )
+            for style in ALL_STYLES
+                test_format(str, str, style; separate_kwargs_with_semicolon = true, whitespace_in_kwargs = false)
+            end
+        end
+    end
+
     @testset "fancy caller" begin
         for caller in (
             "(obj)",

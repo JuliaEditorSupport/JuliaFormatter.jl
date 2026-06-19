@@ -137,13 +137,7 @@ function p_macrocall(
     nospace = n_kw_args > 1
 
     for (i, a) in enumerate(childs)
-        n = pretty(
-            style,
-            a,
-            s,
-            newctx(ctx; nospace = nospace, can_separate_kwargs = false),
-            lineage,
-        )::FST
+        n = pretty(style, a, s, newctx(ctx; nospace = nospace), lineage)::FST
 
         override = (i == first_arg_idx) || kind(a) === K")"
 

@@ -694,13 +694,6 @@ end
         test_format(str_, str, YASStyle(); margin = 1)
     end
 
-    @testset "396 (import as)" begin
-        str = """import Base.threads as th"""
-        test_format(str, str)
-        test_format(str, str; margin = 1)
-        test_format(str, str; margin = 1, import_to_using = true)
-    end
-
     @testset "405" begin
         str = """
         function __init__()
@@ -861,7 +854,7 @@ end
         function _initialize_backend(pkg::AbstractBackend)
             sym = backend_package_name(pkg)
             @eval Main begin
-                using $sym: $sym
+                import $sym
                 export $sym
             end
         end
@@ -897,21 +890,6 @@ end
     end
 
     @testset "460" begin
-        # Do not allow import to using conversion when in a macroblock context such as:
-        #
-        #   @everywhere import A, B
-        #
-        # Prior to this change this would be rewritten as:
-        #
-        #   @everywhere
-        #   using A: A
-        #   using B: B
-        #
-        # which breaks the code.
-        #
-        # There's an easy fix such that the first `using` is on the same line as @everywhere
-        # but beyond that we probably have to wrap it in a begin/end block. For now it's best
-        # to just not do the conversion in this situation.
         str = """
         using Distributed
         @everywhere import Distributed
@@ -1677,13 +1655,6 @@ end
     @testset "656" begin
         s = "[x for x in xs if x in 1:length(ys)]"
         test_format(s, s; indent=4, margin=92)
-    end
-
-    @testset "664" begin
-        # `import ..x` should not be converted to `using ..x: x` with `import_to_using`,
-        # because `using ..x: x` is invalid when `x` is not a module.
-        s = "module M\nimport ..x\ny = x\nend\n"
-        test_format(s, s; import_to_using = true)
     end
 
     @testset "667" begin

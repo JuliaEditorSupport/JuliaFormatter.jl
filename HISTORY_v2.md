@@ -11,6 +11,11 @@ Fixed a bug where keyword argument names that were operators were not being pare
 
 Fixed a bug where `short_to_long_function` would trigger even inside macros or `Expr` objects, leading to a change in the meaning of the code. (#1124, #1145)
 
+Fixed a bug where `import_to_using` would be triggered inside macros or `Expr` objects, leading to a change in the meaning of the code. (#1124, #1146)
+
+Fixed a bug where `import_to_using` would be triggered for relative imports (e.g. `import ..x, ..y`), leading to a change in the meaning of the code.
+This was previously fixed for single imports (e.g. `import ..x`), but not for multiple imports (e.g. `import ..x, ..y`). (#664, #723, #1146)
+
 # v2.9.0
 
 Improved CLI exit codes (and error messages):

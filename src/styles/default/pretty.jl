@@ -322,6 +322,19 @@ function iteration_has_comma(cst::JuliaSyntax.GreenNode)
     haschildren(cst) && any(n -> kind(n) === K",", children(cst))
 end
 
+"""
+    _with_no_transforms(f, s::State)
+
+Run `f` with a modified state where syntax transformations are disabled.
+"""
+function _with_no_transforms(f, s::State)
+    prev = s.disable_syntax_transformations
+    s.disable_syntax_transformations = true
+    ret = f()
+    s.disable_syntax_transformations = prev
+    ret
+end
+
 function pretty(
     ds::AbstractStyle,
     node::JuliaSyntax.GreenNode,
@@ -397,9 +410,13 @@ function pretty(
     elseif k === K"toplevel"
         p_toplevel(style, node, s, ctx, lineage)
     elseif k === K"quote" && haschildren(node) && kind(node[1]) === K":"
-        p_quotenode(style, node, s, ctx, lineage)
+        _with_no_transforms(s) do
+            p_quotenode(style, node, s, ctx, lineage)
+        end
     elseif k === K"quote" && haschildren(node)
-        p_quote(style, node, s, ctx, lineage)
+        _with_no_transforms(s) do
+            p_quote(style, node, s, ctx, lineage)
+        end
     elseif k === K"let"
         p_let(style, node, s, ctx, lineage)
     elseif k === K"vect"
@@ -426,10 +443,12 @@ function pretty(
     elseif k === K"doc"
         p_globalrefdoc(style, node, s, ctx, lineage)
     elseif k === K"macrocall"
-        if !isnothing(do_block_idx)
-            p_do_call(style, node, s, ctx, lineage, do_block_idx)
-        else
-            p_macrocall(style, node, s, ctx, lineage)
+        _with_no_transforms(s) do
+            if !isnothing(do_block_idx)
+                p_do_call(style, node, s, ctx, lineage, do_block_idx)
+            else
+                p_macrocall(style, node, s, ctx, lineage)
+            end
         end
     elseif k === K"where"
         p_whereopcall(style, node, s, ctx, lineage)
@@ -962,7 +981,6 @@ function p_macrocall(
         t.typ = MacroBlock
     end
 
-    ctx = newctx(ctx; can_separate_kwargs = false)
     for (i, a) in enumerate(childs)
         n = pretty(style, a, s, ctx, lineage)::FST
         if JuliaSyntax.is_macro_name(a)
@@ -2559,23 +2577,15 @@ function p_binaryopcall(
     # Intercept piped function calls and construct a normal function call FST instead. NOTE:
     # If overloading `p_binaryopcall` for a custom style you will have to make sure to
     # include this logic!
-    if opkind === K"|>" && s.opts.pipe_to_function_call
-        # We purposely exclude three cases:
-        # 
-        # 1. `x |> f` inside a macro. It's too dangerous to change that inside a macro as
-        #    the macro may well be handling `|>` in a custom way.
-        #
-        # 2. `:(x |> f)` or `quote x |> f end`. Changing the code inside an `Expr` makes
-        #    it a different `Expr`.
-        #
-        # 3. `x .|> (f1, f2)`. This is a very weird Julia quirk where you can broadcast
-        #    over the _caller_ rather than the callee. There's no equivalent way to express
-        #    this in function call form, so we shouldn't try to transform it. See
-        #    https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/647.
-        inside_macro_or_quote = any(t -> t[1] in KSet"macrocall quote", lineage)
+    if opkind === K"|>" && s.opts.pipe_to_function_call && !s.disable_syntax_transformations
+        # We purposely exclude one more case: `x .|> (f1, f2)`. This is a very weird Julia
+        # quirk where you can broadcast over the _caller_ rather than the callee. There's no
+        # equivalent way to express this in function call form, so we shouldn't try to
+        # transform it.
+        # See https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/647
         rhs_cst = childs[findlast(n -> !JuliaSyntax.is_whitespace(n), childs)]
         dotted_tuple = kind(cst) === K"dotcall" && kind(rhs_cst) === K"tuple"
-        if !inside_macro_or_quote && !dotted_tuple
+        if !dotted_tuple
             return p_pipe_to_call(ds, cst, s, ctx, lineage)
         end
     end
@@ -2598,9 +2608,7 @@ function p_binaryopcall(
     # that would lead to invalid Julia code, and also disable it if it's in a macro/Expr.
     is_short_func = defines_function(cst)
     is_expandable_short_func =
-        is_short_func &&
-        !ctx.from_let &&
-        all(t -> !(t[1] in KSet"macrocall quote"), lineage)
+        is_short_func && !ctx.from_let && !s.disable_syntax_transformations
     standalone_binary_circuit = ctx.standalone_binary_circuit
 
     # For the lhs of a short-form function, we can't enable separate_kwargs_with_semicolon.
@@ -3161,7 +3169,11 @@ function p_call(
         end
     end
 
-    if s.opts.separate_kwargs_with_semicolon && can_separate_kwargs_for_this_call
+    if (
+        s.opts.separate_kwargs_with_semicolon &&
+        can_separate_kwargs_for_this_call &&
+        !s.disable_syntax_transformations
+    )
         separate_kwargs_with_semicolon!(t)
     end
 
@@ -4271,9 +4283,7 @@ function p_generator(
 )
     style = getstyle(ds)
     t = FST(Generator, nspaces(s))
-    if !haschildren(cst)
-        return t
-    end
+    JuliaSyntax.is_leaf(cst) && return t
 
     has_for_kw = false
     from_iterable = false
