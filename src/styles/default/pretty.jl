@@ -2301,15 +2301,17 @@ function p_kw(
         else
             child_offset = s.offset
             n = pretty(style, c, s, ctx, lineage)
-            # Check if the value of the kwarg begins with an operator, or if the name ends
-            # with an exclamation mark. If so, then we should parenthesise it to avoid
-            # ambiguity.
+            # Check if the name of the kwarg ends with an exclamation mark, or if the name
+            # of the kwarg is an op (note that the name has to be a single identifier so
+            # checking that it begins with an op is equivalent to checking that is an op),
+            # or if the value of the kwarg begins with an op.
+            #
+            # In all of these cases, we need to parenthesise it to avoid ambiguity.
             lhs_ends_with_bang =
                 !is_rhs_of_equal && kind(c) === K"Identifier" && endswith(n.val, "!")
-            rhs_begins_with_op =
-                is_rhs_of_equal && source_begins_with_op_needing_parens(s, c, child_offset)
+            begins_with_op = source_begins_with_op_needing_parens(s, c, child_offset)
             parenthesise =
-                (lhs_ends_with_bang || rhs_begins_with_op) && !s.opts.whitespace_in_kwargs
+                (lhs_ends_with_bang || begins_with_op) && !s.opts.whitespace_in_kwargs
 
             parenthesise && add_node!(
                 t,

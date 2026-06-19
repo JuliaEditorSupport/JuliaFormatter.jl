@@ -3211,6 +3211,17 @@ end
         end"""
         test_format(s, output, BlueStyle())
     end
+
+    @testset "1144 ops as keyword names" begin
+        for s in (
+            "Compiler.sort!(v; by = x -> -x, < = >) === v == [1,2,3]",
+            "sort(v; by, lt) == Compiler.sort!(copy(v); by, < = lt)",
+        )
+            for style in ALL_STYLES
+                test_format(s, nothing, style; ast=true)
+            end
+        end
+    end
 end
 
 end
