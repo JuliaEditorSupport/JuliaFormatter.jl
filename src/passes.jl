@@ -185,11 +185,6 @@ function short_to_long_function_def!(
         return false
     end
     
-    # Do not perform transformation in exprs
-    if any(i -> i[1] in (Quotenode, MacroBlock, MacroCall), lineage)
-        return false
-    end
-
     for i in (length(lineage)-1):-1:1
         parent = lineage[i]
         # maybe need to know metadata too?
