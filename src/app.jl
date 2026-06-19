@@ -458,16 +458,13 @@ function process_file(args::ProcessFileArgs)
     merged_options = get_formatting_options(config)
 
     formatted_str = try
-        _formatted_str = if is_markdown
+        if is_markdown
             _format_md(sourcetext, style, merged_options)
         elseif !isempty(args.line_ranges)
             _format_line_ranges(sourcetext, style, args.line_ranges, merged_options)
         else
-            _format_text(sourcetext, style, merged_options; check_output = true)
+            _format_text(sourcetext, style, merged_options; check_output = true, ensure_trailing_newline = true)
         end
-        # Since it's a file, presumably we only want one trailing newline, so
-        # we normalise it here.
-        replace(_formatted_str, r"\n*$" => "\n")
     catch err
         if err isa JuliaSyntax.ParseError
             report_status() do io
