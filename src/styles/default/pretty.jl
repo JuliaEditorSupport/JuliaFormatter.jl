@@ -1758,14 +1758,24 @@ function p_begin(
 
     childs = children(cst)
     add_node!(t, pretty(style, childs[1], s, ctx, lineage), s)
-    empty_body = length(filter(n -> !JuliaSyntax.is_whitespace(n), childs)) == 2
+    # Check if the body is genuinely empty (only whitespace/newlines, no comments).
+    # Using KSet"Whitespace NewlineWs" instead of is_whitespace to avoid treating
+    # comments as empty, which would strip them (e.g. `begin #=hi=# end` → `begin end`).
+    empty_body = length(filter(n -> !(kind(n) in KSet"Whitespace NewlineWs"), childs)) == 2
 
-    if empty_body
+    if empty_body && !s.opts.join_lines_based_on_source
         for c in childs[2:(end-1)]
             pretty(style, c, s, ctx, lineage)
         end
         add_node!(t, Whitespace(1), s)
-        add_node!(t, pretty(style, cst[end], s), s; join_lines = true)
+        # Override the `end` keyword's startline to match `begin`, so that
+        # add_node! doesn't detect a source line gap and insert a NEWLINE.
+        # Without this, `begin\n\nend` → `begin\nend` (pass 1) → `begin end`
+        # (pass 2), i.e. non-idempotent.
+        end_node = pretty(style, cst[end], s)
+        end_node.startline = t.endline
+        # but don't override endline or else that inserts extra newlines at the end
+        add_node!(t, end_node, s; join_lines = true)
     else
         push!(lineage, (K"block", false, false))
         s.indent += s.opts.indent

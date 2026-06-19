@@ -6,6 +6,8 @@ Fixed a bug where BlueStyle formatting of array literals which exceeded the marg
 
 Fixed a bug where `short_to_long_function_def` would not apply the correct indentation to the function body, leading to non-idempotent formatting. (#1127, #1151)
 
+Fixed a bug where formatting a `begin ... end` block that had nothing but whitespace or comments inside it would be non-idempotent, or delete comments inside it. (#1153, #1154)
+
 # v2.9.1
 
 Fixed a bug where `separate_kwargs_with_semicolon` would cause a change in the meaning of function calls such as `f(p, q=r, s)`. (#625, #1141)
