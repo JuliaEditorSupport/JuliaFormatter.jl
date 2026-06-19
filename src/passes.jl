@@ -184,7 +184,7 @@ function short_to_long_function_def!(
     if (fst[1].typ !== Call && fst[1].typ !== Where)
         return false
     end
-    
+
     for i in (length(lineage)-1):-1:1
         parent = lineage[i]
         # maybe need to know metadata too?

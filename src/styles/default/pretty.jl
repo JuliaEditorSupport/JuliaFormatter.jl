@@ -2597,7 +2597,10 @@ function p_binaryopcall(
     # Catches e.g. `f(x) = x + 1`; but _not_ `let f(x) = x + 1; body; end` since expanding
     # that would lead to invalid Julia code, and also disable it if it's in a macro/Expr.
     is_short_func = defines_function(cst)
-    is_expandable_short_func = is_short_func && !ctx.from_let && all(t -> !(t[1] in KSet"macrocall quote"), lineage)
+    is_expandable_short_func =
+        is_short_func &&
+        !ctx.from_let &&
+        all(t -> !(t[1] in KSet"macrocall quote"), lineage)
     standalone_binary_circuit = ctx.standalone_binary_circuit
 
     # For the lhs of a short-form function, we can't enable separate_kwargs_with_semicolon.
