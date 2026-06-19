@@ -33,7 +33,6 @@ Note that, although styles each define a different set of options, they are not 
       Use with care, and *please* consider manually disabling them; it is possible that these will be removed in v3.
 
       Currently, only [**`pipe_to_function_call`**](@ref options-pipe-to-function-call) is in this category.
-      [`separate_kwargs_with_semicolon`](@ref options-separate-kwargs-with-semicolon) is also labelled as a dangerous syntax transformation right now, but [that is because of a bug](https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/625), which will be fixed soon.
 
 !!! warning "Options that can spoil idempotence"
 
@@ -65,7 +64,7 @@ Note that, although styles each define a different set of options, they are not 
 | [`pipe_to_function_call`](@ref options-pipe-to-function-call)                       | 🔥    | `false`   | **`true`**  | **`true`**  | `false`      | `false`       |
 | [`remove_extra_newlines`](@ref options-remove-extra-newlines)                       | 📐    | `false`   | **`true`**  | **`true`**  | **`true`**   | `false`       |
 | [`sciml_margin_overrun`](@ref options-sciml-margin-overrun)                         | 📐    | unused    | unused      | unused      | **`20`**     | unused        |
-| [`separate_kwargs_with_semicolon`](@ref options-separate-kwargs-with-semicolon)     | 🔥    | `false`   | **`true`**  | **`true`**  | `false`      | `false`       |
+| [`separate_kwargs_with_semicolon`](@ref options-separate-kwargs-with-semicolon)     | ⚠️    | `false`   | **`true`**  | **`true`**  | `false`      | `false`       |
 | [`short_circuit_to_if`](@ref options-short-circuit-to-if)                           | ⚠️    | `false`   | `false`     | `false`     | `false`      | `false`       |
 | [`short_to_long_function_def`](@ref options-short-to-long-function-def)             | ⚠️    | `false`   | **`true`**  | **`true`**  | **`true`**   | `false`       |
 | [`surround_whereop_typeparameters`](@ref options-surround-whereop-typeparameters)   | ♻️    | `true`    | `true`      | `true`      | `true`       | **`false`**   |
@@ -333,7 +332,7 @@ end
 ## [`force_long_function_def`](@id options-force-long-function-def)
 Default: `false`
 
-If `true` tweaks the behavior of [`short_to_long_function_def`](@ref options-short-to-long-function-def) to force the transformation no matter how short the function definition is.
+If `true`, tweaks the behavior of [`short_to_long_function_def`](@ref options-short-to-long-function-def) to force the transformation no matter how short the function definition is.
 
 ## [`format_docstrings`](@id options-format-docstrings)
 
@@ -347,43 +346,25 @@ Markdown is formatted with [`CommonMark`](https://github.com/MichaelHatherly/Com
 
 Default: `false`
 
-If true, `import` expressions are rewritten to `using` expressions
-in the following cases:
+If true, `import` expressions are rewritten to equivalent `using` expressions:
 
-```julia
+```@example import-to-using
+s = """
 import A
+import B, C, D"""
 
-import A, B, C
-```
-
-is rewritten to:
-
-```julia
-using A: A
-
-using A: A
-using B: B
-using C: C
+using JuliaFormatter: format_text
+format_text(s; import_to_using=true) |> println
 ```
 
 There are some exceptions to this:
 
-- If `as` is found in the import expression, `using` *cannot* be used in this context.
-  The following example will not be rewritten:
+- This transformation is disabled inside macros or `Expr`s.
 
-  ```julia
-  import Base.Threads as th
-  ```
+- `import X as Y` cannot be rewritten in a semantically equivalent way, so is skipped.
 
-- `import ..Module` is not rewritten as that causes an invalid `using ..Module: Module`.
+- `import ..X` cannot be rewritten because `X` may not necessarily be a module.
   See e.g. [this issue](https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/723).
-
-- If `import` is used in the following context it is *not* rewritten.
-  This may change in a future patch.
-
-  ```julia
-  @everywhere import A, B
-  ```
 
 ## [`indent`](@id options-indent)
 
@@ -611,13 +592,31 @@ Default: `false`
 
 When set to `true`, keyword arguments in a function call will be separated with a semicolon.
 
-```julia
-f(a, b=1)
+```@example separate-kwargs-with-semicolon
+s = "f(a, b = 1)"
 
-->
-
-f(a; b=1)
+using JuliaFormatter: format_text
+format_text(s; separate_kwargs_with_semicolon=true) |> println
 ```
+
+This transformation is disabled in several cases:
+
+- Inside macros or `Expr`s.
+- In the signature of a function definition. For example, these are different:
+
+  ```julia
+  function f(a, b = 1)  # b is an optional positional argument
+      body
+  end
+
+  function f(a; b = 1)  # b is a keyword argument
+      body
+  end
+  ```
+
+- When the function call does not have a semicolon, but has positional arguments after keyword arguments.
+  For example, `f(p, q=r, s)` is not transformed.
+  See [this issue](https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/625) for details.
 
 ## [`short_circuit_to_if`](@id options-short-circuit-to-if)
 
@@ -664,6 +663,8 @@ end
 ```
 
 See also: [`long_to_short_function_def`](@ref options-long-to-short-function-def).
+
+This transformation is disabled inside macros or `Expr`s.
 
 ## [`surround_whereop_typeparameters`](@id options-surround-whereop-typeparameters)
 
