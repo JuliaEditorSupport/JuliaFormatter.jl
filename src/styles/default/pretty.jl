@@ -1761,7 +1761,7 @@ function p_begin(
     # Check if the body is genuinely empty (only whitespace/newlines, no comments).
     # Using KSet"Whitespace NewlineWs" instead of is_whitespace to avoid treating
     # comments as empty, which would strip them (e.g. `begin #=hi=# end` → `begin end`).
-    empty_body = all(n -> kind(n) in KSet"begin end Whitespace NewlineWs", childs)
+    empty_body = length(filter(n -> !(kind(n) in KSet"Whitespace NewlineWs"), childs)) == 2
 
     if empty_body && !s.opts.join_lines_based_on_source
         for c in childs[2:(end-1)]
