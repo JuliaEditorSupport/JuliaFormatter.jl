@@ -3421,7 +3421,7 @@ end
         test_format(s, s)
     end
 
-    @testset "1164 emoji" begin
+    @testset "1166 emojis" begin
         s1 = raw"""
         @😬 \"foo
              foo\"
@@ -3435,6 +3435,30 @@ end
                 test_format(s, s, style)
             end
         end
+
+        # Multiline string with emojis in macro name: alignment must be idempotent.
+        s = raw"""
+        @😬 \"ssl_read ⬅️  $n $(n == MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY ? foo :
+                               n == MBEDTLS_ERR_SSL_CONN_EOF          ? foo :
+                               n == MBEDTLS_ERR_NET_CONN_RESET        ? foo :
+                               n == MBEDTLS_ERR_SSL_WANT_READ         ? foo : boo)\"
+        """
+        test_format(s, s)
+
+        # Wide CJK characters should be measured by display width (textwidth), not
+        # character count (length). This line is 63 display columns wide but only
+        # 39 characters long, so it should nest at margin = 62 but not at margin = 63.
+        str = """
+        f("日本語は実はわかりません", "Claudeがこのテストを書きました")
+        """
+        str_nested = """
+        f(
+            "日本語は実はわかりません",
+            "Claudeがこのテストを書きました",
+        )
+        """
+        test_format(str, str_nested; margin = 62)
+        test_format(str, str; margin = 63)
     end
 end
 
