@@ -521,32 +521,36 @@ Module.@macro
 """
 function move_at_sign_to_the_end(fst::FST, s::State)
     val = ""
-    has_at = false
+    num_ats = 0
     f = (n::FST, _) -> begin
         if n.typ === MACRONAME && n.line_offset == -33
             val *= gettreeval(n)
             return false
         elseif is_leaf(n)
             v = gettreeval(n)
-            has_at = has_at || contains(v, "@")
-            v = replace(v, "@" => "")
+            contains(v, "@") && (num_ats += 1)
             val *= v
         end
     end
     walk(f, fst, s)
 
-    if !has_at
-        return fst
-    end
+    num_ats != 1 && return fst
 
-    # Find the last occurrence of . and insert @ after it
-    last_dot_index = findlast('.', val)
-    if last_dot_index !== nothing
-        val = val[1:last_dot_index] * "@" * val[(last_dot_index+1):end]
-    else
-        # If there's no dot, add @ to the beginning
-        val = "@" * val
+    # Now we know that split(val, "@") will return a 2-element array.
+    qualifier, macro_name = split(val, "@")
+    # In general, we can't just split on '.' and call it a day, because this leads to all
+    # sorts of problems with macro or module names that have dots in them. So we'll be
+    # conservative and only move things that look like "Modulename." from the macro name to
+    # the qualifier.
+    while true
+        m = match(r"^[A-Za-z_][A-Za-z0-9_]*\.", macro_name)
+        if m === nothing
+            break
+        end
+        qualifier *= m.match
+        macro_name = macro_name[length(m.match)+1:end]
     end
+    val = qualifier * "@" * macro_name
 
     return FST(MACRONAME, -33, fst.startline, fst.startline, val)
 end
