@@ -27,6 +27,7 @@ jobs:
         orgs_label:
           - Group1
           - Group2
+          - Group3
         style:
           - default
           - blue
