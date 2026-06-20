@@ -22,7 +22,14 @@ hascomment(d::Document, line::Integer) = haskey(d.comments, line)
 function cursor_loc(s::State, offset::Integer)
     l = JuliaSyntax.source_line(s.doc.srcfile, offset)
     r = JuliaSyntax.source_line_range(s.doc.srcfile, offset)
-    return (l, offset - first(r) + 1, length(r))
+    code = JuliaSyntax.sourcetext(s.doc.srcfile)
+    line_start = first(r)
+    display_col = if offset <= line_start
+        1
+    else
+        textwidth(code[line_start:prevind(code, offset)]) + 1
+    end
+    return (l, display_col)
 end
 cursor_loc(s::State) = cursor_loc(s, s.offset)
 

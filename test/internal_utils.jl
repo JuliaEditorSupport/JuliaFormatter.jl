@@ -133,14 +133,17 @@ import JuliaSyntax as JS
     end
 
     @testset "display-width source offsets" begin
-        # Alignment uses display columns, not code-unit offsets; the combining mark
+        # cursor_loc returns display columns, not byte offsets; the combining mark
         # in s\u0304_b should not add a visible column.
         text = "s\u0304_b      = 1\n"
         doc = JF.Document(text)
-        eq_offset = findfirst(isequal('='), text)
+        eq_byte_offset = findfirst(isequal('='), text)
+        state = JF.State(doc, JF.Options())
+        state.offset = eq_byte_offset
+        loc = JF.cursor_loc(state)
 
-        @test eq_offset > 10
-        @test JF.source_display_line_offset(doc, 1, eq_offset) == 10
+        @test eq_byte_offset > 10
+        @test loc[2] == 10
         @test JF.node_align_length(JF.FST(JF.IDENTIFIER, 1, 1, 1, "s\u0304_b")) == 3
     end
 

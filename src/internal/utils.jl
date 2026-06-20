@@ -85,7 +85,7 @@ function format_to_stage(
         JF.short_circuit_to_if_pass!(fst, state)
     end
     if JF.needs_alignment(state.opts)
-        JF.align_fst!(fst, state.doc, state.opts)
+        JF.align_fst!(fst, state.opts)
     end
     JF.nest!(style, fst, state)
     if state.opts.join_lines_based_on_source

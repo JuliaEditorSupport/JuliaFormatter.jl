@@ -1,13 +1,9 @@
 """
-    align_fst!(fst::FST, doc::Document, opts::Options)
+    align_fst!(fst::FST, opts::Options)
 
 Walk `fst` and apply the alignment passes enabled by `opts`.
-
-`doc` is the original source document and is used to translate parser line offsets into
-display columns before padding is adjusted. This keeps alignment stable for source text
-containing combining and other zero-width characters.
 """
-function align_fst!(fst::FST, doc::Document, opts::Options)
+function align_fst!(fst::FST, opts::Options)
     if is_leaf(fst)
         return
     end
@@ -18,15 +14,15 @@ function align_fst!(fst::FST, doc::Document, opts::Options)
         if is_leaf(n)
             continue
         elseif opts.align_struct_field && (n.typ === Struct || n.typ === Mutable)
-            align_struct!(doc, n)
+            align_struct!(n)
         elseif opts.align_conditional && n.typ === Conditional
-            align_conditional!(doc, n)
+            align_conditional!(n)
         elseif opts.align_matrix && (
             n.typ === Vcat || n.typ === TypedVcat || n.typ === Ncat || n.typ === TypedNcat
         )
-            align_matrix!(doc, n)
+            align_matrix!(n)
         else
-            align_fst!(n, doc, opts)
+            align_fst!(n, opts)
         end
 
         if opts.align_assignment && (is_assignment(n) || n.typ === Kw)
@@ -38,8 +34,8 @@ function align_fst!(fst::FST, doc::Document, opts::Options)
         end
     end
 
-    align_binaryopcalls!(doc, fst, assignment_inds)
-    align_binaryopcalls!(doc, fst, pair_arrow_inds)
+    align_binaryopcalls!(fst, assignment_inds)
+    align_binaryopcalls!(fst, pair_arrow_inds)
 end
 
 """
@@ -66,27 +62,6 @@ struct AlignGroup
 end
 AlignGroup() = AlignGroup(FST[], Int[], Int[], Int[], Int[])
 
-"""
-    source_display_line_offset(doc::Document, line::Int, line_offset::Int) -> Int
-
-Convert a 1-based source line offset into a 1-based display column for `line` in `doc`.
-
-`line_offset` follows the offsets recorded in the parsed source and therefore advances
-through the original text representation. Alignment, however, needs display width semantics
-so that combining marks and other zero-width codepoints do not consume extra padding. This
-helper measures the source line prefix with `textwidth` and returns the corresponding
-display column.
-"""
-function source_display_line_offset(doc::Document, line::Int, line_offset::Int)
-    line_offset <= 1 && return 1
-
-    code = JuliaSyntax.sourcetext(doc.srcfile)
-    line_start = doc.srcfile.line_starts[line]
-    offset = line_start + line_offset - 1
-    prefix_end = prevind(code, offset)
-
-    return textwidth(code[line_start:prefix_end]) + 1
-end
 
 function Base.push!(g::AlignGroup, n::FST, ind::Int, line_offset::Int, len::Int, ws::Int)
     push!(g.nodes, n)
@@ -164,15 +139,14 @@ function node_align_length(nodes::Vector{FST})
 end
 
 """
-    align_binaryopcalls!(doc::Document, fst::FST, op_inds::Vector{Int})
+    align_binaryopcalls!(fst::FST, op_inds::Vector{Int})
 
 Aligns binary operator expressions.
 
 Additionally handles the case where a keyword such as `const` is used prior to the binary op
-call. `doc` is used to compare source locations in display columns rather than raw source
-offsets.
+call.
 """
-function align_binaryopcalls!(doc::Document, fst::FST, op_inds::Vector{Int})
+function align_binaryopcalls!(fst::FST, op_inds::Vector{Int})
     if !(length(op_inds) > 1)
         return
     end
@@ -189,11 +163,7 @@ function align_binaryopcalls!(doc::Document, fst::FST, op_inds::Vector{Int})
 
         binop, nlen, ws = if n.typ === Binary || n.typ === Kw
             nlen = node_align_length(n[1])
-            start_offset = source_display_line_offset(doc, n.startline, n.line_offset)
-            op_offset =
-                source_display_line_offset(doc, n[3].startline, n[3].line_offset)
-
-            n, nlen, op_offset - start_offset - nlen
+            n, nlen, n[3].line_offset - n.line_offset - nlen
         else
             binop::Union{FST,Nothing} = nothing
             sn = n
@@ -210,16 +180,7 @@ function align_binaryopcalls!(doc::Document, fst::FST, op_inds::Vector{Int})
                 else
                     binop = (sn.nodes::Vector{FST})[binop_ind]
                     nlen += node_align_length(binop[1])
-                    start_offset =
-                        source_display_line_offset(doc, n.startline, n.line_offset)
-
-                    op_offset = source_display_line_offset(
-                        doc,
-                        binop[3].startline,
-                        binop[3].line_offset,
-                    )
-
-                    ws = op_offset - start_offset - nlen
+                    ws = binop[3].line_offset - n.line_offset - nlen
                     break
                 end
             end
@@ -233,10 +194,7 @@ function align_binaryopcalls!(doc::Document, fst::FST, op_inds::Vector{Int})
 
         push!(g.nodes, binop)
         push!(g.node_inds, i)
-        push!(
-            g.line_offsets,
-            source_display_line_offset(doc, binop[3].startline, binop[3].line_offset),
-        )
+        push!(g.line_offsets, binop[3].line_offset)
         push!(g.lens, nlen)
         push!(g.whitespaces, ws)
 
@@ -261,14 +219,11 @@ function align_binaryopcalls!(doc::Document, fst::FST, op_inds::Vector{Int})
 end
 
 """
-    align_struct!(doc::Document, fst::FST)
+    align_struct!(fst::FST)
 
 Aligns struct fields.
-
-`doc` supplies the original source text so field and type operator columns can be measured
-using display width.
 """
-function align_struct!(doc::Document, fst::FST)
+function align_struct!(fst::FST)
     ind = findfirst(n -> n.typ === Block, fst.nodes)
     if isnothing(ind) || length(fst[ind]) == 0
         return
@@ -298,14 +253,11 @@ function align_struct!(doc::Document, fst::FST)
                 continue
             end
 
-            start_offset = source_display_line_offset(doc, n.startline, n.line_offset)
-            op_offset =
-                source_display_line_offset(doc, n[ind].startline, n[ind].line_offset)
-            ws = op_offset - start_offset - nlen
+            ws = n[ind].line_offset - n.line_offset - nlen
 
             push!(g.nodes, n)
             push!(g.node_inds, i)
-            push!(g.line_offsets, op_offset)
+            push!(g.line_offsets, n[ind].line_offset)
             push!(g.lens, nlen)
             push!(g.whitespaces, ws)
 
@@ -323,17 +275,11 @@ function align_struct!(doc::Document, fst::FST)
             if ind === nothing
                 continue
             end
-            start_offset = source_display_line_offset(doc, n.startline, n.line_offset)
-            op_offset = source_display_line_offset(
-                doc,
-                binop[ind].startline,
-                binop[ind].line_offset,
-            )
-            ws = op_offset - start_offset - nlen
+            ws = binop[ind].line_offset - n.line_offset - nlen
 
             push!(g.nodes, binop)
             push!(g.node_inds, i)
-            push!(g.line_offsets, op_offset)
+            push!(g.line_offsets, binop[ind].line_offset)
             push!(g.lens, nlen)
             push!(g.whitespaces, ws)
 
@@ -356,14 +302,11 @@ function align_struct!(doc::Document, fst::FST)
 end
 
 """
-    align_conditional!(doc::Document, fst::FST)
+    align_conditional!(fst::FST)
 
 Aligns a conditional expression.
-
-`doc` supplies the original source text so `?` and `:` alignment is computed using display
-columns.
 """
-function align_conditional!(doc::Document, fst::FST)
+function align_conditional!(fst::FST)
     nodes = flatten_conditionalopcall(fst)
 
     cond_group = AlignGroup()
@@ -376,17 +319,11 @@ function align_conditional!(doc::Document, fst::FST)
         if n.typ === OPERATOR && n.val == "?"
             if cond_prev_endline != n.endline
                 nlen = node_align_length(nodes[i-2])
-                start_offset = source_display_line_offset(
-                    doc,
-                    nodes[i-2].startline,
-                    nodes[i-2].line_offset,
-                )
-                op_offset = source_display_line_offset(doc, n.startline, n.line_offset)
-                ws = op_offset - start_offset - nlen
+                ws = n.line_offset - nodes[i-2].line_offset - nlen
 
                 push!(cond_group.nodes, n)
                 push!(cond_group.node_inds, i)
-                push!(cond_group.line_offsets, op_offset)
+                push!(cond_group.line_offsets, n.line_offset)
                 push!(cond_group.lens, nlen)
                 push!(cond_group.whitespaces, ws)
             end
@@ -394,17 +331,11 @@ function align_conditional!(doc::Document, fst::FST)
         elseif n.typ === OPERATOR && n.val == ":"
             if colon_prev_endline != n.endline
                 nlen = node_align_length(nodes[i-2])
-                start_offset = source_display_line_offset(
-                    doc,
-                    nodes[i-2].startline,
-                    nodes[i-2].line_offset,
-                )
-                op_offset = source_display_line_offset(doc, n.startline, n.line_offset)
-                ws = op_offset - start_offset - nlen
+                ws = n.line_offset - nodes[i-2].line_offset - nlen
 
                 push!(colon_group.nodes, n)
                 push!(colon_group.node_inds, i)
-                push!(colon_group.line_offsets, op_offset)
+                push!(colon_group.line_offsets, n.line_offset)
                 push!(colon_group.lens, nlen)
                 push!(colon_group.whitespaces, ws)
             end
@@ -450,28 +381,23 @@ function align_conditional!(doc::Document, fst::FST)
 end
 
 """
-    align_matrix!(doc::Document, fst::FST)
+    align_matrix!(fst::FST)
 
 Adjust whitespace between matrix elements so it matches the original source layout.
-
-`doc` is used to recover the source display columns for each element, which avoids
-overpadding when the source contains zero-width characters.
 """
-function align_matrix!(doc::Document, fst::FST)
+function align_matrix!(fst::FST)
     rows = filter(n -> n.typ === Row, fst.nodes::Vector{FST})
     if length(rows) == 0
         return
     end
 
-    min_offset = minimum(map(rows) do r
-        source_display_line_offset(doc, r[1].startline, r[1].line_offset)
-    end)
+    min_offset = minimum(r -> r[1].line_offset, rows)
 
     line = 0
     # add whitespace prior to initial element if elements are aligned to the right and
     # it's the first row on that line.
     for r in rows
-        row_offset = source_display_line_offset(doc, r[1].startline, r[1].line_offset)
+        row_offset = r[1].line_offset
         if row_offset > min_offset && line != r.startline
             diff = row_offset - min_offset
             if diff > 0
@@ -488,10 +414,7 @@ function align_matrix!(doc::Document, fst::FST)
                 n1 = r[i-1]
                 n2 = r[i+1]
 
-                diff =
-                    source_display_line_offset(doc, n2.startline, n2.line_offset) -
-                    source_display_line_offset(doc, n1.startline, n1.line_offset) -
-                    node_align_length(n1)
+                diff = n2.line_offset - n1.line_offset - node_align_length(n1)
 
                 # fix #694 and #713
                 if diff > 0

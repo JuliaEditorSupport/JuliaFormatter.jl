@@ -118,7 +118,7 @@ function _format_text(
     end
 
     if needs_alignment(s.opts)
-        align_fst!(fst, s.doc, s.opts)
+        align_fst!(fst, s.opts)
     end
 
     nest!(style, fst, s)
