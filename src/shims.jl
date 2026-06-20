@@ -17,14 +17,17 @@ This covers, for example:
 - `<:(x)`   ->   K"<:", caught by is_type_operator
 - `.<:(x)`  ->   K"call" (with a dotted caller)
 
-`<:` and `>:` are special-cased by JuliaSyntax to return K"<:" and K">:" nodes but from a
-syntax perspective we want to treat them the same as any other function.
+`<:` and `>:` are special-cased by JuliaSyntax to return K"<:" and K">:" nodes rather than
+K"call", but from a syntax perspective we want to treat them the same as any other function.
 
 We then need to exclude a few things:
 
 - applications of unary operators, for example, `+x`, `-x`, and `<:x`. These are still
   parsed as K"call" but these can be identified by the fact that
-  `JuliaSyntax.is_prefix_op_call` returns `true` for these.
+  `JuliaSyntax.is_prefix_op_call` returns `true` for these. BUT, we don't want to exclude
+  the parenthesised versions +(x), -(x) since these do *look* like function calls (and we
+  only care about the syntax, not the semantics)! So need some custom logic to identify
+  these...
 
 - bare operators, easily identified by `is_leaf`.
 
@@ -42,17 +45,23 @@ true
 function is_function_call(cst::JS.GreenNode)
     JS.is_leaf(cst) && return false
     return if JS.is_type_operator(cst)
-        # Distinguish `<:(a, b)` (prefix call -- has a bare K"(" child) from `a <: b` (infix
-        # -- no `(`) and `<:x` / `<:(a)` (unary -- if the argument is parenthesised, then
-        # it's a K"parens" node rather than K"(").
-        #
-        # We can't rely on the exact position of the K"(" child -- for example, inside
-        # `<:(a, b)` it is the second child, but if we do `f( <:(a, b))` then it is the
-        # third child.
-        any(c -> kind(c) == K"(", JS.children(cst))
+        any(c -> kind(c) in KSet"( parens", JS.children(cst))
     elseif kind(cst) in KSet"call dotcall"
-        # For K"call" nodes the flags can be reliably used.
-        !JS.is_prefix_op_call(cst) && !JS.is_infix_op_call(cst)
+        if JS.is_infix_op_call(cst)
+            false
+        elseif JS.is_prefix_op_call(cst)
+            # reject +x but not +(x)
+            non_ws_idxs = findall(n -> !JS.is_whitespace(n), JS.children(cst))
+            if kind(cst) == K"call"
+                length(non_ws_idxs) < 2 && error("unreachable: prefix call with not enough things")
+                kind(cst[non_ws_idxs[2]]) in KSet"( parens"
+            elseif kind(cst) == K"dotcall"
+                length(non_ws_idxs) < 3 && error("unreachable: prefix call with not enough things")
+                kind(cst[non_ws_idxs[3]]) in KSet"( parens"
+            end
+        else
+            true
+        end
     else
         false
     end

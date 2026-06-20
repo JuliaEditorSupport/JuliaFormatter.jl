@@ -332,8 +332,14 @@ function p_call(
         end
     end
 
-    idx = findfirst(n -> kind(n) === K"(", childs)::Int
-    first_arg_idx = findnext(n -> !JuliaSyntax.is_whitespace(n), childs, idx + 1)
+    idx = findfirst(n -> kind(n) === K"(", childs)
+    first_arg_idx = if idx === nothing
+        # it might just be `+(x)` in which case there is no K"(" but only
+        # K"parens"...
+        nothing
+    else
+        findnext(n -> !JuliaSyntax.is_whitespace(n), childs, idx + 1)
+    end
 
     for (i, a) in enumerate(childs)
         k = kind(a)
@@ -343,7 +349,7 @@ function p_call(
             pretty(style, a, s, ctx, lineage)
         end
 
-        override = (i == first_arg_idx) || k === K")"
+        override = (i === first_arg_idx) || k === K")"
 
         if k === K","
             if has_more_args_to_come(childs, i + 1, K")")

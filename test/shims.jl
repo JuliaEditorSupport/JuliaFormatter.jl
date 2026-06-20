@@ -18,7 +18,14 @@ cst(s::String) = JuliaSyntax.parseall(JuliaSyntax.GreenNode, s)[1]
     end
     @testset "$(func)x" for func in ("+", ".+", "<:")
         @test !S.is_function_call(cst("$(func)x"))
-        @test !S.is_function_call(cst("$(func)(x)"))
+    end
+
+    # But not the parenthesised versions
+    @testset "$(func)(x)" for func in ("+", ".+", "<:")
+        @test S.is_function_call(cst("$(func)(x)"))
+    end
+    @testset "$(func)(x, y)" for func in ("+", ".+", "<:")
+        @test S.is_function_call(cst("$(func)(x, y)"))
     end
 
     # Exclude bare operators
