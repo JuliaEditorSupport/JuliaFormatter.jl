@@ -3409,6 +3409,9 @@ end
 
         test_format("@Base.foo 1", "Base.@foo 1")
         test_format("@Base.Foo.foo 1", "Base.Foo.@foo 1")
+
+        s = raw":($(@__MODULE__).@macro foo)"
+        test_format(s, s)
     end
 end
 

@@ -521,23 +521,23 @@ Module.@macro
 """
 function move_at_sign_to_the_end(fst::FST, s::State)
     val = ""
-    num_ats = 0
     f = (n::FST, _) -> begin
         if n.typ === MACRONAME && n.line_offset == -33
             val *= gettreeval(n)
             return false
         elseif is_leaf(n)
             v = gettreeval(n)
-            contains(v, "@") && (num_ats += 1)
             val *= v
         end
     end
     walk(f, fst, s)
 
-    num_ats != 1 && return fst
+    splits = split(val, "@")
+    if length(splits) != 2
+        return fst
+    end
+    qualifier, macro_name = splits[1], splits[2]
 
-    # Now we know that split(val, "@") will return a 2-element array.
-    qualifier, macro_name = split(val, "@")
     # In general, we can't just split on '.' and call it a day, because this leads to all
     # sorts of problems with macro or module names that have dots in them. So we'll be
     # conservative and only move things that look like "Modulename." from the macro name to
