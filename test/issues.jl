@@ -3341,6 +3341,64 @@ end
         end
     end
 
+    @testset "1159 chained ternary block with parens" begin
+        s = "x ? y : p ? (q; r) : s"
+        out = """if x
+            y
+        elseif p
+            (q; r)
+        else
+            s
+        end"""
+        test_format(s, out, BlueStyle())
+
+        s = "p ? (q; r) : s ? t : u"
+        out = """if p
+            (q; r)
+        elseif s
+            t
+        else
+            u
+        end"""
+        test_format(s, out, BlueStyle())
+    end
+
+    @testset "1162 chained ternary in generator" begin
+        s = """m = [i ? j : m ? p : q for i in j]"""
+        out = """
+        m = [
+            if i
+                j
+            elseif m
+                p
+            else
+                q
+            end for i in j
+        ]"""
+        test_format(s, out, BlueStyle())
+
+        s = """
+        mat = [j == 1 ? NoQuote(rownms[i]) :
+               j-1 == ct.pvalcol ? NoQuote(sprint(show, PValue(cols[j-1][i]))) :
+               j-1 in ct.teststatcol ? TestStat(cols[j-1][i]) :
+               cols[j-1][i] isa AbstractString ? NoQuote(cols[j-1][i]) : cols[j-1][i]
+               for i in 1:nr, j in 1:nc+1]"""
+        out = """
+        mat = [
+            if j == 1
+                NoQuote(rownms[i])
+            elseif j-1 == ct.pvalcol
+                NoQuote(sprint(show, PValue(cols[j - 1][i])))
+            elseif j-1 in ct.teststatcol
+                TestStat(cols[j - 1][i])
+            elseif cols[j - 1][i] isa AbstractString
+                NoQuote(cols[j - 1][i])
+            else
+                cols[j - 1][i]
+            end for i in 1:nr, j in 1:(nc + 1)
+        ]"""
+        test_format(s, out, BlueStyle())
+    end
 end
 
 end

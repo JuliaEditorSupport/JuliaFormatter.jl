@@ -1,4 +1,4 @@
-module SeparateKwargsWithSemicolonsTests
+module SeparateKwargsWithSemicolonTests
 
 using JuliaFormatter: DefaultStyle, YASStyle, BlueStyle, SciMLStyle, MinimalStyle, format_text
 using JuliaFormatter.Internal: test_format, ALL_STYLES
@@ -133,10 +133,17 @@ using Test
         end
     end
 
-    @testset "rhs of short function def is not changed" begin
+    @testset "rhs of short function def is changed" begin
         # g should be changed but not f
         s_ = "f(x, y=z) = g(p, q=r)"
         s = "f(x, y = z) = g(p; q = r)"
+        for style in ALL_STYLES
+            test_format(s_, s, style; separate_kwargs_with_semicolon = true, whitespace_in_kwargs = true)
+        end
+
+        # https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/1161
+        s_= "-(x::T) = f(x, y=z)"
+        s = "-(x::T) = f(x; y = z)"
         for style in ALL_STYLES
             test_format(s_, s, style; separate_kwargs_with_semicolon = true, whitespace_in_kwargs = true)
         end

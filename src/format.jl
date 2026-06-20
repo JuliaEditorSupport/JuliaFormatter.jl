@@ -179,7 +179,9 @@ function _format_text(
             )
         catch err
             if err isa JuliaSyntax.ParseError
-                throw(InvalidFormattedTextError(err))
+                # rethrow() is a bit of bad practice, but
+                # otherwise you'll see the failed parse twice.
+                rethrow(InvalidFormattedTextError(err))
             else
                 rethrow(err)
             end
