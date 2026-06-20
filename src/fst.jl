@@ -133,8 +133,7 @@ mutable struct FST
     # comment rather than a true invariant right now.
     indent::Int
 
-    # TODO(penelopeysm) This uses length(op.val) which is character count
-    # It should really use textwidth.
+    # Display width of the node's content (measured in terminal columns via `textwidth`).
     len::Int
     val::String
     # Note that nodes = () indicates a leaf node, whereas nodes = [] indicates a tree node
@@ -231,7 +230,7 @@ function FST(
         startline,
         endline,
         0,
-        length(val),
+        textwidth(val),
         val,
         (),
         AllowNest,
@@ -904,13 +903,13 @@ function eq_to_in_normalization!(fst::FST, always_for_in::Bool, for_in_replaceme
         old_op_len = op.len
         if always_for_in
             op.val = for_in_replacement
-            op.len = length(op.val)
+            op.len = textwidth(op.val)
         elseif op.val == "=" && op_kind(fst[end]) !== K":"
             op.val = "in"
-            op.len = length(op.val)
+            op.len = textwidth(op.val)
         elseif op.val == "in" && op_kind(fst[end]) === K":"
             op.val = "="
-            op.len = length(op.val)
+            op.len = textwidth(op.val)
         end
         fst.len += op.len - old_op_len
         if !isnothing(fst.metadata)

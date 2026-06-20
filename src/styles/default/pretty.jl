@@ -871,16 +871,15 @@ function p_stringh(
         return FST(LITERAL, loc[2], startline, startline, val)
     end
 
-    # The indent for the StringN FST should be the width of the first line prior to the
-    # opening quote. The quote is the loc[2]-th byte of line loc[1].
-    opening_quote_col = source_display_line_offset(s.doc, loc[1], loc[2])
-    t = FST(StringN, opening_quote_col - 1)
+    # The indent for the StringN FST should be the display width of the first line prior
+    # to the opening quote. loc[2] is already a display column (1-indexed).
+    t = FST(StringN, loc[2] - 1)
     t.line_offset = loc[2]
 
     lines = split(val, "\n")
     # Calculate the display column of the first non-whitespace character in the string
     # literal.
-    sidx = opening_quote_col  # Display column of the opening quote.
+    sidx = loc[2]  # Display column of the opening quote.
     for l in lines[2:end]
         # Note that `fc` is actually a byte index, not a display column. This works only
         # insofar as all whitespace characters (as defined by isspace(c)) have the same
@@ -899,7 +898,7 @@ function p_stringh(
     for (i, l) in enumerate(lines)
         ln = startline + i - 1
         l = i == 1 ? l : l[sidx:end]
-        n = FST(LITERAL, ln, ln, sidx - 1, length(l), l, (), AllowNest, 0, -1, nothing)
+        n = FST(LITERAL, ln, ln, sidx - 1, textwidth(l), l, (), AllowNest, 0, -1, nothing)
         add_node!(t, n, s)
     end
 
