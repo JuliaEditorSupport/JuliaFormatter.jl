@@ -50,14 +50,15 @@ jobs:
             repos-${{ matrix.orgs_label }}-
 
       - name: Clone target repos
-        if: steps.cache-repos.outputs.cache-hit != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           for org in ${{ matrix.orgs }}; do
             for url in $(gh repo list "$org" --limit 1000 --json name,url,isFork,pushedAt --jq '.[] | select(((.name | endswith(".jl")) or .name == "julia") and (.isFork | not) and (.pushedAt >= "2024-01-01")) | .url'); do
+              dest="target/$(basename "$url")"
+              [[ -d "$dest" ]] && continue
               echo "Cloning $url..."
-              git clone --depth 1 --quiet "$url" "target/$(basename "$url")"
+              git clone --depth 1 --quiet "$url" "$dest"
             done
           done
 
