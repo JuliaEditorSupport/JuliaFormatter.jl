@@ -25,13 +25,16 @@ jobs:
       fail-fast: false
       matrix:
         orgs_label:
-          - SciML++
+          - Group1
+          - Group2
         style:
           - default
           - blue
         include:
-          - orgs_label: SciML++
-            orgs: "SciML JuliaDiff JuliaStats TuringLang"
+          - orgs_label: Group1
+            orgs: "JuliaLang JuliaPlots MakieOrg trixi-framework oscar-system"
+          - orgs_label: Group2
+            orgs: "SciML JuliaDiff JuliaStats TuringLang EnzymeAD"
 
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # 6.0.3
