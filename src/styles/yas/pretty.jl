@@ -557,7 +557,8 @@ function p_comprehension(
     )
     arg = childs[idx]
 
-    if is_block(arg, style) || (kind(arg) === K"generator" && haschildren(arg) && is_block(arg[1], style))
+    if is_block(arg, style) ||
+       (kind(arg) === K"generator" && haschildren(arg) && is_block(arg[1], style))
         t.nest_behavior = AlwaysNest
     end
 

@@ -529,7 +529,11 @@ end
 function is_block(x::JuliaSyntax.GreenNode, style::AbstractStyle)
     is_if(x) ||
         kind(x) in KSet"do try for while let" ||
-        (kind(x) == K"block" && haschildren(x) && !JuliaSyntax.has_flags(x, JuliaSyntax.PARENS_FLAG)) ||
+        (
+            kind(x) == K"block" &&
+            haschildren(x) &&
+            !JuliaSyntax.has_flags(x, JuliaSyntax.PARENS_FLAG)
+        ) ||
         (kind(x) == K"quote" && haschildren(x) && is_block(x[1], style)) ||
         # For BlueStyle, chained ternaries will be expanded into blocks so we want to make
         # formatting decisions with that in mind.

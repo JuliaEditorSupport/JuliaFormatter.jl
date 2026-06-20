@@ -1166,7 +1166,8 @@ function p_block(
     end
 
     # We might want to add return to the last statement.
-    add_return_to_last_statement = should_add_return_to_last_statement(cst, s, style, lineage)
+    add_return_to_last_statement =
+        should_add_return_to_last_statement(cst, s, style, lineage)
     # Technically this doesn't need to be computed if add_return_to_last_statement is false,
     # but it's cheap.
     last_stmt_idx =
