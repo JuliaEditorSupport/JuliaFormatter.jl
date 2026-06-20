@@ -8,6 +8,8 @@ Fixed a bug where expansion of chained ternary expressions with BlueStyle would 
 
 Fixed a bug where defining a function such as `-(x) = ...` (where the function is an operator, and there is only one argument) would cause `separate_kwargs_with_semicolon` to _not_ be triggered for the first function call on the RHS of the function definition. (#1161, #1158)
 
+Fixed a bug where macros with dots would be incorrectly formatted, e.g. `Base.@.` would be transformed to `Base..@`. (#1163, #1164)
+
 # v2.9.2
 
 Fixed a bug where `pipe_to_function_call` would remove parentheses from the argument of a function call even if the argument was an assignment, changing the meaning of the code. (#1147, #1148)

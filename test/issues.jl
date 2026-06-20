@@ -3399,6 +3399,20 @@ end
         ]"""
         test_format(s, out, BlueStyle())
     end
+    
+    @testset "1163 macros with dots" begin
+        for s in ("Optimizers.@.. foo", "Base.@. foo")
+            for style in ALL_STYLES
+                test_format(s, s, style)
+            end
+        end
+
+        test_format("@Base.foo 1", "Base.@foo 1")
+        test_format("@Base.Foo.foo 1", "Base.Foo.@foo 1")
+
+        s = raw":($(@__MODULE__).@macro foo)"
+        test_format(s, s)
+    end
 end
 
 end
