@@ -88,10 +88,11 @@ jobs:
             end
           end
 
-      - name: Count Julia lines
+      - name: Count Julia files and lines
         run: |
+          files=$(find target -name '*.jl' -type f | wc -l)
           lines=$(find target -name '*.jl' -type f -print0 | xargs -0 cat | wc -l)
-          echo "Formatting $lines lines of Julia"
+          echo "Formatting $files files, $lines lines of Julia"
 
       - name: Format (pass 1)
         working-directory: target
