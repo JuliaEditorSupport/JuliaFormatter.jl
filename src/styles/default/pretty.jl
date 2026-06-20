@@ -899,7 +899,7 @@ function p_stringh(
     for (i, l) in enumerate(lines)
         ln = startline + i - 1
         l = i == 1 ? l : l[sidx:end]
-        n = FST(LITERAL, ln, ln, sidx - 1, length(l), l, (), AllowNest, 0, -1, nothing)
+        n = FST(LITERAL, ln, ln, sidx - 1, textwidth(l), l, (), AllowNest, 0, -1, nothing)
         add_node!(t, n, s)
     end
 

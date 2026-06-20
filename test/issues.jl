@@ -2491,6 +2491,13 @@ end
         end
     end
 
+    @testset "991 emoji" begin
+        s = "e = 🙃 -> \"x\\\n   y\""
+        for style in ALL_STYLES
+            test_format(s, s, style)
+        end
+    end
+
     @testset "1025" begin
         # from julia@1.12.6 Compiler/src/typelimits.jl
         s = """
@@ -3412,6 +3419,22 @@ end
 
         s = raw":($(@__MODULE__).@macro foo)"
         test_format(s, s)
+    end
+
+    @testset "1164 emoji" begin
+        s1 = raw"""
+        @😬 \"foo
+             foo\"
+        """
+        s2 = raw"""
+        😬(\"foo
+            foo\")
+        """
+        for s in (s1, s2)
+            for style in ALL_STYLES
+                test_format(s, s, style)
+            end
+        end
     end
 end
 
