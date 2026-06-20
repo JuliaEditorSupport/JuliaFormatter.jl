@@ -1069,13 +1069,14 @@ function _contains_return(cst::JuliaSyntax.GreenNode)::Bool
 end
 
 """
-    should_add_return_to_last_statement(cst, s, lineage)
+    should_add_return_to_last_statement(cst, s, style, lineage)
 
 For a block `cst`, determine whether we should add a `return` to the last statement in the block.
 """
 function should_add_return_to_last_statement(
     cst::JuliaSyntax.GreenNode,
     s::State,
+    style::AbstractStyle,
     lineage::Vector{Tuple{JuliaSyntax.Kind,Bool,Bool}},
 )
     kind(cst) === K"block" ||
@@ -1106,9 +1107,8 @@ function should_add_return_to_last_statement(
     if kind(last_stmt) in KSet"return macrocall"
         return false
     end
-    # If the last statement is a block, don't add return. However, parenthesised blocks like
-    # `(a; b)` still get return. Thankfully, JuliaSyntax tells us about that!
-    if is_block(last_stmt) && !JuliaSyntax.has_flags(last_stmt, JuliaSyntax.PARENS_FLAG)
+    # If the last statement is a block, don't add return.
+    if is_block(last_stmt, style)
         return false
     end
     # Do-blocks don't get caught by `is_block()` because they have K"call" or K"macrocall",
@@ -1166,7 +1166,7 @@ function p_block(
     end
 
     # We might want to add return to the last statement.
-    add_return_to_last_statement = should_add_return_to_last_statement(cst, s, lineage)
+    add_return_to_last_statement = should_add_return_to_last_statement(cst, s, style, lineage)
     # Technically this doesn't need to be computed if add_return_to_last_statement is false,
     # but it's cheap.
     last_stmt_idx =
@@ -3218,9 +3218,9 @@ function p_parens(
     args = get_args(cst)
     nest = if length(args) > 0
         arg = args[1]
-        if is_block(arg) || (
+        if is_block(arg, style) || (
             # this branch covers something like (BLOCK for x in y)
-            kind(arg) === K"generator" && first_nontrivial_child_is_block(arg)
+            kind(arg) === K"generator" && first_nontrivial_child_is_block(arg, style)
         )
             t.nest_behavior = AlwaysNest
         end
@@ -3544,9 +3544,9 @@ function p_comprehension(
     body_idx = findnext(n -> !JuliaSyntax.is_whitespace(n), childs, opening_brace_idx + 1)
     body_arg = childs[body_idx]
 
-    if is_block(body_arg) || (
+    if is_block(body_arg, style) || (
         # this branch covers something like [BLOCK for x in y]
-        kind(body_arg) === K"generator" && first_nontrivial_child_is_block(body_arg)
+        kind(body_arg) === K"generator" && first_nontrivial_child_is_block(body_arg, style)
     )
         t.nest_behavior = AlwaysNest
     end

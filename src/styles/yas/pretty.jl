@@ -279,8 +279,8 @@ function p_parens(
     args = get_args(cst)
     if length(args) > 0
         arg = args[1]
-        if is_block(arg) ||
-           (kind(arg) === K"generator" && haschildren(arg) && is_block(arg[1]))
+        if is_block(arg, style) ||
+           (kind(arg) === K"generator" && haschildren(arg) && is_block(arg[1], style))
             t.nest_behavior = AlwaysNest
         end
     end
@@ -557,7 +557,7 @@ function p_comprehension(
     )
     arg = childs[idx]
 
-    if is_block(arg) || (kind(arg) === K"generator" && haschildren(arg) && is_block(arg[1]))
+    if is_block(arg, style) || (kind(arg) === K"generator" && haschildren(arg) && is_block(arg[1], style))
         t.nest_behavior = AlwaysNest
     end
 
@@ -781,7 +781,7 @@ function p_generator(
         n = pretty(style, a, s, newctx(ctx; from_for = from_for), lineage)
         if JuliaSyntax.is_keyword(a) && !haschildren(a)
             idx = findprev(n -> !JuliaSyntax.is_whitespace(n), childs, i - 1)
-            if !isnothing(idx) && is_block(childs[idx])
+            if !isnothing(idx) && is_block(childs[idx], style)
                 add_node!(t, Newline(; length = 1), s)
             elseif from_iterable
                 add_node!(t, Placeholder(1), s)

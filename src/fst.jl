@@ -514,23 +514,26 @@ function is_comprehension(x::FST)
     x.typ in (Comprehension, TypedComprehension)
 end
 
-function first_nontrivial_child_is_block(cst::JuliaSyntax.GreenNode)
+function first_nontrivial_child_is_block(cst::JuliaSyntax.GreenNode, style::AbstractStyle)
     JuliaSyntax.is_leaf(cst) && return false
     for c in children(cst)
         if JuliaSyntax.is_whitespace(c)
             continue
         else
-            return is_block(c)
+            return is_block(c, style)
         end
     end
     return false
 end
 
-function is_block(x::JuliaSyntax.GreenNode)
+function is_block(x::JuliaSyntax.GreenNode, style::AbstractStyle)
     is_if(x) ||
         kind(x) in KSet"do try for while let" ||
-        (kind(x) == K"block" && haschildren(x)) ||
-        (kind(x) == K"quote" && haschildren(x) && is_block(x[1]))
+        (kind(x) == K"block" && haschildren(x) && !JuliaSyntax.has_flags(x, JuliaSyntax.PARENS_FLAG)) ||
+        (kind(x) == K"quote" && haschildren(x) && is_block(x[1], style)) ||
+        # For BlueStyle, chained ternaries will be expanded into blocks so we want to make
+        # formatting decisions with that in mind.
+        (style isa BlueStyle && is_chained_ternary(x))
 end
 
 # A chained ternary `a ? b : c ? d : e` is a K"?" node whose "else" branch (the last
@@ -778,16 +781,13 @@ function is_binaryop_nestable(::AbstractStyle, cst::JuliaSyntax.GreenNode)
 end
 
 function nest_rhs(cst::JuliaSyntax.GreenNode, style::AbstractStyle)::Bool
+    # TODO(penelopeysm): I don't entirely understand this one here tbh: it seems quite
+    # unprincipled for us to not use `is_block(cst, style)`
     if defines_function(cst) && haschildren(cst)
         for c in children(cst)
             if is_if(c) || kind(c) in KSet"do try for while let" && haschildren(c)
                 return true
             end
-            # BlueStyle converts chained ternaries to if/elseif/else blocks at the CST
-            # stage, so we need to treat them as blocks here too. For example, without
-            # this, `f() = a ? b : c ? d : e` would first produce `f() = if a ... end`
-            # (AllowNest), but on the second pass the `if` block triggers AlwaysNest,
-            # producing `f() =\n    if a ... end` instead.
             if style isa BlueStyle && is_chained_ternary(c)
                 return true
             end

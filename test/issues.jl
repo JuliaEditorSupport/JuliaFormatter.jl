@@ -3362,6 +3362,43 @@ end
         end"""
         test_format(s, out, BlueStyle())
     end
+
+    @testset "1162 chained ternary in generator" begin
+        s = """m = [i ? j : m ? p : q for i in j]"""
+        out = """
+        m = [
+            if i
+                j
+            elseif m
+                p
+            else
+                q
+            end for i in j
+        ]"""
+        test_format(s, out, BlueStyle())
+
+        s = """
+        mat = [j == 1 ? NoQuote(rownms[i]) :
+               j-1 == ct.pvalcol ? NoQuote(sprint(show, PValue(cols[j-1][i]))) :
+               j-1 in ct.teststatcol ? TestStat(cols[j-1][i]) :
+               cols[j-1][i] isa AbstractString ? NoQuote(cols[j-1][i]) : cols[j-1][i]
+               for i in 1:nr, j in 1:nc+1]"""
+        out = """
+        mat = [
+            if j == 1
+                NoQuote(rownms[i])
+            elseif j-1 == ct.pvalcol
+                NoQuote(sprint(show, PValue(cols[j - 1][i])))
+            elseif j-1 in ct.teststatcol
+                TestStat(cols[j - 1][i])
+            elseif cols[j - 1][i] isa AbstractString
+                NoQuote(cols[j - 1][i])
+            else
+                cols[j - 1][i]
+            end for i in 1:nr, j in 1:(nc + 1)
+        ]"""
+        test_format(s, out, BlueStyle())
+    end
 end
 
 end
