@@ -53,10 +53,12 @@ function is_function_call(cst::JS.GreenNode)
             # reject +x but not +(x)
             non_ws_idxs = findall(n -> !JS.is_whitespace(n), JS.children(cst))
             if kind(cst) == K"call"
-                length(non_ws_idxs) < 2 && error("unreachable: prefix call with not enough things")
+                length(non_ws_idxs) < 2 &&
+                    error("unreachable: prefix call with not enough things")
                 kind(cst[non_ws_idxs[2]]) in KSet"( parens"
             elseif kind(cst) == K"dotcall"
-                length(non_ws_idxs) < 3 && error("unreachable: prefix call with not enough things")
+                length(non_ws_idxs) < 3 &&
+                    error("unreachable: prefix call with not enough things")
                 kind(cst[non_ws_idxs[3]]) in KSet"( parens"
             end
         else
