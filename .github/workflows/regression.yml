@@ -45,7 +45,7 @@ jobs:
 
       - name: Cache target repos
         id: cache-repos
-        uses: actions/cache@v4
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # 5.0.5
         with:
           path: target
           key: repos-${{ matrix.orgs_label }}-${{ github.run_id }}
@@ -57,11 +57,11 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           for org in ${{ matrix.orgs }}; do
-            for url in $(gh repo list "$org" --limit 1000 --json name,url,isFork,pushedAt --jq '.[] | select(((.name | endswith(".jl")) or .name == "julia") and (.isFork | not) and (.pushedAt >= "2024-01-01")) | .url'); do
-              dest="target/$(basename "$url")"
+            for name in $(gh repo list "$org" --limit 1000 --json name,isFork,pushedAt --jq '.[] | select(((.name | endswith(".jl")) or .name == "julia") and (.isFork | not) and (.pushedAt >= "2024-01-01")) | .name'); do
+              dest="target/$org/$name"
               [[ -d "$dest" ]] && continue
-              echo "Cloning $url..."
-              git clone --depth 1 --quiet "$url" "$dest"
+              echo "Cloning $org/$name ..."
+              git clone --depth 1 --quiet "https://github.com/$org/$name" "$dest"
             done
           done
 
