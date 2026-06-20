@@ -62,7 +62,6 @@ struct AlignGroup
 end
 AlignGroup() = AlignGroup(FST[], Int[], Int[], Int[], Int[])
 
-
 function Base.push!(g::AlignGroup, n::FST, ind::Int, line_offset::Int, len::Int, ws::Int)
     push!(g.nodes, n)
     push!(g.node_inds, ind)
