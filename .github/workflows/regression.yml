@@ -40,7 +40,17 @@ jobs:
       - uses: julia-actions/setup-julia@fa02766e078afaaf09b14210362cee14137e6a32 # 3.0.2
       - uses: julia-actions/cache@a45e8fa8be21c18a06b7177052533149e61e9b38 # 3.1.0
 
+      - name: Cache target repos
+        id: cache-repos
+        uses: actions/cache@v4
+        with:
+          path: target
+          key: repos-${{ matrix.orgs_label }}-${{ github.run_id }}
+          restore-keys: |
+            repos-${{ matrix.orgs_label }}-
+
       - name: Clone target repos
+        if: steps.cache-repos.outputs.cache-hit != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -73,15 +83,15 @@ jobs:
 
       - name: Count Julia lines
         run: |
-          lines=$(find target -name '*.jl' | xargs cat | wc -l)
+          lines=$(find target -name '*.jl' -type f | xargs cat | wc -l)
           echo "Formatting $lines lines of Julia"
 
       - name: Format (pass 1)
         working-directory: target
         run: |
-          julia --project=formatter -m JuliaFormatter --inplace --verbose --style=${{ matrix.style }} ${{ env.FORMATTER_OPTS }} .
+          julia --project=../formatter -m JuliaFormatter --inplace --verbose --style=${{ matrix.style }} ${{ env.FORMATTER_OPTS }} .
 
       - name: Check idempotence (pass 2)
         working-directory: target
         run: |
-          julia --project=formatter -m JuliaFormatter --check --diff --style=${{ matrix.style }} ${{ env.FORMATTER_OPTS }} .
+          julia --project=../formatter -m JuliaFormatter --check --diff --style=${{ matrix.style }} ${{ env.FORMATTER_OPTS }} .
