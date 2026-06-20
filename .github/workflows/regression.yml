@@ -73,7 +73,7 @@ jobs:
               endswith(f, ".jl") || continue
               path = joinpath(root, f)
               try
-                parseall(GreenNode, read(path, String))
+                parseall(GreenNode, read(path, String); ignore_warnings=true)
               catch
                 println("Removing unparseable file: $path")
                 rm(path)
