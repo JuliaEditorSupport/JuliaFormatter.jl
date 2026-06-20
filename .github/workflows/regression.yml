@@ -32,9 +32,11 @@ jobs:
           - blue
         include:
           - orgs_label: Group1
-            orgs: "JuliaLang JuliaPlots MakieOrg trixi-framework oscar-system"
+            orgs: "JuliaLang JuliaPlots MakieOrg"
           - orgs_label: Group2
             orgs: "SciML JuliaDiff JuliaStats TuringLang EnzymeAD"
+          - orgs_label: Group3
+            orgs: "jump-dev trixi-framework oscar-system"
 
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # 6.0.3
