@@ -96,7 +96,7 @@ jobs:
       - name: Format (pass 1)
         working-directory: target
         run: |
-          julia --project=../formatter -m JuliaFormatter --inplace --verbose --style=${{ matrix.style }} ${{ env.FORMATTER_OPTS }} .
+          julia --project=../formatter -m JuliaFormatter --inplace --style=${{ matrix.style }} ${{ env.FORMATTER_OPTS }} .
 
       - name: Check idempotence (pass 2)
         working-directory: target
