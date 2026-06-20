@@ -548,7 +548,7 @@ function move_at_sign_to_the_end(fst::FST, s::State)
             break
         end
         qualifier *= m.match
-        macro_name = macro_name[length(m.match)+1:end]
+        macro_name = macro_name[(length(m.match)+1):end]
     end
     val = qualifier * "@" * macro_name
 
