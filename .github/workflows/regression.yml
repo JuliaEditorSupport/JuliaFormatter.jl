@@ -1,5 +1,8 @@
 name: Regression
 
+env:
+  FORMATTER_OPTS: "--ignore-config --v2-stable-multiline-strings=true --conditional-to-if=false"
+
 on:
   push:
     branches:
@@ -14,95 +17,27 @@ concurrency:
 
 jobs:
   regression:
-    name: ${{ matrix.repo }}@${{ matrix.rev }}-${{ matrix.name_suffix }}
+    name: ${{ matrix.style }}-${{ matrix.orgs_label }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
 
     strategy:
       fail-fast: false
       matrix:
-        # Permitted fields:
-        #  - repo (required): GitHub repo in the form "owner/name"
-        #  - rev (required): Git ref to checkout
-        #  - subdir (optional): Subdirectory to format (defaults to "")
-        #  - args (optional): Additional arguments to pass to `jlfmt` (defaults to "")
-        #  - remove_config (optional): Whether to remove any existing formatter
-        #                              config in the target repo (defaults to false)
-        #  - name_suffix (optional): string to append to the job name (defaults to "",
-        #                            and is otherwise unused)
+        orgs_label:
+          - Group1
+          - Group2
+          - Group3
+        style:
+          - default
+          - blue
         include:
-          - repo: JuliaLang/julia
-            rev: v1.12.6
-            remove_config: true
-            args: "--v2-stable-multiline-strings=true"
-            name_suffix: "default"
-          - repo: JuliaLang/julia
-            rev: v1.12.6
-            remove_config: true
-            args: "--style=blue --v2-stable-multiline-strings=true --conditional-to-if=false"
-            name_suffix: "blue"
-          - repo: SciML/OrdinaryDiffEq.jl
-            rev: v7.0.0
-            remove_config: true
-            args: "--v2-stable-multiline-strings=true"
-            name_suffix: "default"
-          - repo: SciML/OrdinaryDiffEq.jl
-            rev: v7.0.0
-            remove_config: true
-            args: "--style=blue --v2-stable-multiline-strings=true --conditional-to-if=false"
-            name_suffix: "blue"
-          - repo: MakieOrg/Makie.jl
-            rev: v0.24.11
-            remove_config: true
-            args: "--v2-stable-multiline-strings=true"
-            name_suffix: "default"
-          - repo: MakieOrg/Makie.jl
-            rev: v0.24.11
-            remove_config: true
-            args: "--style=blue --v2-stable-multiline-strings=true --conditional-to-if=false"
-            name_suffix: "blue"
-          - repo: jump-dev/JuMP.jl
-            rev: v1.30.1
-            remove_config: true
-            args: "--style=blue --v2-stable-multiline-strings=true --conditional-to-if=false"
-            name_suffix: "blue"
-          - repo: EnzymeAD/Enzyme.jl
-            rev: v0.13.157
-            remove_config: true
-            args: "--style=blue --v2-stable-multiline-strings=true --conditional-to-if=false"
-            name_suffix: "blue"
-          - repo: trixi-framework/Trixi.jl
-            rev: v0.16.18
-            remove_config: true
-            args: "--style=blue --v2-stable-multiline-strings=true --conditional-to-if=false"
-            name_suffix: "blue"
-          - repo: oscar-system/Oscar.jl
-            rev: v1.7.3
-            remove_config: true
-            # that specific file defines 'expected output' for Documenter purposes,
-            # which is not valid Julia
-            args: "--v2-stable-multiline-strings=true --ignore=test/book/cornerstones/polyhedral-geometry/g-vectors.jl"
-            name_suffix: "default"
-          - repo: oscar-system/Oscar.jl
-            rev: v1.7.3
-            remove_config: true
-            args: "--style=blue --v2-stable-multiline-strings=true --conditional-to-if=false --ignore=test/book/cornerstones/polyhedral-geometry/g-vectors.jl"
-            name_suffix: "blue"
-          - repo: SciML/ModelingToolkit.jl
-            rev: v11.26.8
-            remove_config: true
-            args: "--style=blue --v2-stable-multiline-strings=true --conditional-to-if=false"
-            name_suffix: "blue"
-          - repo: JuliaStats/StatsBase.jl
-            rev: v0.34.12
-            remove_config: true
-            args: "--style=blue --v2-stable-multiline-strings=true --conditional-to-if=false"
-            name_suffix: "blue"
-          - repo: JuliaStats/MixedModels.jl
-            rev: v5.7.0
-            remove_config: true
-            args: "--style=blue --v2-stable-multiline-strings=true --conditional-to-if=false"
-            name_suffix: "blue"
+          - orgs_label: Group1
+            orgs: "JuliaLang JuliaPlots MakieOrg"
+          - orgs_label: Group2
+            orgs: "SciML JuliaDiff JuliaStats TuringLang EnzymeAD"
+          - orgs_label: Group3
+            orgs: "jump-dev trixi-framework oscar-system"
 
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # 6.0.3
@@ -111,45 +46,59 @@ jobs:
       - uses: julia-actions/setup-julia@fa02766e078afaaf09b14210362cee14137e6a32 # 3.0.2
       - uses: julia-actions/cache@a45e8fa8be21c18a06b7177052533149e61e9b38 # 3.1.0
 
-      - name: Instantiate JuliaFormatter
-        run: julia --project=formatter -e 'using Pkg; Pkg.instantiate()'
+      - name: Cache target repos
+        id: cache-repos
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # 5.0.5
+        with:
+          path: target
+          key: repos-${{ matrix.orgs_label }}-${{ github.run_id }}
+          restore-keys: |
+            repos-${{ matrix.orgs_label }}-
 
-      - name: Clone target repo
-        run: git clone --depth 1 --branch "${{ matrix.rev }}" "https://github.com/${{ matrix.repo }}.git" target
+      - name: Clone target repos
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for org in ${{ matrix.orgs }}; do
+            for name in $(gh repo list "$org" --limit 1000 --json name,isFork,pushedAt --jq '.[] | select(((.name | endswith(".jl")) or .name == "julia") and (.isFork | not) and (.pushedAt >= "2024-01-01")) | .name'); do
+              dest="target/$org/$name"
+              [[ -d "$dest" ]] && continue
+              echo "Cloning $org/$name ..."
+              git clone --depth 1 --quiet "https://github.com/$org/$name" "$dest"
+            done
+          done
 
-      - name: Remove target formatter config
-        if: matrix.remove_config
-        run: find target -name ".JuliaFormatter.toml" | xargs rm -f
+      - name: Remove unparseable files
+        shell: julia --color=yes --project=formatter {0}
+        run: |
+          using Pkg
+          Pkg.instantiate()
+
+          using JuliaSyntax: parseall, GreenNode
+          for (root, _, files) in walkdir("target")
+            for f in files
+              endswith(f, ".jl") || continue
+              path = joinpath(root, f)
+              try
+                parseall(GreenNode, read(path, String); ignore_warnings=true)
+              catch
+                println("Removing unparseable file: $path")
+                rm(path)
+              end
+            end
+          end
 
       - name: Count Julia lines
         run: |
-          lines=$(find target/${{ matrix.subdir }} -name '*.jl' | xargs wc -l | tail -1 | awk '{print $1}')
-          echo "Formatting ${{ matrix.repo }}@${{ matrix.rev }} — $lines lines of Julia"
+          lines=$(find target -name '*.jl' -type f -print0 | xargs -0 cat | wc -l)
+          echo "Formatting $lines lines of Julia"
 
       - name: Format (pass 1)
+        working-directory: target
         run: |
-          julia --project=formatter -m JuliaFormatter \
-            --inplace --verbose ${{ matrix.args }} \
-            target/${{ matrix.subdir }}
-
-      - name: Commit pass 1 changes
-        run: |
-          cd target
-          git add -A
-          git -c user.name=CI -c user.email=ci@ci commit --allow-empty -m "pass 1"
+          julia --project=../formatter -m JuliaFormatter --inplace --verbose --style=${{ matrix.style }} ${{ env.FORMATTER_OPTS }} .
 
       - name: Check idempotence (pass 2)
-        id: idempotence
+        working-directory: target
         run: |
-          julia --project=formatter -m JuliaFormatter \
-            --inplace --verbose ${{ matrix.args }} \
-            target/${{ matrix.subdir }}
-          cd target
-          if ! git diff --exit-code --quiet; then
-            echo "::error::Formatting is not idempotent for ${{ matrix.repo }}@${{ matrix.rev }}"
-            exit 1
-          fi
-
-      - name: Print idempotence diff
-        if: failure() && steps.idempotence.outcome == 'failure'
-        run: git -C target diff --diff-algorithm=histogram --color=always
+          julia --project=../formatter -m JuliaFormatter --check --diff --style=${{ matrix.style }} ${{ env.FORMATTER_OPTS }} .
