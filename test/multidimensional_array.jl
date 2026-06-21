@@ -303,4 +303,17 @@ end
     end
 end
 
+@testset "1168 vcats in rows of other arrays" begin
+    s = """[x [y z
+        [q
+        s
+        # a
+        # b
+        ]]
+        f]"""
+    for style in ALL_STYLES
+        test_format(s, nothing, style; ast=true)
+    end
+end
+
 end # module

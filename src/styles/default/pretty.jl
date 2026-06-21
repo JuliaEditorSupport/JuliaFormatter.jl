@@ -4280,7 +4280,26 @@ function p_row(
         end
     end
 
-    t.nest_behavior = NeverNest
+    # Prevent the Row *and* its child elements from being nested, unless any of them NEED
+    # to be nested. This is very subtle!
+    #
+    # The problem with unconditionally putting NeverNest is that it actually gets propagated
+    # to the children, so if a parent node has NeverNest the children can't nest either,
+    # even if the children are set to AlwaysNest. (See the opening lines of `nest!` in
+    # src/styles/default/nest.jl.) This can change the meaning of things inside the row's
+    # elements if they don't get nested. See
+    # https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/1168
+    #
+    # This behaviour of NeverNest is arguably too aggressive, but apparently it is intended.
+    # For example, changing that breaks the `align_...` series of options, so we can't
+    # really change that without introducing other regressions.
+    #
+    # The alternative option is to never put NeverNest, just allowing its descendants to
+    # nest as they please. The issue with this is that it means that array elements like
+    # `f(1, 2)` might end up being nested, which is really ugly.
+    if !any_descendant(must_nest, t)
+        t.nest_behavior = NeverNest
+    end
     t
 end
 
