@@ -1013,8 +1013,8 @@ function p_macrocall(
             max_padding = is_block(n) ? 0 : -1
             join_lines = t.endline == n.startline
 
-            if join_lines && (i > 1 && kind(childs[i-1]) in KSet"NewlineWs Whitespace") ||
-               next_node_is(nn -> kind(nn) in KSet"NewlineWs Whitespace", childs[i])
+            if join_lines && (i > 1 && Shims.is_really_whitespace(childs[i-1])) ||
+               next_node_is(Shims.is_really_whitespace, childs[i])
                 add_node!(t, Whitespace(1), s)
             end
             add_node!(t, n, s; join_lines, max_padding)
@@ -1429,10 +1429,8 @@ function p_functiondef(
                 end
             end
         elseif kind(c) === K"block" && haschildren(c)
-            # use NewlineWs/Whitespace instead of JuliaSyntax.is_whitespace() to avoid
-            # accidentally nuking comments.
             block_has_contents =
-                any(cc -> !(kind(cc) in KSet"NewlineWs Whitespace"), children(c))
+                any(cc -> !Shims.is_really_whitespace(cc), children(c))
             s.indent += s.opts.indent
             n = pretty(style, c, s, newctx(ctx; ignore_single_line = true), lineage)
             add_node!(t, n, s; max_padding = s.opts.indent)
@@ -1765,10 +1763,7 @@ function p_begin(
 
     childs = children(cst)
     add_node!(t, pretty(style, childs[1], s, ctx, lineage), s)
-    # Check if the body is genuinely empty (only whitespace/newlines, no comments).
-    # Using KSet"Whitespace NewlineWs" instead of is_whitespace to avoid treating
-    # comments as empty, which would strip them (e.g. `begin #=hi=# end` → `begin end`).
-    empty_body = length(filter(n -> !(kind(n) in KSet"Whitespace NewlineWs"), childs)) == 2
+    empty_body = length(filter(n -> !Shims.is_really_whitespace(n), childs)) == 2
 
     if empty_body && !s.opts.join_lines_based_on_source
         for c in childs[2:(end-1)]
@@ -2325,10 +2320,8 @@ function p_kw(
     # We need to process the LHS and RHS slightly differently in the loop below.
     equal_idx = findfirst(n -> kind(n) === K"=", children(cst))
     equal_idx === nothing && error("unreachable: kw node without an equal sign")
-    # Can't use JuliaSyntax.is_whitespace since that includes comments.
-    is_not_whitespace(n) = !(kind(n) in KSet"Whitespace NewlineWs")
-    immediate_rhs_idx = findnext(is_not_whitespace, children(cst), equal_idx + 1)
-    immediate_lhs_idx = findprev(is_not_whitespace, children(cst), equal_idx - 1)
+    immediate_rhs_idx = findnext(n -> !Shims.is_really_whitespace(n), children(cst), equal_idx + 1)
+    immediate_lhs_idx = findprev(n -> !Shims.is_really_whitespace(n), children(cst), equal_idx - 1)
     immediate_rhs_idx === nothing && error("unreachable: kw node without a RHS")
     immediate_lhs_idx === nothing && error("unreachable: kw node without a LHS")
 
@@ -2689,7 +2682,7 @@ function p_binaryopcall(
     has_ws = false
 
     for (i, c) in enumerate(childs)
-        if i > 1 && kind(c) in KSet"Whitespace NewlineWs"
+        if i > 1 && Shims.is_really_whitespace(c)
             has_ws = true
             break
         end

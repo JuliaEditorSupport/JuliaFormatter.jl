@@ -109,4 +109,15 @@ function is_valid_nonword_operator(s::AbstractString)
     end
 end
 
+"""
+    is_really_whitespace(cst::JS.GreenNode) -> Bool
+
+Check whether a CST node is really whitespace, i.e., either K"Whitespace" or K"NewlineWs".
+Note that `JuliaSyntax.is_whitespace` returns true for K"Comment" as well, which we don't
+want here.
+"""
+function is_really_whitespace(cst::JS.GreenNode)
+    return kind(cst) in KSet"Whitespace NewlineWs"
+end
+
 end # module
