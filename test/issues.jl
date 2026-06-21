@@ -3323,28 +3323,28 @@ end
         test_format(s, out, BlueStyle())
     end
 
-    @testset "1153 empty blocks" begin
-        for prefix in ("", "@testset ")
+    @testset "1153 & 1170 empty blocks" begin
+        for prefix in ("begin", "@testset begin", "function f(g)")
             for nls in ("\n\n", "\n\n\n")
-                s = "$(prefix)begin$(nls)end"
-                test_format(s, "$(prefix)begin end", DefaultStyle())
-                test_format(s, "$(prefix)begin end", BlueStyle())
-                test_format(s, "$(prefix)begin\nend", SciMLStyle())
-                test_format(s, "$(prefix)begin\nend", YASStyle())
-                test_format(s, "$(prefix)begin$(nls)end", MinimalStyle())
+                s = "$(prefix)$(nls)end"
+                test_format(s, "$(prefix) end", DefaultStyle())
+                test_format(s, "$(prefix) end", BlueStyle())
+                test_format(s, "$(prefix)\nend", SciMLStyle())
+                test_format(s, "$(prefix)\nend", YASStyle())
+                test_format(s, "$(prefix)$(nls)end", MinimalStyle())
             end
-        end
 
-        s_ = "begin\n#= hi =#\nend"
-        s = "begin\n    #= hi =#\nend"
-        for style in ALL_STYLES
-            test_format(s_, s, style)
-        end
+            s_ = "$(prefix)\n#= hi =#\nend"
+            s = "$(prefix)\n    #= hi =#\nend"
+            for style in ALL_STYLES
+                test_format(s_, s, style)
+            end
 
-        s_ = "begin\n# hi\nend"
-        s = "begin\n    # hi\nend"
-        for style in ALL_STYLES
-            test_format(s_, s, style)
+            s_ = "$(prefix)\n# hi\nend"
+            s = "$(prefix)\n    # hi\nend"
+            for style in ALL_STYLES
+                test_format(s_, s, style)
+            end
         end
     end
 

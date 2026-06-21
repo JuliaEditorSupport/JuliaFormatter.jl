@@ -1408,24 +1408,31 @@ function p_functiondef(
             add_node!(t, Whitespace(1), s)
         elseif kind(c) === K"end"
             n = pretty(style, c, s, ctx, lineage)
-            if s.opts.join_lines_based_on_source && !block_has_contents
-                join_lines = t.endline == n.startline
-                if join_lines
-                    (add_node!(t, Whitespace(1), s))
-                else
-                    false
-                end
-                add_node!(t, n, s; join_lines = join_lines)
-            elseif block_has_contents
+            if block_has_contents
                 add_node!(t, n, s)
             else
-                add_node!(t, Whitespace(1), s)
-                add_node!(t, n, s; join_lines = true)
+                # Empty block
+                if s.opts.join_lines_based_on_source
+                    join_lines = t.endline == n.startline
+                    if join_lines
+                        add_node!(t, Whitespace(1), s)
+                    end
+                    add_node!(t, n, s; join_lines = join_lines)
+                else
+                    # Force the end keyword to go onto the same line as the definition.
+                    add_node!(t, Whitespace(1), s)
+                    # Override n.startline so that the `end` keyword ends up on the same
+                    # line as the rest of the function def. But don't override n.endline,
+                    # otherwise extra newlines will be inserted after the `end`.
+                    n.startline = t.endline
+                    add_node!(t, n, s; join_lines = true)
+                end
             end
         elseif kind(c) === K"block" && haschildren(c)
+            # use NewlineWs/Whitespace instead of JuliaSyntax.is_whitespace() to avoid
+            # accidentally nuking comments.
             block_has_contents =
-                length(filter(cc -> !JuliaSyntax.is_whitespace(cc), children(c))) > 0
-
+                any(cc -> !(kind(cc) in KSet"NewlineWs Whitespace"), children(c))
             s.indent += s.opts.indent
             n = pretty(style, c, s, newctx(ctx; ignore_single_line = true), lineage)
             add_node!(t, n, s; max_padding = s.opts.indent)
