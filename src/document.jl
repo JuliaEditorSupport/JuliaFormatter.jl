@@ -46,7 +46,7 @@ function Document(text::AbstractString)
 
                 idx = findlast(c -> c == '\n', prevval)
                 if idx === nothing
-                    (idx = 1)
+                    idx = 1
                 end
                 ws = count(c -> c == ' ', prevval[idx:end])
             end
@@ -59,13 +59,11 @@ function Document(text::AbstractString)
                 srcfile.code[first(t.range):prevind(srcfile.code, last(t.range))]
             end
 
-            if startline == endline && startswith(val, "#=") && endswith(val, "=#")
+            if startswith(val, "#=") && endswith(val, "=#")
+                # Block comments (#= ... =#) are handled as HASHEQCOMMENT FST
+                # nodes in p_comment(), so we don't store them in the dict.
             elseif startline == endline
-                if ws > 0
-                    comments[startline] = (ws, val)
-                else
-                    comments[startline] = (ws, val)
-                end
+                comments[startline] = (ws, val)
             else
                 # multiline comment
                 idx = findfirst(x -> x == '\n', val)::Int + 1

@@ -593,12 +593,12 @@ function p_comment(
     same_line = on_same_line(s, s.offset, s.offset + span(cst) - 1)
     val = getsrcval(s.doc, (s.offset):(s.offset+span(cst)-1))
     s.offset += span(cst)
-    return if same_line && startswith(val, "#=") && endswith(val, "=#")
-        FST(HASHEQCOMMENT, loc[2], loc[1], loc[1], val)
+    return if startswith(val, "#=") && endswith(val, "=#")
+        endloc = cursor_loc(s, s.offset - 1)
+        FST(HASHEQCOMMENT, loc[2], loc[1], endloc[1], val)
     else
-        # Could be `#= ... =#` over multiple lines, or `# ...`
-        # These are ignored for now but will be added back later inside
-        # `add_node!`.
+        # Line comments (`# ...`) are ignored for now but will be added back
+        # later inside `add_node!`.
         FST(NONE, loc[2], loc[1], loc[1], "")
     end
 end

@@ -3460,6 +3460,28 @@ end
         test_format(str, str_nested; margin = 62)
         test_format(str, str; margin = 63)
     end
+
+    @testset "1172 line comments after inline" begin
+        for s in (
+            "#= hi \n =# # bye",
+            "#= hi \n =## bye",
+            "#= hi \n =#   # bye",
+            "a #= hi \n =#   # bye",
+            "#= hi \n =#   # bye",
+        )
+            for style in ALL_STYLES
+                test_format(s, s, style)
+            end
+        end
+
+        # Inserts a newline here but I don't really care enough to fix it.
+        # At least it preserves meaning
+        s_ = "#= hi \n =# a # bye"
+        s = "#= hi \n =#\na # bye"
+        for style in ALL_STYLES
+            test_format(s_, s, style)
+        end
+    end
 end
 
 end
