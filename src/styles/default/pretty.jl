@@ -4280,7 +4280,17 @@ function p_row(
         end
     end
 
-    t.nest_behavior = NeverNest
+    # Prevent the Row itself from being nested — its elements are space-separated
+    # and must stay on one line. However, if any descendant requires nesting
+    # (e.g. a Vcat whose newline separators are semantically significant), we
+    # must leave the Row as AllowNest so that nesting can recurse into those
+    # descendants.
+    #
+    # This is safe because Row has no Placeholders; AllowNest merely allows
+    # recursion into children without changing the Row's own layout.
+    if !any_descendant(must_nest, t)
+        t.nest_behavior = NeverNest
+    end
     t
 end
 

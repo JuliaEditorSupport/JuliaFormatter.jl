@@ -26,9 +26,9 @@ function nest!(
     nested = false
 
     for (i, n) in enumerate(nodes)
-        if n.typ === NEWLINE && nodes[i+1].typ === Block
+        if n.typ === NEWLINE && i < length(nodes) && nodes[i+1].typ === Block
             s.line_offset = nodes[i+1].indent
-        elseif n.typ === NOTCODE && nodes[i+1].typ === Block
+        elseif n.typ === NOTCODE && i < length(nodes) && nodes[i+1].typ === Block
             s.line_offset = nodes[i+1].indent
         elseif n.typ === NEWLINE
             s.line_offset = indent

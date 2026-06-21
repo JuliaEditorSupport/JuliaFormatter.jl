@@ -267,6 +267,14 @@ end
 # nesting behaviors
 must_nest(fst::FST) = fst.nest_behavior === AlwaysNest
 cant_nest(fst::FST) = fst.nest_behavior === NeverNest
+function any_descendant(f, fst::FST)
+    is_leaf(fst) && return false
+    for n in fst.nodes::Vector{FST}
+        f(n) && return true
+        any_descendant(f, n) && return true
+    end
+    return false
+end
 can_nest(fst::FST) = fst.nest_behavior in (AllowNest, AllowNestButDontRemove)
 can_remove(fst::FST) = fst.nest_behavior !== AllowNestButDontRemove
 

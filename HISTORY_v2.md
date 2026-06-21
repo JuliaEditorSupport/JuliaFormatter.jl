@@ -2,6 +2,8 @@
 
 Fixed several instances where JuliaFormatter would use `length()` instead of `textwidth()`, leading to incorrect or non-idempotent formatting when non-ASCII characters were present. (#1166, #1167)
 
+Fixed a bug where array literals inside other array literals would have their meaning changed when formatted. (#1168, #1169)
+
 # v2.9.3
 
 Fixed a bug where even if Windows line endings were specified (either via `normalize_line_endings="windows"` or if the original file had Windows line endings), calling `format()` on the file would still append a final Unix trailing newline to the file. (#1156)
