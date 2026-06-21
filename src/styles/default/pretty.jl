@@ -1429,8 +1429,7 @@ function p_functiondef(
                 end
             end
         elseif kind(c) === K"block" && haschildren(c)
-            block_has_contents =
-                any(cc -> !Shims.is_really_whitespace(cc), children(c))
+            block_has_contents = any(cc -> !Shims.is_really_whitespace(cc), children(c))
             s.indent += s.opts.indent
             n = pretty(style, c, s, newctx(ctx; ignore_single_line = true), lineage)
             add_node!(t, n, s; max_padding = s.opts.indent)
@@ -2320,8 +2319,10 @@ function p_kw(
     # We need to process the LHS and RHS slightly differently in the loop below.
     equal_idx = findfirst(n -> kind(n) === K"=", children(cst))
     equal_idx === nothing && error("unreachable: kw node without an equal sign")
-    immediate_rhs_idx = findnext(n -> !Shims.is_really_whitespace(n), children(cst), equal_idx + 1)
-    immediate_lhs_idx = findprev(n -> !Shims.is_really_whitespace(n), children(cst), equal_idx - 1)
+    immediate_rhs_idx =
+        findnext(n -> !Shims.is_really_whitespace(n), children(cst), equal_idx + 1)
+    immediate_lhs_idx =
+        findprev(n -> !Shims.is_really_whitespace(n), children(cst), equal_idx - 1)
     immediate_rhs_idx === nothing && error("unreachable: kw node without a RHS")
     immediate_lhs_idx === nothing && error("unreachable: kw node without a LHS")
 
