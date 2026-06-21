@@ -4,6 +4,9 @@ Fixed several instances where JuliaFormatter would use `length()` instead of `te
 
 Fixed a bug where array literals inside other array literals would have their meaning changed when formatted. (#1168, #1169)
 
+Fixed a bug where formatting an empty function definition would be non-idempotent or delete comments.
+This was a similar bug to #1153, fixed in v2.9.2. (#1170, #1171)
+
 # v2.9.3
 
 Fixed a bug where even if Windows line endings were specified (either via `normalize_line_endings="windows"` or if the original file had Windows line endings), calling `format()` on the file would still append a final Unix trailing newline to the file. (#1156)
