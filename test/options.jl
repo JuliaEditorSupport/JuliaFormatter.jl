@@ -1567,7 +1567,7 @@ end
             function foo
 
               end"""
-            test_format(str_, format_text(str_); join_lines_based_on_source = true)
+            test_format(str_, "function foo\n\nend"; join_lines_based_on_source = true)
 
             for f in (:function, :macro)
                 str_ = "$f foo() body end"
