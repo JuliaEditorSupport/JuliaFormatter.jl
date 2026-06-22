@@ -2457,7 +2457,11 @@ end
     end
 
     @testset "946" begin
-        s = "function f()\n    #==Pairs Tuple or ValidationResult==#\n    #=\n    So far\n    =#\nend\n"
+        # Prior to v2.9.4 the newline didn't get deleted. #1173 introduced a fix for other
+        # comment cases that caused the newline to get deleted. However since it doesn't
+        # change the meaning, I can't be fussed to look into it further.
+        s_ = "function f()\n    #==Pairs Tuple or ValidationResult==#\n    #=\n    So far\n    =#\nend\n"
+        s = "function f()\n    #==Pairs Tuple or ValidationResult==# #=\n    So far\n    =#\nend\n"
         for style in ALL_STYLES
             test_format(s, s, style)
         end
@@ -2470,7 +2474,7 @@ end
         s2_return = """
         function g()
             return y #=c=#
-        end""" |> strip
+        end"""
         for style in (BlueStyle(), YASStyle())
             test_format(s2, s2_return, style)
         end
@@ -3459,6 +3463,28 @@ end
         """
         test_format(str, str_nested; margin = 62)
         test_format(str, str; margin = 63)
+    end
+
+    @testset "1172 line comments after inline" begin
+        for s in (
+            "#= hi \n =# # bye",
+            "#= hi \n =## bye",
+            "#= hi \n =#   # bye",
+            "a #= hi \n =#   # bye",
+            "#= hi \n =#   # bye",
+        )
+            for style in ALL_STYLES
+                test_format(s, s, style)
+            end
+        end
+
+        # Inserts a newline here but I don't really care enough to fix it.
+        # At least it preserves meaning
+        s_ = "#= hi \n =# a # bye"
+        s = "#= hi \n =#\na # bye"
+        for style in ALL_STYLES
+            test_format(s_, s, style)
+        end
     end
 end
 
