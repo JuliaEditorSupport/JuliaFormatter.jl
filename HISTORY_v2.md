@@ -9,6 +9,8 @@ This was a similar bug to #1153, fixed in v2.9.2. (#1170, #1171)
 
 Fixed a bug where if a multiline comment was followed immediately by an end-of-line comment, the end of the multiline comment would be deleted. (#1172, #1173)
 
+Fixed a bug where logical operators inside ternary expressions would be incorrectly formatted when the ternary expression was expanded. (#1177, #1178)
+
 # v2.9.3
 
 Fixed a bug where even if Windows line endings were specified (either via `normalize_line_endings="windows"` or if the original file had Windows line endings), calling `format()` on the file would still append a final Unix trailing newline to the file. (#1156)

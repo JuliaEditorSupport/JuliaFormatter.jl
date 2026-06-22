@@ -3486,6 +3486,28 @@ end
             test_format(s_, s, style)
         end
     end
+
+    @testset "1177 chained ternary and shortcircuit" begin
+        s = """
+        function f()
+            x =
+            a ? b :
+            (aaaaaaaaaaaaaaaaaaaa || bbbbbbbbbbbbbbbbb) && ccccccccccccccccccccccccccccccccc ? d : e
+            return 1
+        end"""
+        out = """
+        function f()
+            x = if a
+                b
+            elseif (aaaaaaaaaaaaaaaaaaaa || bbbbbbbbbbbbbbbbb) && ccccccccccccccccccccccccccccccccc
+                d
+            else
+                e
+            end
+            return 1
+        end"""
+        test_format(s, out, BlueStyle())
+    end
 end
 
 end

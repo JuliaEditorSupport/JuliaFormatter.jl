@@ -2658,14 +2658,15 @@ function p_binaryopcall(
             parent_node, _, is_assign = lineage[end-1]
             # Disable if the binary expression is "used" in a certain context --
             # for example
-            # 
+            #
             # parens      (a && b)
             # macrocall   @foo a && b
             # return      return a && b
             # while       while a && b  (see also #940)
             # if          if a && b
             # elseif      elseif a && b
-            if parent_node in KSet"parens macrocall return while if elseif" || is_assign
+            # ternary     a && b ? c : d
+            if parent_node in KSet"parens macrocall return while if elseif ?" || is_assign
                 standalone_binary_circuit = false
             end
         end
