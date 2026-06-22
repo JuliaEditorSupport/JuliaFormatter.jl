@@ -61,7 +61,7 @@ Note that, although styles each define a different set of options, they are not 
 | [`long_to_short_function_def`](@ref options-long-to-short-function-def)             | ⚠️    | `false`   | `false`     | `false`     | `false`      | `false`       |
 | [`margin`](@ref options-margin)                                                     | 📐    | `92`      | `92`        | `92`        | `92`         | **`10_000`**  |
 | [`normalize_line_endings`](@ref options-normalize-line-endings)                     | 📐    | `"auto"`  | `"auto"`    | `"auto"`    | **`"unix"`** | `"auto"`      |
-| [`pipe_to_function_call`](@ref options-pipe-to-function-call)                       | 🔥    | `false`   | **`true`**  | **`true`**  | `false`      | `false`       |
+| [`pipe_to_function_call`](@ref options-pipe-to-function-call)                       | 🪃 🔥 | `false`   | **`true`**  | **`true`**  | `false`      | `false`       |
 | [`remove_extra_newlines`](@ref options-remove-extra-newlines)                       | 📐    | `false`   | **`true`**  | **`true`**  | **`true`**   | `false`       |
 | [`sciml_margin_overrun`](@ref options-sciml-margin-overrun)                         | 📐    | unused    | unused      | unused      | **`20`**     | unused        |
 | [`separate_kwargs_with_semicolon`](@ref options-separate-kwargs-with-semicolon)     | ⚠️    | `false`   | **`true`**  | **`true`**  | `false`      | `false`       |
@@ -532,6 +532,14 @@ If true, `x |> f` is rewritten to `f(x)`, and `x .|> f` to `f.(x)`.
     `true` by default for Blue and YAS styles, so in such cases you have to opt
     out manually!
 
+!!! warning "This option may cause non-idempotent formatting"
+
+    Enabling `pipe_to_function_call` can cause non-idempotent formatting, because the function call may trigger different formatting choices compared to the pipe.
+    See [this issue](https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/1175) for an example.
+
+    *In principle*, this can be fixed, since we can determine ahead of time when the pipe will be transformed into the function call.
+    However, my current judgment is that this is not really worth it since it would make the codebase more complex and brittle.
+    On top of that, it's probably not a good idea to enable `pipe_to_function_call` anyway.
 
 ## [`remove_extra_newlines`](@id options-remove-extra-newlines)
 
