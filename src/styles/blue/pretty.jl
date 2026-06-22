@@ -33,6 +33,11 @@ function options(::BlueStyle)
 end
 
 function is_binaryop_nestable(::BlueStyle, cst::JuliaSyntax.GreenNode)
+    # TODO(penelopeysm): In theory, here we also need to include `x |> f` nodes which will
+    # be converted to `f(x)` calls (since the latter would satisfy is_iterable). If we
+    # don't, there are idempotence issues because on the second pass this will return true.
+    # This is a massive pain to do though.
+    # See https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/1175
     if is_assignment(cst) && haschildren(cst) && is_iterable(cst[end])
         return false
     end
