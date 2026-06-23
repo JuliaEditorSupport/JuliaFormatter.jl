@@ -39,6 +39,9 @@ Note that, although styles each define a different set of options, they are not 
     Some of the options below additionally have the potential to cause non-idempotent formatting if enabled (or, in the case of [`v2_stable_multiline_strings`](@ref options-v2-stable-multiline-strings), if disabled).
     They are marked with a 🪃 emoji.
 
+    If you want to ensure idempotence, it is recommended to disable these options.
+    If you absolutely must enable them, you may need to run the formatter multiple times to reach a fixed point: you can use the [`max_iterations`](@ref options-max-iterations) option to control the number of passes JuliaFormatter will do.
+
 | Option                                                                              | Kind  | Default   | YAS         | Blue        | SciML        | Minimal       |
 | :-------                                                                            | ----- | --------- | -----       | ------      | -------      | ---------     |
 | [`align_assignment`](@ref options-align-star)                                       | 📐    | `false`   | `false`     | `false`     | `false`      | `false`       |
