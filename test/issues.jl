@@ -3508,6 +3508,29 @@ end
         end"""
         test_format(s, out, BlueStyle())
     end
+
+    @testset "1179 separate_kwargs_with_semicolon with comment" begin
+        for s in (
+            "foo(#comment,\na=a;\nb=b)",
+            "foo(#comment,\na=a,\nb=b)",
+        )
+            expected = """
+            foo(; #comment,
+                a = a,
+                b = b,
+            )"""
+            test_format(s, expected; separate_kwargs_with_semicolon=true)
+        end
+
+        s = "foo(\n#comment,\na=a;\nb=b)"
+        expected = """
+        foo(;
+            #comment,
+            a = a,
+            b = b,
+        )"""
+        test_format(s, expected; separate_kwargs_with_semicolon=true)
+    end
 end
 
 end
