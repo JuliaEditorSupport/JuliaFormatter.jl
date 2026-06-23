@@ -11,6 +11,8 @@ Fixed a bug where if a multiline comment was followed immediately by an end-of-l
 
 Fixed a bug where logical operators inside ternary expressions would be incorrectly formatted when the ternary expression was expanded. (#1177, #1178)
 
+Fixed a bug where `separate_kwargs_with_semicolon` would yield incorrect output if the first line of the function call was a comment. (#1179, #1180)
+
 # v2.9.3
 
 Fixed a bug where even if Windows line endings were specified (either via `normalize_line_endings="windows"` or if the original file had Windows line endings), calling `format()` on the file would still append a final Unix trailing newline to the file. (#1156)
