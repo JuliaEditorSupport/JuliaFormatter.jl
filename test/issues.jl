@@ -3113,9 +3113,37 @@ end
                 "@macro(f(x) = 1)",
             )
                 for style in ALL_STYLES
-                    test_format(s, s, style; short_to_long_function_def=true, force_long_function_def=true)
+                    test_format(s, s, style; short_to_long_function_def=true, force_long_function_def=true, always_use_return=true)
                 end
             end
+        end
+
+        @testset "always use return" begin
+            for s in (
+                """@macro function f()
+                    1
+                end""",
+                """quote
+                    function f()
+                        1
+                    end
+                end""",
+            )
+                for style in ALL_STYLES
+                    test_format(s, s, style; always_use_return=true)
+                end
+            end
+            s = """:(function f()
+                1
+            end)"""
+            out_yas = """
+            :(function f()
+                  1
+              end)"""
+            for style in (DefaultStyle(), SciMLStyle(), BlueStyle(), MinimalStyle())
+                test_format(s, s, style; always_use_return=true)
+            end
+            test_format(s, out_yas, YASStyle(); always_use_return=true)
         end
     end
 

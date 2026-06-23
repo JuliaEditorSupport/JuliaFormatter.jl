@@ -219,9 +219,12 @@ function short_to_long_function_def!(
     # func(a) where T
     add_node!(funcdef, fst[1], s; join_lines = true)
 
-    # body
+    # Note that we don't need to check, for `always_use_return` purposes,  whether we're
+    # inside a macro or Expr in this clause, because if so we would already have bailed out
+    # above.
+    add_return = s.opts.always_use_return
 
-    s.opts.always_use_return && prepend_return_fst!(fst[end], s)
+    add_return && prepend_return_fst!(fst[end], s)
     if fst[end].typ === Block
         add_node!(funcdef, fst[end], s; max_padding = s.opts.indent)
         add_indent!(funcdef[end], s, s.opts.indent)
@@ -258,7 +261,7 @@ function short_to_long_function_def!(
         add_indent!(funcdef[end], s, funcdef.indent + s.opts.indent - body_indent)
     end
 
-    if s.opts.always_use_return
+    if add_return
         prepend_return_fst!(funcdef[end], s)
     end
 

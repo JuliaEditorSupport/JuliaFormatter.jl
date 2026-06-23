@@ -1082,6 +1082,7 @@ function should_add_return_to_last_statement(
         error("should_add_return_to_last_statement called on a non-block node")
 
     # If the option is not enabled, don't add return.
+    s.disable_syntax_transformations && return false
     s.opts.always_use_return || return false
 
     # If the block is empty, don't add return.
