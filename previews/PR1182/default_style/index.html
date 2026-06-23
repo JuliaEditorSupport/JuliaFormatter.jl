@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Default Style · JuliaFormatter</title><meta name="title" content="Default Style · JuliaFormatter"/><meta property="og:title" content="Default Style · JuliaFormatter"/><meta property="twitter:title" content="Default Style · JuliaFormatter"/><meta name="description" content="Documentation for JuliaFormatter."/><meta property="og:description" content="Documentation for JuliaFormatter."/><meta property="twitter:description" content="Documentation for JuliaFormatter."/><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../search_index.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../">JuliaFormatter</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../">Overview</a></li><li><span class="tocitem">Options</span><ul><li><a class="tocitem" href="../formatting_options/">Formatting Options</a></li><li><a class="tocitem" href="../custom_alignment/">Custom Alignment</a></li></ul></li><li><span class="tocitem">Styles</span><ul><li class="is-active"><a class="tocitem" href>Default Style</a><ul class="internal"><li><a class="tocitem" href="#Nesting-decisions"><span>Nesting decisions</span></a></li><li><a class="tocitem" href="#Binary-operators-(with-nesting)"><span>Binary operators (with nesting)</span></a></li><li><a class="tocitem" href="#Syntax-transformations"><span>Syntax transformations</span></a></li></ul></li><li><a class="tocitem" href="../yas_style/">YAS Style</a></li><li><a class="tocitem" href="../blue_style/">Blue Style</a></li><li><a class="tocitem" href="../sciml_style/">SciML Style</a></li></ul></li><li><a class="tocitem" href="../skipping_formatting/">Skipping Formatting</a></li><li><span class="tocitem">Configuration File</span><ul><li><a class="tocitem" href="../config/">.JuliaFormatter.toml</a></li><li><a class="tocitem" href="../file_options/">File Options</a></li></ul></li><li><a class="tocitem" href="../cli/">Command-Line Interface</a></li><li><span class="tocitem">Integrations</span><ul><li><a class="tocitem" href="../editors/">Editors</a></li><li><a class="tocitem" href="../github_actions/">GitHub Actions</a></li><li><a class="tocitem" href="../precommit/">pre-commit</a></li><li><a class="tocitem" href="../packagecompiler/">PackageCompiler</a></li></ul></li><li><a class="tocitem" href="../how_it_works/">How It Works</a></li><li><a class="tocitem" href="../api/">API Reference</a></li><li><a class="tocitem" href="../contributing/">Contributing</a></li><li><a class="tocitem" href="../known_issues/">Known Issues</a></li><li><a class="tocitem" href="../status/">Project Status</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Styles</a></li><li class="is-active"><a href>Default Style</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Default Style</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/JuliaEditorSupport/JuliaFormatter.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/JuliaEditorSupport/JuliaFormatter.jl/blob/master/docs/src/default_style.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="default-style"><a class="docs-heading-anchor" href="#default-style">Default style</a><a id="default-style-1"></a><a class="docs-heading-anchor-permalink" href="#default-style" title="Permalink"></a></h1><p>JuliaFormatter has a default style. This page is intended to give a rough overview of how the output of a formatted file looks like when using the default style. Additional examples can be found in <a href="https://github.com/JuliaEditorSupport/JuliaFormatter.jl">JuliaFormatter&#39;s codebase itself</a>.</p><p>All examples assume indentation of 4 spaces.</p><h2 id="Nesting-decisions"><a class="docs-heading-anchor" href="#Nesting-decisions">Nesting decisions</a><a id="Nesting-decisions-1"></a><a class="docs-heading-anchor-permalink" href="#Nesting-decisions" title="Permalink"></a></h2><p>Where possible JuliaFormatter&#39;s default style attempts to keep code on a single line.</p><h3 id="With-no-arguments"><a class="docs-heading-anchor" href="#With-no-arguments">With no arguments</a><a id="With-no-arguments-1"></a><a class="docs-heading-anchor-permalink" href="#With-no-arguments" title="Permalink"></a></h3><p>Functions, macros, and structs with no arguments are placed on a single line. This also applies to abstract and primitive types:</p><pre><code class="language-julia hljs">function  foo
+end
+abstract type
+AbstractFoo
+end</code></pre><p>is formatted to</p><pre><code class="language-julia hljs">function foo end
+abstract type AbstractFoo end</code></pre><h3 id="With-arguments"><a class="docs-heading-anchor" href="#With-arguments">With arguments</a><a id="With-arguments-1"></a><a class="docs-heading-anchor-permalink" href="#With-arguments" title="Permalink"></a></h3><p>Functions calls <code>foo(args...)</code>, tuples <code>(args...)</code>, arrays <code>[args...]</code>, braces <code>{args...}</code>, and type parameter definitions <code>Foo{args...}</code> are placed on a single line. This applies to any code which has opening and closing punctuation: <code>(...)</code>, <code>{...}</code>, <code>[...]</code>.</p><p>Whitespace is inserted after commas, but not for type definitions:</p><pre><code class="language-julia hljs">f(
+
+a,b
+
+,c )
+
+Foo{
+a,b
+,c }</code></pre><p>is formatted to</p><pre><code class="language-julia hljs">f(a, b, c)
+Foo{a,b,c}</code></pre><h3 id="Blocks"><a class="docs-heading-anchor" href="#Blocks">Blocks</a><a id="Blocks-1"></a><a class="docs-heading-anchor-permalink" href="#Blocks" title="Permalink"></a></h3><p>Blocks and their bodies are spread across multiple lines and properly indented.</p><p>Example 1:</p><pre><code class="language-julia hljs">begin
+  a
+    b; c
+       end
+
+struct Foo{A, B}
+ a::A
+  b::B
+end</code></pre><p>is formatted to</p><pre><code class="language-julia hljs">begin
+    a
+    b
+    c
+end
+
+struct Foo{A,B}
+    a::A
+    b::B
+end</code></pre><h3 id="Binary-operators-(without-nesting)"><a class="docs-heading-anchor" href="#Binary-operators-(without-nesting)">Binary operators (without nesting)</a><a id="Binary-operators-(without-nesting)-1"></a><a class="docs-heading-anchor-permalink" href="#Binary-operators-(without-nesting)" title="Permalink"></a></h3><p>Binary calls are placed on a single line where possible. Their operands are separated by whitespace, except for <code>:</code> operators (i.e. ranges), and for operators which are inside indexing brackets.</p><p>Example 1:</p><pre><code class="language-julia hljs">a+b
+a : a : c
+list[a + b]</code></pre><pre><code class="language-julia hljs">a + b
+a:b:c
+list[a+b]</code></pre><p>Ternary expressions are placed on a single line and separated by whitespace:</p><pre><code class="language-julia hljs">cond1 ?
+expr1 :     expr2</code></pre><p>is formatted to</p><pre><code class="language-julia hljs">cond1 ? expr1 : expr2</code></pre><p>Comments are aligned with surrounding code blocks.</p><pre><code class="language-julia hljs"># comment
+if a
+# comment
+else
+# comment
+end
+# comment</code></pre><p>is formatted to</p><pre><code class="language-julia hljs"># comment
+if a
+    # comment
+else
+    # comment
+end
+# comment</code></pre><h2 id="Binary-operators-(with-nesting)"><a class="docs-heading-anchor" href="#Binary-operators-(with-nesting)">Binary operators (with nesting)</a><a id="Binary-operators-(with-nesting)-1"></a><a class="docs-heading-anchor-permalink" href="#Binary-operators-(with-nesting)" title="Permalink"></a></h2><p>If a binary operation exceeds the margin, they are nested back-to-front:</p><pre><code class="language-julia hljs">arg1 + arg2</code></pre><p>becomes (with a small margin)</p><pre><code class="language-julia hljs">arg1 + 
+arg2</code></pre><p>For the ternary operator, as the margin decreases, the <code>:</code> is first moved to the next line, and then the <code>?</code>:</p><pre><code class="language-julia hljs">cond ? e1 : e2</code></pre><p>becomes (with a small margin)</p><pre><code class="language-julia hljs">cond ? e1 :
+e2</code></pre><p>and with an even smaller margin</p><pre><code class="language-julia hljs">cond ? 
+e1 : e2</code></pre><p>and with a <em>yet</em> smaller margin</p><pre><code class="language-julia hljs">cond ? 
+e1 :
+e2</code></pre><p>If nesting is required for an assignment (i.e., a binary operation with <code>=</code> as the operator), the RHS is placed on the following line and indented.</p><pre><code class="language-julia hljs">foo() = body</code></pre><p>is formatted to</p><pre><code class="language-julia hljs">foo() =
+    body</code></pre><p>All arguments of a function call (applies to any opening/closing punctuation type) are nested if the expression exceeds the margin. The arguments are indented one level.</p><pre><code class="language-julia hljs">function longfunctionname_that_is_long(lots, of, args, even, more, args)
+    body
+end</code></pre><p>becomes</p><pre><code class="language-julia hljs">function longfunctionname_that_is_long(
+    lots, 
+    of, 
+    args,
+    even, 
+    more, 
+    args,
+)
+    body
+end</code></pre><p>With <code>where</code> operations (<code>A where B</code>), <code>A</code> is nested prior to <code>B</code>.</p><pre><code class="language-julia hljs">function f(arg1::A, key1 = val1; key2 = val2) where {A,B,C}
+    body
+end</code></pre><p>becomes</p><pre><code class="language-julia hljs">function f(
+    arg1::A,
+    key1 = val1;
+    key2 = val2,
+) where {A,B,C}
+    body
+end</code></pre><p>and if the margin is shrunk even more,</p><pre><code class="language-julia hljs">function f(
+    arg1::A,
+    key1 = val1;
+    key2 = val2,
+) where {
+    A,
+    B,
+    C,
+}
+    body
+end</code></pre><p>If a comment is detected inside of an expression, that expression is automatically nested:</p><pre><code class="language-julia hljs">var = foo(
+    a, b, # comment
+    c,
+)</code></pre><p>becomes</p><pre><code class="language-julia hljs">var = foo(
+    a,
+    b, # comment
+    c,
+)</code></pre><h3 id="Unnesting"><a class="docs-heading-anchor" href="#Unnesting">Unnesting</a><a id="Unnesting-1"></a><a class="docs-heading-anchor-permalink" href="#Unnesting" title="Permalink"></a></h3><p>In certain cases it is desirable to <em>unnest</em> parts of a <code>FST</code> to avoid excessive whitespace. For example, the following</p><pre><code class="language-julia hljs">var =
+    funccall(
+        arg1,
+        arg2,
+        arg3,
+    )</code></pre><p>will be un-nested to</p><pre><code class="language-julia hljs">var = funccall(arg1, arg2, arg3)</code></pre><p>or </p><pre><code class="language-julia hljs">var = funccall(
+    arg1,
+    arg2,
+    arg3,
+)</code></pre><h2 id="Syntax-transformations"><a class="docs-heading-anchor" href="#Syntax-transformations">Syntax transformations</a><a id="Syntax-transformations-1"></a><a class="docs-heading-anchor-permalink" href="#Syntax-transformations" title="Permalink"></a></h2><h3 id="for-in-vs.-for"><a class="docs-heading-anchor" href="#for-in-vs.-for"><code>for in</code> vs. <code>for =</code></a><a id="for-in-vs.-for-1"></a><a class="docs-heading-anchor-permalink" href="#for-in-vs.-for" title="Permalink"></a></h3><p>By default if the RHS is a range, e.g. <code>1:10</code>, then <code>for ... in ...</code> is converted to <code>for ... = ...</code>. Otherwise <code>for ... = ...</code> is converted to <code>for ... in ...</code>. See <a href="https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/34">this issue</a> for the rationale and further explanation.</p><p>This behaviour can be controlled using the <a href="../formatting_options/#options-always-for-in"><code>always_for_in</code> option</a>. Setting <code>always_for_in=true</code> will always convert <code>=</code> to <code>in</code> even if the RHS is a range. <code>always_for_in=nothing</code> will leave the choice of <code>in</code> vs <code>=</code> up to the user.</p><h3 id="Trailing-Commas"><a class="docs-heading-anchor" href="#Trailing-Commas">Trailing Commas</a><a id="Trailing-Commas-1"></a><a class="docs-heading-anchor-permalink" href="#Trailing-Commas" title="Permalink"></a></h3><p>If the node is <em>iterable</em>, for example a function call or list and is nested, a trailing comma is added to the last argument. The trailing comma is removed if unnested:</p><pre><code class="language-julia hljs">func(a, b, c)</code></pre><p>becomes</p><pre><code class="language-julia hljs">func(
+    a,
+    b,
+    c,
+)</code></pre><p>See <a href="https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/44">this issue</a> for more details.</p><h3 id="Trailing-Semicolons"><a class="docs-heading-anchor" href="#Trailing-Semicolons">Trailing Semicolons</a><a id="Trailing-Semicolons-1"></a><a class="docs-heading-anchor-permalink" href="#Trailing-Semicolons" title="Permalink"></a></h3><p>If a matrix node is nested, the semicolons are removed.</p><pre><code class="language-julia hljs">A = [1 0; 0 1]
+
+-&gt;
+
+A = [
+    1 0
+    0 1
+]</code></pre><p>See <a href="https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/77">this issue</a> for more details.</p><h3 id="Leading-and-trailing-0s-for-float-literals"><a class="docs-heading-anchor" href="#Leading-and-trailing-0s-for-float-literals">Leading and trailing 0s for float literals</a><a id="Leading-and-trailing-0s-for-float-literals-1"></a><a class="docs-heading-anchor-permalink" href="#Leading-and-trailing-0s-for-float-literals" title="Permalink"></a></h3><p>If a float literal is missing a trailing or leading 0, it is added:</p><pre><code class="language-julia hljs">a = 1.
+b = .1</code></pre><p>becomes</p><pre><code class="language-julia hljs">a = 1.0
+b = 0.1</code></pre><p>For <code>Float32</code> literals, if there is no decimal point, <code>.0</code> is added:</p><pre><code class="language-julia hljs">a = 1f0
+
+-&gt;
+
+a = 1.0f0</code></pre><p>See <a href="https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/66">this issue</a> for more details.</p><h3 id="Surround-where-arguments-with-curly-brackets"><a class="docs-heading-anchor" href="#Surround-where-arguments-with-curly-brackets">Surround <code>where</code> arguments with curly brackets</a><a id="Surround-where-arguments-with-curly-brackets-1"></a><a class="docs-heading-anchor-permalink" href="#Surround-where-arguments-with-curly-brackets" title="Permalink"></a></h3><p>If the arguments of a <code>where</code> call are not surrounded by curly brackets, they are added:</p><pre><code class="language-julia hljs">foo(x::T) where T = ...</code></pre><p>becomes</p><pre><code class="language-julia hljs">foo(x::T) where {T} = ...</code></pre><p>This can be controlled with the <a href="../formatting_options/#options-surround-whereop-typeparameters"><code>surround_whereop_typeparameters</code> option</a>.</p><p>See <a href="https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/53">this issue</a> for more details.</p><h3 id="Annotate-unannotated-type-fields-with-Any"><a class="docs-heading-anchor" href="#Annotate-unannotated-type-fields-with-Any">Annotate unannotated type fields with <code>Any</code></a><a id="Annotate-unannotated-type-fields-with-Any-1"></a><a class="docs-heading-anchor-permalink" href="#Annotate-unannotated-type-fields-with-Any" title="Permalink"></a></h3><p>In structs, if a field is unannotated, it is annotated with <code>Any</code>:</p><pre><code class="language-julia hljs">struct Foo
+    field
+end</code></pre><p>becomes</p><pre><code class="language-julia hljs">struct Foo
+    field::Any
+end</code></pre><p>This can be controlled with the <a href="../formatting_options/#options-annotate-untyped-fields-with-any"><code>annotate_untyped_fields_with_any</code> option</a>.</p><h3 id="Move-@-in-macro-calls-to-the-final-identifier"><a class="docs-heading-anchor" href="#Move-@-in-macro-calls-to-the-final-identifier">Move <code>@</code> in macro calls to the final identifier</a><a id="Move-@-in-macro-calls-to-the-final-identifier-1"></a><a class="docs-heading-anchor-permalink" href="#Move-@-in-macro-calls-to-the-final-identifier" title="Permalink"></a></h3><pre><code class="language-julia hljs">@Module.macro</code></pre><p>becomes</p><pre><code class="language-julia hljs">Module.@macro</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../custom_alignment/">« Custom Alignment</a><a class="docs-footer-nextpage" href="../yas_style/">YAS Style »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.17.0 on <span class="colophon-date" title="Tuesday 23 June 2026 12:09">Tuesday 23 June 2026</span>. Using Julia version 1.12.6.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
