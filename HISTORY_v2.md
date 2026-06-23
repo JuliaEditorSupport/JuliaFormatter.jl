@@ -4,7 +4,7 @@ Added a new formatting option, `max_iterations`, which controls the number of ro
 This is a way to suppress non-idempotent formatting, at the cost of poorer performance.
 Note that in principle this should not be necessary as ideally JuliaFormatter would produce idempotent formatting in a single pass.
 However, depending on the style and options being used, this is not always possible.
-This defaults to 1 for most styles, and 4 for SciMLStyle (note that this is pre-existing behaviour, but now it can be configured). (#1181)
+This defaults to 1 for most styles, and 4 for SciMLStyle (note that this is pre-existing behaviour, but now it can be configured). (#1181, #1182)
 
 # v2.9.4
 
