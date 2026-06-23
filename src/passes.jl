@@ -664,7 +664,7 @@ function separate_kwargs_with_semicolon!(fst::FST)
         fst[semicolon_index].typ = PUNCTUATION
         if isnothing(last_comma_idx)
             if !isnothing(last_ph_idx)
-                if last_ph_idx > 1 && fst[last_ph_idx - 1].typ === INLINECOMMENT
+                if last_ph_idx > 1 && fst[last_ph_idx-1].typ === INLINECOMMENT
                     insert!(fst, last_ph_idx - 1, Whitespace(1))
                     insert!(fst, last_ph_idx - 1, Semicolon())
                 else
@@ -681,7 +681,7 @@ function separate_kwargs_with_semicolon!(fst::FST)
         end
     elseif isnothing(semicolon_index) && isnothing(last_comma_idx)
         if !isnothing(last_ph_idx)
-            if last_ph_idx > 1 && fst[last_ph_idx - 1].typ === INLINECOMMENT
+            if last_ph_idx > 1 && fst[last_ph_idx-1].typ === INLINECOMMENT
                 insert!(fst, last_ph_idx - 1, Whitespace(1))
                 insert!(fst, last_ph_idx - 1, Semicolon())
             else
