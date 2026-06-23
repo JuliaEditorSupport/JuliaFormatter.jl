@@ -47,10 +47,6 @@ function choose_line_ending_replacer(text)
 end
 normalize_line_ending(s::AbstractString, replacer = WINDOWS_TO_UNIX) = replace(s, replacer)
 
-# TODO(penelopeysm): Get rid of idempotence issues with SciMLStyle and remove this hack.
-_maxiters(::AbstractStyle) = 1
-_maxiters(::SciMLStyle) = 4
-
 """
     _format_text(
         text::AbstractString, style::AbstractStyle, opts::Options{Union{}};
@@ -82,7 +78,7 @@ function _format_text(
     style::AbstractStyle,
     opts::Options{Union{}};
     check_output::Bool = true,
-    maxiters::Int = _maxiters(style),
+    maxiters::Int = opts.max_iterations,
     ensure_trailing_newline::Bool = false,
 )
     maxiters <= 0 && return text

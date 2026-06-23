@@ -39,6 +39,9 @@ Note that, although styles each define a different set of options, they are not 
     Some of the options below additionally have the potential to cause non-idempotent formatting if enabled (or, in the case of [`v2_stable_multiline_strings`](@ref options-v2-stable-multiline-strings), if disabled).
     They are marked with a 🪃 emoji.
 
+    If you want to ensure idempotence, it is recommended to disable these options.
+    If you absolutely must enable them, you may need to run the formatter multiple times to reach a fixed point: you can use the [`max_iterations`](@ref options-max-iterations) option to control the number of passes JuliaFormatter will do.
+
 | Option                                                                              | Kind  | Default   | YAS         | Blue        | SciML        | Minimal       |
 | :-------                                                                            | ----- | --------- | -----       | ------      | -------      | ---------     |
 | [`align_assignment`](@ref options-align-star)                                       | 📐    | `false`   | `false`     | `false`     | `false`      | `false`       |
@@ -60,6 +63,7 @@ Note that, although styles each define a different set of options, they are not 
 | [`join_lines_based_on_source`](@ref options-join-lines-based-on-source)             | 📐    | `false`   | **`true`**  | `false`     | **`true`**   | **`true`**    |
 | [`long_to_short_function_def`](@ref options-long-to-short-function-def)             | ⚠️    | `false`   | `false`     | `false`     | `false`      | `false`       |
 | [`margin`](@ref options-margin)                                                     | 📐    | `92`      | `92`        | `92`        | `92`         | **`10_000`**  |
+| [`max_iterations`](@ref options-max-iterations)                                     |       | `1`       | `1`         | `1`         | `1`          | `1`           |
 | [`normalize_line_endings`](@ref options-normalize-line-endings)                     | 📐    | `"auto"`  | `"auto"`    | `"auto"`    | **`"unix"`** | `"auto"`      |
 | [`pipe_to_function_call`](@ref options-pipe-to-function-call)                       | 🪃 🔥 | `false`   | **`true`**  | **`true`**  | `false`      | `false`       |
 | [`remove_extra_newlines`](@ref options-remove-extra-newlines)                       | 📐    | `false`   | **`true`**  | **`true`**  | **`true`**   | `false`       |
@@ -497,6 +501,18 @@ Default: `92`
 
 The maximum length of a line.
 Code exceeding this margin will, in general, be formatted across multiple lines.
+
+## [`max_iterations`](@id options-max-iterations)
+
+Default: `1`
+
+JuliaFormatter is *intended* to be idempotent, meaning that formatted code should not change if formatted again.
+However, with certain options enabled, this may not be the case.
+(Please see the top of this page for more information!)
+
+This option exists in order to allow you to perform multiple rounds of formatting, if you wish to.
+Note that this will cause formatting to be slower.
+JuliaFormatter will format the code up to `max_iterations` times, stopping if the code is unchanged after a formatting pass.
 
 ## [`normalize_line_endings`](@id options-normalize-line-endings)
 
