@@ -46,6 +46,7 @@ Base.@kwdef struct Options{T<:_Unset}
     join_lines_based_on_source::Union{T,Bool} = false
     long_to_short_function_def::Union{T,Bool} = false
     margin::Union{T,Int} = 92
+    max_iterations::Union{T,Int} = 1
     normalize_line_endings::Union{T,String} = "auto"
     pipe_to_function_call::Union{T,Bool} = false
     remove_extra_newlines::Union{T,Bool} = false

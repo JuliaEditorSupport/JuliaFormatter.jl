@@ -16,6 +16,8 @@ function options(::SciMLStyle)
         whitespace_typedefs = true,
         indent = 4,
         margin = 92,
+        # Massive hack, should really be disabled
+        max_iterations = 4,
         format_docstrings = false,
         align_struct_field = false,
         align_assignment = false,
