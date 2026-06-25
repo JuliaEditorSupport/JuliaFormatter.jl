@@ -1,6 +1,6 @@
 module ShortCircuitToIfTests
 
-using JuliaFormatter.Internal: test_format
+using JuliaFormatter.Internal: test_format, ALL_STYLES
 using Test
 
 @testset "short_circuit_to_if" begin
