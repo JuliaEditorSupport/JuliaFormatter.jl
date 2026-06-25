@@ -1162,14 +1162,16 @@ function add_node!(
     elseif s.opts.import_to_using && n.typ === Import && can_transform_syntax(s, true)
         usings = import_to_usings(n, s)
         if length(usings) > 0
-            # Remove trailing whitespace before inserting a newline, e.g.
-            # `@eval import Foo` -> the space between `@eval` and `import`
-            # would otherwise become a trailing space before the newline.
-            if length(tnodes) > 0 && (tnodes[end]::FST).typ === WHITESPACE
-                tnodes[end]::FST = Whitespace(0)
-            end
-            for nn in usings
-                add_node!(t, nn, s; join_lines = false, max_padding = 0)
+            for (i, nn) in enumerate(usings)
+                # The first using replaces the original import, so it should
+                # inherit the caller's join_lines (e.g. stay on the same line
+                # in `@eval import Foo` -> `@eval using Foo: Foo`).
+                # Subsequent usings always start on a new line.
+                jl = i == 1 ? join_lines : false
+                if !jl && length(tnodes) > 0 && (tnodes[end]::FST).typ === WHITESPACE
+                    tnodes[end]::FST = Whitespace(0)
+                end
+                add_node!(t, nn, s; join_lines = jl, max_padding = 0)
             end
             return
         end

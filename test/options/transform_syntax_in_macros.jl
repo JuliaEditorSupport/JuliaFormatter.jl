@@ -45,10 +45,8 @@ using Test
     end
 
     @testset "import_to_using" begin
-        s = """
-        @eval import Foo"""
-        s_transformed = """
-        @eval using Foo: Foo"""
+        s = "@eval import Foo"
+        s_transformed = "@eval using Foo: Foo"
         test_format(s, s; import_to_using=true)
         test_format(
             s,
