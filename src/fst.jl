@@ -1162,6 +1162,12 @@ function add_node!(
     elseif s.opts.import_to_using && n.typ === Import && can_transform_syntax(s, true)
         usings = import_to_usings(n, s)
         if length(usings) > 0
+            # Remove trailing whitespace before inserting a newline, e.g.
+            # `@eval import Foo` -> the space between `@eval` and `import`
+            # would otherwise become a trailing space before the newline.
+            if length(tnodes) > 0 && (tnodes[end]::FST).typ === WHITESPACE
+                tnodes[end]::FST = Whitespace(0)
+            end
             for nn in usings
                 add_node!(t, nn, s; join_lines = false, max_padding = 0)
             end

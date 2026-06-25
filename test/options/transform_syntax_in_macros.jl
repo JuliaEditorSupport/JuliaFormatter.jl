@@ -44,19 +44,19 @@ using Test
         )
     end
 
-    # @testset "import_to_using" begin
-    #     s = """
-    #     @eval import Foo"""
-    #     s_transformed = """
-    #     @eval using Foo: Foo"""
-    #     test_format(s, s; import_to_using=true)
-    #     test_format(
-    #         s,
-    #         s_transformed;
-    #         import_to_using=true,
-    #         transform_syntax_in_macros=true,
-    #     )
-    # end
+    @testset "import_to_using" begin
+        s = """
+        @eval import Foo"""
+        s_transformed = """
+        @eval using Foo: Foo"""
+        test_format(s, s; import_to_using=true)
+        test_format(
+            s,
+            s_transformed;
+            import_to_using=true,
+            transform_syntax_in_macros=true,
+        )
+    end
 
     @testset "long_to_short_function_def" begin
         s = """
