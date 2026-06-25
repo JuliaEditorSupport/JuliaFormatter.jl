@@ -31,8 +31,13 @@ should be allowed inside macros when `s.opts.transform_syntax_in_macros` is true
 syntax transformations are simply not safe to perform inside macros so are disabled even if
 `s.opts.transform_syntax_in_macros` is true.
 """
-can_transform_syntax(s::State, allow_in_macros::Bool) =
-    s.syntax_transforms_status == None || (allow_in_macros && s.syntax_transforms_status == InsideMacro && s.opts.transform_syntax_in_macros)
+function can_transform_syntax(s::State, allow_in_macros::Bool)
+    s.syntax_transforms_status == None || (
+        allow_in_macros &&
+        s.syntax_transforms_status == InsideMacro &&
+        s.opts.transform_syntax_in_macros
+    )
+end
 
 nspaces(s::State) = s.indent
 hascomment(d::Document, line::Integer) = haskey(d.comments, line)
