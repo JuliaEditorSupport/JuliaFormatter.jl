@@ -323,11 +323,11 @@ function iteration_has_comma(cst::JuliaSyntax.GreenNode)
 end
 
 """
-    _with_no_transforms(f, new_status, s::State)
+    _with_no_transforms(f, s::State, new_status)
 
 Run `f` with a modified state where syntax transformations may be disabled.
 """
-function _with_no_transforms(f, new_status::SyntaxTransformsStatus, s::State)
+function _with_no_transforms(f, s::State, new_status::SyntaxTransformsStatus)
     prev = s.syntax_transforms_status
     s.syntax_transforms_status = new_status
     ret = f()
