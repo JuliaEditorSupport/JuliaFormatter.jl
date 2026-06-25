@@ -204,6 +204,28 @@ using Test
         """
         test_format(s, s; short_circuit_to_if = true)
     end
+
+    @testset "not in macro/expr" begin
+        s1 = "@foo a && b"
+        s2 = """
+        @foo function f()
+            a && b
+            return c
+        end"""
+        s3 = ":(a && b)"
+        s4 = """
+        quote
+            begin
+                a && b
+            end
+        end"""
+        for s in (s1, s2, s3, s4)
+            for style in ALL_STYLES
+                test_format(s, s; short_circuit_to_if = true)
+                test_format(s, s; short_circuit_to_if = false)
+            end
+        end
+    end
 end
 
 end # module

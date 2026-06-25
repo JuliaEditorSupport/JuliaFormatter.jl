@@ -106,6 +106,14 @@ struct Metadata
     # Indicates that the node is a shortcircuiting logical operator (`&&` or `||`) whose
     # value is not used in any way, i.e., it exists solely for the side effects.
     is_standalone_shortcircuit::Bool
+    # If the above is true, this field indicates whether it should be expanded into a full
+    # if-else statement if `short_circuit_to_if` is true. This mainly exists to catch the
+    # case where it's inside a macro/expr, which causes the transformation to be disabled.
+    # 
+    # Note that because `is_standalone_shortcircuit` has impacts on alignment as well, we
+    # need to have a separate flag instead of just setting it to false when inside
+    # macros/exprs.
+    is_expandable_shortcircuit::Bool
 
     is_short_form_function::Bool
     is_assignment::Bool
@@ -114,7 +122,7 @@ struct Metadata
 end
 
 function Metadata(k::JuliaSyntax.Kind)
-    return Metadata(k, false, false, false, true, false)
+    return Metadata(k, false, false, false, false, true, false)
 end
 
 """
@@ -926,6 +934,7 @@ function eq_to_in_normalization!(fst::FST, always_for_in::Bool, for_in_replaceme
             fst.metadata = Metadata(
                 opkind,
                 metadata.is_standalone_shortcircuit,
+                metadata.is_expandable_shortcircuit,
                 metadata.is_short_form_function,
                 opkind === K"=",
                 metadata.is_long_form_function,
@@ -1328,12 +1337,13 @@ function add_node!(
     elseif is_multiline(n) ||
            (!isnothing(t.metadata) && (t.metadata::Metadata).has_multiline_argument)
         if isnothing(t.metadata)
-            t.metadata = Metadata(K"None", false, false, false, true, true)
+            t.metadata = Metadata(K"None", false, false, false, false, true, true)
         else
             metadata = t.metadata::Metadata
             t.metadata = Metadata(
                 metadata.op_kind,
                 metadata.is_standalone_shortcircuit,
+                metadata.is_expandable_shortcircuit,
                 metadata.is_short_form_function,
                 metadata.is_assignment,
                 metadata.is_long_form_function,

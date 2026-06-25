@@ -1441,7 +1441,7 @@ function p_functiondef(
             add_node!(t, pretty(style, c, s, ctx, lineage), s; join_lines = true)
         end
     end
-    t.metadata = Metadata(kind(cst), false, false, false, true, false)
+    t.metadata = Metadata(kind(cst), false, false, false, false, true, false)
     t
 end
 
@@ -2672,9 +2672,11 @@ function p_binaryopcall(
         end
     end
 
+    is_standalone_shortcircuit = lazy_op && standalone_binary_circuit
     t.metadata = Metadata(
         opkind,
-        lazy_op && standalone_binary_circuit,
+        is_standalone_shortcircuit,
+        is_standalone_shortcircuit && !s.disable_syntax_transformations,
         is_expandable_short_func,
         is_assignment(cst) || defines_function(cst),
         false,
