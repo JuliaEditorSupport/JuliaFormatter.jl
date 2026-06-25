@@ -117,7 +117,11 @@ struct Metadata
 
     is_short_form_function::Bool
     is_assignment::Bool
-    is_long_form_function::Bool
+
+    # Indicates that this is a long-form function def that can be contracted to a short-form
+    # one if needed.
+    is_contractable_function::Bool
+
     has_multiline_argument::Bool
 end
 
@@ -937,7 +941,7 @@ function eq_to_in_normalization!(fst::FST, always_for_in::Bool, for_in_replaceme
                 metadata.is_expandable_shortcircuit,
                 metadata.is_short_form_function,
                 opkind === K"=",
-                metadata.is_long_form_function,
+                metadata.is_contractable_function,
                 metadata.has_multiline_argument,
             )
         end
@@ -1346,7 +1350,7 @@ function add_node!(
                 metadata.is_expandable_shortcircuit,
                 metadata.is_short_form_function,
                 metadata.is_assignment,
-                metadata.is_long_form_function,
+                metadata.is_contractable_function,
                 true,
             )
         end

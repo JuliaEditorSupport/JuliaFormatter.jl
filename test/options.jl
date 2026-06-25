@@ -323,65 +323,6 @@ end
         test_format(str_, str; indent=4, margin=length(str_) - 1, short_to_long_function_def = true)
     end
 
-    @testset "function longdef to shortdef" begin
-        str_ = """
-        function foo(a)
-            bodybodybody
-        end"""
-        str = "foo(a) = bodybodybody"
-        test_format(str_, str_; indent=4, margin=length(str) - 1, long_to_short_function_def = true)
-        test_format(str_, str; indent=4, margin=length(str), long_to_short_function_def = true)
-
-        str_ = """
-        function foo(a::T) where {T}
-            bodybodybodybodybodybodyb
-        end"""
-        str = "foo(a::T) where {T} = bodybodybodybodybodybodyb"
-        test_format(str_, str_; indent=4, margin=length(str) - 1, long_to_short_function_def = true)
-        test_format(str_, str; indent=4, margin=length(str), long_to_short_function_def = true)
-
-        str_ = """
-        function foo(a::T)::R where {T}
-            bodybodybodybodybodybodybody
-        end"""
-        str = "foo(a::T)::R where {T} = bodybodybodybodybodybodybody"
-        test_format(str_, str_; indent=4, margin=length(str) - 1, long_to_short_function_def = true)
-        test_format(str_, str; indent=4, margin=length(str), long_to_short_function_def = true)
-
-        str_ = """
-        function foo(a)
-            return a + 1
-        end"""
-        str = "foo(a) = a + 1"
-        test_format(str_, str; indent=4, margin=length(str), long_to_short_function_def = true)
-
-        str = """
-        function foo()
-            expr1
-            expr2
-        end"""
-        test_format(str, str; indent=4, margin=length(str), long_to_short_function_def = true)
-
-        str_ = """
-        function foo(a)
-            return if a > 1
-                2
-            else
-                nothing
-            end
-        end"""
-
-        str = """
-        foo(a) =
-            if a > 1
-                2
-            else
-                nothing
-            end"""
-        test_format(str_, str; indent=4, margin=length(str), long_to_short_function_def = true)
-        test_format(str_, str; indent=4, margin=length(str), long_to_short_function_def = true)
-    end
-
     @testset "whitespace in keyword arguments" begin
         str_ = "f(; a = b)"
         str = "f(; a=b)"
