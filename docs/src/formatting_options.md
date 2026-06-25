@@ -784,6 +784,7 @@ s = """
     1
 end"""
 
+using JuliaFormatter: format_text
 format_text(s; always_use_return=true) |> println
 ```
 
