@@ -323,15 +323,15 @@ function iteration_has_comma(cst::JuliaSyntax.GreenNode)
 end
 
 """
-    _with_no_transforms(f, s::State)
+    _with_no_transforms(f, s::State, new_status)
 
-Run `f` with a modified state where syntax transformations are disabled.
+Run `f` with a modified state where syntax transformations may be disabled.
 """
-function _with_no_transforms(f, s::State)
-    prev = s.disable_syntax_transformations
-    s.disable_syntax_transformations = true
+function _with_no_transforms(f, s::State, new_status::SyntaxTransformsStatus)
+    prev = s.syntax_transforms_status
+    s.syntax_transforms_status = new_status
     ret = f()
-    s.disable_syntax_transformations = prev
+    s.syntax_transforms_status = prev
     ret
 end
 
@@ -410,11 +410,11 @@ function pretty(
     elseif k === K"toplevel"
         p_toplevel(style, node, s, ctx, lineage)
     elseif k === K"quote" && haschildren(node) && kind(node[1]) === K":"
-        _with_no_transforms(s) do
+        _with_no_transforms(s, InsideExpr) do
             p_quotenode(style, node, s, ctx, lineage)
         end
     elseif k === K"quote" && haschildren(node)
-        _with_no_transforms(s) do
+        _with_no_transforms(s, InsideExpr) do
             p_quote(style, node, s, ctx, lineage)
         end
     elseif k === K"let"
@@ -443,7 +443,7 @@ function pretty(
     elseif k === K"doc"
         p_globalrefdoc(style, node, s, ctx, lineage)
     elseif k === K"macrocall"
-        _with_no_transforms(s) do
+        _with_no_transforms(s, InsideMacro) do
             if !isnothing(do_block_idx)
                 p_do_call(style, node, s, ctx, lineage, do_block_idx)
             else
@@ -1083,6 +1083,7 @@ function should_add_return_to_last_statement(
 
     # If the option is not enabled, don't add return.
     s.opts.always_use_return || return false
+    can_transform_syntax(s, true) || return false
 
     # If the block is empty, don't add return.
     last_stmt_idx =
@@ -1441,7 +1442,15 @@ function p_functiondef(
             add_node!(t, pretty(style, c, s, ctx, lineage), s; join_lines = true)
         end
     end
-    t.metadata = Metadata(kind(cst), false, false, false, true, false)
+    t.metadata = Metadata(
+        kind(cst),
+        false,
+        false,
+        false,
+        false,
+        can_transform_syntax(s, true),
+        false,
+    )
     t
 end
 
@@ -1499,7 +1508,7 @@ function p_struct(
                 length(filter(cc -> !JuliaSyntax.is_whitespace(cc), children(c))) > 0
             s.indent += s.opts.indent
             n = pretty(style, c, s, newctx(ctx; ignore_single_line = true), lineage)
-            if s.opts.annotate_untyped_fields_with_any
+            if s.opts.annotate_untyped_fields_with_any && can_transform_syntax(s, true)
                 annotate_typefields_with_any!(n, s)
             end
             add_node!(t, n, s; max_padding = s.opts.indent)
@@ -1553,7 +1562,7 @@ function p_mutable(
                 length(filter(cc -> !JuliaSyntax.is_whitespace(cc), children(c))) > 0
             s.indent += s.opts.indent
             n = pretty(style, c, s, newctx(ctx; ignore_single_line = true), lineage)
-            if s.opts.annotate_untyped_fields_with_any
+            if s.opts.annotate_untyped_fields_with_any && can_transform_syntax(s, true)
                 annotate_typefields_with_any!(n, s)
             end
             add_node!(t, n, s; max_padding = s.opts.indent)
@@ -2600,7 +2609,7 @@ function p_binaryopcall(
     # Intercept piped function calls and construct a normal function call FST instead. NOTE:
     # If overloading `p_binaryopcall` for a custom style you will have to make sure to
     # include this logic!
-    if opkind === K"|>" && s.opts.pipe_to_function_call && !s.disable_syntax_transformations
+    if opkind === K"|>" && s.opts.pipe_to_function_call && can_transform_syntax(s, false)
         # We purposely exclude one more case: `x .|> (f1, f2)`. This is a very weird Julia
         # quirk where you can broadcast over the _caller_ rather than the callee. There's no
         # equivalent way to express this in function call form, so we shouldn't try to
@@ -2631,7 +2640,7 @@ function p_binaryopcall(
     # that would lead to invalid Julia code, and also disable it if it's in a macro/Expr.
     is_short_func = defines_function(cst)
     is_expandable_short_func =
-        is_short_func && !ctx.from_let && !s.disable_syntax_transformations
+        is_short_func && !ctx.from_let && can_transform_syntax(s, true)
     standalone_binary_circuit = ctx.standalone_binary_circuit
 
     # For the lhs of a short-form function, we can't enable separate_kwargs_with_semicolon.
@@ -2672,9 +2681,11 @@ function p_binaryopcall(
         end
     end
 
+    is_standalone_shortcircuit = lazy_op && standalone_binary_circuit
     t.metadata = Metadata(
         opkind,
-        lazy_op && standalone_binary_circuit,
+        is_standalone_shortcircuit,
+        is_standalone_shortcircuit && can_transform_syntax(s, true),
         is_expandable_short_func,
         is_assignment(cst) || defines_function(cst),
         false,
@@ -3196,7 +3207,7 @@ function p_call(
     if (
         s.opts.separate_kwargs_with_semicolon &&
         can_separate_kwargs_for_this_call &&
-        !s.disable_syntax_transformations
+        can_transform_syntax(s, false)
     )
         separate_kwargs_with_semicolon!(t)
     end

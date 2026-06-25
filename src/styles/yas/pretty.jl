@@ -373,9 +373,11 @@ function p_call(
         end
     end
 
-    if s.opts.separate_kwargs_with_semicolon &&
-       can_separate_kwargs &&
-       !s.disable_syntax_transformations
+    if (
+        s.opts.separate_kwargs_with_semicolon &&
+        can_separate_kwargs &&
+        can_transform_syntax(s, false)
+    )
         separate_kwargs_with_semicolon!(t)
     end
 

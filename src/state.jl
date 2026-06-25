@@ -1,3 +1,9 @@
+# A flag to indicate whether we are inside an `Expr` (in which case all syntax
+# transformations should be suppressed), inside a macro (in which case some syntax
+# transformations can still be enabled if the user explicitly says so), or neither (in which
+# case all syntax transformations can be enabled).
+@enum SyntaxTransformsStatus InsideExpr InsideMacro None
+
 mutable struct State
     doc::Document
     indent::Int
@@ -12,9 +18,26 @@ mutable struct State
     # When true, syntax transformations (e.g. import_to_using) are suppressed.
     # Set inside quote, quotenode, and macro nodes, where transforming the code
     # would change the semantics of the expression.
-    disable_syntax_transformations::Bool
+    syntax_transforms_status::SyntaxTransformsStatus
 end
-State(doc, opts) = State(doc, 0, 1, 0, true, opts, false)
+State(doc, opts) = State(doc, 0, 1, 0, true, opts, None)
+
+"""
+    can_transform_syntax(s::State, allow_in_macros::Bool)
+
+Check whether according to the current state we are allowed to perform a syntax
+transformation. The `allow_in_macros` argument indicates whether the syntax transformation
+should be allowed inside macros when `s.opts.transform_syntax_in_macros` is true. Some
+syntax transformations are simply not safe to perform inside macros so are disabled even if
+`s.opts.transform_syntax_in_macros` is true.
+"""
+function can_transform_syntax(s::State, allow_in_macros::Bool)
+    s.syntax_transforms_status == None || (
+        allow_in_macros &&
+        s.syntax_transforms_status == InsideMacro &&
+        s.opts.transform_syntax_in_macros
+    )
+end
 
 nspaces(s::State) = s.indent
 hascomment(d::Document, line::Integer) = haskey(d.comments, line)

@@ -329,7 +329,7 @@ function long_to_short_function_def!(fst::FST, s::State)
     end
 
     funcdef = FST(Binary, fst.indent)
-    funcdef.metadata = Metadata(K"=", false, true, false, false, false)
+    funcdef.metadata = Metadata(K"=", false, false, true, false, false, false)
     kw = (join_lines = true, override_join_lines_based_on_source = true)
 
     add_node!(funcdef, lhs, s; kw...)
@@ -837,7 +837,7 @@ function short_circuit_to_if_pass!(fst::FST, s::State)
             continue
         elseif (n.typ === Binary || n.typ === Chain) &&
                !isnothing(n.metadata) &&
-               (n.metadata::Metadata).is_standalone_shortcircuit &&
+               (n.metadata::Metadata).is_expandable_shortcircuit &&
                fst.typ in (Block, TopLevel, Return)
             # Only expand short-circuit expressions that appear as statements in a block
             # (e.g. function body, loop body) or at the top level. Don't expand inside

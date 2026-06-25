@@ -6,6 +6,10 @@ Note that in principle this should not be necessary as ideally JuliaFormatter wo
 However, depending on the style and options being used, this is not always possible.
 This defaults to 1 for most styles, and 4 for SciMLStyle (note that this is pre-existing behaviour, but now it can be configured). (#1181, #1182)
 
+Disabled syntax transformations inside macros and `Expr` objects by default.
+Syntax transformations can never happen inside `Expr` objects because that causes the resulting `Expr` to be different from the original.
+For macros, JuliaFormatter errs on the side of caution and does not apply syntax transformations inside macros, since macros can inspect and transform the code that is passed to them, and changing this code can lead to the macro performing different things.
+
 # v2.9.4
 
 Fixed several instances where JuliaFormatter would use `length()` instead of `textwidth()`, leading to incorrect or non-idempotent formatting when non-ASCII characters were present. (#1166, #1167)

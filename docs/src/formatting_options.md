@@ -18,29 +18,39 @@ Values that differ from `DefaultStyle` are shown in **bold**.
 
 Note that, although styles each define a different set of options, they are not _just_ collections of options; they also have unique formatting rules that are not captured by the options.
 
-!!! danger "Dangerous options"
+## A note about options
 
-    **Some of the options below are more dangerous than others, because they perform syntax transformations** (i.e., `Meta.parse(format_text(s))` may not be equal to `Meta.parse(s)`).
-    These options can therefore change the meaning of the code being formatted depending on the context, and should be used with caution.
+Not all options are created equal.
+This section is intended to help you understand the implications of enabling certain options.
 
-    To help you identify dangerous options, there is an emoji legend in the 'Kind' column:
+### Syntax transformations
 
-    - 📐: purely about whitespace
-    - ♻️: syntax normalisation — this does more than just whitespace as it can insert e.g. parentheses, but it does not change the AST in any way
-    - ⚠️: syntax transformation — this does change the AST, but the transformations are conservatively scoped and thus should be safe
-    - 🔥: dangerous syntax transformation — this can change the AST, and it is not actually possible to be conservative because that would defeat the entire purpose of the option.
-      **Note that some styles enable these by default!!**
-      Use with care, and *please* consider manually disabling them; it is possible that these will be removed in v3.
+**Some of the options below are more dangerous than others, because they perform syntax transformations** (i.e., `Meta.parse(format_text(s))` may not be equal to `Meta.parse(s)`).
+These options can therefore change the meaning of the code being formatted depending on the context, and should be used with caution.
 
-      Currently, only [**`pipe_to_function_call`**](@ref options-pipe-to-function-call) is in this category.
+To help you identify dangerous options, there is an emoji legend in the 'Kind' column:
 
-!!! warning "Options that can spoil idempotence"
+- 📐: purely about whitespace
+- ♻️: syntax normalisation — this does more than just whitespace as it can insert e.g. parentheses, but it does not change the AST in any way
+- ⚠️: syntax transformation — this does change the AST, but the transformations are conservatively scoped and thus should be safe
+- 🔥: dangerous syntax transformation — this can change the AST, and it is not actually possible to be conservative because that would defeat the entire purpose of the option.
 
-    Some of the options below additionally have the potential to cause non-idempotent formatting if enabled (or, in the case of [`v2_stable_multiline_strings`](@ref options-v2-stable-multiline-strings), if disabled).
-    They are marked with a 🪃 emoji.
+Currently, only [**`pipe_to_function_call`**](@ref options-pipe-to-function-call) is in the last category.
+**Note that YASStyle and BlueStyle both enable `pipe_to_function_call` by default, so if you use either of those styles, you should be aware that this can change the meaning of your code!**
 
-    If you want to ensure idempotence, it is recommended to disable these options.
-    If you absolutely must enable them, you may need to run the formatter multiple times to reach a fixed point: you can use the [`max_iterations`](@ref options-max-iterations) option to control the number of passes JuliaFormatter will do.
+As a guard against unwanted syntax transformations, by default, JuliaFormatter does not perform any syntax transformations inside macros or Exprs.
+
+This can be overly cautious in some cases: many macros, such as `@test` and `@inline`, are completely agnostic to their contents.
+If you want to enable selected syntax transformations inside macros, you can [set `transform_syntax_in_macros` to `true`](@ref options-transform-syntax-in-macros).
+However, there is no option to enable syntax transformations inside `Expr`s as that changes the literal meaning of the `Expr`.
+
+### Options that can spoil idempotence
+
+Some of the options below additionally have the potential to cause non-idempotent formatting if enabled (or, in the case of [`v2_stable_multiline_strings`](@ref options-v2-stable-multiline-strings), if disabled).
+They are marked with a 🪃 emoji.
+
+If you want to ensure idempotence, it is recommended to disable these options.
+If you absolutely must enable them, you may need to run the formatter multiple times to reach a fixed point: you can use the [`max_iterations`](@ref options-max-iterations) option to control the number of passes JuliaFormatter will do.
 
 | Option                                                                              | Kind  | Default   | YAS         | Blue        | SciML        | Minimal       |
 | :-------                                                                            | ----- | --------- | -----       | ------      | -------      | ---------     |
@@ -74,8 +84,9 @@ Note that, although styles each define a different set of options, they are not 
 | [`surround_whereop_typeparameters`](@ref options-surround-whereop-typeparameters)   | ♻️    | `true`    | `true`      | `true`      | `true`       | **`false`**   |
 | [`trailing_comma`](@ref options-trailing-comma)                                     | ♻️    | `true`    | `true`      | `true`      | **`false`**  | **`nothing`** |
 | [`trailing_zero`](@ref options-trailing-zero)                                       | ♻️    | `true`    | `true`      | `true`      | `true`       | **`false`**   |
-| [`variable_call_indent`](@ref options-variable-call-indent)                         | 📐    | `[]`      | `[]`        | `[]`        | `[]`         | `[]`          |
+| [`transform_syntax_in_macros`](@ref options-transform-syntax-in-macros)             | ⚠️    | `false`   | `false`     | `false`     | `false`      | `false`       |
 | [`v2_stable_multiline_strings`](@ref options-v2-stable-multiline-strings)           | 🪃 📐 | `false`   | `false`     | `false`     | `false`      | `false`       |
+| [`variable_call_indent`](@ref options-variable-call-indent)                         | 📐    | `[]`      | `[]`        | `[]`        | `[]`         | `[]`          |
 | [`whitespace_in_kwargs`](@ref options-whitespace-in-kwargs)                         | 📐    | `true`    | **`false`** | **`false`** | `true`       | **`false`**   |
 | [`whitespace_ops_in_indices`](@ref options-whitespace-ops-in-indices)               | 📐    | `false`   | **`true`**  | **`true`**  | **`true`**   | `false`       |
 | [`whitespace_typedefs`](@ref options-whitespace-typedefs)                           | 📐    | `false`   | `false`     | `false`     | **`true`**   | `false`       |
@@ -747,48 +758,41 @@ Default: `true`
 
 Add a trailing zero, if needed.
 
-## [`variable_call_indent`](@id options-variable-call-indent)
+## [`transform_syntax_in_macros`](@id options-transform-syntax-in-macros)
 
-Default: `[]`
+Default: `false`
 
-The `SciMLStyle` supports the additional option `variable_call_indent`.
-It permits continuation lines in calls to not align with the opening parenthesis.
+If `true`, the following syntax transformations will be permitted inside macros (if the corresponding option has been enabled):
 
-For example, if `variable_call_indent = ["Dict"]`, the following is allowed:
+- [`always_use_return`](@ref options-always-use-return)
+- [`annotate_untyped_fields_with_any`](@ref options-annotate-untyped-fields-with-any)
+- [`import_to_using`](@ref options-import-to-using)
+- [`long_to_short_function_def`](@ref options-long-to-short-function-def)
+- [`short_circuit_to_if`](@ref options-short-circuit-to-if)
+- [`short_to_long_function_def`](@ref options-short-to-long-function-def)
 
-```julia
-Dict{Int, Int}(
-    1 => 2,
-    3 => 4)
+The following syntax transformations will *not* be permitted inside macros, even if `transform_syntax_in_macros` is true:
+
+- [`pipe_to_function_call`](@ref options-pipe-to-function-call)
+- [`separate_kwargs_with_semicolon`](@ref options-separate-kwargs-with-semicolon)
+
+For example, `always_use_return` does not fire inside a macro by default:
+
+```@example transform-syntax-in-macros
+s = """
+@macro function f()
+    1
+end"""
+
+using JuliaFormatter: format_text
+format_text(s; always_use_return=true) |> println
 ```
 
-(Note that in the configuration, `"Dict"` must be passed as a string: this is because JuliaFormatter matches it against the name of the function being called.)
+However, if `transform_syntax_in_macros` is set to `true`, then it does:
 
-If `variable_call_indent` is empty, the above will be formatted to
-
-```julia
-Dict{Int, Int}(1 => 2,
-    3 => 4)
+```@example transform-syntax-in-macros
+format_text(s; always_use_return=true, transform_syntax_in_macros=true) |> println
 ```
-
-## [`whitespace_in_kwargs`](@id options-whitespace-in-kwargs)
-
-Default: `true`
-
-If true, `=` in keyword arguments will be surrounded by whitespace.
-
-```julia
-f(; a=4)
-```
-
-to
-
-```julia
-f(; a = 4)
-```
-
-Note that if this option is false, the arguments on either side of the equals may sometimes be parenthesised to avoid parsing ambiguities.
-For example, `f(s! = x)` will be transformed to `f((s!)=x)`, and `f(t = >=(1))` will be transformed to `f(t=(>=(1)))`.
 
 ## [`v2_stable_multiline_strings`](@id options-v2-stable-multiline-strings)
 
@@ -951,6 +955,49 @@ Click on the "Show explanation" toggle below to read it.
     In many cases these can be fully decoupled, but in this case it can't; furthermore, even though decoupling does not actually ruin idempotence in many other cases, it can still lead to suboptimal formatting (which makes sense -- after all we're trying fewer possibilities).
     *Fixing this properly therefore requires a complete rethink of the formatting algorithm.*
     If you're interested in *that*, see e.g. [this issue](https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/1104).
+
+## [`variable_call_indent`](@id options-variable-call-indent)
+
+Default: `[]`
+
+The `SciMLStyle` supports the additional option `variable_call_indent`.
+It permits continuation lines in calls to not align with the opening parenthesis.
+
+For example, if `variable_call_indent = ["Dict"]`, the following is allowed:
+
+```julia
+Dict{Int, Int}(
+    1 => 2,
+    3 => 4)
+```
+
+(Note that in the configuration, `"Dict"` must be passed as a string: this is because JuliaFormatter matches it against the name of the function being called.)
+
+If `variable_call_indent` is empty, the above will be formatted to
+
+```julia
+Dict{Int, Int}(1 => 2,
+    3 => 4)
+```
+
+## [`whitespace_in_kwargs`](@id options-whitespace-in-kwargs)
+
+Default: `true`
+
+If true, `=` in keyword arguments will be surrounded by whitespace.
+
+```julia
+f(; a=4)
+```
+
+to
+
+```julia
+f(; a = 4)
+```
+
+Note that if this option is false, the arguments on either side of the equals may sometimes be parenthesised to avoid parsing ambiguities.
+For example, `f(s! = x)` will be transformed to `f((s!)=x)`, and `f(t = >=(1))` will be transformed to `f(t=(>=(1)))`.
 
 ## [`whitespace_ops_in_indices`](@id options-whitespace-ops-in-indices)
 

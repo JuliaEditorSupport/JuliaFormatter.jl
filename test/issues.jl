@@ -2565,12 +2565,12 @@ end
         # unindented multiline `do` arguments.
         test_format(
             "y = @foo(a=1,  b=2)  do x,\ny\n    x + y\nend\n",
-            "y = @foo(a=1, b=2) do x, y\n    return x + y\nend\n",
+            "y = @foo(a=1, b=2) do x, y\n    x + y\nend\n",
             BlueStyle(),
         )
         test_format(
             "expr_spec = @template_spec(parameters=(p1=10, p2=10, p3=1),  expressions=(f, g))  do x1,\nx2,\nclass\n\n    x1 * 2\nend\n",
-            "expr_spec = @template_spec(\n    parameters=(p1=10, p2=10, p3=1), expressions=(f, g)\n) do x1, x2, class\n    return x1 * 2\nend\n",
+            "expr_spec = @template_spec(\n    parameters=(p1=10, p2=10, p3=1), expressions=(f, g)\n) do x1, x2, class\n    x1 * 2\nend\n",
             BlueStyle(),
         )
         # default-style macrocall + do-block keeps single spaces and indents the body

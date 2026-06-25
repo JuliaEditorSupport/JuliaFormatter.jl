@@ -106,15 +106,27 @@ struct Metadata
     # Indicates that the node is a shortcircuiting logical operator (`&&` or `||`) whose
     # value is not used in any way, i.e., it exists solely for the side effects.
     is_standalone_shortcircuit::Bool
+    # If the above is true, this field indicates whether it should be expanded into a full
+    # if-else statement if `short_circuit_to_if` is true. This mainly exists to catch the
+    # case where it's inside a macro/expr, which causes the transformation to be disabled.
+    # 
+    # Note that because `is_standalone_shortcircuit` has impacts on alignment as well, we
+    # need to have a separate flag instead of just setting it to false when inside
+    # macros/exprs.
+    is_expandable_shortcircuit::Bool
 
     is_short_form_function::Bool
     is_assignment::Bool
-    is_long_form_function::Bool
+
+    # Indicates that this is a long-form function def that can be contracted to a short-form
+    # one if needed.
+    is_contractable_function::Bool
+
     has_multiline_argument::Bool
 end
 
 function Metadata(k::JuliaSyntax.Kind)
-    return Metadata(k, false, false, false, true, false)
+    return Metadata(k, false, false, false, false, true, false)
 end
 
 """
@@ -926,9 +938,10 @@ function eq_to_in_normalization!(fst::FST, always_for_in::Bool, for_in_replaceme
             fst.metadata = Metadata(
                 opkind,
                 metadata.is_standalone_shortcircuit,
+                metadata.is_expandable_shortcircuit,
                 metadata.is_short_form_function,
                 opkind === K"=",
-                metadata.is_long_form_function,
+                metadata.is_contractable_function,
                 metadata.has_multiline_argument,
             )
         end
@@ -1146,11 +1159,19 @@ function add_node!(
     if n.typ === Block && length(n) == 0
         push!(tnodes::Vector{FST}, n)
         return
-    elseif s.opts.import_to_using && n.typ === Import && !s.disable_syntax_transformations
+    elseif s.opts.import_to_using && n.typ === Import && can_transform_syntax(s, true)
         usings = import_to_usings(n, s)
         if length(usings) > 0
-            for nn in usings
-                add_node!(t, nn, s; join_lines = false, max_padding = 0)
+            for (i, nn) in enumerate(usings)
+                # The first using replaces the original import, so it should
+                # inherit the caller's join_lines (e.g. stay on the same line
+                # in `@eval import Foo` -> `@eval using Foo: Foo`).
+                # Subsequent usings always start on a new line.
+                jl = i == 1 ? join_lines : false
+                if !jl && length(tnodes) > 0 && (tnodes[end]::FST).typ === WHITESPACE
+                    tnodes[end]::FST = Whitespace(0)
+                end
+                add_node!(t, nn, s; join_lines = jl, max_padding = 0)
             end
             return
         end
@@ -1328,15 +1349,16 @@ function add_node!(
     elseif is_multiline(n) ||
            (!isnothing(t.metadata) && (t.metadata::Metadata).has_multiline_argument)
         if isnothing(t.metadata)
-            t.metadata = Metadata(K"None", false, false, false, true, true)
+            t.metadata = Metadata(K"None", false, false, false, false, true, true)
         else
             metadata = t.metadata::Metadata
             t.metadata = Metadata(
                 metadata.op_kind,
                 metadata.is_standalone_shortcircuit,
+                metadata.is_expandable_shortcircuit,
                 metadata.is_short_form_function,
                 metadata.is_assignment,
-                metadata.is_long_form_function,
+                metadata.is_contractable_function,
                 true,
             )
         end

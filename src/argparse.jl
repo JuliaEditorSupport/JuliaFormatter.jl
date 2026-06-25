@@ -541,6 +541,13 @@ const PARSER = ArgParser(
         group = FormattingGroup,
     ),
     option(
+        "--transform-syntax-in-macros";
+        dest = :transform_syntax_in_macros,
+        type = Bool,
+        help = "Apply syntax transformations inside macro calls.",
+        group = FormattingGroup,
+    ),
+    option(
         "--v2-stable-multiline-strings";
         dest = :v2_stable_multiline_strings,
         type = Bool,

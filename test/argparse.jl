@@ -297,6 +297,8 @@ using JuliaFormatter: DefaultStyle, YASStyle, BlueStyle, SciMLStyle, MinimalStyl
             @test parse_args(["--trailing-comma=nothing"]).config.options.trailing_comma === nothing
             @test parse_args(["--trailing-zero=true"]).config.options.trailing_zero == true
             @test parse_args(["--trailing-zero=false"]).config.options.trailing_zero == false
+            @test parse_args(["--transform-syntax-in-macros=true"]).config.options.transform_syntax_in_macros == true
+            @test parse_args(["--transform-syntax-in-macros=false"]).config.options.transform_syntax_in_macros == false
             @test parse_args(["--v2-stable-multiline-strings=true"]).config.options.v2_stable_multiline_strings == true
             @test parse_args(["--v2-stable-multiline-strings=false"]).config.options.v2_stable_multiline_strings == false
             @test parse_args(["--variable-call-indent=Dict"]).config.options.variable_call_indent == ["Dict"]

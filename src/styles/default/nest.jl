@@ -61,7 +61,7 @@ function nest!(
     if fst.typ === FunctionN &&
        s.opts.long_to_short_function_def &&
        !isnothing(fst.metadata) &&
-       (fst.metadata::Metadata).is_long_form_function
+       (fst.metadata::Metadata).is_contractable_function
         long_to_short_function_def!(fst, s)
     elseif fst.typ === Binary
         line_margin = s.line_offset + length(fst) + fst.extra_margin
