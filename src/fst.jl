@@ -1159,7 +1159,7 @@ function add_node!(
     if n.typ === Block && length(n) == 0
         push!(tnodes::Vector{FST}, n)
         return
-    elseif s.opts.import_to_using && n.typ === Import && !s.disable_syntax_transformations
+    elseif s.opts.import_to_using && n.typ === Import && can_transform_syntax(s, true)
         usings = import_to_usings(n, s)
         if length(usings) > 0
             for nn in usings

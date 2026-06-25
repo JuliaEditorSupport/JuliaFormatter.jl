@@ -57,6 +57,7 @@ Base.@kwdef struct Options{T<:_Unset}
     surround_whereop_typeparameters::Union{T,Bool} = true
     trailing_comma::Union{T,Bool,Nothing} = true
     trailing_zero::Union{T,Bool} = true
+    transform_syntax_in_macros::Union{T,Bool} = false
     v2_stable_multiline_strings::Union{T,Bool} = false
     variable_call_indent::Union{T,Vector{String}} = []
     whitespace_in_kwargs::Union{T,Bool} = true
