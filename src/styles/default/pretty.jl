@@ -1499,7 +1499,7 @@ function p_struct(
                 length(filter(cc -> !JuliaSyntax.is_whitespace(cc), children(c))) > 0
             s.indent += s.opts.indent
             n = pretty(style, c, s, newctx(ctx; ignore_single_line = true), lineage)
-            if s.opts.annotate_untyped_fields_with_any
+            if s.opts.annotate_untyped_fields_with_any && !s.disable_syntax_transformations
                 annotate_typefields_with_any!(n, s)
             end
             add_node!(t, n, s; max_padding = s.opts.indent)
@@ -1553,7 +1553,7 @@ function p_mutable(
                 length(filter(cc -> !JuliaSyntax.is_whitespace(cc), children(c))) > 0
             s.indent += s.opts.indent
             n = pretty(style, c, s, newctx(ctx; ignore_single_line = true), lineage)
-            if s.opts.annotate_untyped_fields_with_any
+            if s.opts.annotate_untyped_fields_with_any && !s.disable_syntax_transformations
                 annotate_typefields_with_any!(n, s)
             end
             add_node!(t, n, s; max_padding = s.opts.indent)
