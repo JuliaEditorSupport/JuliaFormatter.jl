@@ -30,12 +30,26 @@ See [the extension's docs](https://www.julia-vscode.org/docs/stable/userguide/fo
 
 [JETLS.jl](https://github.com/aviatesk/JETLS.jl) is a new language server implementation for Julia, backed by much more thorough static analysis of Julia code.
 It also contains support for formatting code, and importantly, it does so by invoking a formatter executable!
-This means that you can use any version of JuliaFormatter you like (from v2.2 onwards, since that is when the [`jlfmt` CLI app](@ref cli) became available)
+This means that you can use any version of JuliaFormatter you like (from v2.2 onwards, since that is when the [`jlfmt` CLI app](@ref cli) became available).
 
 Please see the JETLS.jl docs for more information on [editor setup](https://aviatesk.github.io/JETLS.jl/release/#index/editor-setup) and [configuring the formatter](https://aviatesk.github.io/JETLS.jl/release/formatting/).
 
 !!! warning "JETLS.jl is cutting-edge"
     JETLS.jl's README currently states "Experimental: JETLS is under active development. Not production-ready; APIs and behavior may change. Stability and performance are limited. Expect bugs and rough edges."
+
+## Helix
+
+To use JuliaFormatter with [Helix](https://helix-editor.com/), you can either use the LSP approach, or if you wish to use a specific version of JuliaFormatter, you can install the `jlfmt` CLI app and configure Helix to use it.
+Place the following in [a `language.toml` file](https://docs.helix-editor.com/languages.html):
+
+```toml
+[[language]]
+name = "julia"
+
+[language.formatter]
+command = "jlfmt"
+args = ["--config-dir=%sh{pwd}"]
+```
 
 ## Legacy editor support
 
