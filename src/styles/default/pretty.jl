@@ -1441,7 +1441,15 @@ function p_functiondef(
             add_node!(t, pretty(style, c, s, ctx, lineage), s; join_lines = true)
         end
     end
-    t.metadata = Metadata(kind(cst), false, false, false, false, !s.disable_syntax_transformations, false)
+    t.metadata = Metadata(
+        kind(cst),
+        false,
+        false,
+        false,
+        false,
+        !s.disable_syntax_transformations,
+        false,
+    )
     t
 end
 
