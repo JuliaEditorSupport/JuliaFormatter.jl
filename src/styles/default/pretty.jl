@@ -1083,6 +1083,7 @@ function should_add_return_to_last_statement(
 
     # If the option is not enabled, don't add return.
     s.opts.always_use_return || return false
+    can_transform_syntax(s, true) || return false
 
     # If the block is empty, don't add return.
     last_stmt_idx =
