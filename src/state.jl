@@ -20,7 +20,7 @@ mutable struct State
     # would change the semantics of the expression.
     syntax_transforms_status::SyntaxTransformsStatus
 end
-State(doc, opts) = State(doc, 0, 1, 0, true, opts, false)
+State(doc, opts) = State(doc, 0, 1, 0, true, opts, None)
 
 """
     can_transform_syntax(s::State, allow_in_macros::Bool)
