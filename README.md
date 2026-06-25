@@ -7,11 +7,12 @@ Width-sensitive formatter for Julia code.
 Inspired by gofmt, refmt, and black.
 
 > [!NOTE]
-> Recent versions of JuliaFormatter (v2+) still have a number of rough edges!
-  I'm putting a lot of effort into fixing these, but if you require absolute stability, **please consider pinning the version of JuliaFormatter, and possibly downgrading to v1**.
-  In general if you are already happy with a given version of JuliaFormatter, you *should* pin it in your CI workflows etc. -- the only reason you should upgrade is if you want to take advantage of new features or bug fixes.
-
-  See also the [Project Status](https://juliaeditorsupport.github.io/JuliaFormatter.jl/stable/status) section of the docs for more details.
+> In JuliaFormatter v2, SciMLStyle and YASStyle still have a number of rough edges.
+> If you are using these styles please consider using v1 of JuliaFormatter.
+>
+> Default and Blue styles should _largely_ be stable from v2.10 onwards.
+>
+> See also the [Project Status](https://juliaeditorsupport.github.io/JuliaFormatter.jl/stable/status) section of the docs for more details.
 
 ## Installation
 
