@@ -282,6 +282,9 @@ function format(
             if !ispath(subpath) || islink(subpath)
                 continue
             end
+            if isfile(subpath) && !is_formattable_file(subpath)
+                continue
+            end
             is_formatted = format(subpath, style; throw_on_error, options...)
             Threads.atomic_and!(formatted, is_formatted)
         end
