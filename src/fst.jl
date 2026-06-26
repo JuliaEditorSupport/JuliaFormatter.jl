@@ -769,7 +769,7 @@ end
 
 function has_trailing(n::JuliaSyntax.GreenNode, kinds::NTuple{N,JuliaSyntax.Kind}) where {N}
     return kind(n) in kinds ||
-           (haschildren(n) && length(children(n)) > 0 && has_leading(n[end], kinds))
+           (haschildren(n) && length(children(n)) > 0 && has_trailing(n[end], kinds))
 end
 
 function remove_empty_notcode(fst::FST)
