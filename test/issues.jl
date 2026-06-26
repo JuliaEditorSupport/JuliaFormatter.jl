@@ -2520,6 +2520,15 @@ end
         end
     end
 
+    @testset "1013" begin
+        s = "check_constraints(ex::Union{AbstractExpression,AbstractExpressionNode}, options::AbstractOptions)::Bool = check_constraints(ex, options, options.maxsize)"
+        out = """
+        check_constraints(ex::Union{AbstractExpression,AbstractExpressionNode}, options::AbstractOptions)::Bool = check_constraints(
+            ex, options, options.maxsize
+        )"""
+        test_format(s, out, BlueStyle())
+    end
+
     @testset "1025" begin
         # from julia@1.12.6 Compiler/src/typelimits.jl
         s = """

@@ -38,7 +38,9 @@ function is_binaryop_nestable(::BlueStyle, cst::JuliaSyntax.GreenNode)
     # don't, there are idempotence issues because on the second pass this will return true.
     # This is a massive pain to do though.
     # See https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/1175
-    if is_assignment(cst) && haschildren(cst) && is_iterable(cst[end])
+    if (is_assignment(cst) || defines_function(cst)) &&
+       haschildren(cst) &&
+       is_iterable(cst[end])
         return false
     end
     return is_binaryop_nestable(DefaultStyle(), cst)

@@ -1,3 +1,7 @@
+# v2.10.1
+
+Fixed a formatting regression for BlueStyle introduced in 2.5.0. (#1013, #1193)
+
 # v2.10.0
 
 Added a new formatting option, `max_iterations`, which controls the number of rounds of formatting that JuliaFormatter will apply.
