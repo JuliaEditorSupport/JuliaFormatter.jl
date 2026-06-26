@@ -459,6 +459,13 @@ function n_binaryopcall!(
         return n_binaryopcall!(DefaultStyle(style), fst, s, lineage; indent = indent)
     end
 
-    walk(increment_line_offset!, nodes[1:(end-1)], s, fst.indent)
-    nest!(style, fst[end], s, lineage)
+    nested = false
+    for (i, n) in enumerate(nodes)
+        if i == length(nodes) || must_nest(n) || any_descendant(must_nest, n)
+            nested |= nest!(style, n, s, lineage)
+        else
+            walk(increment_line_offset!, n, s)
+        end
+    end
+    return nested
 end

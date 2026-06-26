@@ -12,6 +12,8 @@ For macros, JuliaFormatter errs on the side of caution and does not apply syntax
 
 Fixed a bug where whitespace around binary operators was not being respected, leading to a change in the meaning of the code. (#788, #1188)
 
+Fixed a bug where Blue and YAS styles would over-aggressively un-nest contents, leading to comments being joined with source code. (#922, #1189)
+
 # v2.9.4
 
 Fixed several instances where JuliaFormatter would use `length()` instead of `textwidth()`, leading to incorrect or non-idempotent formatting when non-ASCII characters were present. (#1166, #1167)
