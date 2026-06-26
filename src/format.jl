@@ -35,7 +35,10 @@ struct InvalidFileError <: Exception
     filename::AbstractString
 end
 function Base.showerror(io::IO, e::InvalidFileError)
-    print(io, "\nthe file to be formatted ($(e.filename)) was not a Julia or Markdown file\n")
+    print(
+        io,
+        "\nthe file to be formatted ($(e.filename)) was not a Julia or Markdown file\n",
+    )
 end
 
 const UNIX_TO_WINDOWS = r"\r?\n" => "\r\n"
@@ -196,9 +199,24 @@ function _format_text(
     end
 end
 
+const FORMATTABLE_EXTENSIONS = (".jl", ".md", ".jmd", ".qmd")
+const JULIA_SHEBANG_PATTERN = r"^#!\s*/.*\bjulia[0-9.-]*\b"
+
+"""
+    is_formattable_file(filename) -> Bool
+
+Check whether `filename` is a file that JuliaFormatter can format, based on its extension
+or the presence of a Julia shebang line (e.g. `#!/usr/bin/env julia`).
+"""
+function is_formattable_file(filename::AbstractString)::Bool
+    isfile(filename) || return false
+    _, ext = splitext(filename)
+    ext in FORMATTABLE_EXTENSIONS && return true
+    return match(JULIA_SHEBANG_PATTERN, readline(filename)) !== nothing
+end
+
 function _format_file(filename::AbstractString, config::Configuration)::Bool
     _, ext = splitext(filename)
-    shebang_pattern = r"^#!\s*/.*\bjulia[0-9.-]*\b"
     merged_options = get_formatting_options(config)
 
     formatted_str = if ext in (".md", ".jmd", ".qmd")
@@ -208,7 +226,7 @@ function _format_file(filename::AbstractString, config::Configuration)::Bool
         # Already guarantees trailing newline, although newlines in Markdown are not
         # normalised (that's a CommonMark thing, not JuliaFormatter).
         _format_md(str, config.style, merged_options)
-    elseif ext == ".jl" || match(shebang_pattern, readline(filename)) !== nothing
+    elseif ext == ".jl" || match(JULIA_SHEBANG_PATTERN, readline(filename)) !== nothing
         config.verbose && println("Formatting $filename")
         str = String(read(filename))
         _format_text(str, config.style, merged_options; ensure_trailing_newline = true)
