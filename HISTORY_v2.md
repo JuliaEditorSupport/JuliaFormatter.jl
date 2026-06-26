@@ -8,7 +8,8 @@ This defaults to 1 for most styles, and 4 for SciMLStyle (note that this is pre-
 
 Disabled syntax transformations inside macros and `Expr` objects by default.
 Syntax transformations can never happen inside `Expr` objects because that causes the resulting `Expr` to be different from the original.
-For macros, JuliaFormatter errs on the side of caution and does not apply syntax transformations inside macros, since macros can inspect and transform the code that is passed to them, and changing this code can lead to the macro performing different things. (#1124, #1187)
+For macros, JuliaFormatter errs on the side of caution and does not apply syntax transformations inside macros, since macros can inspect and transform the code that is passed to them, and changing this code can lead to the macro performing different things.
+There is a new formatting option, `transform_syntax_in_macros`, which can be set to `true` to re-enable syntax transformations inside macros if desired. (#1124, #1187)
 
 Fixed a bug where whitespace around binary operators was not being respected, leading to a change in the meaning of the code. (#788, #1188)
 
