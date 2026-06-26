@@ -2605,17 +2605,22 @@ function p_binaryopcall(
     childs = children(cst)
     op_indices = source_operator_indices(cst)
     opkind = source_op_kind(s, cst)
+    lhs_idx = findfirst(n -> !JuliaSyntax.is_whitespace(n), childs)
+    rhs_idx = findlast(n -> !JuliaSyntax.is_whitespace(n), childs)
 
     # Intercept piped function calls and construct a normal function call FST instead. NOTE:
     # If overloading `p_binaryopcall` for a custom style you will have to make sure to
     # include this logic!
-    if opkind === K"|>" && s.opts.pipe_to_function_call && can_transform_syntax(s, false)
+    if opkind === K"|>" &&
+       s.opts.pipe_to_function_call &&
+       can_transform_syntax(s, false) &&
+       rhs_idx !== nothing
         # We purposely exclude one more case: `x .|> (f1, f2)`. This is a very weird Julia
         # quirk where you can broadcast over the _caller_ rather than the callee. There's no
         # equivalent way to express this in function call form, so we shouldn't try to
         # transform it.
         # See https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/647
-        rhs_cst = childs[findlast(n -> !JuliaSyntax.is_whitespace(n), childs)]
+        rhs_cst = childs[rhs_idx]
         dotted_tuple = kind(cst) === K"dotcall" && kind(rhs_cst) === K"tuple"
         if !dotted_tuple
             return p_pipe_to_call(ds, cst, s, ctx, lineage)
@@ -2630,7 +2635,6 @@ function p_binaryopcall(
     end
     nest = (is_binaryop_nestable(style, cst) && !nonest) || nrhs
     if opkind === K"=>" && haschildren(cst)
-        rhs_idx = findlast(n -> !JuliaSyntax.is_whitespace(n), childs)
         if !isnothing(rhs_idx) && is_str_or_cmd(childs[rhs_idx])
             nest = false
         end
@@ -2692,55 +2696,68 @@ function p_binaryopcall(
         false,
     )
 
-    has_ws = false
+    has_ws_around_op = false
 
     for (i, c) in enumerate(childs)
         if i > 1 && Shims.is_really_whitespace(c)
-            has_ws = true
+            has_ws_around_op = true
             break
+        end
+    end
+    # Check if LHS ends, or RHS begins with whitespace
+    if lhs_idx !== nothing
+        lhs_cst = childs[lhs_idx]
+        if has_trailing(lhs_cst, KSet"Whitespace NewlineWs")
+            has_ws_around_op = true
+        end
+    end
+    if rhs_idx !== nothing
+        rhs_cst = childs[rhs_idx]
+        if has_leading(rhs_cst, KSet"Whitespace NewlineWs")
+            has_ws_around_op = true
         end
     end
 
     from_colon = ctx.from_colon
     from_typedef = ctx.from_typedef
 
-    nospace = ctx.nospace
+    remove_space_around_op = ctx.nospace
     if opkind === K":"
-        nospace = true
+        remove_space_around_op = true
         from_colon = true
     elseif opkind === K"::"
-        nospace = true
+        remove_space_around_op = true
     elseif is_short_func && opkind === K"="
-        nospace = false
-        has_ws = true
+        remove_space_around_op = false
+        has_ws_around_op = true
     elseif kind(cst) === K"comparison"
-        nospace = false
+        remove_space_around_op = false
     elseif opkind in KSet"in ∈ isa ."
-        nospace = false
+        remove_space_around_op = false
     elseif from_typedef && opkind in KSet"<: >:"
         if s.opts.whitespace_typedefs
-            nospace = false
-            has_ws = true
+            remove_space_around_op = false
+            has_ws_around_op = true
         else
-            nospace = true
-            has_ws = false
+            remove_space_around_op = true
+            has_ws_around_op = false
         end
     elseif ctx.from_ref || from_colon
         if s.opts.whitespace_ops_in_indices
-            nospace = false
-            has_ws = true
+            remove_space_around_op = false
+            has_ws_around_op = true
         else
-            nospace = true
-            has_ws = false
+            remove_space_around_op = true
+            has_ws_around_op = false
         end
     elseif from_colon
-        nospace = true
+        remove_space_around_op = true
     end
-    nws = !nospace && has_ws ? 1 : 0
+    nws = !remove_space_around_op && has_ws_around_op ? 1 : 0
 
     has_dot = false
     if kind(cst) === K"dotcall"
-        nospace = false
+        remove_space_around_op = false
         nws = 1
         has_dot = true
     end

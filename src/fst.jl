@@ -762,14 +762,14 @@ function is_short_function_def(cst::JuliaSyntax.GreenNode)
         JuliaSyntax.has_flags(cst, JuliaSyntax.SHORT_FORM_FUNCTION_FLAG)
 end
 
-function has_leading_whitespace(n::JuliaSyntax.GreenNode)
-    if kind(n) === K"Whitespace"
-        return true
-    end
-    if haschildren(n) && length(children(n)) > 0
-        return has_leading_whitespace(n[1])
-    end
-    return false
+function has_leading(n::JuliaSyntax.GreenNode, kinds::NTuple{N,JuliaSyntax.Kind}) where {N}
+    return kind(n) in kinds ||
+           (haschildren(n) && length(children(n)) > 0 && has_leading(n[1], kinds))
+end
+
+function has_trailing(n::JuliaSyntax.GreenNode, kinds::NTuple{N,JuliaSyntax.Kind}) where {N}
+    return kind(n) in kinds ||
+           (haschildren(n) && length(children(n)) > 0 && has_leading(n[end], kinds))
 end
 
 function remove_empty_notcode(fst::FST)
