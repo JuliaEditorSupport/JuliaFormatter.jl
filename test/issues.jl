@@ -1986,6 +1986,15 @@ end
         test_format(s, s)
     end
 
+    @testset "788" begin
+        s_ = "c = (\n+d+\n+e)"
+        s = "c = (+d + +e)"
+        test_format(s_, s)
+        for style in ALL_STYLES
+            test_format(s, nothing, style; ast=true)
+        end
+    end
+
     @testset "795" begin
         s = "a[1 .+ 1 .+ 1]"
         for style in ALL_STYLES
