@@ -35,7 +35,7 @@ struct InvalidFileError <: Exception
     filename::AbstractString
 end
 function Base.showerror(io::IO, e::InvalidFileError)
-    print(io, "\nthe file to be formatted was not a Julia or Markdown file: $(e.filename)\n")
+    print(io, "\nthe file to be formatted ($(e.filename)) was not a Julia or Markdown file\n")
 end
 
 const UNIX_TO_WINDOWS = r"\r?\n" => "\r\n"
