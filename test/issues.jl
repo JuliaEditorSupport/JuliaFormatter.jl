@@ -2425,6 +2425,15 @@ end
         test_format(s, s)
     end
 
+    @testset "922" begin
+        s = "x::T{\n    # com\n    F\n} = z()"
+        for style in ALL_STYLES
+            test_format(s, nothing, style; ast=true)
+            sout = format_text(s, style)
+            @test occursin("# com", sout)
+        end
+    end
+
     @testset "926" begin
         # Function calls with binary operators as arguments should preserve whitespace.
         # Previously `f(*, +, a, b)` was formatted as `f(*,+,a,b)`.
