@@ -1,3 +1,7 @@
+# v2.10.1
+
+Improve handling of inline comments at the top-level of a block. (#1194, #1195)
+
 # v2.10.0
 
 Added a new formatting option, `max_iterations`, which controls the number of rounds of formatting that JuliaFormatter will apply.

@@ -1182,23 +1182,32 @@ function add_node!(
 
     # Handle whitespace around HASHEQCOMMENT nodes.
     if n.typ === HASHEQCOMMENT && !isempty(tnodes)
-        # If join_lines = false, then a newline will be inserted before the HASHEQCOMMENT
-        # node. This will cause (for example) `a #= hi =#` to be formatted to `a \n #= hi
-        # =#`, which is undesirable. So we manually set join_lines = true.
-        join_lines = true
+        if t.endline >= n.startline
+            # The comment is on the same line as the previous node in the source
+            # (e.g. `a #= hi =#`). Force join to keep it there.
+            join_lines = true
+        elseif max_padding == -1
+            # The caller didn't explicitly request a new line (max_padding = -1 is the
+            # default, used by e.g. add_hasheq_comment! and the hcat handler). Force
+            # join_lines = true to preserve the old behavior for those call sites.
+            join_lines = true
+        end
         # Add a space before a `#= =#` comment to avoid it being
-        # glued to the previous node when printed.
+        # glued to the previous node when printed, but only when the comment
+        # stays on the same line (join_lines = true).
         #
         # TODO(penelopeysm): The PLACEHOLDER check catches cases where there is a
         # Placeholder(1) before the comment, which can be turned into a Whitespace(1).
         # I'm not sure if this check is therefore overly broad since it also catches
         # Placeholder(0) nodes.
-        nt = (tnodes[end]::FST).typ
-        if nt !== WHITESPACE &&
-           nt !== NEWLINE &&
-           nt !== PLACEHOLDER &&
-           !is_opener(tnodes[end])
-            add_node!(t, Whitespace(1), s)
+        if join_lines
+            nt = (tnodes[end]::FST).typ
+            if nt !== WHITESPACE &&
+               nt !== NEWLINE &&
+               nt !== PLACEHOLDER &&
+               !is_opener(tnodes[end])
+                add_node!(t, Whitespace(1), s)
+            end
         end
     end
 

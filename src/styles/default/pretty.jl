@@ -1040,7 +1040,15 @@ end
 # (keeping it on the current line when it trails code) instead of losing it.
 #
 # Returns true if the comment was added, false otherwise.
-function add_hasheq_comment!(t::FST, n::FST, s::State)
+"""
+Add a `#= =#` comment node to the FST. Returns `false` if `n` is not a HASHEQCOMMENT.
+
+When `force_join` is `true`, the comment is always joined to the previous node
+(used by contexts like hcat where the nesting phase manages line breaks). When
+`false` (the default), a comment that appears on its own line in the source is
+placed on a new line instead of being merged onto the previous statement.
+"""
+function add_hasheq_comment!(t::FST, n::FST, s::State; force_join::Bool = false)
     n.typ === HASHEQCOMMENT || return false
     tnodes = t.nodes::Vector{FST}
     if isempty(tnodes)
@@ -1050,10 +1058,18 @@ function add_hasheq_comment!(t::FST, n::FST, s::State)
         # preceding source, duplicating unrelated comments.
         t.startline = n.startline
         t.endline = n.endline
-    elseif !(tnodes[end].typ in (NEWLINE, WHITESPACE, PLACEHOLDER, NOTCODE))
-        add_node!(t, Whitespace(1), s)
+        add_node!(t, n, s; join_lines = true)
+    elseif !force_join && t.endline < n.startline && !is_prev_newline(tnodes[end])
+        # The comment is on its own line in the source. Use max_padding = 0 so
+        # that add_node! respects this and inserts a newline (its HASHEQCOMMENT
+        # handler only forces join_lines when max_padding is -1).
+        add_node!(t, n, s; max_padding = 0)
+    else
+        if !(tnodes[end].typ in (NEWLINE, WHITESPACE, PLACEHOLDER, NOTCODE))
+            add_node!(t, Whitespace(1), s)
+        end
+        add_node!(t, n, s; join_lines = true)
     end
-    add_node!(t, n, s; join_lines = true)
     return true
 end
 
@@ -4037,7 +4053,7 @@ function p_hcat(
             add_node!(t, n, s; join_lines = true)
         elseif JuliaSyntax.is_whitespace(a)
             if kind(a) === K"Comment"
-                prev_comment_was_dropped = !add_hasheq_comment!(t, n, s)
+                prev_comment_was_dropped = !add_hasheq_comment!(t, n, s; force_join = true)
             elseif is_newline_after_2semicolons(cst, i)
                 # See above: we cannot convert ';;\n' to ';;'
                 add_node!(t, Newline(; nest_behavior = AlwaysNest), s)

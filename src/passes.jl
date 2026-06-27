@@ -847,6 +847,7 @@ function short_circuit_to_if_pass!(fst::FST, s::State)
                 n ->
                     n.typ !== HASHEQCOMMENT &&
                     n.typ !== WHITESPACE &&
+                    n.typ !== NEWLINE &&
                     n.typ !== PLACEHOLDER,
                 fst.nodes::Vector{FST},
             )
