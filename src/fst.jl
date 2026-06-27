@@ -1182,23 +1182,29 @@ function add_node!(
 
     # Handle whitespace around HASHEQCOMMENT nodes.
     if n.typ === HASHEQCOMMENT && !isempty(tnodes)
-        # If join_lines = false, then a newline will be inserted before the HASHEQCOMMENT
-        # node. This will cause (for example) `a #= hi =#` to be formatted to `a \n #= hi
-        # =#`, which is undesirable. So we manually set join_lines = true.
-        join_lines = true
-        # Add a space before a `#= =#` comment to avoid it being
-        # glued to the previous node when printed.
-        #
-        # TODO(penelopeysm): The PLACEHOLDER check catches cases where there is a
-        # Placeholder(1) before the comment, which can be turned into a Whitespace(1).
-        # I'm not sure if this check is therefore overly broad since it also catches
-        # Placeholder(0) nodes.
-        nt = (tnodes[end]::FST).typ
-        if nt !== WHITESPACE &&
-           nt !== NEWLINE &&
-           nt !== PLACEHOLDER &&
-           !is_opener(tnodes[end])
-            add_node!(t, Whitespace(1), s)
+        # When the `#= =#` comment is on the same line as the previous node in the
+        # original source (e.g. `a #= hi =#`), force join_lines = true to prevent it
+        # from being moved to a new line. But when it's on a separate line (e.g.
+        # `a\n#= hi =#`), respect the caller's join_lines / max_padding so that a
+        # newline is properly inserted.
+        if t.endline >= n.startline
+            join_lines = true
+            # Add a space before a `#= =#` comment to avoid it being
+            # glued to the previous node when printed.
+            #
+            # TODO(penelopeysm): The PLACEHOLDER check catches cases where there is a
+            # Placeholder(1) before the comment, which can be turned into a Whitespace(1).
+            # I'm not sure if this check is therefore overly broad since it also catches
+            # Placeholder(0) nodes.
+            nt = (tnodes[end]::FST).typ
+            if nt !== WHITESPACE &&
+               nt !== NEWLINE &&
+               nt !== PLACEHOLDER &&
+               !is_opener(tnodes[end])
+                add_node!(t, Whitespace(1), s)
+            end
+        else
+            join_lines = false
         end
     end
 

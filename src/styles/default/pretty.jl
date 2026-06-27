@@ -1050,9 +1050,9 @@ function add_hasheq_comment!(t::FST, n::FST, s::State)
         # preceding source, duplicating unrelated comments.
         t.startline = n.startline
         t.endline = n.endline
-    elseif !(tnodes[end].typ in (NEWLINE, WHITESPACE, PLACEHOLDER, NOTCODE))
-        add_node!(t, Whitespace(1), s)
     end
+    # Let add_node! decide whether to join based on whether the comment is on
+    # the same line as the previous node (see the HASHEQCOMMENT handling there).
     add_node!(t, n, s; join_lines = true)
     return true
 end
