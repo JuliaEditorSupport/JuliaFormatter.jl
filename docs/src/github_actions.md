@@ -25,7 +25,7 @@ jobs:
       - uses: julia-actions/cache@a45e8fa8be21c18a06b7177052533149e61e9b38 # 3.1.0
       - name: Install JuliaFormatter
         run: |
-          julia -e 'using Pkg; Pkg.Apps.add(name="JuliaFormatter", version=v"2.10.1")'
+          julia -e 'using Pkg; Pkg.Registry.add("General"); Pkg.Registry.update(); Pkg.Apps.add(name="JuliaFormatter", version=v"2.10.1")'
       - name: Check formatting
         run: |
           ${HOME}/.julia/bin/jlfmt --check --verbose .
