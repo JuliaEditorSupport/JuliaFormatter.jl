@@ -92,7 +92,18 @@ repos:
     entry: julia --startup-file=no ... # The same command as above.
 ```
 
-Unfortunately, there are some downsides to this approach.
-Firstly, JuliaFormatter cannot provide such a hook for you because the `entry` field needs to be customised for your system (e.g. the sysimage path).
-Furthermore, arguably, such a hook should not be shared across users (unless your sysimage is also shared!).
-This means that the pre-commit hook above should not be committed to source control.
+Unfortunately, there is one finicky bit with this approach, which relates to the fact that *your* sysimage is not portable across machines.
+This means that you probably should not commit the above `.pre-commit-config.yaml` to source control, as it won't work for other people who clone your repository.
+To get around this, you can do one of the following, depending on whether your repository already has a `.pre-commit-config.yaml` file.
+
+- If you *don't* have one yet, then you can add `.pre-commit-config.yaml` to `.git/info/exclude`.
+  This file behaves exactly like `.gitignore`, except that it is user-specific (i.e., you aren't stopping anyone else from adding a `.pre-commit-config.yaml` file).
+
+- If you *already* have one, for example a pre-commit config that uses the slower path, then you just want to make sure that you don't commit your local changes.
+  To do this you can run
+
+  ```bash
+  git update-index --skip-worktree .pre-commit-config.yaml
+  ```
+
+  This tells git to ignore any local changes you make to the file.
