@@ -61,4 +61,4 @@ jobs:
 
       - uses: julia-actions/julia-buildpkg@e3eb439fad4f9aba7da2667e7510e4a46ebc46e1 # 1.7.0
 
-      - uses: julia-actions/julia-runtest@fc07e51ec99db23b29943e95406b5762501e2897 # 1.11.5
+      - uses: julia-actions/julia-runtest@6e050c8013b833b1195105ff2fce9cd802f53271 # 1.12.0
