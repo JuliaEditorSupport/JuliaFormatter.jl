@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   regression:
-    name: ${{ matrix.style }}-${{ matrix.orgs_label }}
+    name: ${{ matrix.style }}-${{ matrix.orgs_label }}-${{ matrix.version }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
 
