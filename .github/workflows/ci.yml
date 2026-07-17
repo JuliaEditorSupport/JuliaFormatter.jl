@@ -19,33 +19,35 @@ jobs:
   test:
     name: Julia ${{ matrix.version }} - ${{ matrix.os }} - ${{ matrix.arch }}
     runs-on: ${{ matrix.os }}
-    # The default timeout for each job is 6 hours, we set it to 2 hours instead
-    # Long enough to tell us something's wrong, short enough to catch it early
-    timeout-minutes: 120
+    timeout-minutes: 30
 
     strategy:
       fail-fast: false
       matrix:
         version:
-          - '1.10'
-          - '1.11'
-          - '1.12'
+          - '1'
         os:
           - ubuntu-latest
           - windows-latest
-          - macos-15-intel # Intel (x64) runner
+          - macos-15-intel
         arch:
           - x64
         include:
-          # Keep Windows x86 coverage if needed
-          - os: windows-latest
-            version: '1.10'
-            arch: x86
-          # macOS ARM64 (Apple Silicon)
+          # Apple Silicon
           - os: macos-latest
             version: '1'
             arch: aarch64
-          # 1.13
+          # x86
+          - os: windows-latest
+            version: '1'
+            arch: x86
+          # Older and pre-release versions
+          - os: ubuntu-latest
+            version: '1.10'
+            arch: x64
+          - os: ubuntu-latest
+            version: '1.11'
+            arch: x64
           - os: ubuntu-latest
             version: 'pre'
             arch: x64
