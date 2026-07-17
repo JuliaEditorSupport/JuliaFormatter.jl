@@ -17,27 +17,16 @@ concurrency:
 
 jobs:
   regression:
-    name: ${{ matrix.style }}-${{ matrix.orgs_label }}-${{ matrix.version }}
+    name: ${{ matrix.style }}-${{ matrix.version }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
 
     strategy:
       fail-fast: false
       matrix:
-        orgs_label:
-          - Group1
-          - Group2
-          - Group3
         style:
           - default
           - blue
-        include:
-          - orgs_label: Group1
-            orgs: "JuliaLang JuliaPlots MakieOrg"
-          - orgs_label: Group2
-            orgs: "SciML JuliaDiff JuliaStats TuringLang EnzymeAD"
-          - orgs_label: Group3
-            orgs: "jump-dev trixi-framework oscar-system"
         version:
           - '1'
           - 'pre'
@@ -47,7 +36,7 @@ jobs:
         with:
           path: formatter
       - uses: julia-actions/setup-julia@fa02766e078afaaf09b14210362cee14137e6a32 # 3.0.2
-        with: 
+        with:
           version: ${{ matrix.version }}
 
       - uses: julia-actions/cache@a45e8fa8be21c18a06b7177052533149e61e9b38 # 3.1.0
@@ -57,15 +46,15 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # 6.1.0
         with:
           path: target
-          key: repos-${{ matrix.orgs_label }}-${{ github.run_id }}
+          key: repos-${{ github.run_id }}
           restore-keys: |
-            repos-${{ matrix.orgs_label }}-
+            repos-
 
       - name: Clone target repos
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          for org in ${{ matrix.orgs }}; do
+          for org in JuliaLang JuliaPlots MakieOrg SciML JuliaDiff JuliaStats TuringLang EnzymeAD jump-dev trixi-framework oscar-system; do
             for name in $(gh repo list "$org" --limit 1000 --json name,isFork,pushedAt --jq '.[] | select(((.name | endswith(".jl")) or .name == "julia") and (.isFork | not) and (.pushedAt >= "2024-01-01")) | .name'); do
               dest="target/$org/$name"
               [[ -d "$dest" ]] && continue
