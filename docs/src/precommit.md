@@ -71,7 +71,7 @@ The path to the `jlfmt` executable can be specified in the `args` field of the h
 ```yaml
 repos:
 - repo: https://github.com/JuliaEditorSupport/JuliaFormatter.jl
-  rev: TODO TODO
+  rev: 0935890389c9fbc45f4ee150064c0abe5340b6a9 # v2.4.0
   hooks:
   - id: "jlfmt"
     args: ["--jlfmt-path=/path/to/jlfmt"]

@@ -1,3 +1,7 @@
+# v2.10.2
+
+Documentation improvements only.
+
 # v2.10.1
 
 Improve handling of inline comments at the top-level of a block. (#1194, #1195)
