@@ -711,6 +711,59 @@ end
         end
     end
 
+    @testset "issue 1203" begin
+
+        # Use let blocks to check indentation.
+        triple = """
+        begin
+            \"""
+            doc
+            \"""
+            f() = 0
+        end
+        """
+
+        single = """
+        begin
+            "doc"
+            f() = 0
+        end
+        """
+
+        test_format(triple, triple; format_docstrings=true)
+        test_format(single, triple; format_docstrings=true)
+        test_format(single, single; format_docstrings=true)
+
+        # Not exactly good taste, but the option leaves it alone as promised.
+        single_multiline = """
+        begin
+            "line1\\n\\
+            line2"
+            f() = 0
+        end
+        """
+        test_format(single_multiline, single_multiline; format_docstrings=true)
+
+        # Still drop trailing whitespace on the first line (#667).
+        test_format(
+            """
+            begin
+                "$("  ")
+                doc
+                "
+                f() = 0
+            end
+            """,
+            """
+            begin
+                "doc"   # <- This docstring is correctly formatted.
+                f() = 0 # Can somebody help explain why newlines are being inserted here?
+            end
+            """,
+            ; format_docstrings=true)
+
+    end
+
     @testset "align struct fields" begin
         str_ = """
         struct Foo

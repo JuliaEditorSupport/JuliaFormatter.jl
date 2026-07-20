@@ -51,6 +51,12 @@ end
 function format_docstring(style::AbstractStyle, state::State, text::AbstractString)
     state_indent = state.indent
     start_boundary = findfirst(!=('"'), text)
+    is_triple_quoted = let
+        # Assuming well-formedness, the string is triple-quoted iif
+        # the chars after/before (o)pening/(c)losing quotes are also quotes.
+        o, c = map(f -> f(==('"'), text), (findfirst, findlast))
+        text[o+1] == text[c-1] == '"'
+    end
     # if the docstring is non-empty
     if !isnothing(start_boundary)
         _end_boundary = findlast(!=('"'), text)
@@ -119,21 +125,24 @@ function format_docstring(style::AbstractStyle, state::State, text::AbstractStri
         # the docstring is empty
         formatted = ""
     end
-    # Indent all non-first lines to match the current parser indent
-    buf = IOBuffer()
-    indent = " "^state_indent
-    # This is the first line, so the rest have to be indented. A newline for it will be added below
-    write(buf, "\"\"\"")
-    for line in split(formatted, '\n')
-        # The last line will be empty and will turn into an indent, so no need to indent the last line below
-        write(buf, '\n')
-        # don't write empty lines #667
-        if !all(isspace, line)
-            write(buf, indent)
-            write(buf, line)
-        end
+    # Render into text lines, taking care of original indentation,
+    quot = is_triple_quoted ? "\"\"\"" : '"'
+    indentation = " "^state_indent
+    indent(line) = indentation * line
+    clean(line) = all(isspace, line) ? "" : line # don't write empty lines #667
+    lines = split(formatted, '\n') # Always contains at least an empty last line.
+    if is_triple_quoted
+        prep = line -> clean(indent(line)) # All lines are prepared the same way.
+        lines = Iterators.map(prep, lines)
+        quot * '\n' * join(lines, '\n') * indent(quot)
+    else
+        # The first line needs no indentation.
+        lines = Iterators.Stateful(lines[1:end-1]) # (drop last empty line)
+        first = popfirst!(lines) |> clean
+        isempty(lines) && return quot * first * quot
+        # Upcoming ones do.
+        prep = line -> '\n' * indent(line)
+        lines = Iterators.map(prep, lines)
+        quot * first * join(lines) * quot
     end
-    write(buf, indent)
-    write(buf, "\"\"\"")
-    String(take!(buf))
 end
