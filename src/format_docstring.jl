@@ -49,7 +49,9 @@ function block_modifier(rule::FormatRule)
 end
 
 function format_docstring(style::AbstractStyle, state::State, text::AbstractString)
-    state_indent = state.indent
+    is_triple_quoted =
+        state.opts.enforce_triplequoted_docstrings ||
+        (startswith(text, "\"\"\"") && endswith(text, "\"\"\""))
     start_boundary = findfirst(!=('"'), text)
     # if the docstring is non-empty
     if !isnothing(start_boundary)
@@ -119,21 +121,24 @@ function format_docstring(style::AbstractStyle, state::State, text::AbstractStri
         # the docstring is empty
         formatted = ""
     end
-    # Indent all non-first lines to match the current parser indent
-    buf = IOBuffer()
-    indent = " "^state_indent
-    # This is the first line, so the rest have to be indented. A newline for it will be added below
-    write(buf, "\"\"\"")
-    for line in split(formatted, '\n')
-        # The last line will be empty and will turn into an indent, so no need to indent the last line below
-        write(buf, '\n')
-        # don't write empty lines #667
-        if !all(isspace, line)
-            write(buf, indent)
-            write(buf, line)
-        end
+    # Render into text lines, taking care of original indentation,
+    quot = is_triple_quoted ? "\"\"\"" : '"'
+    indentation = " "^state.indent
+    indent(line) = indentation * line
+    clean(line) = all(isspace, line) ? "" : line # don't write empty lines #667
+    lines = split(formatted, '\n')
+    last(lines) == "" || # Legacy guarantee.
+        error("unreachable: `formatted` should end in empty string. Please report this at \
+               https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues!")
+    if is_triple_quoted
+        prep = line -> clean(indent(line)) # All lines are prepared the same way.
+        lines = Iterators.map(prep, lines)
+        quot * '\n' * join(lines, '\n') * indent(quot)
+    else
+        # The first line needs no indentation.
+        first = clean(lines[1])
+        prep = line -> '\n' * indent(line)
+        lines = Iterators.map(prep, lines[2:(end-1)]) # (drop last empty line)
+        quot * first * join(lines) * quot
     end
-    write(buf, indent)
-    write(buf, "\"\"\"")
-    String(take!(buf))
 end

@@ -268,6 +268,8 @@ using JuliaFormatter: DefaultStyle, YASStyle, BlueStyle, SciMLStyle, MinimalStyl
             @test parse_args(["--conditional-to-if=false"]).config.options.conditional_to_if == false
             @test parse_args(["--disallow-single-arg-nesting=true"]).config.options.disallow_single_arg_nesting == true
             @test parse_args(["--disallow-single-arg-nesting=false"]).config.options.disallow_single_arg_nesting == false
+            @test parse_args(["--enforce-triplequoted-docstrings=true"]).config.options.enforce_triplequoted_docstrings == true
+            @test parse_args(["--enforce-triplequoted-docstrings=false"]).config.options.enforce_triplequoted_docstrings == false
             @test parse_args(["--force-long-function-def=true"]).config.options.force_long_function_def == true
             @test parse_args(["--force-long-function-def=false"]).config.options.force_long_function_def == false
             @test parse_args(["--format-docstrings=true"]).config.options.format_docstrings == true

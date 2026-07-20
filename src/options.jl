@@ -37,6 +37,7 @@ Base.@kwdef struct Options{T<:_Unset}
     annotate_untyped_fields_with_any::Union{T,Bool} = true
     conditional_to_if::Union{T,Bool} = false
     disallow_single_arg_nesting::Union{T,Bool} = false
+    enforce_triplequoted_docstrings::Union{T,Bool} = true
     for_in_replacement::Union{T,String} = "in"
     force_long_function_def::Union{T,Bool} = false
     format_docstrings::Union{T,Bool} = false
