@@ -406,6 +406,13 @@ const PARSER = ArgParser(
         group = FormattingGroup,
     ),
     option(
+        "--enforce-triplequote-docstring";
+        dest = :enforce_triplequote_docstring,
+        type = Bool,
+        help = """Transform `"` into `\"""` in docstrings.""",
+        group = FormattingGroup,
+    ),
+    option(
         "--for-in-replacement";
         dest = :for_in_replacement,
         type = String,

@@ -933,7 +933,9 @@ function p_globalrefdoc(
                 max_padding = 0,
             )
         elseif i == length(childs)
-            add_node!(t, pretty(style, c, s, ctx, lineage), s; max_padding = 0)
+            end_node = pretty(style, c, s, ctx, lineage)
+            end_node.startline = t.endline
+            add_node!(t, end_node, s; max_padding = 0)
         else
             add_node!(t, pretty(style, c, s, ctx, lineage), s)
         end

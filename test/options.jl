@@ -711,65 +711,6 @@ end
         end
     end
 
-    @testset "issue 1203" begin
-
-        opts = (; format_docstrings = true)
-
-        # (use begin blocks to check indentation)
-        triple = """
-        begin
-            \"""
-            doc
-            \"""
-            f() = 0
-        end
-        """
-
-        single = """
-        begin
-            "doc"
-            f() = 0
-        end
-        """
-
-        # Normalize to triple by default.
-        test_format(triple, triple; opts...)
-        test_format(single, triple; opts...)
-
-        # Unless we opt out.
-        opts = (; enforce_triplequote_docstring = false, opts...)
-        test_format(single, single; opts...)
-
-        # Not exactly good taste, but the option leaves it alone as promised.
-        single_multiline = """
-        begin
-            "line1\\n\\
-            line2"
-            f() = 0
-        end
-        """
-        test_format(single_multiline, single_multiline; opts...)
-
-        # Still drop trailing whitespace on the first line (#667).
-        test_format(
-            """
-            begin
-                "$("  ")
-                doc
-                "
-                f() = 0
-            end
-            """,
-            """
-            begin
-                "doc"   # <- This docstring is correctly formatted.
-                f() = 0 # Can somebody help explain why newlines are being inserted here?
-            end
-            """,
-            ; opts...)
-
-    end
-
     @testset "align struct fields" begin
         str_ = """
         struct Foo

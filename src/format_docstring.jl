@@ -49,14 +49,10 @@ function block_modifier(rule::FormatRule)
 end
 
 function format_docstring(style::AbstractStyle, state::State, text::AbstractString)
-    state_indent = state.indent
+    is_triple_quoted =
+        state.opts.enforce_triplequote_docstring ||
+        (startswith(text, "\"\"\"") && endswith(text, "\"\"\""))
     start_boundary = findfirst(!=('"'), text)
-    is_triple_quoted = state.opts.enforce_triplequote_docstring || let
-        # Assuming well-formedness, the string is triple-quoted iif
-        # the chars after/before (o)pening/(c)losing quotes are also quotes.
-        o, c = map(f -> f(==('"'), text), (findfirst, findlast))
-        text[o+1] == text[c-1] == '"'
-    end
     # if the docstring is non-empty
     if !isnothing(start_boundary)
         _end_boundary = findlast(!=('"'), text)
@@ -127,22 +123,22 @@ function format_docstring(style::AbstractStyle, state::State, text::AbstractStri
     end
     # Render into text lines, taking care of original indentation,
     quot = is_triple_quoted ? "\"\"\"" : '"'
-    indentation = " "^state_indent
+    indentation = " "^state.indent
     indent(line) = indentation * line
     clean(line) = all(isspace, line) ? "" : line # don't write empty lines #667
-    lines = split(formatted, '\n') # Always contains at least an empty last line.
+    lines = split(formatted, '\n')
+    last(lines) == "" || # Legacy guarantee.
+        error("unreachable: `formatted` should end in empty string. Please report this at \
+               https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues!")
     if is_triple_quoted
         prep = line -> clean(indent(line)) # All lines are prepared the same way.
         lines = Iterators.map(prep, lines)
         quot * '\n' * join(lines, '\n') * indent(quot)
     else
         # The first line needs no indentation.
-        lines = Iterators.Stateful(lines[1:end-1]) # (drop last empty line)
-        first = popfirst!(lines) |> clean
-        isempty(lines) && return quot * first * quot
-        # Upcoming ones do.
+        first = clean(lines[1])
         prep = line -> '\n' * indent(line)
-        lines = Iterators.map(prep, lines)
+        lines = Iterators.map(prep, lines[2:(end-1)]) # (drop last empty line)
         quot * first * join(lines) * quot
     end
 end
