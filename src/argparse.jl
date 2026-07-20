@@ -406,10 +406,10 @@ const PARSER = ArgParser(
         group = FormattingGroup,
     ),
     option(
-        "--enforce-triplequote-docstring";
-        dest = :enforce_triplequote_docstring,
+        "--enforce-triplequoted-docstrings";
+        dest = :enforce_triplequoted_docstrings,
         type = Bool,
-        help = """Transform `"` into `\"""` in docstrings.""",
+        help = """Transform `"..."` into `\"""...\"""` in docstrings.""",
         group = FormattingGroup,
     ),
     option(

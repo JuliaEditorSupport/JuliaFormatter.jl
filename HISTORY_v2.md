@@ -1,3 +1,9 @@
+# v2.11.0
+
+Added a new formatting option, `enforce_triplequoted_docstrings`, which controls whether single-quoted docstrings are expanded to triple-quoted docstrings.
+By default this option is `true`, which is consistent with preexisting behaviour.
+This option is only relevant if `format_docstrings` is also `true` (otherwise docstrings will always be ignored). (#1203, #1204)
+
 # v2.10.2
 
 Documentation improvements only.

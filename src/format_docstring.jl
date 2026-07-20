@@ -50,7 +50,7 @@ end
 
 function format_docstring(style::AbstractStyle, state::State, text::AbstractString)
     is_triple_quoted =
-        state.opts.enforce_triplequote_docstring ||
+        state.opts.enforce_triplequoted_docstrings ||
         (startswith(text, "\"\"\"") && endswith(text, "\"\"\""))
     start_boundary = findfirst(!=('"'), text)
     # if the docstring is non-empty
