@@ -64,6 +64,7 @@ If you absolutely must enable them, you may need to run the formatter multiple t
 | [`annotate_untyped_fields_with_any`](@ref options-annotate-untyped-fields-with-any) | ⚠️    | `true`    | `true`      | **`false`** | `true`       | **`false`**   |
 | [`conditional_to_if`](@ref options-conditional-to-if)                               | 🪃 ♻️ | `false`   | `false`     | **`true`**  | `false`      | `false`       |
 | [`disallow_single_arg_nesting`](@ref options-disallow-single-arg-nesting)           | 📐    | `false`   | `false`     | `false`     | **`true`**   | `false`       |
+| [`enforce_triplequote_docstring`](@ref options-enforce-triplequote-docstring)       | ⚠️    | `true`    | `true`      | `true`      | `true`       | `true`        |
 | [`for_in_replacement`](@ref options-for-in-replacement)                             | ♻️    | `"in"`    | `"in"`      | `"in"`      | `"in"`       | `"in"`        |
 | [`force_long_function_def`](@ref options-force-long-function-def)                   | ⚠️    | `false`   | `false`     | `false`     | `false`      | `false`       |
 | [`format_docstrings`](@ref options-format-docstrings)                               | ⚠️    | `false`   | `false`     | `false`     | `false`      | `false`       |
@@ -329,6 +330,14 @@ function_call("String argument")
 [array_item(10)]
 {key => value("String value")}
 ```
+
+## [`enforce_triplequote_docstring`](@id options-enforce-triplequote-docstring)
+
+Default: `true`
+
+Ensure that docstrings always use triple `"""` quoting marks.
+
+Only useful if [`format_docstrings`](@ref options-format-docstrings) is on.
 
 ## [`for_in_replacement`](@id options-for-in-replacement)
 

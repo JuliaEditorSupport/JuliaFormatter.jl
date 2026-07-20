@@ -51,7 +51,7 @@ end
 function format_docstring(style::AbstractStyle, state::State, text::AbstractString)
     state_indent = state.indent
     start_boundary = findfirst(!=('"'), text)
-    is_triple_quoted = let
+    is_triple_quoted = state.opts.enforce_triplequote_docstring || let
         # Assuming well-formedness, the string is triple-quoted iif
         # the chars after/before (o)pening/(c)losing quotes are also quotes.
         o, c = map(f -> f(==('"'), text), (findfirst, findlast))

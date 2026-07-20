@@ -713,7 +713,9 @@ end
 
     @testset "issue 1203" begin
 
-        # Use let blocks to check indentation.
+        opts = (; format_docstrings = true)
+
+        # (use begin blocks to check indentation)
         triple = """
         begin
             \"""
@@ -730,9 +732,13 @@ end
         end
         """
 
-        test_format(triple, triple; format_docstrings=true)
-        test_format(single, triple; format_docstrings=true)
-        test_format(single, single; format_docstrings=true)
+        # Normalize to triple by default.
+        test_format(triple, triple; opts...)
+        test_format(single, triple; opts...)
+
+        # Unless we opt out.
+        opts = (; enforce_triplequote_docstring = false, opts...)
+        test_format(single, single; opts...)
 
         # Not exactly good taste, but the option leaves it alone as promised.
         single_multiline = """
@@ -742,7 +748,7 @@ end
             f() = 0
         end
         """
-        test_format(single_multiline, single_multiline; format_docstrings=true)
+        test_format(single_multiline, single_multiline; opts...)
 
         # Still drop trailing whitespace on the first line (#667).
         test_format(
@@ -760,7 +766,7 @@ end
                 f() = 0 # Can somebody help explain why newlines are being inserted here?
             end
             """,
-            ; format_docstrings=true)
+            ; opts...)
 
     end
 
