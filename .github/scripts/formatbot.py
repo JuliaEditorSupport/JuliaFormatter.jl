@@ -24,7 +24,8 @@ FORMATTER_REPO = "JuliaEditorSupport/JuliaFormatter.jl"
 
 
 def git(target_dir, *args):
-    subprocess.run(["git", "-C", target_dir, *args], check=True)
+    subprocess.run(["git", "-C", target_dir, *args], check=True,
+                   stdout=subprocess.DEVNULL)
 
 
 def jlfmt(project, jlfmt_args, format_path):
@@ -32,7 +33,7 @@ def jlfmt(project, jlfmt_args, format_path):
         "julia", f"--project={project}", "-e",
         "import Pkg; Pkg.instantiate(); using JuliaFormatter; exit(JuliaFormatter.main(ARGS))",
         "--", *jlfmt_args, format_path,
-    ])
+    ], stdout=sys.stderr)
 
 
 def build_header(repo, rev, opts, base_ref, head_sha, repo_url, run_url):
@@ -79,6 +80,7 @@ def parse_args(argv):
     parser.add_argument("--target-dir", help="directory to clone the target repo into (default: a temporary directory)")
     parser.add_argument("--subdir", help="only format a subdirectory of the target repo")
     parser.add_argument("--max-diff-bytes", type=int, default=50_000, help="truncate diff display after this many bytes (default: 50000)")
+    parser.add_argument("--diff-output", help="write the raw diff to this file")
     args, jlfmt_extra = parser.parse_known_args(argv)
     args.jlfmt_args = ["--inplace"] + jlfmt_extra
     return args
@@ -164,6 +166,7 @@ def main():
             jlfmt(formatter_base_dir, args.jlfmt_args, format_path)
             base_idempotent = subprocess.run(
                 ["git", "-C", target_dir, "diff", "--exit-code"],
+                stdout=subprocess.DEVNULL,
             ).returncode == 0
             git(target_dir, "checkout", "--", ".")
 
@@ -184,6 +187,7 @@ def main():
         jlfmt(args.formatter_pr, args.jlfmt_args, format_path)
         pr_idempotent = subprocess.run(
             ["git", "-C", target_dir, "diff", "--exit-code"],
+            stdout=subprocess.DEVNULL,
         ).returncode == 0
         git(target_dir, "checkout", "--", ".")
 
@@ -196,6 +200,11 @@ def main():
             text=True,
         )
         diff_text = diff_result.stdout
+
+        if args.diff_output is not None:
+            from pathlib import Path
+            Path(args.diff_output).parent.mkdir(parents=True, exist_ok=True)
+            Path(args.diff_output).write_text(diff_text)
 
         # --- Build idempotence warning ---
         non_idempotent = []
