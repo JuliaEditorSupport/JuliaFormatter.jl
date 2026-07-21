@@ -6,6 +6,9 @@ This option is only relevant if `format_docstrings` is also `true` (otherwise do
 
 When encountering invalid Julia code in docstrings JuliaFormatter will avoid formatting the code instead of crashing. (#1206, #1207)
 
+When invalid formatting options are passed to `format_text()` and similar functions, JuliaFormatter now emits an info message.
+(Note that for the CLI, specifying invalid arguments will cause an error.) (#1205, #1213)
+
 # v2.10.2
 
 Documentation improvements only.
