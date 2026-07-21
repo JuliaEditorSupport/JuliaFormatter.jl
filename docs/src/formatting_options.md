@@ -381,6 +381,10 @@ Format code docstrings with the same options used for the code source.
 
 Markdown is formatted with [`CommonMark`](https://github.com/MichaelHatherly/CommonMark.jl) alongside Julia code.
 
+!!! note "Invalid code"
+Invalid Julia code inside docstrings is silently ignored.
+This is because docstrings sometimes intentionally contain invalid code that is meant more as an illustration than as a working example.
+
 ## [`import_to_using`](@id options-import-to-using)
 
 Default: `false`

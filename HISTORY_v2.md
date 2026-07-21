@@ -4,6 +4,8 @@ Added a new formatting option, `enforce_triplequoted_docstrings`, which controls
 By default this option is `true`, which is consistent with preexisting behaviour.
 This option is only relevant if `format_docstrings` is also `true` (otherwise docstrings will always be ignored). (#1203, #1204)
 
+When encountering invalid Julia code in docstrings JuliaFormatter will avoid formatting the code instead of crashing. (#1206, #1207)
+
 # v2.10.2
 
 Documentation improvements only.

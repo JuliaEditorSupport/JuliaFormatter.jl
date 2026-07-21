@@ -9,7 +9,11 @@ using Test
 function run_pretty(text::String; style = DefaultStyle(), opts = Options())
     d = JuliaFormatter.Document(text)
     s = JuliaFormatter.State(d, opts)
-    g = JuliaSyntax.parseall(JuliaSyntax.GreenNode, text; version=JuliaFormatter.SUPPORTED_SYNTAX_VERSION)
+    g = JuliaSyntax.parseall(
+        JuliaSyntax.GreenNode,
+        text;
+        version = JuliaFormatter.SUPPORTED_SYNTAX_VERSION,
+    )
     t = JuliaFormatter.pretty(style, g, s)
     t
 end
@@ -164,8 +168,16 @@ end
                 test_format("x $dot|> M.f", "M.f$dot(x)"; pipe_to_function_call = true)
                 test_format("x $dot|> T{x}", "T{x}$dot(x)"; pipe_to_function_call = true)
                 # Check that callable is parenthesised if necessary
-                test_format("x $dot|> y -> y + 1", "(y -> y + 1)$dot(x)"; pipe_to_function_call = true)
-                test_format("x $dot|> f ∘ g", "(f ∘ g)$dot(x)"; pipe_to_function_call = true)
+                test_format(
+                    "x $dot|> y -> y + 1",
+                    "(y -> y + 1)$dot(x)";
+                    pipe_to_function_call = true,
+                )
+                test_format(
+                    "x $dot|> f ∘ g",
+                    "(f ∘ g)$dot(x)";
+                    pipe_to_function_call = true,
+                )
             end
         end
 
@@ -177,7 +189,11 @@ end
         @testset "elision of extra argument parentheses" begin
             test_format("(x) |> f", "f(x)"; pipe_to_function_call = true)
             test_format("(x) .|> f", "f.(x)"; pipe_to_function_call = true)
-            test_format("(a for a in x) |> f()", "f()(a for a in x)"; pipe_to_function_call = true)
+            test_format(
+                "(a for a in x) |> f()",
+                "f()(a for a in x)";
+                pipe_to_function_call = true,
+            )
             # make sure that genuine tuples don't get de-parenthesised
             test_format("(x, y) |> f()", "f()((x, y))"; pipe_to_function_call = true)
             test_format("(x,) |> f()", "f()((x,))"; pipe_to_function_call = true)
@@ -299,416 +315,121 @@ end
         function foo(a)
             bodybodybody
         end"""
-        test_format(str_, str_; indent=4, margin=length(str_), short_to_long_function_def = true)
-        test_format(str_, str; indent=4, margin=length(str_) - 1, short_to_long_function_def = true)
+        test_format(
+            str_,
+            str_;
+            indent = 4,
+            margin = length(str_),
+            short_to_long_function_def = true,
+        )
+        test_format(
+            str_,
+            str;
+            indent = 4,
+            margin = length(str_) - 1,
+            short_to_long_function_def = true,
+        )
 
         str_ = "foo(a::T) where {T} = bodybodybodybodybodybodyb"
         str = """
         function foo(a::T) where {T}
             bodybodybodybodybodybodyb
         end"""
-        test_format(str_, str_; indent=4, margin=length(str_), short_to_long_function_def = true)
-        test_format(str_, str; indent=4, margin=length(str_) - 1, short_to_long_function_def = true)
+        test_format(
+            str_,
+            str_;
+            indent = 4,
+            margin = length(str_),
+            short_to_long_function_def = true,
+        )
+        test_format(
+            str_,
+            str;
+            indent = 4,
+            margin = length(str_) - 1,
+            short_to_long_function_def = true,
+        )
 
         str_ = "foo(a::T)::R where {T} = bodybodybodybodybodybodybody"
         str = """
         function foo(a::T)::R where {T}
             bodybodybodybodybodybodybody
         end"""
-        test_format(str_, str_; indent=4, margin=length(str_), short_to_long_function_def = true)
-        test_format(str_, str; indent=4, margin=length(str_), short_to_long_function_def = true,
-            force_long_function_def = true)
-        test_format(str_, str_; indent=4, margin=length(str_), short_to_long_function_def = false,
-            force_long_function_def = false)
-        test_format(str_, str; indent=4, margin=length(str_) - 1, short_to_long_function_def = true)
+        test_format(
+            str_,
+            str_;
+            indent = 4,
+            margin = length(str_),
+            short_to_long_function_def = true,
+        )
+        test_format(
+            str_,
+            str;
+            indent = 4,
+            margin = length(str_),
+            short_to_long_function_def = true,
+            force_long_function_def = true,
+        )
+        test_format(
+            str_,
+            str_;
+            indent = 4,
+            margin = length(str_),
+            short_to_long_function_def = false,
+            force_long_function_def = false,
+        )
+        test_format(
+            str_,
+            str;
+            indent = 4,
+            margin = length(str_) - 1,
+            short_to_long_function_def = true,
+        )
     end
 
     @testset "whitespace in keyword arguments" begin
         str_ = "f(; a = b)"
         str = "f(; a=b)"
-        test_format(str_, str; indent=4, margin=92, whitespace_in_kwargs = false)
+        test_format(str_, str; indent = 4, margin = 92, whitespace_in_kwargs = false)
 
         str = "f(; a!) = a!"
-        test_format(str, str; indent=4, margin=92, whitespace_in_kwargs = false)
+        test_format(str, str; indent = 4, margin = 92, whitespace_in_kwargs = false)
 
         # issue 242
         str_ = "f(a, b! = 1; c! = 2, d = 3, e! = 4)"
         str = "f(a, (b!)=1; (c!)=2, d=3, (e!)=4)"
-        test_format(str_, str; indent=4, margin=92, whitespace_in_kwargs = false)
+        test_format(str_, str; indent = 4, margin = 92, whitespace_in_kwargs = false)
 
         str_ = "( k1 =v1,  k2! = v2)"
         str = "(k1=v1, (k2!)=v2)"
-        test_format(str_, str, YASStyle(); indent=4, margin=80, whitespace_in_kwargs = false)
-        test_format(str_, str; indent=4, margin=80, whitespace_in_kwargs = false)
+        test_format(
+            str_,
+            str,
+            YASStyle();
+            indent = 4,
+            margin = 80,
+            whitespace_in_kwargs = false,
+        )
+        test_format(str_, str; indent = 4, margin = 80, whitespace_in_kwargs = false)
 
         str_ = "( k1 =v1,  k2! = v2)"
         str = "(k1 = v1, k2! = v2)"
-        test_format(str_, str, YASStyle(); indent=4, margin=80, whitespace_in_kwargs = true)
-        test_format(str_, str; indent=4, margin=80, whitespace_in_kwargs = true)
+        test_format(
+            str_,
+            str,
+            YASStyle();
+            indent = 4,
+            margin = 80,
+            whitespace_in_kwargs = true,
+        )
+        test_format(str_, str; indent = 4, margin = 80, whitespace_in_kwargs = true)
 
         str_ = "(; g = >=(1))"
         str = "(; g=(>=(1)))"
-        test_format(str_, str; indent=4, margin=92, whitespace_in_kwargs = false)
+        test_format(str_, str; indent = 4, margin = 92, whitespace_in_kwargs = false)
 
         s = "C(; Vt=Ȳ')"
-        test_format(s, s; indent=4, margin=100, whitespace_in_kwargs = false)
-    end
-
-    @testset "format docstrings" begin
-        @testset "basic" begin
-            str = """
-            \"""
-            doc
-            \"""
-            function f()
-                20
-            end"""
-            t = run_pretty(str; opts = Options(; margin = 80))
-            @test length(t) == 12
-
-            normalized = """
-            \"""
-            doc
-            \"""
-            function f()
-                20
-            end"""
-
-            str = """
-            \"""doc
-            \"""
-            function f()
-                20
-            end"""
-            test_format(str, str)
-            test_format(str, normalized; format_docstrings = true)
-
-            str = """
-            \"""
-            doc\"""
-            function f()
-                20
-            end"""
-            test_format(str, str)
-            test_format(str, normalized; format_docstrings = true)
-
-            str = """
-            \"""doc\"""
-            function f()
-                20
-            end"""
-            test_format(str, str)
-            test_format(str, normalized; format_docstrings = true)
-
-            str = """
-            "doc
-            "
-            function f()
-                20
-            end"""
-            test_format(str, str)
-            test_format(str, normalized; format_docstrings = true)
-
-            str = """
-            "
-            doc"
-            function f()
-                20
-            end"""
-            test_format(str, str)
-            test_format(str, normalized; format_docstrings = true)
-
-            str = """
-            "doc"
-            function f()
-                20
-            end"""
-            test_format(str, str)
-            test_format(str, normalized; format_docstrings = true)
-
-            # test aligning to function identation
-            str_ = """
-                "doc"
-            function f()
-                20
-            end"""
-            str = """
-            "doc"
-            function f()
-                20
-            end"""
-            test_format(str_, str)
-            test_format(str_, normalized; format_docstrings = true)
-
-            str = """\"""
-                     doc for Foo
-                     \"""
-                     Foo"""
-            test_format(str, str)
-            t = run_pretty(str; opts = Options(; margin = 80))
-            @test length(t) == 11
-
-            str = """
-            \"""
-            doc
-            \"""
-            function f()    #  comment
-                20
-            end"""
-            test_format(str, str)
-            test_format(str, str; format_docstrings = true)
-
-            # Issue 157
-            str = raw"""
-            @doc \"""
-               foo()
-            \"""
-            foo() = bar()"""
-            test_format(str, str)
-            test_format(str, str; format_docstrings = true)
-
-            str = raw"""
-            @doc docϵ\"""
-               foo()
-            \"""
-            foo() = bar()"""
-            test_format(str, str)
-            test_format(str, str; format_docstrings = true)
-
-            str = raw"""@doc "doc for foo" foo"""
-            test_format(str, str)
-            test_format(str, str; format_docstrings = true)
-
-            str = raw"""@doc \"""doc for foo\""" foo"""
-            test_format(str, str)
-            test_format(str, str; format_docstrings = true)
-
-            str = raw"""@doc doc\"""doc for foo\""" foo()"""
-            test_format(str, str)
-            test_format(str, str; format_docstrings = true)
-
-            str = raw"""@doc foo"""
-            test_format(str, str)
-            test_format(str, str; format_docstrings = true)
-
-            # issue 160
-            str = raw"""
-            module MyModule
-
-            import Markdown: @doc_str
-
-            @doc doc\"""
-                foo()
-            \"""
-            foo() = bar()
-
-            end # module"""
-            test_format(str, str)
-            test_format(str, str; format_docstrings = true)
-        end
-
-        @testset "with code" begin
-            unformatted = """
-            \"""
-            This is a docstring
-
-            ```@example
-            a =  1
-             b  = 2
-             a + b
-            ```
-
-            ```jldoctest
-            a =  1
-            b  = 2
-            a + b
-
-            # output
-
-            3
-            ```
-
-            ```jldoctest
-            julia> a =  1
-            1
-
-            julia> b  = 2;
-
-            julia>  a + b
-            3
-
-            julia> function test(x)
-                   x + 1
-                   x + 2
-                   end;
-            ```
-            \"""
-            function test(x) x end"""
-
-            formatted = """
-            \"""
-            This is a docstring
-
-            ```@example
-            a = 1
-            b = 2
-            a + b
-            ```
-
-            ```jldoctest
-            a = 1
-            b = 2
-            a + b
-
-            # output
-
-            3
-            ```
-
-            ```jldoctest
-            julia> a = 1
-            1
-
-            julia> b = 2;
-
-            julia> a + b
-            3
-
-            julia> function test(x)
-                       x + 1
-                       x + 2
-                   end;
-
-            ```
-            \"""
-            function test(x)
-                x
-            end"""
-            test_format(unformatted, formatted; format_docstrings = true)
-        end
-
-        @testset "issue 602" begin
-            s = """
-            \"""
-            ```jldoctest
-            julia> foo()
-
-            julia> 1
-            1
-            ```
-            \"""
-            foo() = nothing
-            """
-            test_format(s, s; format_docstrings = true)
-        end
-
-        @testset "Multi-line indented code-blocks" begin
-            unformatted = """
-            \"""
-                fmt(
-                )
-            \"""
-            function fmt() end"""
-
-            formatted = """
-            \"""
-                fmt(
-                )
-            \"""
-            function fmt() end"""
-            test_format(unformatted, formatted; format_docstrings = true)
-        end
-
-        @testset "Empty line in docstring" begin
-            unformatted = """
-            \"""
-
-            \"""
-            function test() end"""
-
-            formatted = """
-            \"""
-            \"""
-            function test() end"""
-            test_format(unformatted, formatted; format_docstrings = true)
-            test_format(unformatted, unformatted; format_docstrings = false)
-        end
-
-        @testset "Indented docstring" begin
-            unformatted = """
-            begin
-                \"""
-                Indented docstring
-
-                with multiple paragraphs
-                \"""
-                indented_item
-            end"""
-            formatted = """
-            begin
-                \"""
-                Indented docstring
-
-                with multiple paragraphs
-                \"""
-                indented_item
-            end"""
-            test_format(unformatted, formatted; format_docstrings = true)
-
-            short = """
-            begin
-                "Short docstring"
-                item
-            end
-            """
-            short_formatted = """
-            begin
-                \"""
-                Short docstring
-                \"""
-                item
-            end
-            """
-            test_format(short, short_formatted; format_docstrings = true)
-        end
-
-        @testset "issue 597" begin
-            str_ = """
-            \"""
-            ```julia
-            julia>  foo()
-            hello world
-            ```
-            \"""
-            foo() = println("hello world")
-            """
-
-            str = """
-            \"""
-            ```julia
-            julia> foo()
-            hello world
-            ```
-            \"""
-            foo() = println("hello world")
-            """
-            test_format(str_, str; format_docstrings = true)
-
-            s = """
-            \"\"\"
-            ```jldoctest
-            foo()
-
-            # output
-
-            1-element Vector{Int64}:
-             1
-            ```
-            \"\"\"
-            foo() = [1]
-            """
-            test_format(str, str; format_docstrings = true)
-        end
+        test_format(s, s; indent = 4, margin = 100, whitespace_in_kwargs = false)
     end
 
     @testset "align struct fields" begin
@@ -831,7 +552,7 @@ end
             Options() =
                 new()
         end"""
-        test_format(str, str; indent=4, margin=1, align_struct_field = true)
+        test_format(str, str; indent = 4, margin = 1, align_struct_field = true)
     end
 
     @testset "align assignment" begin
@@ -927,8 +648,15 @@ end
             1
 
         end"""
-        test_format(str_, str; indent=4, margin=1, align_assignment = true)
-        test_format(str_, str; indent=4, margin=1, align_assignment = true, join_lines_based_on_source = true)
+        test_format(str_, str; indent = 4, margin = 1, align_assignment = true)
+        test_format(
+            str_,
+            str;
+            indent = 4,
+            margin = 1,
+            align_assignment = true,
+            join_lines_based_on_source = true,
+        )
 
         str = """
         a  = 1
@@ -937,7 +665,7 @@ end
         long_variable = 1
         other_var     = 2
         """
-        test_format(str, str; indent=4, margin=1, align_assignment = true)
+        test_format(str, str; indent = 4, margin = 1, align_assignment = true)
 
         str = """
         eclipse  = true
@@ -952,8 +680,15 @@ end
         hcat(X::T...) where {T}         = T[X[j] for i = 1:1, j = 1:length(X)]
         hcat(X::T...) where {T<:Number} = T[X[j] for i = 1:1, j = 1:length(X)]
         """
-        test_format(str, str; indent=4, margin=1, align_assignment = true)
-        test_format(str, str; indent=4, margin=1, align_assignment = true, join_lines_based_on_source = true)
+        test_format(str, str; indent = 4, margin = 1, align_assignment = true)
+        test_format(
+            str,
+            str;
+            indent = 4,
+            margin = 1,
+            align_assignment = true,
+            join_lines_based_on_source = true,
+        )
 
         # ambiguous ordering
         str = """
@@ -980,10 +715,23 @@ end
             anonymous = anonymous ? "allow" : "never",
         )
         """
-        test_format(str, str; indent=4, margin=100, align_assignment = true, whitespace_in_kwargs = false)
-        test_format(str, str; indent=4, margin=100, align_assignment = true,
+        test_format(
+            str,
+            str;
+            indent = 4,
+            margin = 100,
+            align_assignment = true,
             whitespace_in_kwargs = false,
-            join_lines_based_on_source = true)
+        )
+        test_format(
+            str,
+            str;
+            indent = 4,
+            margin = 100,
+            align_assignment = true,
+            whitespace_in_kwargs = false,
+            join_lines_based_on_source = true,
+        )
 
         str_ = """
         s           = model.sys
@@ -997,9 +745,15 @@ end
         C            = s.C
         poles        = eigvals(A - K * C)
         """
-        test_format(str_, str; indent=4, margin=100, align_assignment = true)
-        test_format(str_, str; indent=4, margin=100, align_assignment = true,
-            join_lines_based_on_source = true)
+        test_format(str_, str; indent = 4, margin = 100, align_assignment = true)
+        test_format(
+            str_,
+            str;
+            indent = 4,
+            margin = 100,
+            align_assignment = true,
+            join_lines_based_on_source = true,
+        )
 
         str_ = """
         s             = model.sys
@@ -1013,7 +767,7 @@ end
         C             = s.C
         const polesss = eigvals(A - K * C)
         """
-        test_format(str_, str; indent=4, margin=100, align_assignment = true)
+        test_format(str_, str; indent = 4, margin = 100, align_assignment = true)
 
         str = """
         function stabilize(model)
@@ -1032,9 +786,15 @@ end
             model
         end
         """
-        test_format(str, str; indent=4, margin=100, align_assignment = true)
-        test_format(str, str; indent=4, margin=100, align_assignment = true,
-            join_lines_based_on_source = true)
+        test_format(str, str; indent = 4, margin = 100, align_assignment = true)
+        test_format(
+            str,
+            str;
+            indent = 4,
+            margin = 100,
+            align_assignment = true,
+            join_lines_based_on_source = true,
+        )
     end
 
     @testset "align conditionals" begin
@@ -1063,7 +823,7 @@ end
                 n,
             )
         """
-        test_format(str_, str; indent=4, margin=1, align_conditional = true)
+        test_format(str_, str; indent = 4, margin = 1, align_conditional = true)
 
         str_ = """
         index = zeros(n <= typemax(Int8)  ? Int8 :   # inline
@@ -1085,9 +845,15 @@ end
                 n,
             )
         """
-        test_format(str_, str; indent=4, margin=1, align_conditional = true)
-        test_format(str_, str; indent=4, margin=1, align_conditional = true,
-            join_lines_based_on_source = true)
+        test_format(str_, str; indent = 4, margin = 1, align_conditional = true)
+        test_format(
+            str_,
+            str;
+            indent = 4,
+            margin = 1,
+            align_conditional = true,
+            join_lines_based_on_source = true,
+        )
 
         str_ = """
         index = zeros(n <= typemax(Int8)  ? Int8  :    # inline
@@ -1102,9 +868,15 @@ end
                 n,
             )
         """
-        test_format(str_, str; indent=4, margin=1, align_conditional = true)
-        test_format(str_, str; indent=4, margin=1, align_conditional = true,
-            join_lines_based_on_source = true)
+        test_format(str_, str; indent = 4, margin = 1, align_conditional = true)
+        test_format(
+            str_,
+            str;
+            indent = 4,
+            margin = 1,
+            align_conditional = true,
+            join_lines_based_on_source = true,
+        )
 
         str_ = """
         index =
@@ -1124,7 +896,7 @@ end
                 n,
             )
         """
-        test_format(str_, str; indent=4, margin=1, align_conditional = true)
+        test_format(str_, str; indent = 4, margin = 1, align_conditional = true)
 
         str_ = """
         val = cst.kind === Tokens.ABSTRACT ? "abstract" :
@@ -1133,7 +905,7 @@ end
         str = """
         val = cst.kind === Tokens.ABSTRACT ? "abstract" : cst.kind === Tokens.BAREMODULE ? "baremodule" : ""
         """
-        test_format(str_, str; indent=4, margin=100, align_conditional = true)
+        test_format(str_, str; indent = 4, margin = 100, align_conditional = true)
 
         str_ = """
         val = cst.kind === Tokens.ABSTRACT ? "abstract" :
@@ -1143,18 +915,30 @@ end
         val = cst.kind === Tokens.ABSTRACT  ? "abstract" :
               cst.kind === Tokens.BAREMODUL ? "baremodule" : ""
         """
-        test_format(str_, str; indent=4, margin=100, align_conditional = true)
-        test_format(str_, str; indent=4, margin=100, align_conditional = true,
-            join_lines_based_on_source = true)
+        test_format(str_, str; indent = 4, margin = 100, align_conditional = true)
+        test_format(
+            str_,
+            str;
+            indent = 4,
+            margin = 100,
+            align_conditional = true,
+            join_lines_based_on_source = true,
+        )
 
         str = """
         val =
             cst.kind === Tokens.ABSTRACT  ? "abstract" :
             cst.kind === Tokens.BAREMODUL ? "baremodule" : ""
         """
-        test_format(str_, str; indent=4, margin=1, align_conditional = true)
-        test_format(str_, str; indent=4, margin=1, align_conditional = true,
-            join_lines_based_on_source = true)
+        test_format(str_, str; indent = 4, margin = 1, align_conditional = true)
+        test_format(
+            str_,
+            str;
+            indent = 4,
+            margin = 1,
+            align_conditional = true,
+            join_lines_based_on_source = true,
+        )
     end
 
     @testset "align pair arrow `=>`" begin
@@ -1186,7 +970,7 @@ end
             "API Reference"       => "api.md",
         ]
         """
-        test_format(str_, str; indent=4, margin=100, align_pair_arrow = true)
+        test_format(str_, str; indent = 4, margin = 100, align_pair_arrow = true)
 
         str = """
         pages =
@@ -1203,15 +987,22 @@ end
                 "API Reference"       => "api.md",
             ]
         """
-        test_format(str_, str; indent=4, margin=1, align_pair_arrow = true)
-        test_format(str_, str; indent=4, margin=1, align_pair_arrow = true, join_lines_based_on_source = true)
+        test_format(str_, str; indent = 4, margin = 1, align_pair_arrow = true)
+        test_format(
+            str_,
+            str;
+            indent = 4,
+            margin = 1,
+            align_pair_arrow = true,
+            join_lines_based_on_source = true,
+        )
     end
 
     @testset "conditional to `if` block" begin
         str_ = """
         E ? A : B
         """
-        test_format(str_, str_; indent=2, margin=9, conditional_to_if = true)
+        test_format(str_, str_; indent = 2, margin = 9, conditional_to_if = true)
 
         str = """
         if E
@@ -1220,14 +1011,14 @@ end
           B
         end
         """
-        test_format(str_, str; indent=2, margin=8, conditional_to_if = true)
+        test_format(str_, str; indent = 2, margin = 8, conditional_to_if = true)
 
         str_ = """
         begin
             E1 ? A : E2 ? B : foo(E333, E444) ? D : E
         end
         """
-        test_format(str_, str_; indent=4, margin=45, conditional_to_if = true)
+        test_format(str_, str_; indent = 4, margin = 45, conditional_to_if = true)
 
         str = """
         begin
@@ -1242,8 +1033,8 @@ end
             end
         end
         """
-        test_format(str_, str; indent=4, margin=44, conditional_to_if = true)
-        test_format(str_, str; indent=4, margin=26, conditional_to_if = true)
+        test_format(str_, str; indent = 4, margin = 44, conditional_to_if = true)
+        test_format(str_, str; indent = 4, margin = 26, conditional_to_if = true)
 
         str = """
         begin
@@ -1261,7 +1052,7 @@ end
             end
         end
         """
-        test_format(str_, str; indent=4, margin=25, conditional_to_if = true)
+        test_format(str_, str; indent = 4, margin = 25, conditional_to_if = true)
 
         str_ = """
         foobar = some_big_long_thing * 10_000 == 2 ?
@@ -1363,12 +1154,20 @@ end
             end
 
             str_ = "struct S body end"
-            test_format(str_, format_text(str_; annotate_untyped_fields_with_any = false); join_lines_based_on_source = true,
-                annotate_untyped_fields_with_any = false)
+            test_format(
+                str_,
+                format_text(str_; annotate_untyped_fields_with_any = false);
+                join_lines_based_on_source = true,
+                annotate_untyped_fields_with_any = false,
+            )
 
             str_ = "mutable struct S body end"
-            test_format(str_, format_text(str_; annotate_untyped_fields_with_any = false); join_lines_based_on_source = true,
-                annotate_untyped_fields_with_any = false)
+            test_format(
+                str_,
+                format_text(str_; annotate_untyped_fields_with_any = false);
+                join_lines_based_on_source = true,
+                annotate_untyped_fields_with_any = false,
+            )
 
             str_ = """
             abstract type
@@ -1416,7 +1215,13 @@ end
                 body
             end
             """
-            test_format(str, str; indent=4, margin=84, join_lines_based_on_source = true)
+            test_format(
+                str,
+                str;
+                indent = 4,
+                margin = 84,
+                join_lines_based_on_source = true,
+            )
 
             str_ = """
             function foo(
@@ -1501,8 +1306,15 @@ end
                 return body
             end
             """
-            test_format(str, str, BlueStyle(); indent=4, margin=1000, join_lines_based_on_source = true)
-            test_format(str, str, BlueStyle(); indent=4, margin=15)
+            test_format(
+                str,
+                str,
+                BlueStyle();
+                indent = 4,
+                margin = 1000,
+                join_lines_based_on_source = true,
+            )
+            test_format(str, str, BlueStyle(); indent = 4, margin = 15)
 
             str = """
             function foo(
@@ -1512,7 +1324,14 @@ end
                 return body
             end
             """
-            test_format(str, str, BlueStyle(); indent=4, margin=1000, join_lines_based_on_source = true)
+            test_format(
+                str,
+                str,
+                BlueStyle();
+                indent = 4,
+                margin = 1000,
+                join_lines_based_on_source = true,
+            )
         end
 
         @testset "yas style" begin
@@ -1528,7 +1347,13 @@ end
             end
             """
             @test format_text(str_, YASStyle(); join_lines_based_on_source = true) ==
-                  format_text(str_, YASStyle(); indent=4, margin=1, join_lines_based_on_source = false)
+                  format_text(
+                str_,
+                YASStyle();
+                indent = 4,
+                margin = 1,
+                join_lines_based_on_source = false,
+            )
 
             str_ = """
             @foo(
@@ -1656,7 +1481,13 @@ end
             using A,  #inline
               # comment
               B, C#inline"""
-            test_format(str_, str; indent=2, margin=80, join_lines_based_on_source = true)
+            test_format(
+                str_,
+                str;
+                indent = 2,
+                margin = 80,
+                join_lines_based_on_source = true,
+            )
 
             str_ = """
             using CommonMark:
@@ -1677,8 +1508,20 @@ end
                 Parser,
                 Rule, TableRule
             """
-            test_format(str_, str_; indent=4, margin=37, join_lines_based_on_source = true)
-            test_format(str_, str; indent=4, margin=36, join_lines_based_on_source = true)
+            test_format(
+                str_,
+                str_;
+                indent = 4,
+                margin = 37,
+                join_lines_based_on_source = true,
+            )
+            test_format(
+                str_,
+                str;
+                indent = 4,
+                margin = 36,
+                join_lines_based_on_source = true,
+            )
 
             str = """
             using CommonMark:
@@ -1689,7 +1532,14 @@ end
                               Parser,
                               Rule, TableRule
             """
-            test_format(str_, str, YASStyle(); indent=4, margin=51, join_lines_based_on_source = true)
+            test_format(
+                str_,
+                str,
+                YASStyle();
+                indent = 4,
+                margin = 51,
+                join_lines_based_on_source = true,
+            )
 
             str = """
             using CommonMark:
@@ -1701,7 +1551,14 @@ end
                               Parser,
                               Rule, TableRule
             """
-            test_format(str_, str, YASStyle(); indent=4, margin=50, join_lines_based_on_source = true)
+            test_format(
+                str_,
+                str,
+                YASStyle();
+                indent = 4,
+                margin = 50,
+                join_lines_based_on_source = true,
+            )
         end
 
         # NOTE: not sure since test makes sense anymore.
@@ -1816,7 +1673,7 @@ end
 
         end
         """
-        test_format(str_, str; indent=2, margin=22, indent_submodule = true)
+        test_format(str_, str; indent = 2, margin = 22, indent_submodule = true)
 
         str = """
         "doc"
@@ -1839,7 +1696,7 @@ end
 
         end
         """
-        test_format(str_, str; indent=2, margin=21, indent_submodule = true)
+        test_format(str_, str; indent = 2, margin = 21, indent_submodule = true)
     end
 
     @testset "`surround_whereop_typeparameters`" begin
@@ -2003,7 +1860,7 @@ end
         {key =>
           value("String value")}
         """
-        test_format(s1, s2; indent=2, margin=1, disallow_single_arg_nesting = true)
+        test_format(s1, s2; indent = 2, margin = 1, disallow_single_arg_nesting = true)
     end
 end
 

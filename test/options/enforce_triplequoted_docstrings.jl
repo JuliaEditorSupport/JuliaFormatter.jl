@@ -4,7 +4,7 @@ using JuliaFormatter.Internal: test_format
 using Test
 
 @testset "Basic" begin
-    opts = (; format_docstrings=true)
+    opts = (; format_docstrings = true)
 
     # (use begin blocks to check indentation)
     triple = """
@@ -28,7 +28,7 @@ using Test
     test_format(single, triple; opts...)
 
     # Unless we opt out.
-    opts = (; format_docstrings=true, enforce_triplequoted_docstrings=false)
+    opts = (; format_docstrings = true, enforce_triplequoted_docstrings = false)
     test_format(single, single; opts...)
 
     # Not exactly good taste, but the option leaves it alone as promised.
@@ -57,7 +57,9 @@ using Test
             f() = 0
         end
         """,
-        ; opts...)
+        ;
+        opts...,
+    )
 end
 
 end
