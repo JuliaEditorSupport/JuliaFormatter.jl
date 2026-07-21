@@ -52,6 +52,12 @@ const FORMATTED_BLUE_KW = "foo(; k=v)"
               UNFORMATTED_KW
     end
 
+    @testset "unrecognised kwargs emit error message" begin
+        s = @test_logs (:info, r"ignoring invalid formatting option") format_text("1 +     1"; foo=2)
+        # but it should still format it
+        @test s == "1 + 1"
+    end
+
     @testset "empty string is returned unchanged" begin
         @test format_text("") == ""
         @test format_text("", BlueStyle()) == ""

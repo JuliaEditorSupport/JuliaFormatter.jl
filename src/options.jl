@@ -72,6 +72,11 @@ end
 function Options{_Unset}(; kwargs...)
     # Has to be an outer constructor because @kwdef messes things up
     kw = Dict{Symbol,Any}(kwargs)
+    unused_options = setdiff(keys(kw), fieldnames(Options))
+    if !isempty(unused_options)
+        options_joined = join(map(o -> "`$o`", collect(unused_options)), ", ")
+        @info "ignoring invalid formatting options: $(options_joined)"
+    end
     return Options{_Unset}((get(kw, f, _Unset()) for f in fieldnames(Options))...)
 end
 
