@@ -13,6 +13,7 @@ jobs:
       && startsWith(github.event.comment.body, '!formatbot')
     runs-on: ubuntu-latest
     permissions:
+      actions: write
       contents: read
       pull-requests: write
 
@@ -58,9 +59,9 @@ jobs:
           # Parse the !formatbot comment into script arguments
           read -ra PARTS <<< "$COMMENT_BODY"
           # PARTS[0] is "!formatbot", rest are the arguments
-          python formatter-pr/.github/scripts/formatbot.py "${PARTS[@]:1}" \
+          cd formatter-pr
+          python .github/scripts/formatbot.py "${PARTS[@]:1}" \
             --base-ref "${{ steps.pr.outputs.base_sha }}" \
-            --formatter-pr formatter-pr \
             --diff-output "$RUNNER_TEMP/diff.patch" \
             > "$RUNNER_TEMP/comment.md"
 
