@@ -91,38 +91,45 @@ and every time `julia_eval` or `julia_format` is called, the hook will print wha
 
 ### FormatBot
 
-JuliaFormatter has a small GitHub workflow, called FormatBot, which can be invoked on PRs with the following syntax:
+JuliaFormatter has a small Python script in `.github/scripts/formatbot.py`, whose job is to compare differences between two revisions of JuliaFormatter.
+It can be invoked as follows:
 
 ```
-!formatbot
+python3 formatbot.py
     owner/repo[@REV]
-    [against=basefmt|nofmt]   (default: basefmt)
-    [use_config=true|false]   (default: false)
-    [subdir=SUBDIR]           (default: top-level dir of repo)
-    [style=STYLE]
-    [arg1=val1 arg2=val2...]
+    [--base-ref BASE_REF]
+    [jlfmt_options...]
 ```
 
-where `STYLE` is `default|yas|sciml|blue|minimal` (or omitted to use `DefaultStyle`), and remaining keyword arguments are directly interpolated (**as text**) into `JuliaFormatter.format()`.
+This script **must** be run from a local Git checkout of JuliaFormatter, as that will be used as the 'new' version of JuliaFormatter.
+It will then:
 
-`use_config` is a special argument, which indicates whether the `.JuliaFormatter.toml` file in the target repository should be used.
-By default this is `false`, i.e., the formatter will *ignore* any existing configuration file in the target repository.
+1. Clones the target repository at the specified revision (or the default branch if no revision is specified).
 
-!!! note "Security"
-    Because the keyword arguments are interpolated directly, this allows for arbitrary code execution, including printing the contents of environment variables.
-    Thus, this command can only be invoked by users with write access to the repository.
+1. Uses the current local checkout of JuliaFormatter to format the target repository.
+   The changes are saved to a branch which we'll call `fmt` (the script technically generates a random name for this branch to avoid collisions).
 
-When invoked on a JuliaFormatter PR, FormatBot will:
+1. Resets the target repository to the unformatted code if needed.
 
-1. Clone the target repository at the specified revision (or the default branch if no revision is specified). Let's call this branch `nofmt`, i.e., no formatting.
-1. Check out the base of the JuliaFormatter PR (i.e., usually the current release of JuliaFormatter).
-   - Run the formatter on the target repository, with the specified style options, and save those changes to a branch (let's call it `basefmt`).
-1. Reset the target repository to `nofmt`.
-1. Check out the head of the JuliaFormatter PR (i.e., the proposed changes).
-   - Run the formatter on the target repository again, with the same style options, and save *those* changes to a different branch (let's call it `headfmt`);
-1. If `against=basefmt`, diff the `basefmt` and `headfmt` branches and post the results as a comment on the PR. If `against=nofmt`, diff the `nofmt` and `headfmt` branches instead.
+1. **If `--base-ref` is given**, clones JuliaFormatter at that specified revision into a tempdir, and uses that to format the target repository.
+   The changes are saved to a branch, which again technically has a random name, but which we'll call `basefmt`.
+
+   **If `--base-ref` is not given**, the `basefmt` branch is simply the unformatted code.
+
+1. Diffs the `fmt` branch against `basefmt`.
 
 FormatBot will also include a warning if formatting is not idempotent, or fails.
+
+All other command-line options are passed directly to the `jlfmt` app.
+
+This script can also be invoked on GitHub by posting a comment on a PR with the following format:
+
+```
+!formatbot owner/repo[@REV] [jlfmt_options...]
+```
+
+In this case, the base revision is always the target branch of the PR, and the formatting is checked against the head commit of the PR.
+Once the script has finished, it will post a comment on the PR with the results.
 
 ### [Issue triage](@id issue-triage)
 

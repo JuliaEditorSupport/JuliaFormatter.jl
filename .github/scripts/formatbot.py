@@ -8,7 +8,7 @@ Designed to be called both from CI and locally.
 Run with --help for usage and examples.
 
 Environment variables (all optional, used for the Markdown header):
-    HEAD_SHA   Commit SHA of the PR JuliaFormatter.
+    HEAD_SHA   Commit SHA of the JuliaFormatter PR.
     REPO_URL   URL of the JuliaFormatter repo.
     RUN_URL    URL of the workflow run.
 """
@@ -76,9 +76,7 @@ def parse_args(argv):
     )
     parser.add_argument("repo_rev", metavar="repo", help="owner/repo or owner/repo@rev")
     parser.add_argument("--base-ref", help="compare against this ref of JuliaFormatter (omit to compare against unformatted code)")
-    parser.add_argument("--formatter-pr", default=".", help="path to the PR JuliaFormatter checkout (default: .)")
-    parser.add_argument("--target-dir", help="directory to clone the target repo into (default: a temporary directory)")
-    parser.add_argument("--subdir", help="only format a subdirectory of the target repo")
+parser.add_argument("--subdir", help="only format a subdirectory of the target repo")
     parser.add_argument("--max-diff-bytes", type=int, default=50_000, help="truncate diff display after this many bytes (default: 50000)")
     parser.add_argument("--diff-output", help="write the raw diff to this file")
     args, jlfmt_extra = parser.parse_known_args(argv)
@@ -88,6 +86,16 @@ def parse_args(argv):
 
 def main():
     args = parse_args(sys.argv[1:])
+
+    result = subprocess.run(
+        ["git", "rev-parse", "--show-toplevel"],
+        capture_output=True, text=True,
+    )
+    if result.returncode != 0:
+        print("Error: not inside a git repository. Run this from a JuliaFormatter checkout.",
+              file=sys.stderr)
+        sys.exit(1)
+    formatter_pr = result.stdout.strip()
 
     head_sha = os.environ.get("HEAD_SHA", "")
     repo_url = os.environ.get("REPO_URL", "")
@@ -111,7 +119,7 @@ def main():
     branch_pr = f"formatbot-pr-{uid}"
 
     tmpdir = tempfile.mkdtemp(prefix="formatbot-")
-    target_dir = args.target_dir or os.path.join(tmpdir, "target")
+    target_dir = os.path.join(tmpdir, "target")
     formatter_base_dir = os.path.join(tmpdir, "formatter-base") if args.base_ref is not None else None
 
     try:
@@ -173,7 +181,7 @@ def main():
         # --- Format with PR, commit to branch ---
         git(target_dir, "checkout", branch_clean)
         git(target_dir, "checkout", "-b", branch_pr)
-        pr_result = jlfmt(args.formatter_pr, args.jlfmt_args, format_path)
+        pr_result = jlfmt(formatter_pr, args.jlfmt_args, format_path)
         if pr_result.returncode != 0:
             print(
                 f"{header}\n**Error:** Formatting with PR failed."
@@ -184,7 +192,7 @@ def main():
         git(target_dir, "commit", "--allow-empty", "-m", "formatted with pr")
 
         # --- Check idempotence ---
-        jlfmt(args.formatter_pr, args.jlfmt_args, format_path)
+        jlfmt(formatter_pr, args.jlfmt_args, format_path)
         pr_idempotent = subprocess.run(
             ["git", "-C", target_dir, "diff", "--exit-code"],
             stdout=subprocess.DEVNULL,
