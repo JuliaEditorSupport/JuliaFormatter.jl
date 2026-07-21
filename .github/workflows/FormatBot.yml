@@ -61,7 +61,15 @@ jobs:
           python formatter-pr/.github/scripts/formatbot.py "${PARTS[@]:1}" \
             --base-ref "${{ steps.pr.outputs.base_sha }}" \
             --formatter-pr formatter-pr \
+            --diff-output "$RUNNER_TEMP/diff.patch" \
             > "$RUNNER_TEMP/comment.md"
+
+      - name: Print diff
+        if: always() && steps.formatbot.outcome == 'success'
+        run: |
+          if [ -s "$RUNNER_TEMP/diff.patch" ]; then
+            cat "$RUNNER_TEMP/diff.patch"
+          fi
 
       - name: Post comment
         if: always() && steps.formatbot.outcome != 'skipped'
