@@ -10,7 +10,7 @@ struct FormattingError <: Exception
     original_error::Exception
 end
 function Base.showerror(io::IO, fe::FormattingError)
-    print(io, "\nformatting error at line $(fe.line), column $(fe.column)\n")
+    print(io, "formatting error at line $(fe.line), column $(fe.column)\n")
 end
 
 """
@@ -22,7 +22,7 @@ struct InvalidFormattedTextError <: Exception
     juliasyntax_error::JuliaSyntax.ParseError
 end
 function Base.showerror(io::IO, ie::InvalidFormattedTextError)
-    print(io, "\nformatted text could not be parsed as valid Julia\n")
+    print(io, "formatted text could not be parsed as valid Julia\n")
     showerror(io, ie.juliasyntax_error)
 end
 

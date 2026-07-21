@@ -309,7 +309,7 @@ using Test
         test_format(short, short_formatted; format_docstrings = true)
     end
 
-    @testset "issue 597" begin
+    @testset "597 printing to stdout" begin
         str_ = """
         \"""
         ```julia
@@ -347,7 +347,30 @@ using Test
         test_format(str, str; format_docstrings = true)
     end
 
-    @testset "doesn't attempt to format invalid code" begin
+    @testset "812 empty jldoctest" begin
+        s = """
+        \"""
+        ```jldoctest foo
+        ```
+        \"""
+        function foo end
+        """
+        test_format(s, s; format_docstrings=true)
+    end
+
+    @testset "812 triple quotes in jldoctest" begin
+        s = """
+        \"""
+        ```jldoctest
+        \\\"""
+        ```
+        \"""
+        f() = 1
+        """
+        test_format(s, s; format_docstrings=true)
+    end
+
+    @testset "1206 doesn't attempt to format invalid code" begin
         for prefix in ("julia", "{julia}", "@example")
             str = """
             \"""
