@@ -2,7 +2,19 @@ struct FormatRule
     style::AbstractStyle
     opts::Options{Union{}}
 end
-format_text(text::AbstractString, fr::FormatRule) = _format_text(text, fr.style, fr.opts)
+
+function format_docstring_julia(text::AbstractString, fr::FormatRule)
+    try
+        _format_text(text, fr.style, fr.opts)
+    catch e
+        if e isa JuliaSyntax.ParseError
+            # Original code was invalid. Just pass it through.
+            return text
+        else
+            rethrow(e)
+        end
+    end
+end
 
 function block_modifier(rule::FormatRule)
     Rule(1) do _, block
@@ -15,7 +27,8 @@ function block_modifier(rule::FormatRule)
                 chunks = repl_splitter(code)
                 for (i, (an_input, output)) in enumerate(chunks)
                     write(doctests, "julia> ")
-                    for (j, line) in enumerate(split(format_text(an_input, rule), '\n'))
+                    for (j, line) in
+                        enumerate(split(format_docstring_julia(an_input, rule), '\n'))
                         if j > 1
                             if line == ""
                                 write(doctests, "\n")
@@ -40,9 +53,13 @@ function block_modifier(rule::FormatRule)
                 String(take!(doctests))
             elseif occursin(r"\n+# output\n+", code)
                 input, output = split(code, r"\n+# output\n+"; limit = 2)
-                string(format_text(String(input), rule), "\n\n# output\n\n", output)
+                string(
+                    format_docstring_julia(String(input), rule),
+                    "\n\n# output\n\n",
+                    output,
+                )
             else
-                format_text(code, rule)
+                format_docstring_julia(code, rule)
             end
         end
     end
