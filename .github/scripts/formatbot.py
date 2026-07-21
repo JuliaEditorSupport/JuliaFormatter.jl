@@ -76,7 +76,7 @@ def parse_args(argv):
     )
     parser.add_argument("repo_rev", metavar="repo", help="owner/repo or owner/repo@rev")
     parser.add_argument("--base-ref", help="compare against this ref of JuliaFormatter (omit to compare against unformatted code)")
-parser.add_argument("--subdir", help="only format a subdirectory of the target repo")
+    parser.add_argument("--subdir", help="only format a subdirectory of the target repo")
     parser.add_argument("--max-diff-bytes", type=int, default=50_000, help="truncate diff display after this many bytes (default: 50000)")
     parser.add_argument("--diff-output", help="write the raw diff to this file")
     args, jlfmt_extra = parser.parse_known_args(argv)
