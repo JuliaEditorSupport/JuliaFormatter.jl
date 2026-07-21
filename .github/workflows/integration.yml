@@ -1,7 +1,7 @@
 name: Integration
 
 env:
-  FORMATTER_OPTS: "--ignore-config --v2-stable-multiline-strings=true --conditional-to-if=false --pipe-to-function-call=false --format-docstrings=true"
+  FORMATTER_OPTS: "--ignore-config --v2-stable-multiline-strings=true --conditional-to-if=false --pipe-to-function-call=false"
 
 on:
   push:
