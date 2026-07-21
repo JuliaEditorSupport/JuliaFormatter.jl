@@ -115,10 +115,18 @@ def main():
     try:
         # --- Clone base formatter if needed ---
         if args.base_ref is not None:
-            subprocess.run([
-                "git", "clone", "--depth", "1", "--branch", args.base_ref,
-                f"https://github.com/{FORMATTER_REPO}.git", formatter_base_dir,
-            ], check=True)
+            is_sha = len(args.base_ref) >= 7 and all(c in "0123456789abcdef" for c in args.base_ref)
+            if is_sha:
+                subprocess.run([
+                    "git", "clone",
+                    f"https://github.com/{FORMATTER_REPO}.git", formatter_base_dir,
+                ], check=True)
+                git(formatter_base_dir, "checkout", args.base_ref)
+            else:
+                subprocess.run([
+                    "git", "clone", "--depth", "1", "--branch", args.base_ref,
+                    f"https://github.com/{FORMATTER_REPO}.git", formatter_base_dir,
+                ], check=True)
 
         # --- Clone target repo ---
         clone_cmd = ["git", "clone", "--depth", "1"]
