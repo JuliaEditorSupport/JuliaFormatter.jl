@@ -4,23 +4,25 @@ using JuliaFormatter: format
 using Test
 
 @testset "Format repo" begin
-    try
-        sandbox_dir = joinpath(tempdir(), join(rand('a':'z', 40)))
-        @info "formatting in directory" sandbox_dir
-        mkdir(sandbox_dir)
-        cp(@__DIR__, sandbox_dir; force = true)
-
-        # initial format
-        format(sandbox_dir)
-
-        # follow up formats should be the same
-        @test format(sandbox_dir; join_lines_based_on_source = true) == true
-        @test format(sandbox_dir; join_lines_based_on_source = true, margin = 10_000) ==
-              true
-    finally
+    @testset "$name" for (name, kwargs) in (
+        ("empty", (;)),
+        ("jlbos", (; join_lines_based_on_source=true)),
+        ("jlbos+margin", (; join_lines_based_on_source=true, margin=10_000))
+    )
         try
-            rm(sandbox_dir; recursive = true)
-        catch
+            sandbox_dir = joinpath(tempdir(), join(rand('a':'z', 40)))
+            if isdir(sandbox_dir)
+                rm(sandbox_dir; recursive=true)
+            end
+            mkdir(sandbox_dir)
+            cp(@__DIR__, sandbox_dir; force=true)
+            format(sandbox_dir; kwargs...)
+            @test format(sandbox_dir; kwargs...)
+        finally
+            try
+                rm(sandbox_dir; recursive=true)
+            catch
+            end
         end
     end
 end

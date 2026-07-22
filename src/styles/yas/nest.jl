@@ -455,7 +455,7 @@ function n_binaryopcall!(
 )
     style = getstyle(ys)
     nodes = fst.nodes::Vector
-    
+
     if any(n -> n.typ === PLACEHOLDER, nodes)
         return n_binaryopcall!(DefaultStyle(style), fst, s, lineage; indent = indent)
     end

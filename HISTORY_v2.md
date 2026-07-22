@@ -1,6 +1,8 @@
 # v2.11.1
 
-Fixed a bug where formatting a do-block with no argument after the `do` would cause YASStyle to crash. (#1219, #1220)
+Fixed a bug where formatting a do-block with no argument after the `do` would cause YASStyle to crash. (#1219, #1221)
+
+Fixed an issue where indentation of the right-hand side in `x => rhs` blocks (amongst others) was incorrect under YASStyle. (#1103, #1220, #1221)
 
 # v2.11.0
 

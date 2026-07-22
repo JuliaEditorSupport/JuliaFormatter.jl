@@ -118,15 +118,8 @@ function dedent!(::YASStyle, fst::FST, s::State)
         fst.indent -= s.opts.indent
     elseif is_leaf(fst) || fst.typ === StringN
         return
-    elseif is_unnamed_iterable(fst)
-        fst.indent = s.line_offset
-        if !isempty(fst.nodes) && is_opener(fst[1])
-            fst.indent += 1
-        end
-    elseif is_named_iterable(fst)
-        fst.indent = s.line_offset + length(fst[1]) + length(fst[2])
     else
-        fst.indent = s.line_offset
+        fst.indent -= s.opts.indent
     end
 end
 
