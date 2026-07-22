@@ -32,7 +32,7 @@ jobs:
         run: |
           julia -e 'using Pkg; Pkg.add(; path=".")'
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.x'
 
@@ -80,7 +80,7 @@ jobs:
         run:
           julia -e 'using Pkg; Pkg.Registry.add("General"); Pkg.Apps.add(; path=pwd())'
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.x'
 
