@@ -2826,7 +2826,7 @@ end
                    return f() do x
                        return aaaaaaaaaaaaa
                    end
-               end"""
+               end""",
         )
             test_format(s, s, YASStyle())
         end
