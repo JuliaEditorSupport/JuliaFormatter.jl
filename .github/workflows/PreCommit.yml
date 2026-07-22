@@ -25,7 +25,7 @@ jobs:
     timeout-minutes: 120
 
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
 
       # Note: Pkg App support only in >= 1.12
       - uses: julia-actions/setup-julia@v3
