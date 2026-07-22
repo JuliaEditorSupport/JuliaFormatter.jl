@@ -103,7 +103,7 @@ function nl_to_ws!(fst::FST, s::State)
     return
 end
 
-function dedent!(::AbstractStyle, fst::FST, s::State)
+function dedent!(fst::FST, s::State)
     if is_closer(fst) || fst.typ === NOTCODE
         fst.indent -= s.opts.indent
     elseif is_leaf(fst) || fst.typ === StringN
@@ -119,7 +119,7 @@ function unnest!(style::AbstractStyle, fst::FST, s::State; dedent::Bool)
     end
 
     if dedent
-        dedent!(style, fst, s)
+        dedent!(fst, s)
     end
 
     if is_leaf(fst) || fst.typ === StringN || !can_nest(fst)
