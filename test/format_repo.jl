@@ -17,7 +17,10 @@ using Test
             mkdir(sandbox_dir)
             cp(@__DIR__, sandbox_dir; force=true)
             format(sandbox_dir; kwargs...)
-            @test format(sandbox_dir; kwargs...)
+            # directly doing `@test format(...)` is broken on 1.13, see
+            # https://github.com/JuliaLang/julia/issues/62296
+            res = format(sandbox_dir; kwargs...)
+            @test res
         finally
             try
                 rm(sandbox_dir; recursive=true)
