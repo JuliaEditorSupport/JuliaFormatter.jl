@@ -27,6 +27,7 @@ jobs:
         style:
           - default
           - blue
+          - yas
         version:
           - '1'
           - 'pre'
