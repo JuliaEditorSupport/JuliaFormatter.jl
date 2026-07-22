@@ -991,20 +991,22 @@ function n_binaryopcall!(
                 fst[i1] = Whitespace(1)
                 if indent_nest || style isa YASStyle
                     fst[i2] = Whitespace(0)
-                    yas_line_offset = if is_unnamed_iterable(rhs)
-                        if !isempty(rhs.nodes) && is_opener(rhs[1])
-                            s.line_offset + 1
-                        else
-                            s.line_offset
-                        end
-                    elseif is_named_iterable(rhs)
-                        s.line_offset + length(rhs[1]) + length(rhs[2])
-                    else
-                        s.line_offset
-                    end
+                    line_offset = s.line_offset
                     walk(unnest!(style; dedent = true), rhs, s)
+                    # Iterables in YASStyle need to be aligned with the
+                    # open bracket
                     if style isa YASStyle
-                        add_indent!(rhs, s, yas_line_offset - rhs.indent)
+                        if is_unnamed_iterable(rhs)
+                            extra_indent = if !isempty(rhs.nodes) && is_opener(rhs[1])
+                                line_offset - rhs.indent + 1
+                            else
+                                line_offset - rhs.indent
+                            end
+                            add_indent!(rhs, s, extra_indent)
+                        elseif is_named_iterable(rhs)
+                            extra_indent = line_offset - rhs.indent + length(rhs[1]) + length(rhs[2])
+                            add_indent!(rhs, s, extra_indent)
+                        end
                     end
                 end
             end
@@ -1041,7 +1043,17 @@ function n_binaryopcall!(
         elseif i == length(nodes)
             # rhs
             if style isa YASStyle
-                add_indent!(n, s, s.line_offset - fst.indent)
+                if is_unnamed_iterable(rhs)
+                    extra_indent = if !isempty(rhs.nodes) && is_opener(rhs[1])
+                        s.line_offset - fst.indent + 1
+                    else
+                        s.line_offset - fst.indent
+                    end
+                    add_indent!(rhs, s, extra_indent)
+                elseif is_named_iterable(rhs)
+                    extra_indent = s.line_offset - fst.indent + length(rhs[1]) + length(rhs[2])
+                    add_indent!(rhs, s, extra_indent)
+                end
             end
             n.extra_margin = fst.extra_margin
             nested |= nest!(style, n, s, lineage)

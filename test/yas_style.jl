@@ -792,10 +792,10 @@ using JuliaFormatter: format_text
         s2 = """
         begin
             @test ccc => function ()
-                             return f() do x
-                                 return aaaaaaaaaaaaa
-                             end
-                         end
+                return f() do x
+                    return aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+                end
+            end
         end"""
         for margin in (80, 2000)
             test_format(s2, s2, YASStyle(); margin=margin)

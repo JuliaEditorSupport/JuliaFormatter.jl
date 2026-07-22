@@ -2823,10 +2823,10 @@ end
 
         """
         ccc => function ()
-                   return f() do x
-                       return aaaaaaaaaaaaa
-                   end
-               end""",
+            return f() do x
+                return aaaaaaaaaaaaa
+            end
+        end""",
         )
             test_format(s, s, YASStyle())
         end
@@ -3575,10 +3575,10 @@ end
     @testset "1219 dedenting empty do-block argument" begin
         s = """
         ccc => function ()
-                   return f() do
-                       return aaaaaaaaaaaaa
-                   end
-               end"""
+            return f() do
+                return aaaaaaaaaaaaa
+            end
+        end"""
         test_format(s, s, YASStyle(); margin=30)
     end
 end
