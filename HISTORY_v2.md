@@ -1,3 +1,7 @@
+# v2.11.1
+
+Fixed a bug where formatting a do-block with no argument after the `do` would cause YASStyle to crash. (#1219, #1220)
+
 # v2.11.0
 
 Added a new formatting option, `enforce_triplequoted_docstrings`, which controls whether single-quoted docstrings are expanded to triple-quoted docstrings.

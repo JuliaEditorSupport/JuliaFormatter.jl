@@ -120,7 +120,7 @@ function dedent!(::YASStyle, fst::FST, s::State)
         return
     elseif is_unnamed_iterable(fst)
         fst.indent = s.line_offset
-        if is_opener(fst[1])
+        if !isempty(fst.nodes) && is_opener(fst[1])
             fst.indent += 1
         end
     elseif is_named_iterable(fst)
