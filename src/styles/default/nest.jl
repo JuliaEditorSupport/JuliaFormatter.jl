@@ -897,13 +897,11 @@ function n_binaryopcall!(
     # If there are no top-level placeholders in the FST, the binary call itself is not
     # nestable (although its children, i.e. the operands, might be).
     nodes = fst.nodes::Vector
-    idxs = findall(n -> n.typ === PLACEHOLDER, nodes)
+    placeholder_idxs = findall(n -> n.typ === PLACEHOLDER, nodes)
 
     rhs = fst[end]
     if rhs.typ === Block
-        (rhs = rhs[1])
-    else
-        false
+        rhs = rhs[1]
     end
 
     # is the LHS on a different line than the RHS ?
@@ -912,10 +910,10 @@ function n_binaryopcall!(
 
     nested = false
 
-    if length(idxs) == 2 &&
+    if length(placeholder_idxs) == 2 &&
        (line_margin > s.opts.margin || must_nest(fst) || must_nest(rhs) || src_diff_line)
-        i1 = idxs[1]
-        i2 = idxs[2]
+        i1 = placeholder_idxs[1]
+        i2 = placeholder_idxs[2]
         fst[i1] = Newline(; length = fst[i1].len)
         nested = true
 
@@ -952,14 +950,17 @@ function n_binaryopcall!(
         # "lhs op" rhs
         s.line_offset = line_offset
 
-        # extra margin for " op"
+        # Nest the LHS, but first update the extra margin corresponding to " op"
         fst[1].extra_margin = length(fst[2]) + length(fst[3])
-        nest!(style, fst[1], s, lineage) # lhs
+        nest!(style, fst[1], s, lineage)
+        # Nest everything up to the operator
         for n in fst[2:i1]
             nest!(style, n, s, lineage)
         end
 
-        # Undo nest if possible
+        # It's possible that nesting the LHS means that it's shorter, and thus we might not
+        # need to nest the entire binaryop (i.e., we might not need newlines around the
+        # operator). Attempt to undo the nesting here.
         if can_nest(fst) && !no_unnest(rhs) && !src_diff_line
             line_margin = s.line_offset
 
@@ -981,6 +982,7 @@ function n_binaryopcall!(
                     line_margin += sum(length.(rhs[1:(idx-1)]))
                 end
             else
+                # Calculate how much of the RHS we need to fit on the current line
                 rw, _ = length_to(fst, (NEWLINE,); start = i2 + 1)
                 line_margin += rw
             end
@@ -989,7 +991,24 @@ function n_binaryopcall!(
                 fst[i1] = Whitespace(1)
                 if indent_nest || style isa YASStyle
                     fst[i2] = Whitespace(0)
+                    line_offset = s.line_offset
                     walk(unnest!(style; dedent = true), rhs, s)
+                    # Iterables in YASStyle need to be aligned with the
+                    # open bracket
+                    if style isa YASStyle
+                        if is_unnamed_iterable(rhs)
+                            extra_indent = if !isempty(rhs.nodes) && is_opener(rhs[1])
+                                line_offset - rhs.indent + 1
+                            else
+                                line_offset - rhs.indent
+                            end
+                            add_indent!(rhs, s, extra_indent)
+                        elseif is_named_iterable(rhs)
+                            extra_indent =
+                                line_offset - rhs.indent + length(rhs[1]) + length(rhs[2])
+                            add_indent!(rhs, s, extra_indent)
+                        end
+                    end
                 end
             end
         end
@@ -1024,6 +1043,20 @@ function n_binaryopcall!(
             nested |= nest!(style, n, s, lineage)
         elseif i == length(nodes)
             # rhs
+            if style isa YASStyle
+                if is_unnamed_iterable(rhs)
+                    extra_indent = if !isempty(rhs.nodes) && is_opener(rhs[1])
+                        s.line_offset - fst.indent + 1
+                    else
+                        s.line_offset - fst.indent
+                    end
+                    add_indent!(rhs, s, extra_indent)
+                elseif is_named_iterable(rhs)
+                    extra_indent =
+                        s.line_offset - fst.indent + length(rhs[1]) + length(rhs[2])
+                    add_indent!(rhs, s, extra_indent)
+                end
+            end
             n.extra_margin = fst.extra_margin
             nested |= nest!(style, n, s, lineage)
         else

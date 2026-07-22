@@ -774,6 +774,33 @@ using JuliaFormatter: format_text
         test_format(str, formatted_str1, YASStyle(); variable_call_indent = ["test"])
         test_format(str, formatted_str2, YASStyle(); variable_call_indent = ["SVector", "test"])
     end
+
+    @testset "indentation of binary ops" begin
+        s1 = """
+        begin
+            @test aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa == ["theta[1]",
+                                                           "theta[2]",
+                                                           "theta[3]",
+                                                           "theta[4]",
+                                                           "tau"]
+        end"""
+        # different margins have different code paths so test both
+        for margin in (80, 2000)
+            test_format(s1, s1, YASStyle(); margin=margin)
+        end
+
+        s2 = """
+        begin
+            @test ccc => function ()
+                return f() do x
+                    return aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+                end
+            end
+        end"""
+        for margin in (80, 2000)
+            test_format(s2, s2, YASStyle(); margin=margin)
+        end
+    end
 end
 
 end

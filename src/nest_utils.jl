@@ -103,30 +103,13 @@ function nl_to_ws!(fst::FST, s::State)
     return
 end
 
-function dedent!(::AbstractStyle, fst::FST, s::State)
+function dedent!(fst::FST, s::State)
     if is_closer(fst) || fst.typ === NOTCODE
         fst.indent -= s.opts.indent
     elseif is_leaf(fst) || fst.typ === StringN
         return
     else
         fst.indent -= s.opts.indent
-    end
-end
-
-function dedent!(::YASStyle, fst::FST, s::State)
-    if is_closer(fst) || fst.typ === NOTCODE
-        fst.indent -= s.opts.indent
-    elseif is_leaf(fst) || fst.typ === StringN
-        return
-    elseif is_unnamed_iterable(fst)
-        fst.indent = s.line_offset
-        if is_opener(fst[1])
-            fst.indent += 1
-        end
-    elseif is_named_iterable(fst)
-        fst.indent = s.line_offset + length(fst[1]) + length(fst[2])
-    else
-        fst.indent = s.line_offset
     end
 end
 
@@ -136,7 +119,7 @@ function unnest!(style::AbstractStyle, fst::FST, s::State; dedent::Bool)
     end
 
     if dedent
-        dedent!(style, fst, s)
+        dedent!(fst, s)
     end
 
     if is_leaf(fst) || fst.typ === StringN || !can_nest(fst)

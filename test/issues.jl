@@ -2810,6 +2810,28 @@ end
         end
     end
 
+    @testset "1103 YAS indentation after =>" begin
+        for s in (
+        """
+        long_name => [
+                      #
+                      1,
+                      2,
+                      3
+                      #
+                      ]""",
+
+        """
+        ccc => function ()
+            return f() do x
+                return aaaaaaaaaaaaa
+            end
+        end""",
+        )
+            test_format(s, s, YASStyle())
+        end
+    end
+
     @testset "1105 typed comprehension idempotence" begin
         s = """
         function f()
@@ -3548,6 +3570,16 @@ end
             b = b,
         )"""
         test_format(s, expected; separate_kwargs_with_semicolon=true)
+    end
+
+    @testset "1219 dedenting empty do-block argument" begin
+        s = """
+        ccc => function ()
+            return f() do
+                return aaaaaaaaaaaaa
+            end
+        end"""
+        test_format(s, s, YASStyle(); margin=30)
     end
 end
 

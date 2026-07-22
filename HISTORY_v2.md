@@ -1,3 +1,9 @@
+# v2.11.1
+
+Fixed a bug where formatting a do-block with no argument after the `do` would cause YASStyle to crash. (#1219, #1221)
+
+Fixed a number of YASStyle issues with indentation of the right-hand side of binary operators. (#1103, #1220, #1221)
+
 # v2.11.0
 
 Added a new formatting option, `enforce_triplequoted_docstrings`, which controls whether single-quoted docstrings are expanded to triple-quoted docstrings.
