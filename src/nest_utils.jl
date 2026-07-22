@@ -113,16 +113,6 @@ function dedent!(::AbstractStyle, fst::FST, s::State)
     end
 end
 
-function dedent!(::YASStyle, fst::FST, s::State)
-    if is_closer(fst) || fst.typ === NOTCODE
-        fst.indent -= s.opts.indent
-    elseif is_leaf(fst) || fst.typ === StringN
-        return
-    else
-        fst.indent -= s.opts.indent
-    end
-end
-
 function unnest!(style::AbstractStyle, fst::FST, s::State; dedent::Bool)
     if is_leaf(fst)
         s.line_offset += length(fst)
