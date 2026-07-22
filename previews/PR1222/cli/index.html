@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Command-Line Interface · JuliaFormatter</title><meta name="title" content="Command-Line Interface · JuliaFormatter"/><meta property="og:title" content="Command-Line Interface · JuliaFormatter"/><meta property="twitter:title" content="Command-Line Interface · JuliaFormatter"/><meta name="description" content="Documentation for JuliaFormatter."/><meta property="og:description" content="Documentation for JuliaFormatter."/><meta property="twitter:description" content="Documentation for JuliaFormatter."/><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../search_index.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../">JuliaFormatter</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../">Overview</a></li><li><span class="tocitem">Options</span><ul><li><a class="tocitem" href="../formatting_options/">Formatting Options</a></li><li><a class="tocitem" href="../custom_alignment/">Custom Alignment</a></li></ul></li><li><span class="tocitem">Styles</span><ul><li><a class="tocitem" href="../default_style/">Default Style</a></li><li><a class="tocitem" href="../yas_style/">YAS Style</a></li><li><a class="tocitem" href="../blue_style/">Blue Style</a></li><li><a class="tocitem" href="../sciml_style/">SciML Style</a></li></ul></li><li><a class="tocitem" href="../skipping_formatting/">Skipping Formatting</a></li><li><span class="tocitem">Configuration File</span><ul><li><a class="tocitem" href="../config/">.JuliaFormatter.toml</a></li><li><a class="tocitem" href="../file_options/">File Options</a></li></ul></li><li class="is-active"><a class="tocitem" href>Command-Line Interface</a><ul class="internal"><li><a class="tocitem" href="#Installation"><span>Installation</span></a></li><li><a class="tocitem" href="#Quick-Start"><span>Quick Start</span></a></li><li><a class="tocitem" href="#Options"><span>Options</span></a></li><li><a class="tocitem" href="#Configuration-Files"><span>Configuration Files</span></a></li><li><a class="tocitem" href="#Conventions"><span>Conventions</span></a></li><li><a class="tocitem" href="#Help-text"><span>Help text</span></a></li></ul></li><li><span class="tocitem">Integrations</span><ul><li><a class="tocitem" href="../editors/">Editors</a></li><li><a class="tocitem" href="../github_actions/">GitHub Actions</a></li><li><a class="tocitem" href="../precommit/">pre-commit</a></li><li><a class="tocitem" href="../packagecompiler/">PackageCompiler</a></li></ul></li><li><a class="tocitem" href="../how_it_works/">How It Works</a></li><li><a class="tocitem" href="../api/">API Reference</a></li><li><a class="tocitem" href="../contributing/">Contributing</a></li><li><a class="tocitem" href="../known_issues/">Known Issues</a></li><li><a class="tocitem" href="../status/">Project Status</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Command-Line Interface</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Command-Line Interface</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/JuliaEditorSupport/JuliaFormatter.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/JuliaEditorSupport/JuliaFormatter.jl/blob/main/docs/src/cli.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="cli"><a class="docs-heading-anchor" href="#cli">Command Line Interface</a><a id="cli-1"></a><a class="docs-heading-anchor-permalink" href="#cli" title="Permalink"></a></h1><p>JuliaFormatter provides a command-line executable <code>jlfmt</code> for formatting Julia source code. This is a <a href="https://pkgdocs.julialang.org/v1/apps/">Pkg app</a>, and therefore requires Julia v1.12 or later.</p><h2 id="Installation"><a class="docs-heading-anchor" href="#Installation">Installation</a><a id="Installation-1"></a><a class="docs-heading-anchor-permalink" href="#Installation" title="Permalink"></a></h2><p>The app can be installed using Julia&#39;s app manager:</p><pre><code class="language-julia hljs"># Install the latest available version
+import Pkg; Pkg.Apps.add(&quot;JuliaFormatter&quot;)
+
+# Or a specific version. Note that the version must be &gt;= v2.2.0 since that is
+# when the `jlfmt` app was introduced.
+import Pkg; Pkg.Apps.add(; name = &quot;JuliaFormatter&quot;, version = v&quot;2.3.0&quot;)</code></pre><p>This should create a new binary, called <code>jlfmt</code>, inside the Julia depot&#39;s <code>bin</code> directory (usually <code>~/.julia/bin</code>; but you can check with the <code>DEPOT_PATH</code> variable in Julia).</p><p>Alternatively, you can invoke the app directly without installation:</p><pre><code class="language-bash hljs">julia -m JuliaFormatter [&lt;options&gt;] &lt;path&gt;...</code></pre><div class="admonition is-info" id="Runic-Compatibility-9e01a6a8bfc85c4d"><header class="admonition-header">Runic Compatibility<a class="admonition-anchor" href="#Runic-Compatibility-9e01a6a8bfc85c4d" title="Permalink"></a></header><div class="admonition-body"><p>The CLI interface is designed to be compatible with <a href="https://github.com/fredrikekre/Runic.jl">Runic.jl</a>&#39;s CLI where possible, making it easier to switch between formatters. This includes the repeatable <code>--lines=&lt;start&gt;:&lt;stop&gt;</code> option for formatting only specific line ranges (e.g. <code>jlfmt --lines=1:10 --lines=42:47 src/file.jl</code>).</p></div></div><h2 id="Quick-Start"><a class="docs-heading-anchor" href="#Quick-Start">Quick Start</a><a id="Quick-Start-1"></a><a class="docs-heading-anchor-permalink" href="#Quick-Start" title="Permalink"></a></h2><pre><code class="language-bash hljs"># Preview formatted output
+jlfmt src/file.jl
+
+# Check if files are already formatted with verbose mode
+jlfmt --check -v src/
+
+# Format files in-place with multiple threads
+jlfmt --threads=6 -- --inplace -v src/
+
+# Show diff without modifying
+jlfmt --diff src/file.jl</code></pre><h2 id="Options"><a class="docs-heading-anchor" href="#Options">Options</a><a id="Options-1"></a><a class="docs-heading-anchor-permalink" href="#Options" title="Permalink"></a></h2><p>All formatting options can be passed to <code>jlfmt</code> as command-line arguments, e.g. <code>--indent=2 --always-use-return=true</code>.</p><p>In general the way that CLI options are specified are exactly the same as in <code>.JuliaFormatter.toml</code>, with some exceptions:</p><ul><li>When specified on the CLI options are hyphenated (e.g. <code>--always-use-return</code>), while in the config file they are underscored (e.g. <code>always_use_return</code>).</li><li>To set an option to <code>nothing</code>, use <code>--option=nothing</code> (in the config file it would have to be <code>option = &quot;nothing&quot;</code>).</li><li>To pass a list of strings for <code>variable_call_indent</code>, specify the option multiple times on the CLI, e.g. <code>--variable-call-indent=foo --variable-call-indent=bar</code> (in the config file it would be <code>variable_call_indent = [&quot;foo&quot;, &quot;bar&quot;]</code>).</li></ul><p>You can run <code>jlfmt --help</code> for a full list of available options (the output of this is at the bottom of this page, to avoid clutter).</p><div class="admonition is-info" id="Deprecated-options-1f045c0d0750d17d"><header class="admonition-header">Deprecated options<a class="admonition-anchor" href="#Deprecated-options-1f045c0d0750d17d" title="Permalink"></a></header><div class="admonition-body"><p>In previous versions of <code>jlfmt</code>, some (but not all) Boolean options could be specified using <code>--option_name</code> or <code>--no-option_name</code> flags (e.g. <code>--always-use-return</code> or <code>--no-always-use-return</code>). This is now deprecated in favor of <code>--option-name=true</code> or <code>--option-name=false</code> (note hyphens instead of underscores, and the value must be explicitly supplied!), and will be removed in a future release.</p></div></div><h2 id="Configuration-Files"><a class="docs-heading-anchor" href="#Configuration-Files">Configuration Files</a><a id="Configuration-Files-1"></a><a class="docs-heading-anchor-permalink" href="#Configuration-Files" title="Permalink"></a></h2><p><code>jlfmt</code> searches for <a href="../config/#config"><code>.JuliaFormatter.toml</code> configuration</a> files starting from each input file&#39;s directory and walking up the directory tree.</p><p>A specific directory containing a configuration file can be specified with <code>--config-dir</code>:</p><pre><code class="language-bash hljs"># Search upwards from home directory for a config file
+jlfmt --config-dir=~ src/file.jl</code></pre><p>By default, command-line options override configuration file settings:</p><pre><code class="language-bash hljs"># Use indent=2 even if config file specifies indent=4
+jlfmt --indent=2 src/file.jl</code></pre><p>Use <code>--prioritize-config-file</code> to make configuration file settings take precedence (might be useful for language server integration):</p><pre><code class="language-bash hljs">jlfmt --prioritize-config-file --indent=2 src/file.jl</code></pre><p>If you want to ignore preexisting configuration files, use <code>--ignore-config</code> (this is mostly useful for JuliaFormatter&#39;s own testing pipelines):</p><pre><code class="language-bash hljs"># Ignore any config files and use only CLI args
+jlfmt --ignore-config --indent=2 src/file.jl</code></pre><h3 id="Configuration-with-stdin"><a class="docs-heading-anchor" href="#Configuration-with-stdin">Configuration with stdin</a><a id="Configuration-with-stdin-1"></a><a class="docs-heading-anchor-permalink" href="#Configuration-with-stdin" title="Permalink"></a></h3><p>When formatting from stdin, no configuration file is used by default. Use <code>--config-dir</code> to specify a directory for configuration file lookup:</p><pre><code class="language-bash hljs"># Format stdin using config from ./src directory
+echo &#39;f(x,y)=x+y&#39; | jlfmt --config-dir=./src
+
+# Useful in editor integrations to respect project config
+cat file.jl | jlfmt --config-dir=$(dirname file.jl)</code></pre><p>The formatter will search for <code>.JuliaFormatter.toml</code> in the specified directory and its parent directories, just like it does for regular file inputs.</p><h2 id="Conventions"><a class="docs-heading-anchor" href="#Conventions">Conventions</a><a id="Conventions-1"></a><a class="docs-heading-anchor-permalink" href="#Conventions" title="Permalink"></a></h2><p><code>jlfmt</code> follows standard CLI conventions:</p><ul><li>Exit code 0 on success</li><li>Exit code 1 on formatting errors or when <code>--check</code> detects unformatted files</li><li>Formatted output to stdout (default) or in-place with <code>--inplace</code></li><li>Error messages to stderr</li></ul><h2 id="Help-text"><a class="docs-heading-anchor" href="#Help-text">Help text</a><a id="Help-text-1"></a><a class="docs-heading-anchor-permalink" href="#Help-text" title="Permalink"></a></h2><pre><code class="nohighlight hljs ansi" style="display:block;"><span class="sgr1">NAME</span>
+       jlfmt - An opinionated code formatter for Julia
+
+<span class="sgr1">SYNOPSIS</span>
+       jlfmt [&lt;julia_options&gt; --] [&lt;options&gt;] &lt;path&gt;...
+       jlfmt [&lt;julia_options&gt; --] [&lt;options&gt;] -
+       ... | jlfmt [&lt;julia_options&gt; --] [&lt;options&gt;]
+
+       where &lt;julia_options&gt; are options passed to the Julia
+       interpreter (e.g. --threads=auto), and &lt;options&gt; are
+       options for JuliaFormatter.
+
+<span class="sgr1">DESCRIPTION</span>
+       `jlfmt` formats Julia source code using JuliaFormatter.jl.
+       This tool can also be invoked as `julia -m JuliaFormatter`.
+
+<span class="sgr1">OPTIONS</span>
+       &lt;path&gt;...
+           Input path(s) (files and/or directories) to process. For directories,
+           all files (recursively) with the &#39;*.jl&#39; suffix are used as input files
+           (also &#39;*.md&#39;, &#39;*.jmd&#39;, &#39;*.qmd&#39; if --format-markdown is specified).
+           If no path is given, or if path is `-`, input is read from stdin.
+
+       -h, --help
+           Print this message.
+
+       --version
+           Print version information.
+
+       -c, --check
+           Check formatting without writing.
+
+       -i, --inplace
+           Format files in place.
+
+       -d, --diff
+           Print diff to stderr.
+
+       -o &lt;file&gt;, --output=&lt;file&gt;
+           File to write formatted output to.
+
+       -v, --verbose
+           Enable verbose output.
+
+       --config-dir=&lt;dir&gt;
+           Directory path for .JuliaFormatter.toml config lookup.
+
+       --format-markdown=true|false
+           Also format code blocks in Markdown files.
+
+       --ignore=&lt;pattern&gt;
+           Ignore files matching the given pattern. Can be repeated.
+
+       --ignore-config
+           Do not use .JuliaFormatter.toml config files.
+
+       --lines=&lt;start:stop&gt;
+           Only format the given range of lines. Can be repeated.
+
+       --prioritize-config-file
+           Prioritize config file options over command-line options.
+
+       --stdin-filename=&lt;name&gt;
+           Assumed filename when formatting from stdin.
+
+<span class="sgr1">FORMATTING OPTIONS</span>
+       These options control the formatting style. They can also be set in
+       a `.JuliaFormatter.toml` config file.
+
+       Note that options are merged from the config file and command-line
+       arguments. If the same option is specified both a config file and
+       command-line options are specified, the CLI arguments take priority
+       by default. With `--prioritize-config-file`, the config file takes
+       priority instead.
+
+       If the same option is specified multiple times on the command line,
+       the last value is used.
+
+       --style=default|blue|sciml|yas|minimal
+           Formatting style.
+
+       --align-assignment=true|false
+           Align assignment operators.
+
+       --align-conditional=true|false
+           Align conditional operators.
+
+       --align-matrix=true|false
+           Preserve whitespace alignment of matrix elements.
+
+       --align-pair-arrow=true|false
+           Align pair arrows (=&gt;).
+
+       --align-struct-field=true|false
+           Align struct field type annotations.
+
+       --always-for-in=true|false|nothing
+           Normalise `in` to/from `=` in for loops.
+
+       --always-use-return=true|false
+           Add explicit &#39;return&#39; statements to function definitions.
+
+       --annotate-untyped-fields-with-any=true|false
+           Annotate untyped struct fields with &#39;::Any&#39;.
+
+       --conditional-to-if=true|false
+           Convert ternary expressions to if/else blocks when over margin.
+
+       --disallow-single-arg-nesting=true|false
+           Prevent nesting of a single argument in parentheses.
+
+       --enforce-triplequoted-docstrings=true|false
+           Transform `&quot;...&quot;` into `&quot;&quot;&quot;...&quot;&quot;&quot;` in docstrings.
+
+       --for-in-replacement=in|=|∈
+           Replacement for `=` in for loops when always_for_in is true.
+
+       --force-long-function-def=true|false
+           Force short-to-long function def transformation regardless of length.
+
+       --format-docstrings=true|false
+           Format docstrings.
+
+       --import-to-using=true|false
+           Convert &#39;import&#39; to &#39;using&#39;.
+
+       --indent=&lt;n&gt;
+           Indentation width.
+
+       --indent-submodule=true|false
+           Indent submodules appearing in the same file.
+
+       --join-lines-based-on-source=true|false
+           Join lines as they appear in the original source file.
+
+       --long-to-short-function-def=true|false
+           Convert long function definitions to short form.
+
+       --margin=&lt;n&gt;
+           Maximum line width.
+
+       --normalize-line-endings=auto|unix|windows
+           Normalize line endings.
+
+       --pipe-to-function-call=true|false
+           Convert pipe operator to function calls.
+
+       --remove-extra-newlines=true|false
+           Remove extra newlines.
+
+       --sciml-margin-overrun=&lt;n&gt;
+           Additional columns SciMLStyle may use.
+
+       --separate-kwargs-with-semicolon=true|false
+           Separate keyword arguments with a semicolon.
+
+       --short-circuit-to-if=true|false
+           Convert short-circuit operators to if-expressions.
+
+       --short-to-long-function-def=true|false
+           Convert short function definitions to long form.
+
+       --surround-whereop-typeparameters=true|false
+           Add curly braces around where type parameters.
+
+       --trailing-comma=true|false|nothing
+           Add trailing commas.
+
+       --trailing-zero=true|false
+           Add trailing zeros to floats.
+
+       --transform-syntax-in-macros=true|false
+           Apply syntax transformations inside macro calls.
+
+       --v2-stable-multiline-strings=true|false
+           Use stable multiline string length calculation.
+
+       --variable-call-indent=&lt;name&gt;
+           Allow variable indentation for calls to this function. Can be repeated.
+
+       --whitespace-in-kwargs=true|false
+           Add whitespace in keyword arguments.
+
+       --whitespace-ops-in-indices=true|false
+           Add whitespace around binary operations in indices.
+
+       --whitespace-typedefs=true|false
+           Add whitespace around &#39;::&#39; in type definitions.
+
+       --yas-style-nesting=true|false
+           Use YASStyle nesting rules in SciMLStyle.
+
+<span class="sgr1">EXAMPLES</span>
+       Format a file and write to stdout:
+           jlfmt src/file.jl
+
+       Format a file in place:
+           jlfmt --inplace src/file.jl
+
+       Format all files in a directory with the verbose mode:
+           jlfmt --inplace --verbose src/
+
+       Check if a file is formatted:
+           jlfmt --check src/file.jl
+
+       Format only lines 1-10 and 42-47 of a file:
+           jlfmt --lines=1:10 --lines=42:47 src/file.jl
+
+       Check if all files in a directory are formatted with multiple threads:
+           jlfmt --threads=4 -- --check src/
+
+       Show diff for formatting with 2-space indentations:
+           jlfmt --diff --indent=2 src/file.jl
+
+       Format from stdin (pipe):
+           echo &#39;f(x,y)=x+y&#39; | jlfmt
+
+       Format from stdin (explicit):
+           jlfmt - &lt; input.jl
+
+       Format from stdin using project config:
+           echo &#39;f(x,y)=x+y&#39; | jlfmt --config-dir=./src
+
+       Use specific style:
+           jlfmt --style=blue src/file.jl
+
+       Combine options:
+           echo &#39;for i=1:10; end&#39; | jlfmt --always-for-in=true</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../file_options/">« File Options</a><a class="docs-footer-nextpage" href="../editors/">Editors »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.17.0 on <span class="colophon-date" title="Wednesday 22 July 2026 18:28">Wednesday 22 July 2026</span>. Using Julia version 1.12.6.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
