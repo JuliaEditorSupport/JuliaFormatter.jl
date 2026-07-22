@@ -1004,7 +1004,8 @@ function n_binaryopcall!(
                             end
                             add_indent!(rhs, s, extra_indent)
                         elseif is_named_iterable(rhs)
-                            extra_indent = line_offset - rhs.indent + length(rhs[1]) + length(rhs[2])
+                            extra_indent =
+                                line_offset - rhs.indent + length(rhs[1]) + length(rhs[2])
                             add_indent!(rhs, s, extra_indent)
                         end
                     end
@@ -1051,7 +1052,8 @@ function n_binaryopcall!(
                     end
                     add_indent!(rhs, s, extra_indent)
                 elseif is_named_iterable(rhs)
-                    extra_indent = s.line_offset - fst.indent + length(rhs[1]) + length(rhs[2])
+                    extra_indent =
+                        s.line_offset - fst.indent + length(rhs[1]) + length(rhs[2])
                     add_indent!(rhs, s, extra_indent)
                 end
             end
