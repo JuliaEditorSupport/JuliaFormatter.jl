@@ -1,3 +1,7 @@
+# v2.11.2
+
+Fixed a bug where YASStyle would insert a trailing comma for a function call with zero arguments, which is invalid Julia syntax. (#1225, #1226)
+
 # v2.11.1
 
 Fixed a bug where formatting a do-block with no argument after the `do` would cause YASStyle to crash. (#1219, #1221)

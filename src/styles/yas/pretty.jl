@@ -362,7 +362,12 @@ function p_call(
             # case where the last argument is followed by a comment, the closing paren will
             # be placed on the next line, and in that case we want to allow a trailing
             # comma.
-            k === K")" && add_node!(t, TrailingComma(), s)
+            # If `i == first_arg_idx`, then the function call is empty. In such cases adding
+            # a trailing comma causes a syntax error, so don't do it
+            if k === K")" && i != first_arg_idx
+                add_node!(t, TrailingComma(), s)
+            end
+
             add_node!(
                 t,
                 n,

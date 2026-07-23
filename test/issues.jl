@@ -3581,6 +3581,27 @@ end
         end"""
         test_format(s, s, YASStyle(); margin=30)
     end
+
+    @testset "1225 YAS trailing comma with zero args" begin
+        s_ = """
+        f(
+             # Hi
+        )"""
+        s = """
+        f(
+          # Hi
+          )"""
+        test_format(s_, s, YASStyle())
+
+        s_ = """
+        f(
+             #= Hi =#
+        )"""
+        s = """
+        f(
+          #= Hi =#)"""
+        test_format(s_, s, YASStyle())
+    end
 end
 
 end
