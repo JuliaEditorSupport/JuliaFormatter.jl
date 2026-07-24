@@ -23,13 +23,13 @@ function unescape_docstring_code(text::AbstractString, context::FormatDocstringC
     end
 end
 function escape_docstring_code(text::AbstractString, context::FormatDocstringContext)
-    # If the output is within a triple-quoted docstring, then we don't need to
-    # fully escape `"""`: we can get away with just doing `\\"""`.
     return if context === MarkdownFile
         text
     elseif context === TripleQuotedDocstring
+        # If the output is within a triple-quoted docstring, then we don't need to
+        # fully escape `"""`: we can get away with just doing `\\"""`.
         text_chunks = split(text, "\"\"\"")
-        text_chunks = map(x -> escape_docstring_code(x, false), text_chunks)
+        text_chunks = map(x -> escape_docstring_code(x, SingleQuotedDocstring), text_chunks)
         join(text_chunks, "\\\"\"\"")
     else
         replace(text, (v => k for (k, v) in _REPLACEMENT_PAIRS)...)
