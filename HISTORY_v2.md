@@ -1,3 +1,7 @@
+# v2.11.4
+
+Fixed a bug where comments from outside docstrings would be incorrectly duplicated inside the docstring if the vertical length of the docstring changed during formatting. (#1223, #1229)
+
 # v2.11.3
 
 Fixed a bug where Julia code in docstrings would be formatted incorrectly if the code itself contained characters that had to be escaped. (#1224, #1228)
