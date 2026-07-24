@@ -1,18 +1,28 @@
 struct FormatRule
     style::AbstractStyle
     opts::Options{Union{}}
+    is_triple_quoted::Bool
 end
 
-const _REPLACEMENT_PAIRS = Dict(
-    # TODO: Not sure what other replacements are needed?
+const _REPLACEMENT_PAIRS = (
+    # Not sure what other replacements are needed?
     "\\\\" => "\\",
     "\\\$" => "\$",
+    "\\\"" => "\"",
 )
 function unescape_docstring_code(text::AbstractString)
     return replace(text, (k => v for (k, v) in _REPLACEMENT_PAIRS)...)
 end
-function escape_docstring_code(text::AbstractString)
-    return replace(text, (v => k for (k, v) in _REPLACEMENT_PAIRS)...)
+function escape_docstring_code(text::AbstractString, is_triple_quoted::Bool)
+    # If the output is within a triple-quoted docstring, then we don't need to
+    # fully escape `"""`: we can get away with just doing `\\"""`.
+    return if is_triple_quoted
+        text_chunks = split(text, "\"\"\"")
+        text_chunks = map(x -> escape_docstring_code(x, false), text_chunks)
+        join(text_chunks, "\\\"\"\"")
+    else
+        replace(text, (v => k for (k, v) in _REPLACEMENT_PAIRS)...)
+    end
 end
 
 function format_docstring_code(text::AbstractString, fr::FormatRule)
@@ -44,6 +54,7 @@ function format_docstring_code(text::AbstractString, fr::FormatRule)
         # https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/1224
         escape_docstring_code(
             _format_text(unescape_docstring_code(text), fr.style, fr.opts),
+            fr.is_triple_quoted,
         )
     catch e
         if e isa JuliaSyntax.ParseError
@@ -168,7 +179,7 @@ function format_docstring(style::AbstractStyle, state::State, text::AbstractStri
                     MathRule(),
                     TableRule(),
                     FrontMatterRule(),
-                    FormatRule(style, state.opts),
+                    FormatRule(style, state.opts, is_triple_quoted),
                 ],
             )(
                 deindented_string,
@@ -179,7 +190,7 @@ function format_docstring(style::AbstractStyle, state::State, text::AbstractStri
         formatted = ""
     end
     # Render into text lines, taking care of original indentation,
-    quot = is_triple_quoted ? "\"\"\"" : '"'
+    quot = is_triple_quoted ? "\"\"\"" : "\""
     indentation = " "^state.indent
     indent(line) = indentation * line
     clean(line) = all(isspace, line) ? "" : line # don't write empty lines #667
