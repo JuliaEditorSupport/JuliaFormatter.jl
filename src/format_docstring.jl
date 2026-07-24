@@ -1,7 +1,12 @@
+# When formatting Julia code inside docstrings, we need to know whether it's inside
+# a single-quoted Julia docstring, a triple-quoted Julia docstring, or just a Markdown
+# file. This affects how we handle escape sequences.
+@enum FormatDocstringContext SingleQuotedDocstring TripleQuotedDocstring MarkdownFile
+
 struct FormatRule
     style::AbstractStyle
     opts::Options{Union{}}
-    is_triple_quoted::Bool
+    context::FormatDocstringContext
 end
 
 const _REPLACEMENT_PAIRS = (
@@ -10,13 +15,19 @@ const _REPLACEMENT_PAIRS = (
     "\\\$" => "\$",
     "\\\"" => "\"",
 )
-function unescape_docstring_code(text::AbstractString)
-    return replace(text, (k => v for (k, v) in _REPLACEMENT_PAIRS)...)
+function unescape_docstring_code(text::AbstractString, context::FormatDocstringContext)
+    return if context === MarkdownFile
+        text
+    else
+        replace(text, (k => v for (k, v) in _REPLACEMENT_PAIRS)...)
+    end
 end
-function escape_docstring_code(text::AbstractString, is_triple_quoted::Bool)
+function escape_docstring_code(text::AbstractString, context::FormatDocstringContext)
     # If the output is within a triple-quoted docstring, then we don't need to
     # fully escape `"""`: we can get away with just doing `\\"""`.
-    return if is_triple_quoted
+    return if context === MarkdownFile
+        text
+    elseif context === TripleQuotedDocstring
         text_chunks = split(text, "\"\"\"")
         text_chunks = map(x -> escape_docstring_code(x, false), text_chunks)
         join(text_chunks, "\\\"\"\"")
@@ -53,8 +64,8 @@ function format_docstring_code(text::AbstractString, fr::FormatRule)
         #
         # https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/1224
         escape_docstring_code(
-            _format_text(unescape_docstring_code(text), fr.style, fr.opts),
-            fr.is_triple_quoted,
+            _format_text(unescape_docstring_code(text, fr.context), fr.style, fr.opts),
+            fr.context,
         )
     catch e
         if e isa JuliaSyntax.ParseError
@@ -179,7 +190,11 @@ function format_docstring(style::AbstractStyle, state::State, text::AbstractStri
                     MathRule(),
                     TableRule(),
                     FrontMatterRule(),
-                    FormatRule(style, state.opts, is_triple_quoted),
+                    FormatRule(style, state.opts, if is_triple_quoted
+                        TripleQuotedDocstring
+                    else
+                        SingleQuotedDocstring
+                    end),
                 ],
             )(
                 deindented_string,

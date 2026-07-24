@@ -28,7 +28,7 @@ function _format_md(text::AbstractString, style::AbstractStyle, opts::Options{Un
                 MathRule(),
                 TableRule(),
                 FrontMatterRule(),
-                FormatRule(style, opts),
+                FormatRule(style, opts, MarkdownFile),
             ],
         )(
             text,
