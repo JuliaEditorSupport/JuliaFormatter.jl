@@ -1,14 +1,76 @@
+# When formatting Julia code inside docstrings, we need to know whether it's inside
+# a single-quoted Julia docstring, a triple-quoted Julia docstring, or just a Markdown
+# file. This affects how we handle escape sequences.
+@enum FormatDocstringContext SingleQuotedDocstring TripleQuotedDocstring MarkdownFile
+
 struct FormatRule
     style::AbstractStyle
     opts::Options{Union{}}
+    context::FormatDocstringContext
 end
 
-function format_docstring_julia(text::AbstractString, fr::FormatRule)
+const _REPLACEMENT_PAIRS = (
+    # Not sure what other replacements are needed?
+    "\\\\" => "\\",
+    "\\\$" => "\$",
+    "\\\"" => "\"",
+)
+function unescape_docstring_code(text::AbstractString, context::FormatDocstringContext)
+    return if context === MarkdownFile
+        text
+    else
+        replace(text, (k => v for (k, v) in _REPLACEMENT_PAIRS)...)
+    end
+end
+function escape_docstring_code(text::AbstractString, context::FormatDocstringContext)
+    return if context === MarkdownFile
+        text
+    elseif context === TripleQuotedDocstring
+        # If the output is within a triple-quoted docstring, then we don't need to
+        # fully escape `"""`: we can get away with just doing `\\"""`.
+        text_chunks = split(text, "\"\"\"")
+        text_chunks = map(x -> escape_docstring_code(x, SingleQuotedDocstring), text_chunks)
+        join(text_chunks, "\\\"\"\"")
+    else
+        replace(text, (v => k for (k, v) in _REPLACEMENT_PAIRS)...)
+    end
+end
+
+function format_docstring_code(text::AbstractString, fr::FormatRule)
     try
-        _format_text(text, fr.style, fr.opts)
+        # Julia code within docstrings may contain escape sequences. For example if we want
+        # to write `A \ b` in a docstring, it has to be written as (for example)
+        # 
+        #     """
+        #     [...]
+        #     julia> A \\ b
+        #
+        #     [...]
+        #     """
+        #     function foo end
+        #
+        # However, this means that the `text` we receive here is actually doubly
+        # escaped because it's the literal contents of the docstring:
+        #
+        #     text = "A \\\\ b"
+        #
+        # which is not the same thing as the code we want to format, which is
+        #
+        #     code = "A \\ b"
+        #
+        # So we need to unescape it before formatting, and then re-escape it afterwards.
+        # Note that docstrings have to be `"""..."""`: prefixed strings (e.g.
+        # `raw"""..."""`) are not valid docstrings, so we don't have to worry about them.
+        #
+        # https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/1224
+        escape_docstring_code(
+            _format_text(unescape_docstring_code(text, fr.context), fr.style, fr.opts),
+            fr.context,
+        )
     catch e
         if e isa JuliaSyntax.ParseError
-            # Original code was invalid. Just pass it through.
+            # Original code was invalid Julia (not through any fault of ours). Just pass it
+            # through.
             return text
         else
             rethrow(e)
@@ -28,7 +90,7 @@ function block_modifier(rule::FormatRule)
                 for (i, (an_input, output)) in enumerate(chunks)
                     write(doctests, "julia> ")
                     for (j, line) in
-                        enumerate(split(format_docstring_julia(an_input, rule), '\n'))
+                        enumerate(split(format_docstring_code(an_input, rule), '\n'))
                         if j > 1
                             if line == ""
                                 write(doctests, "\n")
@@ -54,12 +116,12 @@ function block_modifier(rule::FormatRule)
             elseif occursin(r"\n+# output\n+", code)
                 input, output = split(code, r"\n+# output\n+"; limit = 2)
                 string(
-                    format_docstring_julia(String(input), rule),
+                    format_docstring_code(String(input), rule),
                     "\n\n# output\n\n",
                     output,
                 )
             else
-                format_docstring_julia(code, rule)
+                format_docstring_code(code, rule)
             end
         end
     end
@@ -128,7 +190,11 @@ function format_docstring(style::AbstractStyle, state::State, text::AbstractStri
                     MathRule(),
                     TableRule(),
                     FrontMatterRule(),
-                    FormatRule(style, state.opts),
+                    FormatRule(style, state.opts, if is_triple_quoted
+                        TripleQuotedDocstring
+                    else
+                        SingleQuotedDocstring
+                    end),
                 ],
             )(
                 deindented_string,
@@ -139,7 +205,7 @@ function format_docstring(style::AbstractStyle, state::State, text::AbstractStri
         formatted = ""
     end
     # Render into text lines, taking care of original indentation,
-    quot = is_triple_quoted ? "\"\"\"" : '"'
+    quot = is_triple_quoted ? "\"\"\"" : "\""
     indentation = " "^state.indent
     indent(line) = indentation * line
     clean(line) = all(isspace, line) ? "" : line # don't write empty lines #667

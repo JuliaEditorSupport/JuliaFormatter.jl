@@ -1,3 +1,7 @@
+# v2.11.3
+
+Fixed a bug where Julia code in docstrings would be formatted incorrectly if the code itself contained characters that had to be escaped. (#1224, #1228)
+
 # v2.11.2
 
 Fixed a bug where YASStyle would insert a trailing comma for a function call with zero arguments, which is invalid Julia syntax. (#1225, #1226)

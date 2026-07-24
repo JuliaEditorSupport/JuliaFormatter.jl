@@ -388,6 +388,58 @@ using Test
             test_format(str, str; format_docstrings = true)
         end
     end
+
+    @testset "1224 escape sequences" begin
+        for escaped_julia_code in (
+            raw"@macro a.\$s",
+            raw"A \\ b",
+            "A = \\\"hello\\\"",
+        )
+            s = """
+            \"""
+            ```julia
+            $(escaped_julia_code)
+            ```
+            \"""
+            f
+            """
+            test_format(s, s; format_docstrings=true)
+        end
+
+        @testset "normalisation of triple quotes" begin
+            # Regardless of how the user has escaped their triple quotes inside docstrings,
+            # we want to always normalise them to `\"""`
+            s_ = """
+            \"""
+            ```julia
+            s = \\\"\\\"\\\"hello\\\"\\\"\\\"
+            ```
+            \"""
+            f
+            """
+
+            s = """
+            \"""
+            ```julia
+            s = \\\"\"\"hello\\\"\"\"
+            ```
+            \"""
+            f
+            """
+            test_format(s_, s; format_docstrings=true)
+            test_format(s, s; format_docstrings=true)
+
+            # However if the docstring is single quoted we need to normalise to `\"\"\"`
+            # instead
+            s = """
+            \"```julia
+            s = \\\"\\\"\\\"hello\\\"\\\"\\\"
+            ```\"
+            f
+            """ 
+            test_format(s, s; format_docstrings=true, enforce_triplequoted_docstrings=false)
+        end
+    end
 end
 
 end # module OptionsFormatDocstringsTests
