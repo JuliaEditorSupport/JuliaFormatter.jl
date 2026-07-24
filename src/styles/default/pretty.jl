@@ -896,17 +896,23 @@ function p_stringh(
     end
 
     for (i, l) in enumerate(lines)
-        ln = startline + i - 1
+        # When format_docstrings is enabled, the formatted docstring may have more lines
+        # than the original (e.g. blank lines added around code fences). Clamping prevents
+        # add_node! from checking source lines outside the docstring for comments. See
+        # https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/1223
+        ln = min(startline + i - 1, endline)
         l = i == 1 ? l : l[sidx:end]
         n = FST(LITERAL, ln, ln, sidx - 1, textwidth(l), l, (), AllowNest, 0, -1, nothing)
-        add_node!(t, n, s)
+        # override_join_lines_based_on_source ensures that the lines are always printed on
+        # separate lines rather than being joined, even if join_lines_based_on_source has
+        # been enabled by the user
+        add_node!(t, n, s; override_join_lines_based_on_source = true)
     end
 
     # we need to maintain the start and endlines of the original source
     t.startline = startline
     t.endline = endline
-
-    t
+    return t
 end
 
 # GlobalRefDoc (docstring)

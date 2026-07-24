@@ -1,227 +1,233 @@
 module OptionsFormatDocstringsTests
 
-using JuliaFormatter.Internal: test_format
+using JuliaFormatter.Internal: test_format, ALL_STYLES
 using Test
 
 @testset "format_docstrings" begin
     @testset "basic" begin
-        normalized = """
-        \"""
-        doc
-        \"""
-        function f()
-            20
-        end"""
+        for style in ALL_STYLES
+            normalized = """
+            \"""
+            doc
+            \"""
+            function f()
+                return 20
+            end"""
 
-        str = """
-        \"""doc
-        \"""
-        function f()
-            20
-        end"""
-        test_format(str, str)
-        test_format(str, normalized; format_docstrings = true)
+            str = """
+            \"""doc
+            \"""
+            function f()
+                return 20
+            end"""
+            test_format(str, str, style)
+            test_format(str, normalized, style; format_docstrings = true)
 
-        str = """
-        \"""
-        doc\"""
-        function f()
-            20
-        end"""
-        test_format(str, str)
-        test_format(str, normalized; format_docstrings = true)
+            str = """
+            \"""
+            doc\"""
+            function f()
+                return 20
+            end"""
+            test_format(str, str, style)
+            test_format(str, normalized, style; format_docstrings = true)
 
-        str = """
-        \"""doc\"""
-        function f()
-            20
-        end"""
-        test_format(str, str)
-        test_format(str, normalized; format_docstrings = true)
+            str = """
+            \"""doc\"""
+            function f()
+                return 20
+            end"""
+            test_format(str, str, style)
+            test_format(str, normalized, style; format_docstrings = true)
 
-        str = """
-        "doc
-        "
-        function f()
-            20
-        end"""
-        test_format(str, str)
-        test_format(str, normalized; format_docstrings = true)
+            str = """
+            "doc
+            "
+            function f()
+                return 20
+            end"""
+            test_format(str, str, style)
+            test_format(str, normalized, style; format_docstrings = true)
 
-        str = """
-        "
-        doc"
-        function f()
-            20
-        end"""
-        test_format(str, str)
-        test_format(str, normalized; format_docstrings = true)
+            str = """
+            "
+            doc"
+            function f()
+                return 20
+            end"""
+            test_format(str, str, style)
+            test_format(str, normalized, style; format_docstrings = true)
 
-        str = """
-        "doc"
-        function f()
-            20
-        end"""
-        test_format(str, str)
-        test_format(str, normalized; format_docstrings = true)
-
-        # test aligning to function identation
-        str_ = """
+            str = """
             "doc"
-        function f()
-            20
-        end"""
-        str = """
-        "doc"
-        function f()
-            20
-        end"""
-        test_format(str_, str)
-        test_format(str_, normalized; format_docstrings = true)
+            function f()
+                return 20
+            end"""
+            test_format(str, str, style)
+            test_format(str, normalized, style; format_docstrings = true)
 
-        str = """\"""
-                 doc for Foo
-                 \"""
-                 Foo"""
-        test_format(str, str)
+            # test aligning to function identation
+            str_ = """
+                "doc"
+            function f()
+                return 20
+            end"""
+            str = """
+            "doc"
+            function f()
+                return 20
+            end"""
+            test_format(str_, str, style)
+            test_format(str_, normalized, style; format_docstrings = true)
 
-        str = """
-        \"""
-        doc
-        \"""
-        function f()    #  comment
-            20
-        end"""
-        test_format(str, str)
-        test_format(str, str; format_docstrings = true)
+            str = """\"""
+                     doc for Foo
+                     \"""
+                     Foo"""
+            test_format(str, str, style)
 
-        # Issue 157
-        str = raw"""
-        @doc \"""
-           foo()
-        \"""
-        foo() = bar()"""
-        test_format(str, str)
-        test_format(str, str; format_docstrings = true)
+            str = """
+            \"""
+            doc
+            \"""
+            function f()    #  comment
+                return 20
+            end"""
+            test_format(str, str, style)
+            test_format(str, str, style; format_docstrings = true)
 
-        str = raw"""
-        @doc docϵ\"""
-           foo()
-        \"""
-        foo() = bar()"""
-        test_format(str, str)
-        test_format(str, str; format_docstrings = true)
+            # Issue 157
+            str = raw"""
+            @doc \"""
+               foo()
+            \"""
+            foo() = bar()"""
+            test_format(str, str, style)
+            test_format(str, str, style; format_docstrings = true)
 
-        str = raw"""@doc "doc for foo" foo"""
-        test_format(str, str)
-        test_format(str, str; format_docstrings = true)
+            str = raw"""
+            @doc docϵ\"""
+               foo()
+            \"""
+            foo() = bar()"""
+            test_format(str, str, style)
+            test_format(str, str, style; format_docstrings = true)
 
-        str = raw"""@doc \"""doc for foo\""" foo"""
-        test_format(str, str)
-        test_format(str, str; format_docstrings = true)
+            str = raw"""@doc "doc for foo" foo"""
+            test_format(str, str, style)
+            test_format(str, str, style; format_docstrings = true)
 
-        str = raw"""@doc doc\"""doc for foo\""" foo()"""
-        test_format(str, str)
-        test_format(str, str; format_docstrings = true)
+            str = raw"""@doc \"""doc for foo\""" foo"""
+            test_format(str, str, style)
+            test_format(str, str, style; format_docstrings = true)
 
-        str = raw"""@doc foo"""
-        test_format(str, str)
-        test_format(str, str; format_docstrings = true)
+            str = raw"""@doc doc\"""doc for foo\""" foo()"""
+            test_format(str, str, style)
+            test_format(str, str, style; format_docstrings = true)
 
-        # issue 160
-        str = raw"""
-        module MyModule
+            str = raw"""@doc foo"""
+            test_format(str, str, style)
+            test_format(str, str, style; format_docstrings = true)
 
-        import Markdown: @doc_str
+            # issue 160
+            str = raw"""
+            module MyModule
 
-        @doc doc\"""
-            foo()
-        \"""
-        foo() = bar()
+            import Markdown: @doc_str
 
-        end # module"""
-        test_format(str, str)
-        test_format(str, str; format_docstrings = true)
+            @doc doc\"""
+                foo()
+            \"""
+            foo() = bar()
+
+            end # module"""
+            test_format(str, str, style)
+            test_format(str, str, style; format_docstrings = true)
+        end
     end
 
     @testset "with code" begin
-        unformatted = """
-        \"""
-        This is a docstring
+        for style in ALL_STYLES
+            unformatted = """
+            \"""
+            This is a docstring
 
-        ```@example
-        a =  1
-         b  = 2
-         a + b
-        ```
+            ```@example
+            a =  1
+             b  = 2
+             a + b
+            ```
 
-        ```jldoctest
-        a =  1
-        b  = 2
-        a + b
+            ```jldoctest
+            a =  1
+            b  = 2
+            a + b
 
-        # output
+            # output
 
-        3
-        ```
+            3
+            ```
 
-        ```jldoctest
-        julia> a =  1
-        1
+            ```jldoctest
+            julia> a =  1
+            1
 
-        julia> b  = 2;
+            julia> b  = 2;
 
-        julia>  a + b
-        3
+            julia>  a + b
+            3
 
-        julia> function test(x)
-               x + 1
-               x + 2
-               end;
-        ```
-        \"""
-        function test(x) x end"""
-
-        formatted = """
-        \"""
-        This is a docstring
-
-        ```@example
-        a = 1
-        b = 2
-        a + b
-        ```
-
-        ```jldoctest
-        a = 1
-        b = 2
-        a + b
-
-        # output
-
-        3
-        ```
-
-        ```jldoctest
-        julia> a = 1
-        1
-
-        julia> b = 2;
-
-        julia> a + b
-        3
-
-        julia> function test(x)
+            julia> function test(x)
                    x + 1
-                   x + 2
-               end;
+                   return x + 2
+                   end;
+            ```
+            \"""
+            function test(x)
+                return x
+            end"""
 
-        ```
-        \"""
-        function test(x)
-            x
-        end"""
-        test_format(unformatted, formatted; format_docstrings = true)
+            formatted = """
+            \"""
+            This is a docstring
+
+            ```@example
+            a = 1
+            b = 2
+            a + b
+            ```
+
+            ```jldoctest
+            a = 1
+            b = 2
+            a + b
+
+            # output
+
+            3
+            ```
+
+            ```jldoctest
+            julia> a = 1
+            1
+
+            julia> b = 2;
+
+            julia> a + b
+            3
+
+            julia> function test(x)
+                       x + 1
+                       return x + 2
+                   end;
+
+            ```
+            \"""
+            function test(x)
+                return x
+            end"""
+            test_format(unformatted, formatted, style; format_docstrings = true)
+        end
     end
 
     @testset "issue 602" begin
@@ -389,6 +395,72 @@ using Test
         end
     end
 
+    @testset "1223 comments not duplicated into docstrings" begin
+        # Single code block
+        str = """
+        \"""
+        a
+        ```julia
+        b
+        ```
+        \"""
+        function f end
+        # comment
+        f() = 1
+        """
+        expected = """
+        \"""
+        a
+
+        ```julia
+        b
+        ```
+        \"""
+        function f end
+        # comment
+        f() = 1
+        """
+        test_format(str, expected; format_docstrings = true)
+
+        # Two code blocks
+        str = """
+        \"""
+        a
+        ```julia
+        b
+        ```
+        foo
+        ```julia
+        c
+        ```
+        \"""
+        function f end
+        # comment
+        f() = 1
+        """
+        expected = """
+        \"""
+        a
+
+        ```julia
+        b
+        ```
+
+        foo
+
+        ```julia
+        c
+        ```
+        \"""
+        function f end
+        # comment
+        f() = 1
+        """
+        for style in ALL_STYLES
+            test_format(str, expected, style; format_docstrings = true)
+        end
+    end
+
     @testset "1224 escape sequences" begin
         for escaped_julia_code in (
             raw"@macro a.\$s",
@@ -403,7 +475,9 @@ using Test
             \"""
             f
             """
-            test_format(s, s; format_docstrings=true)
+            for style in ALL_STYLES
+                test_format(s, s, style; format_docstrings=true)
+            end
         end
 
         @testset "normalisation of triple quotes" begin
@@ -426,8 +500,10 @@ using Test
             \"""
             f
             """
-            test_format(s_, s; format_docstrings=true)
-            test_format(s, s; format_docstrings=true)
+            for style in ALL_STYLES
+                test_format(s_, s, style; format_docstrings=true)
+                test_format(s, s, style; format_docstrings=true)
+            end
 
             # However if the docstring is single quoted we need to normalise to `\"\"\"`
             # instead
@@ -437,7 +513,9 @@ using Test
             ```\"
             f
             """ 
-            test_format(s, s; format_docstrings=true, enforce_triplequoted_docstrings=false)
+            for style in ALL_STYLES
+                test_format(s, s, style; format_docstrings=true, enforce_triplequoted_docstrings=false)
+            end
         end
     end
 end
