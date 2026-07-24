@@ -388,6 +388,22 @@ using Test
             test_format(str, str; format_docstrings = true)
         end
     end
+
+    @testset "1224 escape sequences" begin
+        for escaped_julia_code in (
+            raw"@macro a.\$s",
+        )
+            s = """
+            \"""
+            ```julia
+            $(escaped_julia_code)
+            ```
+            \"""
+            f
+            """
+            test_format(s, s)
+        end
+    end
 end
 
 end # module OptionsFormatDocstringsTests
