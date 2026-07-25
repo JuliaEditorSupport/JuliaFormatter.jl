@@ -529,7 +529,7 @@ Foo{A} where {Aaaaaaaaaaaaaaa<:Xxxxxxxxxxxx,
 ```
 
 Block-like constructs are not, because their bodies are indented by one level from the
-start of the line:
+start of the line, regardless of where `function f()` starts:
 
 ```julia
 function f()
@@ -537,46 +537,41 @@ function f()
 end
 ```
 
-A unary operator takes this from its operand, and a macrocall written without parentheses
-(a `MacroBlock`) from its final argument, since those are the parts that the continuation
-lines belong to:
+For nested constructs we might need to inspect their children. For example in
 
 ```julia
-!(aaaaaaaaaaaaaaaaaaaaaa &&
-  bbbbbbbbbbbbbbbbbbbbbb)
-
 @mymacro [aaaaaaaaaaaaaaaaaaaa,
           bbbbbbbbbbbbbbbbbbbb]
-
-@mymacro function f()
-    body
-end
 ```
 
-Note that a `MacroBlock` that mixes the two (e.g. `@mymacro [a, b] begin ... end`) is
-reported as not column-aligned: the two parts would have to move in different ways, and
-only one answer can be given.
+the second line is indented according to the `[` iff the last argument of the
+macro is column-aligned.
 
 `Binary`, `Chain`, `Comparison` and `Conditional` are column-aligned in YASStyle too, but
 they are deliberately not listed here because the only caller (`n_binaryopcall!`) accounts
-for their full width before it will consider undoing a nesting, so it never has to move
-one of them that has already been split over several lines.
+for their full width before it will consider undoing a nesting, so it never has to move one
+of them that has already been split over several lines.
 """
 function is_column_aligned(fst::FST)
-    if is_leaf(fst)
-        return false
+    return if is_leaf(fst)
+        false
     elseif fst.typ === MacroBlock
         # The trailing argument is the one that continuation lines follow on from.
         nodes = fst.nodes::Vector{FST}
-        return !isempty(nodes) && is_column_aligned(nodes[end])
+        !isempty(nodes) && is_column_aligned(nodes[end])
     elseif fst.typ === Unary
         # Either `!x` or `x...`; in both cases it's the operand that matters, not the
         # operator.
         nodes = fst.nodes::Vector{FST}
         idx = findfirst(n -> n.typ !== OPERATOR, nodes)
-        return idx !== nothing && is_column_aligned(nodes[idx])
+        idx !== nothing && is_column_aligned(nodes[idx])
+    elseif fst.typ === Where # `where {...}`
+        true
+    elseif is_iterable(fst)
+        true
+    else
+        false
     end
-    return fst.typ === Where || is_iterable(fst)
 end
 
 """
