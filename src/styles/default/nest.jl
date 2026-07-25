@@ -943,12 +943,12 @@ function n_binaryopcall!(
             end
         end
 
-        # rhs
-        #
+        # RHS.
+
         # Remember the column the RHS starts at in this (nested) layout. Any alignment
         # that nesting the RHS sets up is relative to this column, so if the nesting is
         # undone further below we need to know how far the RHS has moved sideways.
-        rhs_line_offset = s.line_offset
+        rhs_line_offset_when_op_nested = s.line_offset
         fst[end].extra_margin = fst.extra_margin
         nest!(style, fst[end], s, lineage)
 
@@ -998,27 +998,28 @@ function n_binaryopcall!(
                     fst[i2] = Whitespace(0)
                     line_offset = s.line_offset
                     walk(unnest!(style; dedent = true), rhs, s)
+                    # The RHS may span multiple lines, in which case we need to decide
+                    # how to reindent its continuation lines.
+                    #
                     # If the RHS aligns its continuation lines against the column it
-                    # starts at (see `is_column_aligned`), that alignment was calculated
-                    # for the nested layout, where the RHS began at column
-                    # `rhs_line_offset`. Undoing the nesting moves it to column
-                    # `line_offset`, so every indent inside it has to move by the same
-                    # amount. `s.opts.indent` is added back on because `unnest!` above
-                    # dedented the whole RHS by one level.
+                    # starts at (see `is_column_aligned`), then we need to reuse the
+                    # `rhs_line_offset_when_op_nested` that we calculated earlier.
                     #
-                    # For example, in
+                    # When we undo the nesting, the rhs gets moved to column `line_offset`,
+                    # so every indent inside it has to be offset by the difference with
+                    # `rhs_line_offset_when_op_nested`.
                     #
-                    #     for x in @mymacro [1111111111111111111111, 2222222222222222222,
-                    #                        3333333333333333333333, 444444444]
-                    #
-                    # the vector literal is first laid out with the macrocall on a line of
-                    # its own, so `3333...` gets aligned against a `[` at column
-                    # `rhs_line_offset + length("@mymacro ")`. Once we decide that the
-                    # macrocall does fit after `for x in ` after all, that alignment has to
-                    # shift right by the width of `for x in `.
+                    # `s.opts.indent` is added back on because `unnest!` above dedented the
+                    # whole RHS by one level.
                     if style isa YASStyle && is_column_aligned(rhs)
-                        add_indent!(rhs, s, line_offset - rhs_line_offset + s.opts.indent)
+                        add_indent!(
+                            rhs,
+                            s,
+                            line_offset - rhs_line_offset_when_op_nested + s.opts.indent,
+                        )
                     end
+                    # For default style, nothing is 'column aligned' so we don't need to do
+                    # anything.
                 end
             end
         end
