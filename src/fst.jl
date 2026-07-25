@@ -512,6 +512,74 @@ function is_import_expr(x::FST)
 end
 
 """
+    is_column_aligned(fst::FST)
+
+Whether YASStyle lays out the continuation lines of `fst` relative to the column at which
+`fst` itself starts, rather than relative to the start of the line it appears on.
+
+Iterables are column-aligned, because their arguments line up with the bracket that opens
+them, as is `where`, whose type parameters line up with the `{`:
+
+```julia
+f(aaaaaaaaaaaaaaaaaaaaaa,
+  bbbbbbbbbbbbbbbbbbbbbb)
+
+Foo{A} where {Aaaaaaaaaaaaaaa<:Xxxxxxxxxxxx,
+              Bbbbbbbbbbbbbbb<:Yyyyyyyyyyyy}
+```
+
+Block-like constructs are not, because their bodies are indented by one level from the
+start of the line:
+
+```julia
+function f()
+    body
+end
+```
+
+A unary operator takes this from its operand, and a macrocall written without parentheses
+(a `MacroBlock`) from its final argument, since those are the parts that the continuation
+lines belong to:
+
+```julia
+!(aaaaaaaaaaaaaaaaaaaaaa &&
+  bbbbbbbbbbbbbbbbbbbbbb)
+
+@mymacro [aaaaaaaaaaaaaaaaaaaa,
+          bbbbbbbbbbbbbbbbbbbb]
+
+@mymacro function f()
+    body
+end
+```
+
+Note that a `MacroBlock` that mixes the two (e.g. `@mymacro [a, b] begin ... end`) is
+reported as not column-aligned: the two parts would have to move in different ways, and
+only one answer can be given.
+
+`Binary`, `Chain`, `Comparison` and `Conditional` are column-aligned in YASStyle too, but
+they are deliberately not listed here because the only caller (`n_binaryopcall!`) accounts
+for their full width before it will consider undoing a nesting, so it never has to move
+one of them that has already been split over several lines.
+"""
+function is_column_aligned(fst::FST)
+    if is_leaf(fst)
+        return false
+    elseif fst.typ === MacroBlock
+        # The trailing argument is the one that continuation lines follow on from.
+        nodes = fst.nodes::Vector{FST}
+        return !isempty(nodes) && is_column_aligned(nodes[end])
+    elseif fst.typ === Unary
+        # Either `!x` or `x...`; in both cases it's the operand that matters, not the
+        # operator.
+        nodes = fst.nodes::Vector{FST}
+        idx = findfirst(n -> n.typ !== OPERATOR, nodes)
+        return idx !== nothing && is_column_aligned(nodes[idx])
+    end
+    return fst.typ === Where || is_iterable(fst)
+end
+
+"""
 Returns whether `fst` can be an iterable argument. For example in
 the case of a function call, which is of type `Call`:
 

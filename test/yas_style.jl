@@ -801,6 +801,74 @@ using JuliaFormatter: format_text
             test_format(s2, s2, YASStyle(); margin=margin)
         end
     end
+
+    @testset "realignment of RHS after un-nesting a binary op" begin
+        # To lay out `x in rhs`, the RHS is first put on a line of its own and nested
+        # there. If it then turns out that it does fit after `x in ` after all, that
+        # nesting is undone -- and everything inside the RHS that was aligned against a
+        # bracket has to move sideways along with it.
+
+        # A macrocall written without parentheses: the vector aligns with its `[`.
+        s_ = """
+        for x in @mac [aaaaa, bbbbb, ccccc]
+            foo
+        end"""
+        s = """
+        for x in @mac [aaaaa, bbbbb,
+                       ccccc]
+            foo
+        end"""
+        test_format(s_, s, YASStyle(); margin=30)
+
+        s_ = """
+        for x in @mac f(aaaaa, bbbbb, ccccc)
+            foo
+        end"""
+        s = """
+        for x in @mac f(aaaaa, bbbbb,
+                        ccccc)
+            foo
+        end"""
+        test_format(s_, s, YASStyle(); margin=31)
+
+        # A macrocall whose final argument is a block indents that block relative to the
+        # start of the line instead, so here there is nothing to move.
+        s_ = """
+        ccc => @mac function ()
+            return aaa
+        end"""
+        s = """
+        ccc => @mac function ()
+            return aaa
+        end"""
+        test_format(s_, s, YASStyle(); margin=24)
+
+        # A unary operator aligns the same way its operand alone would.
+        s_ = """
+        for x in !(aaaa == 1 && (bbbb(cc) || dddd))
+            foo
+        end"""
+        s = """
+        for x in !(aaaa == 1 &&
+                   (bbbb(cc) || dddd))
+            foo
+        end"""
+        test_format(s_, s, YASStyle(); margin=24)
+
+        # `where` aligns its type parameters with the `{`. (The blank line before the loop
+        # body is unrelated pre-existing behaviour for a nested iteration specification.)
+        s_ = """
+        for x in Foo{A} where {Aa<:Xx, Bb<:Yy, Cc<:Zz}
+            foo
+        end"""
+        s = """
+        for x in Foo{A} where {Aa<:Xx,Bb<:Yy,
+                               Cc<:Zz}
+
+            foo
+        end"""
+        test_format(s_, s, YASStyle(); margin=38)
+    end
 end
 
 end
