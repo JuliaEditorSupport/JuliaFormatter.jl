@@ -1,3 +1,7 @@
+# v2.11.5
+
+Fixed more buggy cases of YASStyle indentation (some of which were regressions in v2.11.1). (#1230, #1231)
+
 # v2.11.4
 
 Fixed a bug where comments from outside docstrings would be incorrectly duplicated inside the docstring if the vertical length of the docstring changed during formatting. (#1223, #1229)
