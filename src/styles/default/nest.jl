@@ -917,14 +917,7 @@ function n_binaryopcall!(
         fst[i1] = Newline(; length = fst[i1].len)
         nested = true
 
-        indent_nest =
-            (!isnothing(fst.metadata) && (fst.metadata::Metadata).is_short_form_function) ||
-            is_assignment(fst) ||
-            op_kind(fst) in KSet"=> ->" ||
-            (
-                !isnothing(fst.metadata) &&
-                (fst.metadata::Metadata).is_standalone_shortcircuit
-            )
+        indent_nest = is_indent_nest(fst)
 
         if indent_nest
             s.line_offset = fst.indent + s.opts.indent
@@ -943,7 +936,12 @@ function n_binaryopcall!(
             end
         end
 
-        # rhs
+        # RHS.
+
+        # Remember the column the RHS starts at in this (nested) layout. Any alignment
+        # that nesting the RHS sets up is relative to this column, so if the nesting is
+        # undone further below we need to know how far the RHS has moved sideways.
+        rhs_line_offset_when_op_nested = s.line_offset
         fst[end].extra_margin = fst.extra_margin
         nest!(style, fst[end], s, lineage)
 
@@ -993,22 +991,28 @@ function n_binaryopcall!(
                     fst[i2] = Whitespace(0)
                     line_offset = s.line_offset
                     walk(unnest!(style; dedent = true), rhs, s)
-                    # Iterables in YASStyle need to be aligned with the
-                    # open bracket
-                    if style isa YASStyle
-                        if is_unnamed_iterable(rhs)
-                            extra_indent = if !isempty(rhs.nodes) && is_opener(rhs[1])
-                                line_offset - rhs.indent + 1
-                            else
-                                line_offset - rhs.indent
-                            end
-                            add_indent!(rhs, s, extra_indent)
-                        elseif is_named_iterable(rhs)
-                            extra_indent =
-                                line_offset - rhs.indent + length(rhs[1]) + length(rhs[2])
-                            add_indent!(rhs, s, extra_indent)
-                        end
+                    # The RHS may span multiple lines, in which case we need to decide
+                    # how to reindent its continuation lines.
+                    #
+                    # If the RHS aligns its continuation lines against the column it
+                    # starts at (see `is_column_aligned`), then we need to reuse the
+                    # `rhs_line_offset_when_op_nested` that we calculated earlier.
+                    #
+                    # When we undo the nesting, the rhs gets moved to column `line_offset`,
+                    # so every indent inside it has to be offset by the difference with
+                    # `rhs_line_offset_when_op_nested`.
+                    #
+                    # `s.opts.indent` is added back on because `unnest!` above dedented the
+                    # whole RHS by one level.
+                    if style isa YASStyle && is_column_aligned(rhs)
+                        add_indent!(
+                            rhs,
+                            s,
+                            line_offset - rhs_line_offset_when_op_nested + s.opts.indent,
+                        )
                     end
+                    # For default style, nothing is 'column aligned' so we don't need to do
+                    # anything.
                 end
             end
         end

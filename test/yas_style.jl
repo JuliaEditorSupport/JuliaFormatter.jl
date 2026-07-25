@@ -801,6 +801,86 @@ using JuliaFormatter: format_text
             test_format(s2, s2, YASStyle(); margin=margin)
         end
     end
+
+    @testset "realignment of RHS after un-nesting a binary op" begin
+        s_ = """
+        for x in @mac [aaaaa, bbbbb, ccccc]
+            foo
+        end"""
+        s = """
+        for x in @mac [aaaaa, bbbbb,
+                       ccccc]
+            foo
+        end"""
+        test_format(s_, s, YASStyle(); margin=30)
+
+        s_ = """
+        for x in @mac f(aaaaa, bbbbb, ccccc)
+            foo
+        end"""
+        s = """
+        for x in @mac f(aaaaa, bbbbb,
+                        ccccc)
+            foo
+        end"""
+        test_format(s_, s, YASStyle(); margin=31)
+
+        s_ = """
+        ccc => @mac function ()
+            return aaa
+        end"""
+        s = """
+        ccc => @mac function ()
+            return aaa
+        end"""
+        test_format(s_, s, YASStyle(); margin=24)
+
+        s_ = """
+        for x in yyy::Foo(aaaaa, bbbbb, ccccc)
+            foo
+        end"""
+        s = """
+        for x in yyy::Foo(aaaaa, bbbbb,
+                          ccccc)
+
+            foo
+        end"""
+        test_format(s_, s, YASStyle(); margin=33)
+
+        s_ = """
+        for x in @mac aaaa = [bbbbbb, cccccc, dddddd]
+            foo
+        end"""
+        s = """
+        for x in @mac aaaa = [bbbbbb, cccccc,
+                              dddddd]
+            foo
+        end"""
+        test_format(s_, s, YASStyle(); margin=39)
+
+        s_ = """
+        for x in !(aaaa == 1 && (bbbb(cc) || dddd))
+            foo
+        end"""
+        s = """
+        for x in !(aaaa == 1 &&
+                   (bbbb(cc) || dddd))
+            foo
+        end"""
+        test_format(s_, s, YASStyle(); margin=24)
+
+        s_ = """
+        for x in Foo{A} where {Aa<:Xx, Bb<:Yy, Cc<:Zz}
+            foo
+        end"""
+        s = """
+        for x in Foo{A} where {Aa<:Xx,Bb<:Yy,
+                               Cc<:Zz}
+
+            foo
+        end"""
+        test_format(s_, s, YASStyle(); margin=38)
+    end
 end
 
 end

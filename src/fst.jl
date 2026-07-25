@@ -512,6 +512,113 @@ function is_import_expr(x::FST)
 end
 
 """
+    is_indent_nest(fst::FST)
+
+Whether nesting the binary call `fst` at its operator indents the RHS by one level from the
+start of the line:
+
+```julia
+aaaaaaaaaaaa =>
+    rhs
+```
+
+as opposed to bringing it back to the column the LHS starts at, which is what every other
+operator does:
+
+```julia
+aaaaaaaaaaaa in
+rhs
+```
+
+True for assignments, `=>`, `->` and standalone short-circuits.
+"""
+function is_indent_nest(fst::FST)
+    md = fst.metadata
+    return (!isnothing(md) && (md::Metadata).is_short_form_function) ||
+           is_assignment(fst) ||
+           op_kind(fst) in KSet"=> ->" ||
+           (!isnothing(md) && (md::Metadata).is_standalone_shortcircuit)
+end
+
+"""
+    is_column_aligned(fst::FST)
+
+Whether YASStyle lays out the continuation lines of `fst` relative to the column at which
+`fst` itself starts, rather than relative to the start of the line it appears on.
+
+Iterables are column-aligned, because their arguments line up with the bracket that opens
+them, as is `where`, whose type parameters line up with the `{`:
+
+```julia
+f(aaaaaaaaaaaaaaaaaaaaaa,
+  bbbbbbbbbbbbbbbbbbbbbb)
+
+Foo{A} where {Aaaaaaaaaaaaaaa<:Xxxxxxxxxxxx,
+              Bbbbbbbbbbbbbbb<:Yyyyyyyyyyyy}
+```
+
+Block-like constructs are not, because their bodies are indented by one level from the
+start of the line, regardless of where `function f()` starts:
+
+```julia
+function f()
+    body
+end
+```
+
+For nested constructs we might need to inspect their children. For example in
+
+```julia
+@mymacro [aaaaaaaaaaaaaaaaaaaa,
+          bbbbbbbbbbbbbbbbbbbb]
+```
+
+the second line is indented according to the `[` iff the last argument of the
+macro is column-aligned.
+
+A binary call is column-aligned unless its operator is one of those that indents the RHS
+from the start of the line instead (see [`is_indent_nest`](@ref)).
+
+`Chain`, `Comparison` and `Conditional` are column-aligned in YASStyle too, but they are
+deliberately not listed here because the only caller (`n_binaryopcall!`) accounts for their
+full width before it will consider undoing a nesting, so it never has to move one of them
+that has already been split over several lines.
+"""
+function is_column_aligned(fst::FST)
+    return if is_leaf(fst)
+        false
+    elseif fst.typ === Binary
+        nodes = fst.nodes::Vector{FST}
+        if any(n -> n.typ === NEWLINE, nodes)
+            # It has been split across its own operator, so `n_binaryopcall!` decided
+            # where the RHS goes.
+            !is_indent_nest(fst)
+        else
+            # It is still on one line, so any continuation lines belong to the RHS
+            # operand. In `@mac aaaa = [bbbbb, ccccc]` it is the vector literal, not the
+            # assignment, that the second line is aligned against.
+            is_column_aligned(nodes[end])
+        end
+    elseif fst.typ === MacroBlock
+        # The trailing argument is the one that continuation lines follow on from.
+        nodes = fst.nodes::Vector{FST}
+        !isempty(nodes) && is_column_aligned(nodes[end])
+    elseif fst.typ === Unary
+        # Either `!x` or `x...`; in both cases it's the operand that matters, not the
+        # operator.
+        nodes = fst.nodes::Vector{FST}
+        idx = findfirst(n -> n.typ !== OPERATOR, nodes)
+        idx !== nothing && is_column_aligned(nodes[idx])
+    elseif fst.typ === Where # `where {...}`
+        true
+    elseif is_iterable(fst)
+        true
+    else
+        false
+    end
+end
+
+"""
 Returns whether `fst` can be an iterable argument. For example in
 the case of a function call, which is of type `Call`:
 
