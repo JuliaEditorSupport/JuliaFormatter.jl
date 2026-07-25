@@ -917,14 +917,7 @@ function n_binaryopcall!(
         fst[i1] = Newline(; length = fst[i1].len)
         nested = true
 
-        indent_nest =
-            (!isnothing(fst.metadata) && (fst.metadata::Metadata).is_short_form_function) ||
-            is_assignment(fst) ||
-            op_kind(fst) in KSet"=> ->" ||
-            (
-                !isnothing(fst.metadata) &&
-                (fst.metadata::Metadata).is_standalone_shortcircuit
-            )
+        indent_nest = is_indent_nest(fst)
 
         if indent_nest
             s.line_offset = fst.indent + s.opts.indent
