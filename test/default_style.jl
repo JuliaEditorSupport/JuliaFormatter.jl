@@ -2296,18 +2296,14 @@ run_nest(text::String, margin::Int) = run_nest(text, opts = Options(margin = mar
         # issue 152
         str = """
         try
-            ;
         catch
-            ;
         end   # comment"""
         str_ = """try; catch;  end   # comment"""
         test_format(str_, str)
 
         str = """
         try
-            ;
         catch
-            ;
         end   # comment
         a = 10"""
         str_ = """
@@ -5000,6 +4996,51 @@ some_function(
             c
         """
         test_format(str_, str; indent=4, margin=1)
+    end
+
+    @testset "semicolon statement separators are dropped" begin
+        # A `;` inside a block only separates statements. Once the block is laid out
+        # one statement per line the newline does that job, so the `;` goes away.
+        test_format("for i = 1:10; x = 1; y = 2; end", "for i = 1:10\n    x = 1\n    y = 2\nend")
+        test_format("function f(); x = 1; end", "function f()\n    x = 1\nend")
+        test_format("if a; b; else; c; end", "if a\n    b\nelse\n    c\nend")
+        test_format("while a; b; end", "while a\n    b\nend")
+        test_format("struct A; x; end", "struct A\n    x::Any\nend")
+        test_format("quote; x = 1; end", "quote\n    x = 1\nend")
+        test_format("begin; end", "begin\nend")
+
+        # The separator between the binding list and the body of a `let` is a child of
+        # the `let` node rather than of a block, but goes the same way.
+        test_format("let a = 1; b = 2; x; end", "let a = 1\n    b = 2\n    x\nend")
+        test_format("let a = 1, b = 2; x; end", "let a = 1, b = 2\n    x\nend")
+
+        # Not at top level though: there a `;` suppresses display of the result, so
+        # removing it would change behaviour in the REPL and in notebooks.
+        test_format("hello();", "hello();")
+        test_format("x = 1; y = 2", "x = 1;\ny = 2")
+
+        # A `;` that is part of the syntax rather than a separator also has to stay.
+        test_format("(a; b)", "(a; b)")
+        test_format("f(a; b = 1)", "f(a; b = 1)")
+
+        # A body of nothing but semicolons is an empty body, so these take the same path
+        # as `begin end` / `function f() end` rather than being printed over two lines
+        # and then collapsed on the next pass.
+        test_format("begin; end", "begin end")
+        test_format("quote; end", "quote end")
+        test_format("function f(); end", "function f() end")
+        test_format("macro m(); end", "macro m() end")
+        test_format("module A; end", "module A end")
+        test_format("struct A; end", "struct A end")
+        test_format("mutable struct A; end", "mutable struct A end")
+
+        # These constructs don't collapse an empty body onto one line, with or without
+        # the semicolon.
+        test_format("let; end", "let\nend")
+        test_format("for i = 1:2; end", "for i = 1:2\nend")
+        test_format("while a; end", "while a\nend")
+        test_format("if a; end", "if a\nend")
+        test_format("try; catch; end", "try\ncatch\nend")
     end
 end
 

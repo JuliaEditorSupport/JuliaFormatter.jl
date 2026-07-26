@@ -21,11 +21,11 @@ options(::DefaultStyle) = Options()
     # indicates whether newlines inside are semantically meaningful
     from_nrow::Bool = false
     # indicates whether newlines at the end are semantically meaningful
-    is_last_ncat_or_nrow_arg::Bool=false
+    is_last_ncat_or_nrow_arg::Bool = false
 
     # indicates whether the caller in a function definition has been parenthesised
     # see p_call for explanation
-    is_parenthesised_caller::Bool=false
+    is_parenthesised_caller::Bool = false
 
     ignore_single_line::Bool = false
     from_quote::Bool = false
@@ -1220,7 +1220,7 @@ function p_block(
         if kind(a) === K"Comment"
             add_hasheq_comment!(t, pretty(style, a, s, ctx, lineage), s)
             continue
-        elseif is_ws(a)
+        elseif JuliaSyntax.is_whitespace(a)
             s.offset += span(a)
             continue
         end
@@ -1260,8 +1260,13 @@ function p_block(
                     add_node!(t, Placeholder(1), s)
                 end
             elseif kind(a) === K";"
-                n = pretty(style, a, s, ctx, lineage)
-                add_node!(t, n, s; join_lines = true)
+                if join_body
+                    # Collapsing the statements onto a single line, so print the semicolon
+                    add_node!(t, pretty(style, a, s, ctx, lineage), s; join_lines = true)
+                else
+                    # Breaking onto multiple lines so just skip over it
+                    s.offset += span(a)
+                end
             elseif join_body
                 n = pretty(style, a, s, ctx, lineage)
                 add_node!(t, n, s; join_lines = true)
@@ -1311,7 +1316,7 @@ function p_block(
         if kind(a) === K"Comment"
             add_hasheq_comment!(t, pretty(style, a, s, ctx, lineage), s)
             continue
-        elseif is_ws(a)
+        elseif JuliaSyntax.is_whitespace(a) || kind(a) === K";"
             s.offset += span(a)
             continue
         end
@@ -1454,7 +1459,7 @@ function p_functiondef(
                 end
             end
         elseif kind(c) === K"block" && haschildren(c)
-            block_has_contents = any(cc -> !Shims.is_really_whitespace(cc), children(c))
+            block_has_contents = block_has_statements(c)
             s.indent += s.opts.indent
             n = pretty(style, c, s, newctx(ctx; ignore_single_line = true), lineage)
             add_node!(t, n, s; max_padding = s.opts.indent)
@@ -1528,8 +1533,7 @@ function p_struct(
                 add_node!(t, n, s; join_lines = true)
             end
         elseif kind(c) === K"block" && haschildren(c)
-            block_has_contents =
-                length(filter(cc -> !JuliaSyntax.is_whitespace(cc), children(c))) > 0
+            block_has_contents = block_has_statements(c)
             s.indent += s.opts.indent
             n = pretty(style, c, s, newctx(ctx; ignore_single_line = true), lineage)
             if s.opts.annotate_untyped_fields_with_any && can_transform_syntax(s, true)
@@ -1582,8 +1586,7 @@ function p_mutable(
                 add_node!(t, n, s; join_lines = true)
             end
         elseif kind(c) === K"block" && haschildren(c)
-            block_has_contents =
-                length(filter(cc -> !JuliaSyntax.is_whitespace(cc), children(c))) > 0
+            block_has_contents = block_has_statements(c)
             s.indent += s.opts.indent
             n = pretty(style, c, s, newctx(ctx; ignore_single_line = true), lineage)
             if s.opts.annotate_untyped_fields_with_any && can_transform_syntax(s, true)
@@ -1639,8 +1642,7 @@ function p_module(
                 add_node!(t, n, s; join_lines = true)
             end
         elseif kind(c) === K"block" && haschildren(c)
-            block_has_contents =
-                length(filter(cc -> !JuliaSyntax.is_whitespace(cc), children(c))) > 0
+            block_has_contents = block_has_statements(c)
 
             if indent_module
                 s.indent += s.opts.indent
@@ -1772,6 +1774,8 @@ function p_toplevel(
     for a in children(cst)
         n = pretty(style, a, s, ctx, lineage)
         if kind(a) === K";"
+            # Can't drop top-level semicolons as that leads to different behaviour
+            # in REPL for example
             add_node!(t, n, s; join_lines = true)
         else
             add_node!(t, n, s; max_padding = 0)
@@ -1795,20 +1799,21 @@ function p_begin(
 
     childs = children(cst)
     add_node!(t, pretty(style, childs[1], s, ctx, lineage), s)
-    empty_body = length(filter(n -> !Shims.is_really_whitespace(n), childs)) == 2
+
+    # == 2 because the two children are `begin` and `end`
+    empty_body = count(n -> !Shims.is_really_whitespace(n) && kind(n) !== K";", childs) == 2
 
     if empty_body && !s.opts.join_lines_based_on_source
         for c in childs[2:(end-1)]
             pretty(style, c, s, ctx, lineage)
         end
         add_node!(t, Whitespace(1), s)
-        # Override the `end` keyword's startline to match `begin`, so that
-        # add_node! doesn't detect a source line gap and insert a NEWLINE.
-        # Without this, `begin\n\nend` → `begin\nend` (pass 1) → `begin end`
-        # (pass 2), i.e. non-idempotent.
+        # Override the `end` keyword's startline to match `begin`, so that add_node! doesn't
+        # detect a source line gap and insert a NEWLINE. Without this, `begin\n\nend` is
+        # formatted to `begin\nend` and then `begin end`
         end_node = pretty(style, cst[end], s)
         end_node.startline = t.endline
-        # but don't override endline or else that inserts extra newlines at the end
+        # But don't override endline or else that inserts extra newlines at the end
         add_node!(t, end_node, s; join_lines = true)
     else
         push!(lineage, (K"block", false, false))
@@ -1956,6 +1961,15 @@ function p_let(
             end
         elseif kind(c) === K"end"
             add_node!(t, pretty(style, c, s, ctx, lineage), s)
+        elseif kind(c) === K";"
+            # The `;` between the binding list and the body of `let x = 1; body; end`.
+            # The body is always emitted on its own line, so the newline separates the
+            # two and the `;` is redundant:
+            #
+            #     let x = 1; body; end  ->  let x = 1
+            #                                   body
+            #                               end
+            s.offset += span(c)
         else
             add_node!(
                 t,

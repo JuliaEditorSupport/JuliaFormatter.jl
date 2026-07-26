@@ -323,7 +323,21 @@ is_comment(fst::FST) = fst.typ in (INLINECOMMENT, NOTCODE, HASHEQCOMMENT)
 
 is_identifier(x) = kind(x) === K"Identifier" && !haschildren(x)
 
-is_ws(x) = JuliaSyntax.is_whitespace(x)
+"""
+    block_has_statements(cst) -> Bool
+
+Whether the `block` node `cst` contains any statements.
+
+Semicolons don't count. They are only statement separators and are dropped when the block
+is printed (see `p_block`), so `function f(); end` is just as empty as `function f() end`
+and both are printed the same way. Counting the `;` as a statement would instead give
+`function f()\\nend` on the first pass, which the empty-block handling then collapses to
+`function f() end` on the second — i.e. not idempotent.
+"""
+function block_has_statements(cst)
+    haschildren(cst) || return false
+    any(c -> !Shims.is_really_whitespace(c) && kind(c) !== K";", children(cst))
+end
 
 function is_multiline(fst::FST)
     fst.endline > fst.startline &&
