@@ -1798,7 +1798,7 @@ end
         let hello() =
                 print(
                     "ok",
-                );
+                )
             hello()
         end
         """

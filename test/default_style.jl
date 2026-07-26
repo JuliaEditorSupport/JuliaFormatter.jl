@@ -2328,7 +2328,7 @@ run_nest(text::String, margin::Int) = run_nest(text, opts = Options(margin = mar
         @test length(t) == 18
 
         str = """function foo()
-                     10;
+                     10
                      20
                  end"""
         test_format("""function foo() 10;  20 end""", str)
@@ -2347,15 +2347,15 @@ run_nest(text::String, margin::Int) = run_nest(text, opts = Options(margin = mar
                 end""", str)
 
         str = """for i = 1:10
-                     1;
-                     2;
+                     1
+                     2
                      3
                  end"""
         test_format("""for i=1:10 1; 2; 3 end""", str)
 
         str = """while true
-                     1;
-                     2;
+                     1
+                     2
                      3
                  end"""
         test_format("""while true 1; 2; 3 end""", str)
@@ -2368,13 +2368,13 @@ run_nest(text::String, margin::Int) = run_nest(text, opts = Options(margin = mar
         test_format("""try a catch e b end""", str)
 
         str = """try
-                     a1;
+                     a1
                      a2
                  catch e
-                     b1;
+                     b1
                      b2
                  finally
-                     c1;
+                     c1
                      c2
                  end"""
         test_format("""try a1;a2 catch e b1;b2 finally c1;c2 end""", str)
@@ -2386,8 +2386,8 @@ run_nest(text::String, margin::Int) = run_nest(text, opts = Options(margin = mar
                      e end""", str)
 
         str = """let a=b, c = d
-                     e1;
-                     e2;
+                     e1
+                     e2
                      e3
                  end"""
         test_format("""let a=b,c  =  d  \ne1; e2; e3 end""", str)
@@ -2403,8 +2403,8 @@ run_nest(text::String, margin::Int) = run_nest(text, opts = Options(margin = mar
                      c""", str)
 
         str = """begin
-                     a;
-                     b;
+                     a
+                     b
                      c
                  end"""
         test_format("""begin a; b; c end""", str)
@@ -2413,8 +2413,8 @@ run_nest(text::String, margin::Int) = run_nest(text, opts = Options(margin = mar
         test_format("""begin \n            end""", str)
 
         str = """quote
-                     a;
-                     b;
+                     a
+                     b
                      c
                  end"""
         test_format("""quote a; b; c end""", str)
@@ -2423,32 +2423,32 @@ run_nest(text::String, margin::Int) = run_nest(text, opts = Options(margin = mar
         test_format("""quote \n end""", str)
 
         str = """if cond1
-                     e1;
+                     e1
                      e2
                  end"""
         test_format("if cond1 e1;e2 end", str)
 
         str = """if cond1
-                     e1;
+                     e1
                      e2
                  else
-                     e3;
+                     e3
                      e4
                  end"""
         test_format("if cond1 e1;e2 else e3;e4 end", str)
 
         str = """begin
                      if cond1
-                         e1;
+                         e1
                          e2
                      elseif cond2
-                         e3;
+                         e3
                          e4
                      elseif cond3
-                         e5;
+                         e5
                          e6
                      else
-                         e7;
+                         e7
                          e8
                      end
                  end"""
@@ -2457,10 +2457,10 @@ run_nest(text::String, margin::Int) = run_nest(text, opts = Options(margin = mar
             str)
 
         str = """if cond1
-                     e1;
+                     e1
                      e2
                  elseif cond2
-                     e3;
+                     e3
                      e4
                  end"""
         test_format("if cond1 e1;e2 elseif cond2 e3; e4 end", str)
@@ -2640,7 +2640,7 @@ run_nest(text::String, margin::Int) = run_nest(text, opts = Options(margin = mar
                 C,
             },
         }
-            10;
+            10
             20
         end"""
         str_ = "function f(arg1::A,key1=val1;key2=val2) where {A,F{B,C}} 10; 20 end"
@@ -2655,7 +2655,7 @@ run_nest(text::String, margin::Int) = run_nest(text, opts = Options(margin = mar
             A,
             F{B,C},
         }
-            10;
+            10
             20
         end"""
         test_format(str_, str; indent=4, margin=17)
@@ -2666,7 +2666,7 @@ run_nest(text::String, margin::Int) = run_nest(text, opts = Options(margin = mar
             key1 = val1;
             key2 = val2,
         ) where {A,F{B,C}}
-            10;
+            10
             20
         end"""
         test_format(str_, str; indent=4, margin=18)
