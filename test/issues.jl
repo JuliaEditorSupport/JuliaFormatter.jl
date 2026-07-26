@@ -3625,6 +3625,20 @@ end
             test_format(str_, str, st)
         end
     end
+
+    @testset "1241 array idempotence MinimalStyle" begin
+        s = """
+        [
+            [a
+                []
+
+            if b
+                c
+            end
+            ]
+        ]"""
+        test_format(s, nothing, MinimalStyle())
+    end
 end
 
 end

@@ -1,7 +1,8 @@
 name: Integration
 
 env:
-  FORMATTER_OPTS: "--ignore-config --v2-stable-multiline-strings=true --conditional-to-if=false --pipe-to-function-call=false"
+  # Need to enable these to guarantee idempotence
+  SHARED_FORMATTER_OPTS: "--ignore-config --v2-stable-multiline-strings=true --conditional-to-if=false --pipe-to-function-call=false"
 
 on:
   push:
@@ -17,21 +18,32 @@ concurrency:
 
 jobs:
   integration:
-    name: ${{ matrix.style }}-${{ matrix.version }}
+    name: ${{ matrix.name }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
 
     strategy:
       fail-fast: false
       matrix:
-        style:
-          - default
-          - blue
-          - yas
-          - minimal
-        version:
-          - '1'
-          - 'pre'
+        include:
+          - name: default
+            version: '1.12'
+            opts: '--style=default'
+          - name: default-jlbos
+            version: '1.12'
+            opts: '--style=default --join-lines-based-on-source=true'
+          - name: default-pre
+            version: 'pre'
+            opts: '--style=default'
+          - name: blue
+            version: '1.12'
+            opts: '--style=blue'
+          - name: yas
+            version: '1.12'
+            opts: '--style=yas'
+          - name: minimal
+            version: '1.12'
+            opts: '--style=minimal'
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # 7.0.1
@@ -101,9 +113,9 @@ jobs:
       - name: Format (pass 1)
         working-directory: target
         run: |
-          julia --project=../formatter -m JuliaFormatter --inplace --style=${{ matrix.style }} ${{ env.FORMATTER_OPTS }} .
+          julia --project=../formatter -m JuliaFormatter --inplace ${{ matrix.opts }} ${{ env.SHARED_FORMATTER_OPTS }} .
 
       - name: Check idempotence (pass 2)
         working-directory: target
         run: |
-          julia --project=../formatter -m JuliaFormatter --check --diff --style=${{ matrix.style }} ${{ env.FORMATTER_OPTS }} .
+          julia --project=../formatter -m JuliaFormatter --check --diff ${{ matrix.opts }} ${{ env.SHARED_FORMATTER_OPTS }} .

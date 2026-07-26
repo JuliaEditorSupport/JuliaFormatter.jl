@@ -1419,6 +1419,30 @@ function add_node!(
                 # swap PLACEHOLDER (will be NEWLINE) with INLINECOMMENT node
                 idx = length(tnodes::Vector{FST})
                 tnodes[idx-1], tnodes[idx] = tnodes[idx], tnodes[idx-1]
+            elseif !join_lines && t.typ in (Vcat, TypedVcat, Ncat, TypedNcat)
+                # In a vcat/ncat the newline between two arguments *is* the separator, so
+                # `p_vcat` strips the source newline and appends a PLACEHOLDER in its place,
+                # relying on that placeholder later becoming a NEWLINE. That's not
+                # guaranteed here: with `join_lines_based_on_source` (MinimalStyle, YAS,
+                # SciML) the nesting pass only converts a placeholder when the margin is
+                # exceeded, so the placeholder can survive and the two arguments get glued
+                # onto one line. Since we know from the source that `n` belongs on its own
+                # line, emit the NEWLINE explicitly -- exactly as the `!join_lines` branch
+                # below does when there is no blank line to divert us into this branch.
+                #
+                # Without this, `[a\n\nb]` (a two-element vcat) formats to `[a b]`, which is
+                # a 1x2 hcat, and
+                #
+                #     [a
+                #         []
+                #                    <- blank line
+                #     if b
+                #         c
+                #     end
+                #     ]
+                #
+                # glues `[]` and `if b` together.
+                add_node!(t, Newline(; nest_behavior = AlwaysNest), s)
             end
 
             if nest
