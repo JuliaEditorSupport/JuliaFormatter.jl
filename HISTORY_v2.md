@@ -1,3 +1,8 @@
+# v2.12.0
+
+JuliaFormatter now removes superfluous semicolons inside block expressions.
+For example, `for x in y; z; end` is now formatted as `for x in y\n    z\nend`, rather than `for x in y\n    ;\n    z;\nend` (which is pretty ugly). (#1237)
+
 # v2.11.5
 
 Fixed more buggy cases of YASStyle indentation (some of which were regressions in v2.11.1). (#1230, #1231)

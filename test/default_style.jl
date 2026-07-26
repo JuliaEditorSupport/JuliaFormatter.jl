@@ -3,7 +3,7 @@ module DefaultTests
 using Test
 using JuliaSyntax
 using JuliaFormatter: JuliaFormatter, DefaultStyle, Options, format_file
-using JuliaFormatter.Internal: test_format
+using JuliaFormatter.Internal: test_format, ALL_STYLES
 
 function run_pretty(text::String; style = DefaultStyle(), opts = Options())
     d = JuliaFormatter.Document(text)
@@ -2296,18 +2296,14 @@ run_nest(text::String, margin::Int) = run_nest(text, opts = Options(margin = mar
         # issue 152
         str = """
         try
-            ;
         catch
-            ;
         end   # comment"""
         str_ = """try; catch;  end   # comment"""
         test_format(str_, str)
 
         str = """
         try
-            ;
         catch
-            ;
         end   # comment
         a = 10"""
         str_ = """
@@ -2332,7 +2328,7 @@ run_nest(text::String, margin::Int) = run_nest(text, opts = Options(margin = mar
         @test length(t) == 18
 
         str = """function foo()
-                     10;
+                     10
                      20
                  end"""
         test_format("""function foo() 10;  20 end""", str)
@@ -2351,15 +2347,15 @@ run_nest(text::String, margin::Int) = run_nest(text, opts = Options(margin = mar
                 end""", str)
 
         str = """for i = 1:10
-                     1;
-                     2;
+                     1
+                     2
                      3
                  end"""
         test_format("""for i=1:10 1; 2; 3 end""", str)
 
         str = """while true
-                     1;
-                     2;
+                     1
+                     2
                      3
                  end"""
         test_format("""while true 1; 2; 3 end""", str)
@@ -2372,13 +2368,13 @@ run_nest(text::String, margin::Int) = run_nest(text, opts = Options(margin = mar
         test_format("""try a catch e b end""", str)
 
         str = """try
-                     a1;
+                     a1
                      a2
                  catch e
-                     b1;
+                     b1
                      b2
                  finally
-                     c1;
+                     c1
                      c2
                  end"""
         test_format("""try a1;a2 catch e b1;b2 finally c1;c2 end""", str)
@@ -2390,8 +2386,8 @@ run_nest(text::String, margin::Int) = run_nest(text, opts = Options(margin = mar
                      e end""", str)
 
         str = """let a=b, c = d
-                     e1;
-                     e2;
+                     e1
+                     e2
                      e3
                  end"""
         test_format("""let a=b,c  =  d  \ne1; e2; e3 end""", str)
@@ -2407,8 +2403,8 @@ run_nest(text::String, margin::Int) = run_nest(text, opts = Options(margin = mar
                      c""", str)
 
         str = """begin
-                     a;
-                     b;
+                     a
+                     b
                      c
                  end"""
         test_format("""begin a; b; c end""", str)
@@ -2417,8 +2413,8 @@ run_nest(text::String, margin::Int) = run_nest(text, opts = Options(margin = mar
         test_format("""begin \n            end""", str)
 
         str = """quote
-                     a;
-                     b;
+                     a
+                     b
                      c
                  end"""
         test_format("""quote a; b; c end""", str)
@@ -2427,32 +2423,32 @@ run_nest(text::String, margin::Int) = run_nest(text, opts = Options(margin = mar
         test_format("""quote \n end""", str)
 
         str = """if cond1
-                     e1;
+                     e1
                      e2
                  end"""
         test_format("if cond1 e1;e2 end", str)
 
         str = """if cond1
-                     e1;
+                     e1
                      e2
                  else
-                     e3;
+                     e3
                      e4
                  end"""
         test_format("if cond1 e1;e2 else e3;e4 end", str)
 
         str = """begin
                      if cond1
-                         e1;
+                         e1
                          e2
                      elseif cond2
-                         e3;
+                         e3
                          e4
                      elseif cond3
-                         e5;
+                         e5
                          e6
                      else
-                         e7;
+                         e7
                          e8
                      end
                  end"""
@@ -2461,10 +2457,10 @@ run_nest(text::String, margin::Int) = run_nest(text, opts = Options(margin = mar
             str)
 
         str = """if cond1
-                     e1;
+                     e1
                      e2
                  elseif cond2
-                     e3;
+                     e3
                      e4
                  end"""
         test_format("if cond1 e1;e2 elseif cond2 e3; e4 end", str)
@@ -2644,7 +2640,7 @@ run_nest(text::String, margin::Int) = run_nest(text, opts = Options(margin = mar
                 C,
             },
         }
-            10;
+            10
             20
         end"""
         str_ = "function f(arg1::A,key1=val1;key2=val2) where {A,F{B,C}} 10; 20 end"
@@ -2659,7 +2655,7 @@ run_nest(text::String, margin::Int) = run_nest(text, opts = Options(margin = mar
             A,
             F{B,C},
         }
-            10;
+            10
             20
         end"""
         test_format(str_, str; indent=4, margin=17)
@@ -2670,7 +2666,7 @@ run_nest(text::String, margin::Int) = run_nest(text, opts = Options(margin = mar
             key1 = val1;
             key2 = val2,
         ) where {A,F{B,C}}
-            10;
+            10
             20
         end"""
         test_format(str_, str; indent=4, margin=18)
@@ -5000,6 +4996,66 @@ some_function(
             c
         """
         test_format(str_, str; indent=4, margin=1)
+    end
+
+    @testset "semicolon statement separators are dropped" begin
+        test_format("begin; end", "begin end")
+        test_format("for i = 1:10; x = 1; y = 2; end", "for i = 1:10\n    x = 1\n    y = 2\nend")
+        test_format("for i = 1:2; end", "for i = 1:2\nend")
+        test_format("function f(); end", "function f() end")
+        test_format("function f(); x = 1; end", "function f()\n    x = 1\nend")
+        test_format("if a; b; else; c; end", "if a\n    b\nelse\n    c\nend")
+        test_format("if a; end", "if a\nend")
+        test_format("let a = 1, b = 2; x; end", "let a = 1, b = 2\n    x\nend")
+        test_format("let a = 1; b = 2; x; end", "let a = 1\n    b = 2\n    x\nend")
+        test_format("let; end", "let\nend")
+        test_format("macro m(); end", "macro m() end")
+        test_format("module A; end", "module A end")
+        test_format("mutable struct A; end", "mutable struct A end")
+        test_format("mutable struct A; x::Int; end", "mutable struct A\n    x::Int\nend")
+        test_format("quote; end", "quote end")
+        test_format("quote; x = 1; end", "quote\n    x = 1\nend")
+        test_format("struct A; end", "struct A end")
+        test_format("struct A; x::Int; end", "struct A\n    x::Int\nend")
+        test_format("try; catch; end", "try\ncatch\nend")
+        test_format("while a; b; end", "while a\n    b\nend")
+        test_format("while a; end", "while a\nend")
+
+        @testset "top-level semicolons aren't dropped" begin
+            test_format("hello();", "hello();")
+            test_format("x = 1; y = 2", "x = 1;\ny = 2")
+        end
+
+        @testset "semantically significant semicolons aren't dropped" begin
+            test_format("(a; b)", "(a; b)")
+            test_format("f(a; b = 1)", "f(a; b = 1)")
+        end
+    end
+
+    @testset "comments after empty block body" begin
+        for style in ALL_STYLES
+            for loop_start in ("for x in y", "while x", "if x", "if x\n    f\nelseif x", "let x = y", "function f()", "macro m()")
+                s_ = "$(loop_start); #= comment =# end"
+                s = """
+                $(loop_start)
+                    #= comment =#
+                end"""
+                test_format(s_, s, style)
+
+                s_ = "$(loop_start); #= comment1 =# #= comment2 =# end"
+                s = """
+                $(loop_start)
+                    #= comment1 =# #= comment2 =#
+                end"""
+                test_format(s_, s, style)
+
+                s_ = "$(loop_start); # comment\n end"
+                s = """
+                $(loop_start) # comment
+                end"""
+                test_format(s_, s, style)
+            end
+        end
     end
 end
 

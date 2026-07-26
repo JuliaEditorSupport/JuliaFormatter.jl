@@ -66,7 +66,7 @@ using JuliaFormatter.Internal: test_format
     """
     formatted_str = raw"""
     begin
-        include("hi");
+        include("hi")
         1
     end
     """

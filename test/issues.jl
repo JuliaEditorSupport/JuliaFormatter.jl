@@ -533,7 +533,7 @@ end
     @testset "264 - `let` empty block body" begin
         str_ = "let; end"
         str = """
-        let;
+        let
         end"""
         test_format(str_, str)
     end
@@ -1798,7 +1798,7 @@ end
         let hello() =
                 print(
                     "ok",
-                );
+                )
             hello()
         end
         """
