@@ -62,6 +62,45 @@ function add_indent!(fst::FST, s::State, indent::Int)
     s.line_offset = lo
 end
 
+"""
+    add_indent_after_row_newlines!(fst::FST, s::State, indent::Int)
+
+Indent the lines that a `Row`/`NRow` node starts *itself*, i.e. those that follow one of its
+own newlines, leaving the rest of its descendants alone.
+
+`Row`/`NRow` are transparent grouping nodes: the newlines inside them are the concatenation
+separators of the array literal that encloses them (see `p_row`), so they have to be
+indented to that literal's indent. Everything else inside a row is an ordinary argument
+which works out its own indent, and an argument that opens on the same line as the
+enclosing bracket is deliberately *not* indented any further:
+
+    [[1,
+        2]; 3;;    # WRONG, `2` should be at 4, as it would be in `f([1,\\n2], 3)`
+    4]
+
+which is why this can't just use [`add_indent!`](@ref) — that walks into the arguments too.
+
+Rows can be nested inside other rows, because a row groups its arguments by the longest run
+of semicolons it contains and any shorter runs end up in a nested row (`[1; 2;; 3;;; 4]` is
+an `nrow` `1; 2;; 3` inside an `ncat`). The newlines of such an inner row are still
+separators of the enclosing literal, so recurse through `Row`/`NRow` children.
+"""
+function add_indent_after_row_newlines!(fst::FST, s::State, indent::Int)
+    if indent == 0 || is_leaf(fst)
+        return
+    end
+    fst.indent += indent
+    nodes = fst.nodes::Vector
+    for (i, n) in enumerate(nodes)
+        if i > 1 && nodes[i-1].typ === NEWLINE
+            add_indent!(n, s, indent)
+        elseif n.typ === Row || n.typ === NRow
+            add_indent_after_row_newlines!(n, s, indent)
+        end
+    end
+    return nothing
+end
+
 function gettreeval(fst::FST)::String
     if is_leaf(fst)
         return fst.val
