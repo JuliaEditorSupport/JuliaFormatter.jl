@@ -1,6 +1,7 @@
 module ConfigTests
 
 using JuliaFormatter: format, CONFIG_FILE_NAME, format_text
+using JuliaFormatter: BlueStyle, YASStyle
 using Test
 
 @testset ".JuliaFormatter.toml config" begin
@@ -154,6 +155,41 @@ using Test
                 @test read(sub_code2_path, String) == after2
                 @test format(".") == true
             end
+        end
+    end
+
+    @testset "directory walk with nested styles" begin
+        # ├─ .JuliaFormatter.toml (style = "yas")
+        # ├─ code.jl (before -> yas)
+        # ├─ sub1
+        # │  ├─ .JuliaFormatter.toml (style = "blue")
+        # │  └─ sub_code1.jl (before -> blue)
+        # └─ sub2
+        #    └─ sub_code2.jl (before -> yas, from the root config)
+        #
+        # The call is long enough to be nested, which is where yas and blue disagree.
+        before = "function f()\n  some_function_name(argument_one, argument_two, argument_three, argument_four, arg_five)\nend\n"
+        after_yas = format_text(before; style = YASStyle())
+        after_blue = format_text(before; style = BlueStyle())
+        @test after_yas != after_blue
+
+        mktempdir() do dir
+            sub1_dir = mkdir(joinpath(dir, "sub1"))
+            sub2_dir = mkdir(joinpath(dir, "sub2"))
+            code_path = joinpath(dir, "code.jl")
+            sub_code1_path = joinpath(sub1_dir, "sub_code1.jl")
+            sub_code2_path = joinpath(sub2_dir, "sub_code2.jl")
+            write(joinpath(dir, CONFIG_FILE_NAME), """style = "yas"\n""")
+            write(joinpath(sub1_dir, CONFIG_FILE_NAME), """style = "blue"\n""")
+            write(code_path, before)
+            write(sub_code1_path, before)
+            write(sub_code2_path, before)
+
+            @test format(dir) == false
+            @test read(code_path, String) == after_yas
+            @test read(sub_code1_path, String) == after_blue
+            @test read(sub_code2_path, String) == after_yas
+            @test format(dir) == true
         end
     end
 
