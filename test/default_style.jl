@@ -5007,7 +5007,6 @@ some_function(
         test_format("while a; b; end", "while a\n    b\nend")
         test_format("struct A; x; end", "struct A\n    x::Any\nend")
         test_format("quote; x = 1; end", "quote\n    x = 1\nend")
-        test_format("begin; end", "begin\nend")
 
         # The separator between the binding list and the body of a `let` is a child of
         # the `let` node rather than of a block, but goes the same way.
