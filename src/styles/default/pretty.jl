@@ -1429,8 +1429,11 @@ function p_functiondef(
         caller_idx = nothing
     end
 
-    block_has_contents = false
+    collapse_end_onto_same_line = true
     childs = children(cst)
+    seen_body = false
+    extra_block_node = nothing
+
     for (i, c) in enumerate(childs)
         if i == function_or_macro_keyword_idx
             n = pretty(style, c, s, ctx, lineage)
@@ -1438,10 +1441,12 @@ function p_functiondef(
             add_node!(t, Whitespace(1), s)
         elseif kind(c) === K"end"
             n = pretty(style, c, s, ctx, lineage)
-            if block_has_contents
-                add_node!(t, n, s)
-            else
-                # Empty block
+            if extra_block_node !== nothing
+                add_node!(t, extra_block_node, s)
+                s.indent -= s.opts.indent
+                collapse_end_onto_same_line = false
+            end
+            if collapse_end_onto_same_line
                 if s.opts.join_lines_based_on_source
                     join_lines = t.endline == n.startline
                     if join_lines
@@ -1457,13 +1462,26 @@ function p_functiondef(
                     n.startline = t.endline
                     add_node!(t, n, s; join_lines = true)
                 end
+            else
+                add_node!(t, n, s)
             end
+        elseif seen_body
+            if !JuliaSyntax.is_whitespace(c)
+                error("Unexpected node after function body: $(kind(c))")
+            end
+            if extra_block_node === nothing
+                s.indent += s.opts.indent
+                extra_block_node = FST(Block, nspaces(s))
+            end
+            n = pretty(style, c, s, ctx, lineage)
+            add_node!(extra_block_node, n, s)
         elseif kind(c) === K"block" && haschildren(c)
-            block_has_contents = block_has_statements(c)
+            collapse_end_onto_same_line = !block_has_statements(c)
             s.indent += s.opts.indent
             n = pretty(style, c, s, newctx(ctx; ignore_single_line = true), lineage)
             add_node!(t, n, s; max_padding = s.opts.indent)
             s.indent -= s.opts.indent
+            seen_body = true
         elseif i === caller_idx
             n = pretty(style, c, s, newctx(ctx; can_separate_kwargs = false), lineage)
             add_node!(t, n, s; join_lines = true)
@@ -1998,6 +2016,8 @@ function p_for(
 
     ends_in_iterable = false
     is_while_cond = false
+    seen_body = false
+    extra_block_node = nothing
 
     for c in children(cst)
         if kind(c) in KSet"for while" && !haschildren(c)
@@ -2006,7 +2026,29 @@ function p_for(
                 is_while_cond = true
             end
         elseif kind(c) === K"end"
+            if extra_block_node !== nothing
+                add_node!(t, extra_block_node, s)
+                s.indent -= s.opts.indent
+            end
             add_node!(t, pretty(style, c, s), s)
+        elseif seen_body
+            # These are things that came after the loop body, but somehow aren't `end`.
+            # This can happen with constructs such as `for i in 1:10; #= hello =# end`,
+            # where JuliaSyntax parses the comment as a child of the `for` node instead
+            # of the block.
+            #
+            # To handle such cases, we create a fake block node that contains the remaining
+            # children. It's hacky, but I strongly suspect that the only thing that can
+            # occur here is whitespace / comments so it might be fine.
+            if !JuliaSyntax.is_whitespace(c)
+                error("Unexpected child after loop body: $(kind(c))")
+            end
+            if extra_block_node === nothing
+                s.indent += s.opts.indent
+                extra_block_node = FST(Block, nspaces(s))
+            end
+            n = pretty(style, c, s, ctx, lineage)
+            add_node!(extra_block_node, n, s)
         elseif kind(c) === K"block"
             # We need `is_while_cond` to determine whether the block we see is the body of
             # the loop, or the condition of a while loop such as `while (a; b; c) ... end`.
@@ -2025,6 +2067,7 @@ function p_for(
                 if !ends_in_iterable && (t.nodes::Vector{FST})[end-2].typ !== NOTCODE
                     insert!(t, length(t.nodes) - 1, Placeholder(0))
                 end
+                seen_body = true
             end
         elseif JuliaSyntax.is_whitespace(c)
             add_node!(t, pretty(style, c, s, ctx, lineage), s)
@@ -2268,13 +2311,21 @@ function p_if(
 
     # Flag to indicate when we are processing the condition of an if or elseif.
     is_cond = false
+    # Whether or not we've read in a body following the if/elseif/else yet.
+    seen_body = false
+    extra_block_node = nothing
 
     for c in children(cst)
         if kind(c) in KSet"if elseif else"
             if !haschildren(c)
                 add_node!(t, pretty(style, c, s, ctx, lineage), s; max_padding = 0)
             else
-                # TODO(penelopeysm) how can an if/elseif/else keyword have a child?
+                if extra_block_node !== nothing
+                    add_node!(t, extra_block_node, s)
+                    s.indent -= s.opts.indent
+                    extra_block_node = nothing
+                    seen_body = false
+                end
                 len = length(t)
                 n = pretty(style, c, s, ctx, lineage)
                 add_node!(t, n, s)
@@ -2285,7 +2336,23 @@ function p_if(
                 is_cond = true
             end
         elseif kind(c) === K"end"
+            if extra_block_node !== nothing
+                add_node!(t, extra_block_node, s)
+                s.indent -= s.opts.indent
+                extra_block_node = nothing
+            end
             add_node!(t, pretty(style, c, s, ctx, lineage), s)
+        elseif seen_body
+            # See comments in `p_for` for explanation of this
+            if !JuliaSyntax.is_whitespace(c)
+                error("Unexpected child after if body: $(kind(c))")
+            end
+            if extra_block_node === nothing
+                s.indent += s.opts.indent
+                extra_block_node = FST(Block, nspaces(s))
+            end
+            n = pretty(style, c, s, ctx, lineage)
+            add_node!(extra_block_node, n, s)
         elseif kind(c) === K"block"
             # This block could either be the condition (if it immediatelly follows an `if`
             # or `elseif`, ignoring whitespace), or it could be the actual body. This is
@@ -2304,6 +2371,7 @@ function p_if(
                     max_padding = s.opts.indent,
                 )
                 s.indent -= s.opts.indent
+                seen_body = true
             end
         elseif !JuliaSyntax.is_whitespace(c)
             # This branch is hit for non-block conditions (i.e. simple things like the `x`
@@ -2316,6 +2384,17 @@ function p_if(
         else
             add_node!(t, pretty(style, c, s, ctx, lineage), s)
         end
+    end
+
+    # This branch can be hit in cases like
+    #     s = "if x; elseif y; #= comment =# end"
+    # because `comment` is the final child of the elseif and there's no node after it to
+    # trigger addition of `extra_block_node`.
+    if extra_block_node !== nothing
+        add_node!(t, extra_block_node, s)
+        s.indent -= s.opts.indent
+        extra_block_node = nothing
+        seen_body = false
     end
 
     return t
