@@ -2319,6 +2319,7 @@ function p_if(
         if kind(c) in KSet"if elseif else"
             if !haschildren(c)
                 add_node!(t, pretty(style, c, s, ctx, lineage), s; max_padding = 0)
+                seen_body = false
             else
                 if extra_block_node !== nothing
                     add_node!(t, extra_block_node, s)
