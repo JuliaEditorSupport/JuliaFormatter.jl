@@ -703,6 +703,19 @@ function n_generator!(
                 # +1 for newline to whitespace conversion
                 width = s.line_offset + 1
                 w, _ = length_to(fst, (NEWLINE,); start = i + 1)
+                # Don't count a trailing PLACEHOLDER/WHITESPACE that immediately
+                # precedes the next NEWLINE, because `remove_superfluous_whitespace!`
+                # will zero it out. For example, in `expr <NL> for <PH> <NL> iter`,
+                # the <PH> between "for" and the second NEWLINE won't appear in the
+                # printed output, so it shouldn't count toward the line width.
+                next_nl = findnext(x -> x.typ === NEWLINE, nodes, i + 1)
+                if next_nl !== nothing && next_nl > i + 1
+                    prev = fst[next_nl-1]
+                    if (prev.typ === PLACEHOLDER || prev.typ === WHITESPACE) &&
+                       can_remove(prev)
+                        w -= length(prev)
+                    end
+                end
                 width += w
                 if width <= s.opts.margin
                     fst[i] = Whitespace(1)
