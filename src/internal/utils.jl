@@ -177,6 +177,7 @@ end
         input::AbstractString,
         expected::Union{Nothing,AbstractString},
         [style::AbstractStyle=DefaultStyle();]
+        testset::Bool=false,
         ast::Bool=false,
         options...
     )
@@ -189,14 +190,25 @@ AST.
 
 If `expected` is `nothing`, doesn't test for an exact output, but still checks idempotence
 (and also semantic invariance if `ast=true`).
+
+If `testset=true`, wraps the function call in a `@testset`.
 """
 function test_format(
     input::AbstractString,
     expected::Union{Nothing,AbstractString},
     style::JF.AbstractStyle = JF.DefaultStyle();
+    testset::Bool = false,
     ast::Bool = false,
     options...,
 )
+    if testset
+        maxlen = 15
+        truncated_input = length(input) > maxlen ? input[1:(maxlen-1)] * "…" : input
+        return @testset "$truncated_input" begin
+            test_format(input, expected, style; testset = false, ast = ast, options...)
+        end
+    end
+
     out = JF.format_text(input, style; options...)
     if !isnothing(expected)
         if out != expected
