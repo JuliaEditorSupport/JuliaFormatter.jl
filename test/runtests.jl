@@ -31,7 +31,6 @@ Pkg.develop(; path = dirname(@__DIR__))
     include("line_ranges.jl")
     include("interface.jl")
     include("config.jl")
-    include("format_repo.jl")
     include("argparse.jl")
     include("jlfmt_app.jl")
 end
