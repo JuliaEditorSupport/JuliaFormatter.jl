@@ -42,12 +42,13 @@ using Test
             "$(T)[;]",
             "$(T)[;;]",
             "$(T)[;;;]",
-            "$(T)[1 2 ;;\n 3 4 ; 2 3 4 5]", # 1080
-            "$(T)[1 2 ;;\n 3 4 ;;; 5 6 ;;\n 7 8]", #1080
+            "$(T)[1 2 ;;\n 3 4 ; 2 3 4 5]", # issue 1080
+            "$(T)[1 2 ;;\n 3 4 ;;; 5 6 ;;\n 7 8]", # issue 1080
+            "$(T)[1\n\n2\n\n3]", # issue 1242
         )
             for style in ALL_STYLES
                 @testset let style = style
-                    test_format(s, nothing, style)
+                    test_format(s, nothing, style; ast=true)
                 end
             end
         end
