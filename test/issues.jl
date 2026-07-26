@@ -3641,6 +3641,9 @@ end
     end
 
     @testset "1244 join_lines idempotence fail with for ... in" begin
+        s = "[foo(bar) for i in I]"
+        test_format(s, nothing; join_lines_based_on_source=true, margin=16, ast=true)
+
         s_ = """
         begin
           HSeriesList = [multi_hilbert_series(quo(P,I)[1]; parent=HSRing, backend=backend)[1][1]  for I in IdealList];
@@ -3653,7 +3656,6 @@ end
                 I in IdealList
             ]
         end"""
-
         test_format(s_, s; join_lines_based_on_source=true)
     end
 end
