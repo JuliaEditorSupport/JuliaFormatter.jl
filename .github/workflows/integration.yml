@@ -42,11 +42,13 @@ jobs:
 
       - uses: julia-actions/cache@a45e8fa8be21c18a06b7177052533149e61e9b38 # 3.1.0
 
-      - name: Cache target repos
+      # `pristine` holds the clones exactly as they came from GitHub and is
+      # never written to by the formatter
+      - name: Cache pristine target repos
         id: cache-repos
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # 6.1.0
         with:
-          path: target
+          path: pristine
           key: repos-${{ github.run_id }}
           restore-keys: |
             repos-
@@ -57,7 +59,7 @@ jobs:
         run: |
           for org in JuliaLang JuliaPlots MakieOrg SciML JuliaDiff JuliaStats TuringLang EnzymeAD jump-dev trixi-framework oscar-system; do
             for name in $(gh repo list "$org" --limit 1000 --json name,isFork,pushedAt --jq '.[] | select(((.name | endswith(".jl")) or .name == "julia") and (.isFork | not) and (.pushedAt >= "2024-01-01")) | .name'); do
-              dest="target/$org/$name"
+              dest="pristine/$org/$name"
               [[ -d "$dest" ]] && continue
               echo "Cloning $org/$name ..."
               git clone --depth 1 --quiet "https://github.com/$org/$name" "$dest"
@@ -71,7 +73,7 @@ jobs:
           Pkg.instantiate()
 
           using JuliaSyntax: parseall, GreenNode
-          for (root, _, files) in walkdir("target")
+          for (root, _, files) in walkdir("pristine")
             for f in files
               endswith(f, ".jl") || continue
               path = joinpath(root, f)
@@ -83,6 +85,11 @@ jobs:
               end
             end
           end
+
+      # Do all the work in a separate directory to avoid clobbering the clones
+      # and accidentally caching formatted files
+      - name: Copy target repos
+        run: cp -a pristine target
 
       - name: Count Julia files and lines
         run: |
