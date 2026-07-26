@@ -1465,8 +1465,8 @@ function p_functiondef(
             else
                 add_node!(t, n, s)
             end
-        elseif seen_body
-            if !JuliaSyntax.is_whitespace(c)
+        elseif seen_body && !Shims.is_really_whitespace(c)
+            if kind(c) !== K"Comment"
                 error("Unexpected node after function body: $(kind(c))")
             end
             if extra_block_node === nothing
@@ -2031,7 +2031,7 @@ function p_for(
                 s.indent -= s.opts.indent
             end
             add_node!(t, pretty(style, c, s), s)
-        elseif seen_body
+        elseif seen_body && !Shims.is_really_whitespace(c)
             # These are things that came after the loop body, but somehow aren't `end`.
             # This can happen with constructs such as `for i in 1:10; #= hello =# end`,
             # where JuliaSyntax parses the comment as a child of the `for` node instead
@@ -2040,8 +2040,8 @@ function p_for(
             # To handle such cases, we create a fake block node that contains the remaining
             # children. It's hacky, but I strongly suspect that the only thing that can
             # occur here is whitespace / comments so it might be fine.
-            if !JuliaSyntax.is_whitespace(c)
-                error("Unexpected child after loop body: $(kind(c))")
+            if kind(c) !== K"Comment"
+                error("Unexpected node after loop body: $(kind(c))")
             end
             if extra_block_node === nothing
                 s.indent += s.opts.indent
@@ -2343,10 +2343,10 @@ function p_if(
                 extra_block_node = nothing
             end
             add_node!(t, pretty(style, c, s, ctx, lineage), s)
-        elseif seen_body
+        elseif seen_body && !Shims.is_really_whitespace(c)
             # See comments in `p_for` for explanation of this
-            if !JuliaSyntax.is_whitespace(c)
-                error("Unexpected child after if body: $(kind(c))")
+            if kind(c) !== K"Comment"
+                error("Unexpected node after if body: $(kind(c))")
             end
             if extra_block_node === nothing
                 s.indent += s.opts.indent
