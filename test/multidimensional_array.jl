@@ -160,7 +160,7 @@ end
             test_format(s, expected_indent1, style; margin = 1)
         end
         # MinimalStyle is weird...
-        test_format(s, "[1\n    2;;\n    3\n    4]", MinimalStyle())
+        test_format(s, "[1\n2;;\n    3\n    4]", MinimalStyle())
     end
 end
 
