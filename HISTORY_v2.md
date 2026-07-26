@@ -1,3 +1,9 @@
+# v2.12.2
+
+Fixed a bug where formatting of specific array literals would not be idempotent under MinimalStyle. (#1241, #1243)
+
+Fixed a bug where array literals with newline separators would be formatted into a different array under MinimalStyle. (#1242, #1243)
+
 # v2.12.1
 
 Fixed a bug where bodies of block constructs inside e.g. tuples would not be formatted idempotently (the bodies would keep shifting rightwards) when `join_lines_based_on_source = true`. (#1238, #1240)
