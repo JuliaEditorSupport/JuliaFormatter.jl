@@ -387,8 +387,13 @@ function n_tuple!(
             elseif has_closer && (i == 1 || i == length(nodes))
                 nest!(style, n, s, lineage)
             else
-                diff = fst.indent - fst[i].indent
-                add_indent!(n, s, diff)
+                # It's an argument inside the `tuple` which needs to be indented to
+                # `fst.indent`. However, we need to be careful to only indent things
+                # that are genuinely on a new line.
+                if i > 1 && fst[i-1].typ === NEWLINE
+                    diff = fst.indent - fst[i].indent
+                    add_indent!(n, s, diff)
+                end
                 n.extra_margin = 1
                 nest!(style, n, s, lineage)
             end

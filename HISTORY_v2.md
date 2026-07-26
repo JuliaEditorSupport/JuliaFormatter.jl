@@ -1,3 +1,7 @@
+# v2.12.1
+
+Fixed a bug where bodies of block constructs inside e.g. tuples would not be formatted idempotently (the bodies would keep shifting rightwards) when `join_lines_based_on_source = true`. (#1238, #1240)
+
 # v2.12.0
 
 JuliaFormatter now removes superfluous semicolons inside block expressions.
