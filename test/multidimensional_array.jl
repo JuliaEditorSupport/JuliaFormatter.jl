@@ -159,8 +159,87 @@ end
             test_format(s, expected_indent1, style)
             test_format(s, expected_indent1, style; margin = 1)
         end
-        # MinimalStyle is weird...
+        # MinimalStyle keeps the brackets where they are, and indents every continuation
+        # line by one level
         test_format(s, "[1\n    2;;\n    3\n    4]", MinimalStyle())
+    end
+end
+
+@testset "MinimalStyle indentation of array literals" begin
+    # MinimalStyle leaves the brackets where they are, so every line after the opening
+    # bracket gets exactly one extra level of indentation, whichever kind of concatenation
+    # the newline stands for.
+    @testset "rows are all indented equally" begin
+        for (s, expected) in (
+            ("[1\n2\n3]", "[1\n    2\n    3]"),
+            ("[1\n2;;\n3]", "[1\n    2;;\n    3]"),
+            ("[1\n2;;\n3\n4]", "[1\n    2;;\n    3\n    4]"),
+            ("[1;\n2;;\n3;\n4]", "[1;\n    2;;\n    3;\n    4]"),
+            ("[1;;\n2]", "[1;;\n    2]"),
+            ("[1 2;;\n3 4]", "[1 2;;\n    3 4]"),
+            # rows nested inside rows
+            ("[1\n2;;\n3;;;\n4]", "[1\n    2;;\n    3;;;\n    4]"),
+            ("[1\n2;;;\n3\n4]", "[1\n    2;;;\n    3\n    4]"),
+            # hcat rows inside a vcat
+            ("[1 2\n3 4]", "[1 2\n    3 4]"),
+            ("T[1\n2;;\n3]", "T[1\n    2;;\n    3]"),
+        )
+            @testset let s = s
+                test_format(s, expected, MinimalStyle(); ast=true)
+            end
+        end
+    end
+
+    @testset "nested brackets" begin
+        s = """
+        [[1,
+        2]; 3;;
+        4]"""
+        expected = """
+        [[1,
+            2]; 3;;
+            4]"""
+        test_format(s, expected, MinimalStyle(); ast=true)
+
+        s = """
+        [[1,
+        2] 3
+        4 5]"""
+        expected = """
+        [[1,
+            2] 3
+            4 5]"""
+        test_format(s, expected, MinimalStyle(); ast=true)
+
+        s = """
+        [1 2
+        [3,
+        4] 5]"""
+        expected = """
+        [1 2
+            [3,
+                4] 5]"""
+        test_format(s, expected, MinimalStyle(); ast=true)
+    end
+
+    @testset "indentation is relative to the enclosing scope" begin
+        s = """
+        function f()
+            x = [1
+            2;;
+            3
+            4]
+            return x
+        end"""
+        expected = """
+        function f()
+            x = [1
+                2;;
+                3
+                4]
+            return x
+        end"""
+        test_format(s, expected, MinimalStyle(); ast=true)
     end
 end
 

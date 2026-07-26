@@ -387,8 +387,28 @@ function n_tuple!(
             elseif has_closer && (i == 1 || i == length(nodes))
                 nest!(style, n, s, lineage)
             else
-                diff = fst.indent - fst[i].indent
-                add_indent!(n, s, diff)
+                # It's an argument inside the `tuple` which needs to be indented to
+                # `fst.indent`. However, we need to be careful to only indent things
+                # that are genuinely on a new line.
+                if i > 1 && fst[i-1].typ === NEWLINE
+                    diff = fst.indent - fst[i].indent
+                    add_indent!(n, s, diff)
+                elseif n.typ === Row || n.typ === NRow
+                    # A Row/NRow that begins on the same line as the opening bracket is not
+                    # itself on a new line, but it still carries newlines of its own, which
+                    # are concatenation separators belonging to _this_ node (see `p_row`).
+                    # Those need to be indented to `fst.indent`. For example, in
+                    #
+                    #     [1
+                    #     2;;
+                    #     3
+                    #     4]
+                    #
+                    # the `1\n2;;` NRow starts on the same line as `[`, and the newline
+                    # between `1` and `2` belongs to the enclosing Ncat just as much as the
+                    # one between `2;;` and `3` does. Both should be indented equally.
+                    add_indent_after_row_newlines!(n, s, fst.indent - fst[i].indent)
+                end
                 n.extra_margin = 1
                 nest!(style, n, s, lineage)
             end

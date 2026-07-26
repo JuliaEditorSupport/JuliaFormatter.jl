@@ -28,6 +28,7 @@ jobs:
           - default
           - blue
           - yas
+          - minimal
         version:
           - '1'
           - 'pre'

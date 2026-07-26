@@ -3602,6 +3602,29 @@ end
           #= Hi =#)"""
         test_format(s_, s, YASStyle())
     end
+
+    @testset "1238 block as the first element of a tuple" begin
+        str_ = "(begin x = 1 end, 1)"
+        str1 = "(begin\n    x = 1\nend, 1)"
+        str2 = "(begin\n     x = 1\n end, 1)"
+        str3 = "(\n    begin\n        x = 1\n    end,\n    1,\n)"
+        test_format(str_, str1, DefaultStyle())
+        test_format(str_, str1, MinimalStyle())
+        test_format(str_, str2, YASStyle())
+        test_format(str_, str3, BlueStyle())
+
+        str_ = "(for _ = 1:10; x = 1; end, 1)"
+        str = "(for _ = 1:10\n    x = 1\nend, 1)"
+        for st in (DefaultStyle(), MinimalStyle())
+            test_format(str_, str, st)
+        end
+
+        str_ = "aa = (begin x = 1 end, 1)"
+        str = "aa = (begin\n    x = 1\nend, 1)"
+        for st in (DefaultStyle(), MinimalStyle())
+            test_format(str_, str, st)
+        end
+    end
 end
 
 end

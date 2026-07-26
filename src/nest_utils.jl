@@ -62,6 +62,24 @@ function add_indent!(fst::FST, s::State, indent::Int)
     s.line_offset = lo
 end
 
+# Indent the lines that a `Row`/`NRow` node starts *itself*, i.e. those that follow one of
+# its own newlines, leaving the rest of its descendants alone.
+function add_indent_after_row_newlines!(fst::FST, s::State, indent::Int)
+    if indent == 0 || is_leaf(fst)
+        return
+    end
+    fst.indent += indent
+    nodes = fst.nodes::Vector
+    for (i, n) in enumerate(nodes)
+        if i > 1 && nodes[i-1].typ === NEWLINE
+            add_indent!(n, s, indent)
+        elseif n.typ === Row || n.typ === NRow
+            add_indent_after_row_newlines!(n, s, indent)
+        end
+    end
+    return nothing
+end
+
 function gettreeval(fst::FST)::String
     if is_leaf(fst)
         return fst.val
