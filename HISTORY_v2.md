@@ -1,3 +1,7 @@
+# v2.12.3
+
+Fixed a bug causing lack of idempotence with generator expressions and `join_lines_based_on_source = true`. (#1244, #1245)
+
 # v2.12.2
 
 Fixed a bug where formatting of specific array literals would not be idempotent under MinimalStyle. (#1241, #1243)
