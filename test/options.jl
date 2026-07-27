@@ -1630,6 +1630,88 @@ end
             """
             test_format(s, s; join_lines_based_on_source = true)
         end
+
+        @testset "blank lines inside iterables" begin
+            # Blank lines inside an iterable are always dropped, but they must not affect
+            # anything else: the arguments and the closing bracket stay exactly where the
+            # source put them. Previously the blank line diverted `add_node!` into the
+            # "notcode" branch, which emitted no NEWLINE at all and left the arguments (or
+            # the closer) glued to the previous line, e.g. `[\n a,\n b,]`.
+            @testset "$opener … $closer" for (opener, closer) in (
+                ("[", "]"),
+                ("(", ")"),
+                ("f(", ")"),
+                ("T{", "}"),
+                ("x[", "]"),
+                ("{", "}"),
+            )
+                str = """
+                $opener
+                    a,
+                    b,
+                $closer"""
+
+                # blank line before the closing bracket
+                str_ = """
+                $opener
+                    a,
+                    b,
+
+                $closer"""
+                test_format(str_, str; join_lines_based_on_source = true)
+
+                # ... several of them
+                str_ = """
+                $opener
+                    a,
+                    b,
+
+
+
+                $closer"""
+                test_format(str_, str; join_lines_based_on_source = true)
+
+                # blank line between two arguments
+                str_ = """
+                $opener
+                    a,
+
+                    b,
+                $closer"""
+                test_format(str_, str; join_lines_based_on_source = true)
+            end
+
+            # A comment in the gap is not a blank line: it is preserved, and so is the
+            # newline that has to precede it.
+            str = """
+            [
+                a,
+                b,
+
+                # hi
+            ]"""
+            test_format(str, str; join_lines_based_on_source = true)
+
+            # In a vcat the newline between two arguments *is* the separator, so losing it
+            # turns `[a\n\nb]` (a 2x1 vcat) into `[a b]` (a 1x2 hcat).
+            test_format("[a\n\nb]", "[a\n    b]"; join_lines_based_on_source = true)
+            str_ = """
+            [a
+                []
+
+            if b
+                c
+            end
+            ]"""
+            str = """
+            [a
+                []
+                if b
+                    c
+                end
+            ]"""
+            test_format(str_, str; join_lines_based_on_source = true)
+        end
     end
 
     @testset "`indent_submodule`" begin
