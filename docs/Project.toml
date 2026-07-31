@@ -1,4 +1,5 @@
 [deps]
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+DocumenterCodeBlocks = "b6400b83-267f-4b55-9fd8-bffc853bdfd8"
 JuliaFormatter = "98e50ef6-434e-11e9-1051-2b60c6c9e899"
 JuliaSyntax = "70703baa-626e-46a2-a12c-08ffd08c73b4"
