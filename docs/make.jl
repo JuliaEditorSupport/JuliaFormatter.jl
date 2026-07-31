@@ -1,7 +1,7 @@
 using Pkg: Pkg
 Pkg.develop(; path = dirname(@__DIR__))
 
-using Documenter, JuliaFormatter
+using Documenter, DocumenterCodeBlocks, JuliaFormatter
 
 makedocs(;
     sitename = "JuliaFormatter",
@@ -36,6 +36,7 @@ makedocs(;
         "Project Status" => "status.md",
     ],
     checkdocs = :export,
+    plugins = [CodeBlocks()],
 )
 
 deploydocs(;
