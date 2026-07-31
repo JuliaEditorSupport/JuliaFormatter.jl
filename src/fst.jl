@@ -1413,25 +1413,44 @@ function add_node!(
                 add_node!(t, InlineComment(current_line), s)
             end
 
-            if nt !== PLACEHOLDER
+            # A newline is mandatory if we're about to emit a Notcode node or an inline
+            # comment (both of which occupy the rest of the line), and it's what the caller
+            # asked for if `join_lines` is false. Otherwise the caller wants `n` on the same
+            # line as the previous node and the only thing in between is a blank line that
+            # we are dropping anyway, so there is nothing to separate them with. For
+            # example, YASStyle adds the closer of `[\n a,\n b,\n\n]` with
+            # `override_join_lines_based_on_source = true` -- i.e. 'always glue `]` to the
+            # last argument' -- and breaking the line here would strand it as `[a,\n b\n ]`.
+            force_newline = !join_lines || nest || hascomment(s.doc, current_line)
+
+            if nt !== PLACEHOLDER && force_newline
                 add_node!(t, Newline(; nest_behavior = AlwaysNest), s)
             elseif hascomment(s.doc, current_line) && nt === PLACEHOLDER
                 # swap PLACEHOLDER (will be NEWLINE) with INLINECOMMENT node
                 idx = length(tnodes::Vector{FST})
                 tnodes[idx-1], tnodes[idx] = tnodes[idx], tnodes[idx-1]
-            elseif !join_lines && t.typ in (Vcat, TypedVcat, Ncat, TypedNcat)
-                # In a vcat/ncat the newline between two arguments *is* the separator, so
-                # `p_vcat` strips the source newline and appends a PLACEHOLDER in its place,
-                # relying on that placeholder later becoming a NEWLINE. That's not
-                # guaranteed here: with `join_lines_based_on_source` (MinimalStyle, YAS,
-                # SciML) the nesting pass only converts a placeholder when the margin is
-                # exceeded, so the placeholder can survive and the two arguments get glued
-                # onto one line. Since we know from the source that `n` belongs on its own
-                # line, emit the NEWLINE explicitly -- exactly as the `!join_lines` branch
-                # below does when there is no blank line to divert us into this branch.
+            elseif !join_lines
+                # We know that `n` belongs on its own line, but we are not adding a Notcode
+                # node (which would come with its own NEWLINE), so unless we do something
+                # here the only thing separating `n` from the previous node is the
+                # PLACEHOLDER. That relies on the nesting pass later converting that
+                # PLACEHOLDER into a NEWLINE, which is not guaranteed: with
+                # `join_lines_based_on_source` (MinimalStyle, YAS, SciML) placeholders are
+                # only converted when the margin is exceeded (see `nest_if_over_margin!`),
+                # so the placeholder survives and `n` gets glued onto the previous line.
+                # Emit the NEWLINE explicitly -- exactly as the `!join_lines` branch below
+                # does when there is no blank line to divert us into this branch.
                 #
-                # Without this, `[a\n\nb]` (a two-element vcat) formats to `[a b]`, which is
-                # a 1x2 hcat, and
+                # Without this, the blank lines in
+                #
+                #     [               f(              [a
+                #         a,              a,
+                #         b,          )               b]
+                #                                     ^ two-element vcat
+                #     ]
+                #
+                # respectively produce `[\n a,\n b,]`, `f(\n a,)` and `[a b]` (a 1x2 hcat!),
+                # instead of just being dropped. Likewise
                 #
                 #     [a
                 #         []

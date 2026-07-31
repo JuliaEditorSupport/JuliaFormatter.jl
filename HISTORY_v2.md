@@ -1,3 +1,7 @@
+# v2.12.4
+
+Fixed a bug causing lack of idempotence when extra lines inside comma-separated arguments (e.g. in a vector) were present. (#1246, #1247)
+
 # v2.12.3
 
 Fixed a bug causing lack of idempotence with generator expressions and `join_lines_based_on_source = true`. (#1244, #1245)

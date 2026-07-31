@@ -571,6 +571,37 @@ using JuliaFormatter: format_text
         test_format(str, str, YASStyle())
     end
 
+    @testset "blank lines inside iterables" begin
+        # YAS always glues the closing bracket to the last argument (its `p_vect` and
+        # friends pass `override_join_lines_based_on_source = true` for the closer). A
+        # blank line before the closer used to defeat that override and strand it on its
+        # own line, e.g. `[a,\n b\n ]`.
+        @testset "$opener … $closer" for (opener, closer, expected) in (
+            ("[", "]", "[a,\n b]"),
+            ("(", ")", "(a,\n b)"),
+            ("f(", ")", "f(a,\n  b)"),
+            ("T{", "}", "T{a,\n  b}"),
+            ("x[", "]", "x[a,\n  b]"),
+            ("{", "}", "{a,\n b}"),
+        )
+            str_ = """
+            $opener
+                a,
+                b,
+
+            $closer"""
+            test_format(str_, expected, YASStyle())
+
+            str_ = """
+            $opener
+                a,
+
+                b,
+            $closer"""
+            test_format(str_, expected, YASStyle())
+        end
+    end
+
     @testset "issue 582 - vcat" begin
         test_format("[sts...;]", "[sts...;]", YASStyle())
         test_format("[a;b;]", "[a; b;]", YASStyle())
