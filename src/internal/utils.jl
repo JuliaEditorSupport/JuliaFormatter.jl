@@ -4,7 +4,7 @@
 
 module Internal
 
-import JuliaSyntax as JS
+import ..JuliaSyntax as JS
 import ..JuliaFormatter as JF
 using Test
 
