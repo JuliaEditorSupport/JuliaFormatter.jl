@@ -2,8 +2,8 @@
 
 module Shims
 
-using JuliaSyntax
-using JuliaSyntax: @KSet_str, @K_str, JuliaSyntax as JS
+using ..JuliaSyntax
+using ..JuliaSyntax: @KSet_str, @K_str, JuliaSyntax as JS
 
 """
 Determine if a CST represents a function call, i.e., `F(X1, X2, ...)` syntactically.
