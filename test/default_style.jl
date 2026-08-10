@@ -2,7 +2,7 @@ module DefaultTests
 
 using Test
 using JuliaSyntax
-using JuliaFormatter: JuliaFormatter, DefaultStyle, Options, format_file
+using JuliaFormatter: JuliaFormatter, DefaultStyle, MinimalStyle, Options, format_file
 using JuliaFormatter.Internal: test_format, ALL_STYLES
 
 function run_pretty(text::String; style = DefaultStyle(), opts = Options())
