@@ -876,6 +876,36 @@ function p_stringh(
     t = FST(StringN, loc[2] - 1)
     t.line_offset = loc[2]
 
+    # Triple-quoted literals ("""...""" and ```...```) have dedent semantics: the common
+    # leading whitespace of their interior lines is stripped by the parser, so uniformly
+    # shifting those lines with the surrounding code preserves the resulting value.
+    # Ordinary multiline literals have no such semantics -- in
+    #
+    #     x = "line one
+    #             line two"
+    #
+    # every leading space on the second line is part of the string's value, so shifting it
+    # would silently change program behavior (issue #1251). The same applies to `...`
+    # cmd literals and to non-triple string-macro literals such as r"..." or raw"...".
+    # Such "opaque" literals get their interior lines stored verbatim below and are
+    # marked via Metadata so that `n_string!` and `print_string` do not re-indent them.
+    #
+    # The first child of a string/cmdstring node is its opening delimiter token, e.g.
+    #
+    #     julia> parseall(GreenNode, "x = \"\"\"\n    a\n    \"\"\"")[2][5]
+    #          1:13     │[string]
+    #          1:3      │  """
+    #          ...
+    #
+    # When the docstring path has rewritten `val` (format_docstrings = true), the result
+    # is deliberately re-indented Markdown, so the existing shifting behavior is kept.
+    is_triple =
+        haschildren(cst) && kind(children(cst)[1]) in KSet"\"\"\" ```"
+    opaque = !is_triple && !(ctx.from_docstring && s.opts.format_docstrings)
+    if opaque
+        t.metadata = Metadata(K"None", false, false, false, false, true, false, true)
+    end
+
     lines = split(val, "\n")
     # Calculate the display column of the first non-whitespace character in the string
     # literal.
@@ -901,8 +931,14 @@ function p_stringh(
         # add_node! from checking source lines outside the docstring for comments. See
         # https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/1223
         ln = min(startline + i - 1, endline)
-        l = i == 1 ? l : l[sidx:end]
-        n = FST(LITERAL, ln, ln, sidx - 1, textwidth(l), l, (), AllowNest, 0, -1, nothing)
+        # For opaque literals interior lines keep their full original text (including
+        # leading whitespace) and get indent 0, so they are reproduced byte-for-byte no
+        # matter how the opening line moves. For triple-quoted literals the common leading
+        # whitespace (`sidx - 1` columns) is stripped here and re-added at print time
+        # according to the (possibly shifted) indent.
+        l = (i == 1 || opaque) ? l : l[sidx:end]
+        line_indent = (i == 1 || !opaque) ? sidx - 1 : 0
+        n = FST(LITERAL, ln, ln, line_indent, textwidth(l), l, (), AllowNest, 0, -1, nothing)
         # override_join_lines_based_on_source ensures that the lines are always printed on
         # separate lines rather than being joined, even if join_lines_based_on_source has
         # been enabled by the user
@@ -1496,6 +1532,7 @@ function p_functiondef(
         false,
         false,
         can_transform_syntax(s, true),
+        false,
         false,
     )
     t
@@ -2810,6 +2847,7 @@ function p_binaryopcall(
         is_standalone_shortcircuit && can_transform_syntax(s, true),
         is_expandable_short_func,
         is_assignment(cst) || defines_function(cst),
+        false,
         false,
         false,
     )

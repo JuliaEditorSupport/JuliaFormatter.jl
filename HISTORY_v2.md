@@ -1,3 +1,7 @@
+# v2.12.5
+
+Fixed a bug where re-indenting code containing an ordinary (non-triple-quoted) multiline string, cmd, or string-macro literal would also shift the lines inside the literal, silently changing its value. Interior lines of such literals are now kept exactly as written; only the line containing the opening delimiter moves with the surrounding code. Triple-quoted literals, which have dedent semantics, are unaffected. (#1251, #1253)
+
 # v2.12.4
 
 Fixed a bug causing lack of idempotence when extra lines inside comma-separated arguments (e.g. in a vector) were present. (#1246, #1247)
