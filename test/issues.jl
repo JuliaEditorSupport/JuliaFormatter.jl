@@ -1459,6 +1459,45 @@ end
         )
     end
 
+    @testset "594 no forced line break after =" begin
+        # With `preserve_single_line_blocks` (enabled for MinimalStyle), a short-form
+        # function definition whose right-hand side is a single-line block construct is
+        # left completely unchanged: no line break is forced after the `=`.
+        unchanged = [
+            "getallns() = let allns = Base.IdSet{Symbol}(); oneverything((m, s, x, state) -> push!(allns, s)); allns end",
+            "safe_isfile(x) = try isfile(x); catch; false end",
+            "f(x) = if x; 1 else 2 end",
+            "f() = for i in 1:10; g(i) end",
+        ]
+        for c in unchanged
+            test_format(c * "\n", c * "\n", MinimalStyle(); ast=true)
+        end
+
+        # If the source already breaks the line after the `=`, the break is preserved.
+        test_format(
+            "f() =\n    try isfile(x); catch; false end\n",
+            "f() =\n    try isfile(x); catch; false end\n",
+            MinimalStyle();
+            ast=true,
+        )
+
+        # A block RHS that starts on the `=` line but has a multi-line body: no break is
+        # inserted after the `=`, and the body stays expanded.
+        test_format(
+            "f() = let x = 1\n    x\nend\n",
+            "f() = let x = 1\n    x\nend\n",
+            MinimalStyle();
+            ast=true,
+        )
+
+        # The option is off by default: DefaultStyle still forces the break after `=`.
+        test_format(
+            "f(x) = if x; 1 else 2 end\n",
+            "f(x) =\n    if x\n        1\n    else\n        2\n    end\n";
+            ast=true,
+        )
+    end
+
     @testset "604" begin
         str = raw"""
         begin @foo a end

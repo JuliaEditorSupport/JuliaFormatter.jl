@@ -1,3 +1,7 @@
+# v2.13.1
+
+When `preserve_single_line_blocks` is enabled (as in `MinimalStyle`), a line break is no longer forced after the `=` of a short-form function definition whose right-hand side is a block construct (`try`, `let`, `if`, `for`, `while`, `do`). For example `getallns() = let allns = Base.IdSet{Symbol}(); ...; allns end` is now left unchanged under `MinimalStyle`. (#594, #1255)
+
 # v2.13.0
 
 Added a new formatting option, `preserve_single_line_blocks` (default `false`; `true` for `MinimalStyle`). When enabled, block constructs written entirely on a single source line — e.g. `try isfile(x); catch; false end` or `let x = 1; x end` — are kept on one line, with their statements separated by semicolons, instead of being expanded onto multiple lines. This applies to `function`/`macro` definitions, `for`/`while` loops, `if`, `let`, `try`, `do`, `struct`/`mutable struct`, `module`/`baremodule`, `begin`, and `quote`. (#593, #1254)
