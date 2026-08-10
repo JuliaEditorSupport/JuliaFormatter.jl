@@ -5033,20 +5033,42 @@ some_function(
     end
 
     @testset "comments after empty block body" begin
+        # MinimalStyle enables preserve_single_line_blocks, so constructs written on a
+        # single source line keep their comments on that line instead of being expanded.
+        # The `;` before an empty body is still dropped for function/macro definitions,
+        # and for a multi-line `if` only the single-line `elseif` part stays joined.
+        function minimal_preserved(loop_start, comments)
+            if endswith(loop_start, ")")
+                "$(loop_start) $(comments) end"
+            elseif occursin("\n", loop_start)
+                "$(loop_start); $(comments)\nend"
+            else
+                "$(loop_start); $(comments) end"
+            end
+        end
         for style in ALL_STYLES
+            preserve = style isa MinimalStyle
             for loop_start in ("for x in y", "while x", "if x", "if x\n    f\nelseif x", "let x = y", "function f()", "macro m()")
                 s_ = "$(loop_start); #= comment =# end"
-                s = """
-                $(loop_start)
-                    #= comment =#
-                end"""
+                s = if preserve
+                    minimal_preserved(loop_start, "#= comment =#")
+                else
+                    """
+                    $(loop_start)
+                        #= comment =#
+                    end"""
+                end
                 test_format(s_, s, style)
 
                 s_ = "$(loop_start); #= comment1 =# #= comment2 =# end"
-                s = """
-                $(loop_start)
-                    #= comment1 =# #= comment2 =#
-                end"""
+                s = if preserve
+                    minimal_preserved(loop_start, "#= comment1 =# #= comment2 =#")
+                else
+                    """
+                    $(loop_start)
+                        #= comment1 =# #= comment2 =#
+                    end"""
+                end
                 test_format(s_, s, style)
 
                 s_ = "$(loop_start); # comment\n end"

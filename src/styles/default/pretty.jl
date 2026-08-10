@@ -1525,6 +1525,12 @@ function p_functiondef(
             if kind(c) !== K"Comment"
                 error("Unexpected node after function body: $(kind(c))")
             end
+            if keep_single
+                # preserve_single_line_blocks: keep the comment on the same line.
+                add_node!(t, Whitespace(1), s)
+                add_node!(t, pretty(style, c, s, ctx, lineage), s; join_lines = true)
+                continue
+            end
             if extra_block_node === nothing
                 s.indent += s.opts.indent
                 extra_block_node = FST(Block, nspaces(s))
@@ -2213,6 +2219,12 @@ function p_for(
             if kind(c) !== K"Comment"
                 error("Unexpected node after loop body: $(kind(c))")
             end
+            if keep_single
+                # preserve_single_line_blocks: keep the comment on the same line.
+                add_node!(t, Whitespace(1), s)
+                add_node!(t, pretty(style, c, s, ctx, lineage), s; join_lines = true)
+                continue
+            end
             if extra_block_node === nothing
                 s.indent += s.opts.indent
                 extra_block_node = FST(Block, nspaces(s))
@@ -2606,6 +2618,12 @@ function p_if(
             # See comments in `p_for` for explanation of this
             if kind(c) !== K"Comment"
                 error("Unexpected node after if body: $(kind(c))")
+            end
+            if keep_single
+                # preserve_single_line_blocks: keep the comment on the same line.
+                add_node!(t, Whitespace(1), s)
+                add_node!(t, pretty(style, c, s, ctx, lineage), s; join_lines = true)
+                continue
             end
             if extra_block_node === nothing
                 s.indent += s.opts.indent
