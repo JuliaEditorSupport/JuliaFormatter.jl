@@ -50,6 +50,24 @@ Base.@kwdef struct Options{T<:_Unset}
     max_iterations::Union{T,Int} = 1
     normalize_line_endings::Union{T,String} = "auto"
     pipe_to_function_call::Union{T,Bool} = false
+    # When true, block constructs (function/macro definitions, for/while loops, if, let,
+    # try, do, ...) that are written entirely on a single source line are kept on a single
+    # line, with their statements separated by semicolons, instead of being expanded onto
+    # multiple lines. For example
+    #
+    #     safe_isfile(x) = try isfile(x); catch; false end
+    #
+    # is left as-is instead of being rewritten to
+    #
+    #     safe_isfile(x) =
+    #         try
+    #             isfile(x)
+    #         catch
+    #             false
+    #         end
+    #
+    # This is enabled by default for MinimalStyle.
+    preserve_single_line_blocks::Union{T,Bool} = false
     remove_extra_newlines::Union{T,Bool} = false
     sciml_margin_overrun::Union{T,Int} = 20
     separate_kwargs_with_semicolon::Union{T,Bool} = false

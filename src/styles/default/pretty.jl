@@ -1176,6 +1176,51 @@ end
 
 # Block
 # length Block is the length of the longest expr
+"""
+    keep_single_line(cst::JuliaSyntax.GreenNode, s::State)::Bool
+
+Whether a block construct that is written entirely on a single source line should be kept
+on a single line (see the `preserve_single_line_blocks` option). For example, with the
+option enabled,
+
+    safe_isfile(x) = try isfile(x); catch; false end
+
+keeps the `try` on one line instead of being expanded to
+
+    safe_isfile(x) =
+        try
+            isfile(x)
+        catch
+            false
+        end
+
+IMPORTANT: this must be called when `s.offset` is still positioned at the start of `cst`
+(i.e. at the start of the construct, before any of its children have been prettified),
+since it compares the source line of the first and last byte of `cst`.
+"""
+function keep_single_line(cst::JuliaSyntax.GreenNode, s::State)::Bool
+    return s.opts.preserve_single_line_blocks &&
+           on_same_line(s, s.offset, s.offset + span(cst) - 1)
+end
+
+"""
+    starts_with_semicolon(fst::FST)::Bool
+
+Whether the first leaf of `fst` is a semicolon. Used when joining a single-line block onto
+the line of its parent construct: in `try; isfile(x); catch; false end` the body block
+starts with a `;`, and no space should be inserted between the `try` keyword and the `;`
+(`try; isfile(x)` rather than `try ; isfile(x)`).
+"""
+function starts_with_semicolon(fst::FST)::Bool
+    n = fst
+    while !is_leaf(n)
+        nodes = n.nodes::Vector{FST}
+        isempty(nodes) && return false
+        n = nodes[1]
+    end
+    return n.typ === SEMICOLON
+end
+
 function p_block(
     ds::AbstractStyle,
     cst::JuliaSyntax.GreenNode,
@@ -1208,8 +1253,17 @@ function p_block(
         return p_tupleblock(style, cst, s, ctx, lineage)
     end
 
+    # Block-owning constructs (function/for/if/let/try/do/...) pass
+    # `ignore_single_line = true` so that their bodies are always expanded onto separate
+    # lines. When `preserve_single_line_blocks` is enabled, a body written on a single
+    # source line keeps its single-line, semicolon-separated form instead. Blocks without
+    # any statements (e.g. the `;` in `baremodule Q; end`) keep the existing behavior of
+    # dropping the superfluous semicolons.
     single_line =
-        ignore_single_line ? false : on_same_line(s, s.offset, s.offset + span(cst) - 1)
+        (
+            !ignore_single_line ||
+            (s.opts.preserve_single_line_blocks && block_has_statements(cst))
+        ) && on_same_line(s, s.offset, s.offset + span(cst) - 1)
 
     before_first_arg = true
 
@@ -1433,6 +1487,8 @@ function p_functiondef(
     childs = children(cst)
     seen_body = false
     extra_block_node = nothing
+    # Keep e.g. `function f(); 1 end` on a single line (preserve_single_line_blocks).
+    keep_single = keep_single_line(cst, s)
 
     for (i, c) in enumerate(childs)
         if i == function_or_macro_keyword_idx
@@ -1476,12 +1532,26 @@ function p_functiondef(
             n = pretty(style, c, s, ctx, lineage)
             add_node!(extra_block_node, n, s)
         elseif kind(c) === K"block" && haschildren(c)
-            collapse_end_onto_same_line = !block_has_statements(c)
-            s.indent += s.opts.indent
-            n = pretty(style, c, s, newctx(ctx; ignore_single_line = true), lineage)
-            add_node!(t, n, s; max_padding = s.opts.indent)
-            s.indent -= s.opts.indent
-            seen_body = true
+            if keep_single && block_has_statements(c)
+                # preserve_single_line_blocks: keep e.g. `function f(); 1 end` on one
+                # line. The block is prettified without `ignore_single_line`, so p_block
+                # joins its statements with `; `, and it is appended to the definition
+                # line rather than being placed on its own (indented) line. The `end`
+                # keyword is then also collapsed onto the same line below.
+                n = pretty(style, c, s, ctx, lineage)
+                if !starts_with_semicolon(n)
+                    add_node!(t, Whitespace(1), s)
+                end
+                add_node!(t, n, s; join_lines = true)
+                seen_body = true
+            else
+                collapse_end_onto_same_line = !block_has_statements(c)
+                s.indent += s.opts.indent
+                n = pretty(style, c, s, newctx(ctx; ignore_single_line = true), lineage)
+                add_node!(t, n, s; max_padding = s.opts.indent)
+                s.indent -= s.opts.indent
+                seen_body = true
+            end
         elseif i === caller_idx
             n = pretty(style, c, s, newctx(ctx; can_separate_kwargs = false), lineage)
             add_node!(t, n, s; join_lines = true)
@@ -1529,6 +1599,8 @@ function p_struct(
 
     block_has_contents = false
     childs = children(cst)
+    # Keep e.g. `struct A; x::Int end` on a single line (preserve_single_line_blocks).
+    keep_single = keep_single_line(cst, s)
     for (i, c) in enumerate(childs)
         if i == 1
             n = pretty(style, c, s, ctx, lineage)
@@ -1536,7 +1608,10 @@ function p_struct(
             add_node!(t, Whitespace(1), s)
         elseif kind(c) === K"end"
             n = pretty(style, c, s, ctx, lineage)
-            if s.opts.join_lines_based_on_source && !block_has_contents
+            if keep_single && block_has_contents
+                add_node!(t, Whitespace(1), s)
+                add_node!(t, n, s; join_lines = true)
+            elseif s.opts.join_lines_based_on_source && !block_has_contents
                 join_lines = t.endline == n.startline
                 if join_lines
                     (add_node!(t, Whitespace(1), s))
@@ -1552,13 +1627,25 @@ function p_struct(
             end
         elseif kind(c) === K"block" && haschildren(c)
             block_has_contents = block_has_statements(c)
-            s.indent += s.opts.indent
-            n = pretty(style, c, s, newctx(ctx; ignore_single_line = true), lineage)
-            if s.opts.annotate_untyped_fields_with_any && can_transform_syntax(s, true)
-                annotate_typefields_with_any!(n, s)
+            if keep_single && block_has_contents
+                # preserve_single_line_blocks: keep the fields on the same line.
+                n = pretty(style, c, s, ctx, lineage)
+                if s.opts.annotate_untyped_fields_with_any && can_transform_syntax(s, true)
+                    annotate_typefields_with_any!(n, s)
+                end
+                if !starts_with_semicolon(n)
+                    add_node!(t, Whitespace(1), s)
+                end
+                add_node!(t, n, s; join_lines = true)
+            else
+                s.indent += s.opts.indent
+                n = pretty(style, c, s, newctx(ctx; ignore_single_line = true), lineage)
+                if s.opts.annotate_untyped_fields_with_any && can_transform_syntax(s, true)
+                    annotate_typefields_with_any!(n, s)
+                end
+                add_node!(t, n, s; max_padding = s.opts.indent)
+                s.indent -= s.opts.indent
             end
-            add_node!(t, n, s; max_padding = s.opts.indent)
-            s.indent -= s.opts.indent
         else
             add_node!(t, pretty(style, c, s, ctx, lineage), s; join_lines = true)
         end
@@ -1582,6 +1669,8 @@ function p_mutable(
 
     block_has_contents = false
     childs = children(cst)
+    # Keep e.g. `mutable struct B; x end` on a single line (preserve_single_line_blocks).
+    keep_single = keep_single_line(cst, s)
     for c in childs
         if kind(c) in KSet"struct mutable"
             n = pretty(style, c, s, ctx, lineage)
@@ -1589,7 +1678,10 @@ function p_mutable(
             add_node!(t, Whitespace(1), s)
         elseif kind(c) === K"end"
             n = pretty(style, c, s, ctx, lineage)
-            if s.opts.join_lines_based_on_source && !block_has_contents
+            if keep_single && block_has_contents
+                add_node!(t, Whitespace(1), s)
+                add_node!(t, n, s; join_lines = true)
+            elseif s.opts.join_lines_based_on_source && !block_has_contents
                 join_lines = t.endline == n.startline
                 if join_lines
                     (add_node!(t, Whitespace(1), s))
@@ -1605,13 +1697,25 @@ function p_mutable(
             end
         elseif kind(c) === K"block" && haschildren(c)
             block_has_contents = block_has_statements(c)
-            s.indent += s.opts.indent
-            n = pretty(style, c, s, newctx(ctx; ignore_single_line = true), lineage)
-            if s.opts.annotate_untyped_fields_with_any && can_transform_syntax(s, true)
-                annotate_typefields_with_any!(n, s)
+            if keep_single && block_has_contents
+                # preserve_single_line_blocks: keep the fields on the same line.
+                n = pretty(style, c, s, ctx, lineage)
+                if s.opts.annotate_untyped_fields_with_any && can_transform_syntax(s, true)
+                    annotate_typefields_with_any!(n, s)
+                end
+                if !starts_with_semicolon(n)
+                    add_node!(t, Whitespace(1), s)
+                end
+                add_node!(t, n, s; join_lines = true)
+            else
+                s.indent += s.opts.indent
+                n = pretty(style, c, s, newctx(ctx; ignore_single_line = true), lineage)
+                if s.opts.annotate_untyped_fields_with_any && can_transform_syntax(s, true)
+                    annotate_typefields_with_any!(n, s)
+                end
+                add_node!(t, n, s; max_padding = s.opts.indent)
+                s.indent -= s.opts.indent
             end
-            add_node!(t, n, s; max_padding = s.opts.indent)
-            s.indent -= s.opts.indent
         else
             add_node!(t, pretty(style, c, s, ctx, lineage), s; join_lines = true)
         end
@@ -1637,6 +1741,8 @@ function p_module(
     block_has_contents = false
     childs = children(cst)
     indent_module = s.opts.indent_submodule && from_module
+    # Keep e.g. `module M; f() = 1 end` on a single line (preserve_single_line_blocks).
+    keep_single = keep_single_line(cst, s)
 
     for c in childs
         if kind(c) in KSet"module baremodule" && !haschildren(c)
@@ -1645,7 +1751,10 @@ function p_module(
             add_node!(t, Whitespace(1), s)
         elseif kind(c) === K"end"
             n = pretty(style, c, s)
-            if s.opts.join_lines_based_on_source && !block_has_contents
+            if keep_single && block_has_contents
+                add_node!(t, Whitespace(1), s)
+                add_node!(t, n, s; join_lines = true)
+            elseif s.opts.join_lines_based_on_source && !block_has_contents
                 join_lines = t.endline == n.startline
                 if join_lines
                     (add_node!(t, Whitespace(1), s))
@@ -1662,21 +1771,30 @@ function p_module(
         elseif kind(c) === K"block" && haschildren(c)
             block_has_contents = block_has_statements(c)
 
-            if indent_module
-                s.indent += s.opts.indent
-            end
-            n = pretty(
-                style,
-                c,
-                s,
-                newctx(ctx; from_module = true, ignore_single_line = true),
-                lineage,
-            )
-            if indent_module
-                add_node!(t, n, s; max_padding = s.opts.indent)
-                s.indent -= s.opts.indent
+            if keep_single && block_has_contents
+                # preserve_single_line_blocks: keep the module body on the same line.
+                n = pretty(style, c, s, newctx(ctx; from_module = true), lineage)
+                if !starts_with_semicolon(n)
+                    add_node!(t, Whitespace(1), s)
+                end
+                add_node!(t, n, s; join_lines = true)
             else
-                add_node!(t, n, s; max_padding = 0)
+                if indent_module
+                    s.indent += s.opts.indent
+                end
+                n = pretty(
+                    style,
+                    c,
+                    s,
+                    newctx(ctx; from_module = true, ignore_single_line = true),
+                    lineage,
+                )
+                if indent_module
+                    add_node!(t, n, s; max_padding = s.opts.indent)
+                    s.indent -= s.opts.indent
+                else
+                    add_node!(t, n, s; max_padding = 0)
+                end
             end
         else
             add_node!(
@@ -1815,6 +1933,10 @@ function p_begin(
         return t
     end
 
+    # Keep e.g. `begin x = 1; y = 2 end` on a single line (preserve_single_line_blocks).
+    # This must be computed before the `begin` keyword below is prettified.
+    keep_single = keep_single_line(cst, s)
+
     childs = children(cst)
     add_node!(t, pretty(style, childs[1], s, ctx, lineage), s)
 
@@ -1833,6 +1955,24 @@ function p_begin(
         end_node.startline = t.endline
         # But don't override endline or else that inserts extra newlines at the end
         add_node!(t, end_node, s; join_lines = true)
+    elseif keep_single && !empty_body
+        # preserve_single_line_blocks: join the statements (and their `;` separators)
+        # onto the `begin ... end` line.
+        for c in childs[2:(end-1)]
+            if JuliaSyntax.is_whitespace(c)
+                s.offset += span(c)
+                continue
+            end
+            n = pretty(style, c, s, ctx, lineage)
+            if kind(c) === K";"
+                add_node!(t, n, s; join_lines = true)
+            else
+                add_node!(t, Whitespace(1), s)
+                add_node!(t, n, s; join_lines = true)
+            end
+        end
+        add_node!(t, Whitespace(1), s)
+        add_node!(t, pretty(style, cst[end], s), s; join_lines = true)
     else
         push!(lineage, (K"block", false, false))
         s.indent += s.opts.indent
@@ -1930,10 +2070,22 @@ function p_let(
     block_id = 1
 
     has_let_args = false
+    # Keep e.g. `let x = 1; x end` on a single line (preserve_single_line_blocks).
+    keep_single = keep_single_line(cst, s)
 
     childs = children(cst)
     for (i, c) in enumerate(childs)
-        if kind(c) === K"block"
+        if kind(c) === K"block" && keep_single && block_id != 1
+            # preserve_single_line_blocks: the body of a single-line `let` is joined onto
+            # the same line, e.g. `let x = 1; x end` is left as-is. (The first block --
+            # the binding list `x = 1` -- is already joined via `join_body` below.)
+            n = pretty(style, c, s, newctx(ctx; from_let = true), lineage)
+            if !starts_with_semicolon(n)
+                add_node!(t, Whitespace(1), s)
+            end
+            add_node!(t, n, s; join_lines = true)
+            block_id += 1
+        elseif kind(c) === K"block"
             s.indent += s.opts.indent
             if block_id == 1
                 has_let_args =
@@ -1978,16 +2130,27 @@ function p_let(
                 add_node!(t, Whitespace(1), s)
             end
         elseif kind(c) === K"end"
-            add_node!(t, pretty(style, c, s, ctx, lineage), s)
+            if keep_single
+                add_node!(t, Whitespace(1), s)
+                add_node!(t, pretty(style, c, s, ctx, lineage), s; join_lines = true)
+            else
+                add_node!(t, pretty(style, c, s, ctx, lineage), s)
+            end
         elseif kind(c) === K";"
             # The `;` between the binding list and the body of `let x = 1; body; end`.
-            # The body is always emitted on its own line, so the newline separates the
-            # two and the `;` is redundant:
+            # When the construct is kept on a single line (preserve_single_line_blocks)
+            # the `;` still separates the binding list from the body, so it is emitted.
+            # Otherwise the body is emitted on its own line, the newline separates the
+            # two, and the `;` is redundant:
             #
             #     let x = 1; body; end  ->  let x = 1
             #                                   body
             #                               end
-            s.offset += span(c)
+            if keep_single
+                add_node!(t, pretty(style, c, s, ctx, lineage), s; join_lines = true)
+            else
+                s.offset += span(c)
+            end
         else
             add_node!(
                 t,
@@ -2018,6 +2181,8 @@ function p_for(
     is_while_cond = false
     seen_body = false
     extra_block_node = nothing
+    # Keep e.g. `for i in 1:10; f(i) end` on a single line (preserve_single_line_blocks).
+    keep_single = keep_single_line(cst, s)
 
     for c in children(cst)
         if kind(c) in KSet"for while" && !haschildren(c)
@@ -2030,7 +2195,12 @@ function p_for(
                 add_node!(t, extra_block_node, s)
                 s.indent -= s.opts.indent
             end
-            add_node!(t, pretty(style, c, s), s)
+            if keep_single
+                add_node!(t, Whitespace(1), s)
+                add_node!(t, pretty(style, c, s), s; join_lines = true)
+            else
+                add_node!(t, pretty(style, c, s), s)
+            end
         elseif seen_body && !Shims.is_really_whitespace(c)
             # These are things that came after the loop body, but somehow aren't `end`.
             # This can happen with constructs such as `for i in 1:10; #= hello =# end`,
@@ -2057,6 +2227,15 @@ function p_for(
                 is_while_cond = false
                 add_node!(t, Whitespace(1), s)
                 add_node!(t, pretty(style, c, s), s; join_lines = true)
+            elseif keep_single
+                # preserve_single_line_blocks: the loop body is joined onto the same
+                # line, e.g. `for i in 1:10; f(i) end` is left as-is.
+                n = pretty(style, c, s, ctx, lineage)
+                if !starts_with_semicolon(n)
+                    add_node!(t, Whitespace(1), s)
+                end
+                add_node!(t, n, s; join_lines = true)
+                seen_body = true
             else
                 # The body of the for/while loop.
                 s.indent += s.opts.indent
@@ -2164,18 +2343,35 @@ function append_do_nodes!(
         return t
     end
 
+    # Keep e.g. `foo() do x; x + 1 end` on a single line (preserve_single_line_blocks).
+    keep_single = keep_single_line(cst, s)
+
     childs = children(cst)
     for (i, c) in enumerate(childs)
         if kind(c) === K"do" && !haschildren(c)
             add_node!(t, Whitespace(1), s)
             add_node!(t, pretty(style, c, s, ctx, lineage), s; join_lines = true)
         elseif kind(c) === K"end"
-            add_node!(t, pretty(style, c, s, ctx, lineage), s)
+            if keep_single
+                add_node!(t, Whitespace(1), s)
+                add_node!(t, pretty(style, c, s, ctx, lineage), s; join_lines = true)
+            else
+                add_node!(t, pretty(style, c, s, ctx, lineage), s)
+            end
         elseif kind(c) === K"block"
-            s.indent += s.opts.indent
-            n = pretty(style, c, s, newctx(ctx; ignore_single_line = true), lineage)
-            add_node!(t, n, s; max_padding = s.opts.indent)
-            s.indent -= s.opts.indent
+            if keep_single
+                # The do-block body is joined onto the same line, keeping its `;`.
+                n = pretty(style, c, s, ctx, lineage)
+                if !starts_with_semicolon(n) && length(n) > 0
+                    add_node!(t, Whitespace(1), s)
+                end
+                add_node!(t, n, s; join_lines = true)
+            else
+                s.indent += s.opts.indent
+                n = pretty(style, c, s, newctx(ctx; ignore_single_line = true), lineage)
+                add_node!(t, n, s; max_padding = s.opts.indent)
+                s.indent -= s.opts.indent
+            end
         elseif kind(c) === K"tuple"
             # the thing immediately after the do.
             n = pretty(style, c, s, ctx, lineage)
@@ -2257,31 +2453,69 @@ function p_try(
     #
     # Apparently "try catch else end" is also valid.
 
+    # Keep e.g. `try isfile(x); catch; false end` on a single line
+    # (preserve_single_line_blocks). Note that p_try is called recursively for the
+    # `catch`/`finally`/`else` sub-nodes; each recursion recomputes this for its own node,
+    # which lies on the same source line, so the whole construct is joined consistently.
+    keep_single = keep_single_line(cst, s)
+
     childs = children(cst)
     for c in childs
         if kind(c) in KSet"try catch finally else"
             if !haschildren(c)
-                if kind(c) in KSet"catch finally else"
+                # The keyword leaf itself (e.g. the `catch` of a `catch` sub-node).
+                if kind(c) in KSet"catch finally else" && !keep_single
                     s.indent -= s.opts.indent
                 end
-                add_node!(t, pretty(style, c, s, ctx, lineage), s; max_padding = 0)
+                if keep_single
+                    # Separate the keyword from preceding content with a space, unless it
+                    # is the first token of this node (e.g. the `catch` at the start of a
+                    # `catch` sub-node).
+                    if !isempty(t.nodes::Vector{FST})
+                        add_node!(t, Whitespace(1), s)
+                    end
+                    add_node!(t, pretty(style, c, s, ctx, lineage), s; join_lines = true)
+                else
+                    add_node!(t, pretty(style, c, s, ctx, lineage), s; max_padding = 0)
+                end
             else
+                # A `catch`/`finally`/`else` sub-node with children.
                 len = length(t)
                 n = pretty(style, c, s, ctx, lineage)
-                add_node!(t, n, s; max_padding = 0)
+                if keep_single
+                    # Join e.g. `catch; false` onto the line after `try isfile(x);`.
+                    add_node!(t, Whitespace(1), s)
+                    add_node!(t, n, s; join_lines = true)
+                else
+                    add_node!(t, n, s; max_padding = 0)
+                end
                 t.len = max(len, length(n))
             end
         elseif kind(c) === K"end"
-            s.indent -= s.opts.indent
-            add_node!(t, pretty(style, c, s, ctx, lineage), s)
+            if keep_single
+                add_node!(t, Whitespace(1), s)
+                add_node!(t, pretty(style, c, s, ctx, lineage), s; join_lines = true)
+            else
+                s.indent -= s.opts.indent
+                add_node!(t, pretty(style, c, s, ctx, lineage), s)
+            end
         elseif kind(c) === K"block"
-            s.indent += s.opts.indent
-            add_node!(
-                t,
-                pretty(style, c, s, newctx(ctx; ignore_single_line = true), lineage),
-                s;
-                max_padding = s.opts.indent,
-            )
+            if keep_single
+                # The body: joined onto the same line, keeping its `;` separators.
+                n = pretty(style, c, s, ctx, lineage)
+                if !starts_with_semicolon(n) && length(n) > 0
+                    add_node!(t, Whitespace(1), s)
+                end
+                add_node!(t, n, s; join_lines = true)
+            else
+                s.indent += s.opts.indent
+                add_node!(
+                    t,
+                    pretty(style, c, s, newctx(ctx; ignore_single_line = true), lineage),
+                    s;
+                    max_padding = s.opts.indent,
+                )
+            end
         elseif !JuliaSyntax.is_whitespace(c)
             # "catch" vs "catch ..."
             if !(kind(cst) === K"catch" && any(n -> kind(n) === K"Placeholder", childs))
@@ -2314,11 +2548,25 @@ function p_if(
     # Whether or not we've read in a body following the if/elseif/else yet.
     seen_body = false
     extra_block_node = nothing
+    # Keep e.g. `if x; y end` on a single line (preserve_single_line_blocks). As in
+    # p_try, the `elseif`/`else` sub-nodes are handled recursively and recompute this
+    # for their own (same-line) span.
+    keep_single = keep_single_line(cst, s)
 
     for c in children(cst)
         if kind(c) in KSet"if elseif else"
             if !haschildren(c)
-                add_node!(t, pretty(style, c, s, ctx, lineage), s; max_padding = 0)
+                if keep_single
+                    # A bare keyword leaf (e.g. the `else` in `if x; y else z end`).
+                    # Separate it from the preceding content with a space, unless it is
+                    # the first token of this node.
+                    if !isempty(t.nodes::Vector{FST})
+                        add_node!(t, Whitespace(1), s)
+                    end
+                    add_node!(t, pretty(style, c, s, ctx, lineage), s; join_lines = true)
+                else
+                    add_node!(t, pretty(style, c, s, ctx, lineage), s; max_padding = 0)
+                end
                 seen_body = false
             else
                 if extra_block_node !== nothing
@@ -2329,7 +2577,13 @@ function p_if(
                 end
                 len = length(t)
                 n = pretty(style, c, s, ctx, lineage)
-                add_node!(t, n, s)
+                if keep_single
+                    # Join e.g. `else z` onto the line after `if x; y;`.
+                    add_node!(t, Whitespace(1), s)
+                    add_node!(t, n, s; join_lines = true)
+                else
+                    add_node!(t, n, s)
+                end
                 t.len = max(len, length(n))
             end
             if kind(c) in KSet"if elseif"
@@ -2342,7 +2596,12 @@ function p_if(
                 s.indent -= s.opts.indent
                 extra_block_node = nothing
             end
-            add_node!(t, pretty(style, c, s, ctx, lineage), s)
+            if keep_single
+                add_node!(t, Whitespace(1), s)
+                add_node!(t, pretty(style, c, s, ctx, lineage), s; join_lines = true)
+            else
+                add_node!(t, pretty(style, c, s, ctx, lineage), s)
+            end
         elseif seen_body && !Shims.is_really_whitespace(c)
             # See comments in `p_for` for explanation of this
             if kind(c) !== K"Comment"
@@ -2363,6 +2622,15 @@ function p_if(
                 add_node!(t, pretty(style, c, s, ctx, lineage), s; join_lines = true)
                 # The next block will be the body.
                 is_cond = false
+            elseif keep_single
+                # preserve_single_line_blocks: the body is joined onto the same line,
+                # e.g. `if x; y end` is left as-is.
+                n = pretty(style, c, s, ctx, lineage)
+                if !starts_with_semicolon(n) && length(n) > 0
+                    add_node!(t, Whitespace(1), s)
+                end
+                add_node!(t, n, s; join_lines = true)
+                seen_body = true
             else
                 s.indent += s.opts.indent
                 add_node!(
