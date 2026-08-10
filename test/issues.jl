@@ -3658,6 +3658,39 @@ end
         end"""
         test_format(s_, s; join_lines_based_on_source=true)
     end
+
+    @testset "1250 no gluing operators when it changes tokenization" begin
+        # MinimalStyle has `trailing_zero = false`, so the trailing-dot floats survive
+        # as-is and gluing the operators to them would produce `A[1...1., :]` (invalid)
+        # and `SA[1.+2*cos(1.), 1.]` (ambiguous `.` syntax). The space must be kept.
+        test_format("x = A[1. .. 1., :]\n", "x = A[1. .. 1., :]\n", MinimalStyle(); ast=true)
+        test_format(
+            "y = SA[1. + 2*cos(1.), 1.]\n",
+            "y = SA[1. + 2*cos(1.), 1.]\n",
+            MinimalStyle();
+            ast=true,
+        )
+
+        # DefaultStyle normalizes `1.` to `1.0`, after which gluing is unambiguous.
+        test_format("x = A[1. .. 1., :]\n", "x = A[1.0..1.0, :]\n", DefaultStyle(); ast=true)
+
+        # A binary operator must not be glued against a unary operator: `A[1--2]` does
+        # not parse. This previously errored for DefaultStyle and MinimalStyle too
+        # (YAS/Blue/SciML keep the spaces via `whitespace_ops_in_indices = true`).
+        for style in ALL_STYLES
+            test_format("A[1 - -2]\n", nothing, style; ast=true)
+        end
+
+        # Non-regression: gluing still happens whenever it is safe.
+        test_format("A[1 + 2]\n", "A[1+2]\n", MinimalStyle(); ast=true)
+        test_format("A[1 + 2]\n", "A[1+2]\n", DefaultStyle(); ast=true)
+        # `1.:2` tokenizes the same as `1. : 2`, so a trailing-dot float does not
+        # blanket-disable gluing.
+        test_format("A[1. : 2]\n", "A[1.:2]\n", MinimalStyle(); ast=true)
+        # The adjoint `'` and string delimiters next to an operator are fine to glue.
+        test_format("A[a' - b]\n", "A[a'-b]\n", MinimalStyle(); ast=true)
+        test_format("A[\"a\" * \"b\"]\n", "A[\"a\"*\"b\"]\n", DefaultStyle(); ast=true)
+    end
 end
 
 end

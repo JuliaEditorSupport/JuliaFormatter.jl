@@ -139,6 +139,35 @@ function first_nonws_leaf_and_offset(
 end
 
 """
+    last_nonws_leaf_and_offset(
+        node::JuliaSyntax.GreenNode,
+    )::Union{Nothing,Tuple{JuliaSyntax.GreenNode,Int}
+
+Return the last non-whitespace leaf node in `node` plus its offset from the beginning of
+`node`, or `nothing` if there are no non-whitespace leaves. This is the mirror image of
+`first_nonws_leaf_and_offset`.
+"""
+function last_nonws_leaf_and_offset(
+    node::JuliaSyntax.GreenNode,
+    # Callers should not set _acc, this is only used in this function to recurse
+    _acc::Integer = 0,
+)::Union{Nothing,Tuple{JuliaSyntax.GreenNode,Int}}
+    if JuliaSyntax.is_leaf(node)
+        return JuliaSyntax.is_whitespace(node) ? nothing : (node, _acc)
+    end
+    # Recursively search children, keeping the last hit.
+    result = nothing
+    for c in children(node)
+        r = last_nonws_leaf_and_offset(c, _acc)
+        if r !== nothing
+            result = r
+        end
+        _acc += span(c)
+    end
+    return result
+end
+
+"""
    source_begins_with_op_needing_parens(s, cst, offset) 
 
 Check whether the first token of `cst` is an operator. Used in `p_kw`: if the value on the
@@ -785,6 +814,50 @@ end
 # if cst.head === :FLOAT && !startswith(val, "0x")
 #     if (fidx = findlast(==('f'), val)) === nothing
 #         float_suffix = ""
+
+"""
+    normalize_number_literal(k::JuliaSyntax.Kind, val::AbstractString, trailing_zero::Bool)
+
+Return the text that the formatter emits for a number literal whose source text is `val`.
+Float literals (but not hex floats or literals with an exponent) are normalized, e.g. with
+`trailing_zero = true` the literal `1.` becomes `1.0` and `.5` becomes `0.5`; with
+`trailing_zero = false` the trailing dot is kept but a leading zero is still added.
+Non-float literals are returned unchanged.
+
+This is used both by `p_literal` when emitting the literal and by `boundary_token_text`
+in `p_binaryopcall`, which needs to know the *emitted* text of the operands next to an
+operator (checking the raw source text there would not be idempotent, since e.g. `1.` may
+be emitted as `1.0`).
+"""
+function normalize_number_literal(
+    k::JuliaSyntax.Kind,
+    val::AbstractString,
+    trailing_zero::Bool,
+)::AbstractString
+    if k in KSet"Float Float32" && !startswith(val, r"[+-]?0x")
+        float_suffix = if (fidx = findlast(==('f'), val)) === nothing
+            ""
+        else
+            fs = val[fidx:end]
+            val = val[1:(fidx-1)]
+            fs
+        end
+        if findfirst(c -> c == 'e' || c == 'E', val) === nothing
+            if (dotidx = findlast(==('.'), val)) === nothing
+                val *= trailing_zero ? ".0" : ""  # append a trailing zero prior to the suffix
+            elseif dotidx == length(val)
+                val *= trailing_zero ? "0" : ""  # if a float literal ends in `.`, add trailing zero.
+            elseif dotidx == 1
+                val = '0' * val  # leading zero
+            elseif dotidx == 2 && (val[1] == '-' || val[1] == '+')
+                val = val[1] * '0' * val[2:end]  # leading zero on signed numbers
+            end
+        end
+        val *= float_suffix
+    end
+    return val
+end
+
 function p_literal(
     ::AbstractStyle,
     cst::JuliaSyntax.GreenNode,
@@ -796,27 +869,7 @@ function p_literal(
     val = getsrcval(s.doc, (s.offset):(s.offset+span(cst)-1))
 
     if !is_str_or_cmd(cst)
-        if kind(cst) in KSet"Float Float32" && !startswith(val, r"[+-]?0x")
-            float_suffix = if (fidx = findlast(==('f'), val)) === nothing
-                ""
-            else
-                fs = val[fidx:end]
-                val = val[1:(fidx-1)]
-                fs
-            end
-            if findfirst(c -> c == 'e' || c == 'E', val) === nothing
-                if (dotidx = findlast(==('.'), val)) === nothing
-                    val *= s.opts.trailing_zero ? ".0" : ""  # append a trailing zero prior to the suffix
-                elseif dotidx == length(val)
-                    val *= s.opts.trailing_zero ? "0" : ""  # if a float literal ends in `.`, add trailing zero.
-                elseif dotidx == 1
-                    val = '0' * val  # leading zero
-                elseif dotidx == 2 && (val[1] == '-' || val[1] == '+')
-                    val = val[1] * '0' * val[2:end]  # leading zero on signed numbers
-                end
-            end
-            val *= float_suffix
-        end
+        val = normalize_number_literal(kind(cst), val, s.opts.trailing_zero)
     end
 
     s.offset += span(cst)
@@ -2707,6 +2760,94 @@ function p_pipe_to_call(
     return call_node
 end
 
+"""
+    gluing_changes_tokenization(left, op, right)::Bool
+
+Check whether emitting `left`, `op`, and `right` with no spaces in between produces a
+different token stream than emitting them separated by spaces. If it does, the space
+around the operator must be kept, otherwise removing it would change the meaning of the
+code (or make it invalid). For example, with MinimalStyle (which keeps `1.` as-is because
+`trailing_zero = false`):
+
+    A[1. .. 1.]   would be glued to   A[1...1.]     (tokenizes as `1 ... 1.` -- invalid here)
+    A[1. + 2]     would be glued to   A[1.+2]       (ambiguous `.` syntax -- a parse error)
+    A[1 - -2]     would be glued to   A[1--2]       (`--` is an invalid operator)
+
+whereas e.g. `A[1. : 2]` -> `A[1.:2]` and `A[1 + 2]` -> `A[1+2]` tokenize identically with
+or without the spaces and may be glued.
+
+The comparison is done by actually tokenizing both variants with JuliaSyntax and comparing
+the (kind, text) pairs of the resulting non-whitespace tokens. Merely checking for error
+tokens would be insufficient: `1...1.` produces no error token at all, just a *different*
+token split (`1`, `...`, `1.`).
+"""
+function gluing_changes_tokenization(
+    left::AbstractString,
+    op::AbstractString,
+    right::AbstractString,
+)::Bool
+    function tokstream(str::String)
+        return [
+            (kind(t), JuliaSyntax.untokenize(t, str)) for
+            t in JuliaSyntax.tokenize(str) if kind(t) !== K"Whitespace"
+        ]
+    end
+    return tokstream(string(left, op, right)) !=
+           tokstream(string(left, ' ', op, ' ', right))
+end
+
+"""
+    boundary_token_text(s::State, child::JuliaSyntax.GreenNode, child_offset::Int, rightmost::Bool)
+
+Return the text that will be emitted for the token of `child` that sits directly next to a
+binary operator: the last non-whitespace leaf of the left operand (`rightmost = true`) or
+the first non-whitespace leaf of the right operand (`rightmost = false`). This text is fed
+to `gluing_changes_tokenization` to decide whether the whitespace around the operator can
+be removed. Returns `nothing` if `child` has no non-whitespace leaves.
+
+Only tokens whose characters can lexically interact with an adjacent operator are returned
+verbatim:
+
+  - number literals, returned as they will be *emitted* (`normalize_number_literal`), since
+    e.g. DefaultStyle rewrites `1.` to `1.0` which is safe to glue while `1.` is not;
+  - operator tokens (including `.` of dotted operators and unary `-`/`+`), e.g. the `-` in
+    `A[1 - -2]` whose right operand `-2` starts with the unary `-` token;
+  - `'` (adjoint), which is prefixed with a placeholder identifier because a lone `'` would
+    otherwise be tokenized as the start of a character literal (in `A[a' - b]` the adjoint
+    `'` follows a value, so `x'` reproduces the real lexical context).
+
+Any other kind of token (identifiers, keywords, closing brackets, string delimiters, ...)
+is replaced by the neutral identifier `x`: such tokens cannot merge with operator
+characters, and replacing them avoids false positives -- e.g. the closing `"` of `"a"` in
+`A["a" * "b"]` must not be tokenized as if a string *started* at the operator.
+"""
+function boundary_token_text(
+    s::State,
+    child::JuliaSyntax.GreenNode,
+    child_offset::Int,
+    rightmost::Bool,
+)::Union{Nothing,String}
+    result = if rightmost
+        last_nonws_leaf_and_offset(child)
+    else
+        first_nonws_leaf_and_offset(child)
+    end
+    result === nothing && return nothing
+    leaf, leaf_offset = result
+    k = kind(leaf)
+    offset = child_offset + leaf_offset
+    txt = getsrcval(s.doc, offset:(offset+span(leaf)-1))
+    return if k in KSet"Integer BinInt HexInt OctInt Float Float32"
+        normalize_number_literal(k, txt, s.opts.trailing_zero)
+    elseif k === K"'"
+        "x" * txt
+    elseif JuliaSyntax.is_operator(k) || k === K"."
+        txt
+    else
+        "x"
+    end
+end
+
 function p_binaryopcall(
     ds::AbstractStyle,
     cst::JuliaSyntax.GreenNode,
@@ -2878,6 +3019,58 @@ function p_binaryopcall(
         remove_space_around_op = false
         nws = 1
         has_dot = true
+    end
+
+    # If the whitespace around an operator is about to be removed (`nws == 0`), make sure
+    # that gluing the operator to its neighboring tokens does not change how the code
+    # tokenizes. For example in
+    #
+    #     x = A[1. .. 1., :]
+    #
+    # with `trailing_zero = false` (MinimalStyle), removing the spaces would produce
+    # `A[1...1., :]`, which tokenizes as `1 ... 1.` and is not valid Julia. Similarly
+    # `A[1 - -2]` must not become `A[1--2]` (`--` is an invalid operator). In such cases we
+    # keep a single space on both sides of the operator. See issue #1250.
+    if nws == 0 && !isempty(op_indices)
+        # Offsets of each child relative to the start of the source document. At this
+        # point `s.offset` is positioned at the start of the first child.
+        child_offsets = Vector{Int}(undef, length(childs))
+        let off = s.offset
+            for (i, c) in enumerate(childs)
+                child_offsets[i] = off
+                off += span(c)
+            end
+        end
+        # For `op=` the operator is split over several tokens (e.g. `+` and `=`), which are
+        # emitted as a single unit; treat them as one token. Everywhere else each entry in
+        # `op_indices` is a separate operator (e.g. the two `+` in the chain `a + b + c`).
+        op_ranges = if kind(cst) === K"op=" && !isempty(op_indices)
+            [first(op_indices):last(op_indices)]
+        else
+            [i:i for i in op_indices]
+        end
+        for op_range in op_ranges
+            prev_idx =
+                findprev(c -> !JuliaSyntax.is_whitespace(c), childs, first(op_range) - 1)
+            next_idx =
+                findnext(c -> !JuliaSyntax.is_whitespace(c), childs, last(op_range) + 1)
+            (prev_idx === nothing || next_idx === nothing) && continue
+            op_last = last(op_range)
+            op_text = getsrcval(
+                s.doc,
+                (child_offsets[first(op_range)]):(child_offsets[op_last]+span(
+                    childs[op_last],
+                )-1),
+            )
+            left = boundary_token_text(s, childs[prev_idx], child_offsets[prev_idx], true)
+            right =
+                boundary_token_text(s, childs[next_idx], child_offsets[next_idx], false)
+            (left === nothing || right === nothing) && continue
+            if gluing_changes_tokenization(left, op_text, right)
+                nws = 1
+                break
+            end
+        end
     end
 
     nlws_count = 0
