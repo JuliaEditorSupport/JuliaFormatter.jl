@@ -1418,11 +1418,11 @@ end
             test_format(c * "\n", c * "\n", MinimalStyle(); ast=true)
         end
 
-        # A short-form function def with a single-line block RHS keeps the block on one
-        # line. (The line break after `=` is a separate issue, #594.)
+        # A short-form function def with a single-line block RHS is left completely
+        # unchanged: no line break is forced after the `=` (see #594).
         test_format(
             "safe_isfile(x) = try isfile(x); catch; false end\n",
-            "safe_isfile(x) =\n    try isfile(x); catch; false end\n",
+            "safe_isfile(x) = try isfile(x); catch; false end\n",
             MinimalStyle();
             ast=true,
         )
