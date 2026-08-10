@@ -2819,9 +2819,18 @@ end
            cur_row - curs_row + 1 >= rows ÷ 2 # center the cursor
             lastline = true
         end"""
-        for style in (YASStyle(), SciMLStyle(), MinimalStyle())
+        for style in (YASStyle(), SciMLStyle())
             test_format(s_, syas, style)
         end
+
+        # MinimalStyle indents chain continuations by one level instead of aligning
+        # them to the column of the first operand (#592).
+        sminimal = """
+        if curs_row >= 0 && cur_row + 1 >= rows &&             # when too many lines,
+            cur_row - curs_row + 1 >= rows ÷ 2 # center the cursor
+            lastline = true
+        end"""
+        test_format(s_, sminimal, MinimalStyle())
     end
 
     @testset "1078 <: and >: as function calls" begin
