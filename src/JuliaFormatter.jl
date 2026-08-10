@@ -126,6 +126,7 @@ include("styles/blue/nest.jl")
 include("styles/sciml/pretty.jl")
 include("styles/sciml/nest.jl")
 include("styles/minimal/pretty.jl")
+include("styles/minimal/nest.jl")
 
 include("format_docstring.jl")
 include("nest_utils.jl")

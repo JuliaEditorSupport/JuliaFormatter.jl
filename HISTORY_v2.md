@@ -1,3 +1,7 @@
+# v2.12.5
+
+`MinimalStyle` now indents continuation lines of binary operator calls, operator chains (e.g. `|>` pipelines), and comparisons by one indent level, instead of aligning them to the column of the first operand. For example `aaa |>\nbbb` is now formatted as `aaa |>\n    bbb`. (#592, #1256)
+
 # v2.12.4
 
 Fixed a bug causing lack of idempotence when extra lines inside comma-separated arguments (e.g. in a vector) were present. (#1246, #1247)
