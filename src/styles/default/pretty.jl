@@ -3034,6 +3034,19 @@ function p_binaryopcall(
     nonest = ctx.nonest || opkind === K":"
 
     nrhs = nest_rhs(cst, style)
+    # `nest_rhs` forces a line break after the `=` of a short-form function definition
+    # whose right-hand side is a block construct (if/do/try/for/while/let). Under
+    # `preserve_single_line_blocks` the source layout, not the presence of a block RHS,
+    # decides whether the RHS goes on its own line, so e.g.
+    #
+    #     safe_isfile(x) = try isfile(x); catch; false end
+    #
+    # is left completely unchanged. If the source *does* break the line after the `=`,
+    # `src_diff_line` in `n_binaryopcall!` preserves that break, so nothing is lost by
+    # not forcing AlwaysNest here. See issue #594.
+    if s.opts.preserve_single_line_blocks
+        nrhs = false
+    end
     if nrhs
         t.nest_behavior = AlwaysNest
     end
