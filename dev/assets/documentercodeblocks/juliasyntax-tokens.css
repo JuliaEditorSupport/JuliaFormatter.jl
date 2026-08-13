@@ -92,13 +92,16 @@ html.theme--catppuccin-macchiato { --jl-prompt: #a6da95; }
 html.theme--catppuccin-mocha { --jl-prompt: #a6e3a1; }
 pre code .julia-prompt { color: var(--jl-prompt); font-weight: 700; }
 
-/* Reference links: keep the identifier readable, mark it as a link. */
+/* Reference links: soft dotted underline, solid while the pointer is inside
+ * the code block. */
 pre code a.julia-ref {
   color: inherit;
   text-decoration: underline;
   text-decoration-style: dotted;
+  text-decoration-color: color-mix(in srgb, currentColor 55%, transparent);
   text-underline-offset: 2px;
 }
-pre code a.julia-ref:hover {
+pre:hover code a.julia-ref {
   text-decoration-style: solid;
+  text-decoration-color: currentColor;
 }
