@@ -17,6 +17,9 @@ using CommonMark:
     TableRule,
     FrontMatterRule
 
+# The `using` and `import` statements above are separated from the rest of the package code
+# in order to accommodate julia-vscode. See
+# https://github.com/JuliaEditorSupport/JuliaFormatter.jl/pull/1249
 include("packagedef.jl")
 
 end # module JuliaFormatter

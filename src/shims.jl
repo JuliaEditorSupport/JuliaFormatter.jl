@@ -2,6 +2,8 @@
 
 module Shims
 
+# Use relative import for JuliaSyntax to avoid importing external package, see
+# https://github.com/JuliaEditorSupport/JuliaFormatter.jl/pull/1249
 using ..JuliaSyntax
 using ..JuliaSyntax: @KSet_str, @K_str, JuliaSyntax as JS
 
