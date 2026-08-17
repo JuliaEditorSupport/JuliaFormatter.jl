@@ -2780,12 +2780,20 @@ The comparison is done by actually tokenizing both variants with JuliaSyntax and
 the (kind, text) pairs of the resulting non-whitespace tokens. Merely checking for error
 tokens would be insufficient: `1...1.` produces no error token at all, just a *different*
 token split (`1`, `...`, `1.`).
+
+`left` and/or `right` may be `nothing`, meaning that the token on that side cannot lexically
+merge with an operator (see `boundary_token_text`). Such a side is stood in for by the neutral
+identifier `x`. Using the real text of such tokens would produce false positives -- e.g. the
+closing `"` of `"a"` in `A["a" * "b"]` must not be tokenized as if a string *started* at the
+operator.
 """
 function gluing_changes_tokenization(
-    left::AbstractString,
+    left::Union{AbstractString,Nothing},
     op::AbstractString,
-    right::AbstractString,
+    right::Union{AbstractString,Nothing},
 )::Bool
+    left = something(left, "x")
+    right = something(right, "x")
     function tokstream(str::String)
         return [
             (kind(t), JuliaSyntax.untokenize(t, str)) for
@@ -2803,10 +2811,9 @@ Return the text that will be emitted for the token of `child` that sits directly
 binary operator: the last non-whitespace leaf of the left operand (`rightmost = true`) or
 the first non-whitespace leaf of the right operand (`rightmost = false`). This text is fed
 to `gluing_changes_tokenization` to decide whether the whitespace around the operator can
-be removed. Returns `nothing` if `child` has no non-whitespace leaves.
+be removed.
 
-Only tokens whose characters can lexically interact with an adjacent operator are returned
-verbatim:
+Only tokens whose characters can lexically interact with an adjacent operator are returned:
 
   - number literals, returned as they will be *emitted* (`normalize_number_literal`), since
     e.g. DefaultStyle rewrites `1.` to `1.0` which is safe to glue while `1.` is not;
@@ -2816,10 +2823,9 @@ verbatim:
     otherwise be tokenized as the start of a character literal (in `A[a' - b]` the adjoint
     `'` follows a value, so `x'` reproduces the real lexical context).
 
-Any other kind of token (identifiers, keywords, closing brackets, string delimiters, ...)
-is replaced by the neutral identifier `x`: such tokens cannot merge with operator
-characters, and replacing them avoids false positives -- e.g. the closing `"` of `"a"` in
-`A["a" * "b"]` must not be tokenized as if a string *started* at the operator.
+For any other kind of token (identifiers, keywords, closing brackets, string delimiters, ...)
+`nothing` is returned: such tokens cannot merge with operator characters, so gluing is
+always safe on that side.
 """
 function boundary_token_text(
     s::State,
@@ -2832,7 +2838,7 @@ function boundary_token_text(
     else
         first_nonws_leaf_and_offset(child)
     end
-    result === nothing && return nothing
+    result === nothing && error("binop child has no non-whitespace node")
     leaf, leaf_offset = result
     k = kind(leaf)
     offset = child_offset + leaf_offset
@@ -2844,7 +2850,7 @@ function boundary_token_text(
     elseif JuliaSyntax.is_operator(k) || k === K"."
         txt
     else
-        "x"
+        nothing
     end
 end
 
@@ -3054,7 +3060,8 @@ function p_binaryopcall(
                 findprev(c -> !JuliaSyntax.is_whitespace(c), childs, first(op_range) - 1)
             next_idx =
                 findnext(c -> !JuliaSyntax.is_whitespace(c), childs, last(op_range) + 1)
-            (prev_idx === nothing || next_idx === nothing) && continue
+            (prev_idx === nothing || next_idx === nothing) &&
+                error("binop operator has no non-whitespace neighbour")
             op_last = last(op_range)
             op_text = getsrcval(
                 s.doc,
@@ -3065,7 +3072,9 @@ function p_binaryopcall(
             left = boundary_token_text(s, childs[prev_idx], child_offsets[prev_idx], true)
             right =
                 boundary_token_text(s, childs[next_idx], child_offsets[next_idx], false)
-            (left === nothing || right === nothing) && continue
+            # `nothing` on a side means that token cannot merge with the operator; if
+            # neither side can, gluing is trivially safe and no tokenization is needed.
+            (left === nothing && right === nothing) && continue
             if gluing_changes_tokenization(left, op_text, right)
                 nws = 1
                 break
