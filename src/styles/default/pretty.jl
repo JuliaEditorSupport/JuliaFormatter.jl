@@ -3070,8 +3070,7 @@ function p_binaryopcall(
                 )-1),
             )
             left = boundary_token_text(s, childs[prev_idx], child_offsets[prev_idx], true)
-            right =
-                boundary_token_text(s, childs[next_idx], child_offsets[next_idx], false)
+            right = boundary_token_text(s, childs[next_idx], child_offsets[next_idx], false)
             # `nothing` on a side means that token cannot merge with the operator; if
             # neither side can, gluing is trivially safe and no tokenization is needed.
             (left === nothing && right === nothing) && continue
