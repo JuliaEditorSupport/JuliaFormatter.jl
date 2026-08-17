@@ -799,35 +799,16 @@ function p_macrostr(
     return t
 end
 
-# what mean
-#
-# julia> t = parseall(JuliaSyntax.GreenNode, """r"hello"x""")
-#      1:9      │[toplevel]
-#      1:9      │  [macrocall]
-#      1:1      │    StringMacroName      ✔
-#      2:8      │    [string]
-#      2:2      │      "
-#      3:7      │      String             ✔
-#      8:8      │      "
-#      9:9      │    String               ✔
-#
-# if cst.head === :FLOAT && !startswith(val, "0x")
-#     if (fidx = findlast(==('f'), val)) === nothing
-#         float_suffix = ""
-
 """
     normalize_number_literal(k::JuliaSyntax.Kind, val::AbstractString, trailing_zero::Bool)
 
-Return the text that the formatter emits for a number literal whose source text is `val`.
-Float literals (but not hex floats or literals with an exponent) are normalized, e.g. with
-`trailing_zero = true` the literal `1.` becomes `1.0` and `.5` becomes `0.5`; with
-`trailing_zero = false` the trailing dot is kept but a leading zero is still added.
-Non-float literals are returned unchanged.
+Add leading zeroes, and trailing zeros if `trailing_zero` is true, to float literals.
 
-This is used both by `p_literal` when emitting the literal and by `boundary_token_text`
-in `p_binaryopcall`, which needs to know the *emitted* text of the operands next to an
-operator (checking the raw source text there would not be idempotent, since e.g. `1.` may
-be emitted as `1.0`).
+                  trailing_zero = true     trailing_zero = false
+    `1.`     -->   `1.0`                    `1.`
+    `.5`     -->   `0.5`                    `0.5`
+
+Other literals are unchanged.
 """
 function normalize_number_literal(
     k::JuliaSyntax.Kind,
@@ -835,7 +816,8 @@ function normalize_number_literal(
     trailing_zero::Bool,
 )::AbstractString
     if k in KSet"Float Float32" && !startswith(val, r"[+-]?0x")
-        float_suffix = if (fidx = findlast(==('f'), val)) === nothing
+        fidx = findlast(==('f'), val)
+        float_suffix = if fidx === nothing
             ""
         else
             fs = val[fidx:end]
@@ -843,7 +825,8 @@ function normalize_number_literal(
             fs
         end
         if findfirst(c -> c == 'e' || c == 'E', val) === nothing
-            if (dotidx = findlast(==('.'), val)) === nothing
+            dotidx = findlast(==('.'), val)
+            if dotidx === nothing
                 val *= trailing_zero ? ".0" : ""  # append a trailing zero prior to the suffix
             elseif dotidx == length(val)
                 val *= trailing_zero ? "0" : ""  # if a float literal ends in `.`, add trailing zero.
@@ -2763,29 +2746,18 @@ end
 """
     gluing_changes_tokenization(left, op, right)::Bool
 
-Check whether emitting `left`, `op`, and `right` with no spaces in between produces a
-different token stream than emitting them separated by spaces. If it does, the space
-around the operator must be kept, otherwise removing it would change the meaning of the
-code (or make it invalid). For example, with MinimalStyle (which keeps `1.` as-is because
-`trailing_zero = false`):
+For a binary operator `op`, check whether emitting `left`, `op`, and `right` with no spaces
+in between produces a different token stream than emitting them separated by spaces.
 
-    A[1. .. 1.]   would be glued to   A[1...1.]     (tokenizes as `1 ... 1.` -- invalid here)
-    A[1. + 2]     would be glued to   A[1.+2]       (ambiguous `.` syntax -- a parse error)
-    A[1 - -2]     would be glued to   A[1--2]       (`--` is an invalid operator)
-
-whereas e.g. `A[1. : 2]` -> `A[1.:2]` and `A[1 + 2]` -> `A[1+2]` tokenize identically with
-or without the spaces and may be glued.
-
-The comparison is done by actually tokenizing both variants with JuliaSyntax and comparing
-the (kind, text) pairs of the resulting non-whitespace tokens. Merely checking for error
-tokens would be insufficient: `1...1.` produces no error token at all, just a *different*
-token split (`1`, `...`, `1.`).
+`left` and `right` are the text of the tokens immediately adjacent to the operator. Note
+that this is not necessarily equal to the text of the full left and right operands (we only
+take the extreme tokens).
 
 `left` and/or `right` may be `nothing`, meaning that the token on that side cannot lexically
-merge with an operator (see `boundary_token_text`). Such a side is stood in for by the neutral
-identifier `x`. Using the real text of such tokens would produce false positives -- e.g. the
-closing `"` of `"a"` in `A["a" * "b"]` must not be tokenized as if a string *started* at the
-operator.
+merge with an operator (see `boundary_token_text`). Such a side is stood in for by the
+neutral identifier `x`. Using the actual text of such tokens would produce false positives.
+For example, if the binary expression was `"a" * "b"`, then naively passing the extreme
+tokens would lead to `"*"`.
 """
 function gluing_changes_tokenization(
     left::Union{AbstractString,Nothing},
@@ -2812,20 +2784,6 @@ binary operator: the last non-whitespace leaf of the left operand (`rightmost = 
 the first non-whitespace leaf of the right operand (`rightmost = false`). This text is fed
 to `gluing_changes_tokenization` to decide whether the whitespace around the operator can
 be removed.
-
-Only tokens whose characters can lexically interact with an adjacent operator are returned:
-
-  - number literals, returned as they will be *emitted* (`normalize_number_literal`), since
-    e.g. DefaultStyle rewrites `1.` to `1.0` which is safe to glue while `1.` is not;
-  - operator tokens (including `.` of dotted operators and unary `-`/`+`), e.g. the `-` in
-    `A[1 - -2]` whose right operand `-2` starts with the unary `-` token;
-  - `'` (adjoint), which is prefixed with a placeholder identifier because a lone `'` would
-    otherwise be tokenized as the start of a character literal (in `A[a' - b]` the adjoint
-    `'` follows a value, so `x'` reproduces the real lexical context).
-
-For any other kind of token (identifiers, keywords, closing brackets, string delimiters, ...)
-`nothing` is returned: such tokens cannot merge with operator characters, so gluing is
-always safe on that side.
 """
 function boundary_token_text(
     s::State,
@@ -2844,12 +2802,17 @@ function boundary_token_text(
     offset = child_offset + leaf_offset
     txt = getsrcval(s.doc, offset:(offset+span(leaf)-1))
     return if k in KSet"Integer BinInt HexInt OctInt Float Float32"
+        # Normalise the number before passing it on so that we can make decisions based on
+        # the text that will actually be emitted.
         normalize_number_literal(k, txt, s.opts.trailing_zero)
     elseif k === K"'"
+        # Postfix adjoint operator -- we need to give it an operand so that it can be
+        # parsed.
         "x" * txt
     elseif JuliaSyntax.is_operator(k) || k === K"."
         txt
     else
+        # Other tokens can't merge with operators, so we return `nothing` to indicate this.
         nothing
     end
 end
@@ -3029,14 +2992,9 @@ function p_binaryopcall(
 
     # If the whitespace around an operator is about to be removed (`nws == 0`), make sure
     # that gluing the operator to its neighboring tokens does not change how the code
-    # tokenizes. For example in
+    # tokenizes. For example, when `trailing_zero` is false, we want to avoid changing
     #
-    #     x = A[1. .. 1., :]
-    #
-    # with `trailing_zero = false` (MinimalStyle), removing the spaces would produce
-    # `A[1...1., :]`, which tokenizes as `1 ... 1.` and is not valid Julia. Similarly
-    # `A[1 - -2]` must not become `A[1--2]` (`--` is an invalid operator). In such cases we
-    # keep a single space on both sides of the operator. See issue #1250.
+    #     A[1. .. 1.]  -> A[1...1.]
     if nws == 0 && !isempty(op_indices)
         # Offsets of each child relative to the start of the source document. At this
         # point `s.offset` is positioned at the start of the first child.
