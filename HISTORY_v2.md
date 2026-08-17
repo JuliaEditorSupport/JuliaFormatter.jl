@@ -1,3 +1,8 @@
+# v2.12.5
+
+Fixed a bug where removing the whitespace around a binary operator could change how the code tokenizes, producing invalid or ambiguous output.
+For example `A[1. .. 1.]` was formatted to `A[1...1.]` under `MinimalStyle` and `A[1 - -2]` was formatted to `A[1--2]` under `DefaultStyle`, neither of which parses. (#1250, #1252)
+
 # v2.12.4
 
 Fixed a bug causing lack of idempotence when extra lines inside comma-separated arguments (e.g. in a vector) were present. (#1246, #1247)
