@@ -14,6 +14,11 @@
  * Hash formats:  #c-1a2b3c4d          whole block
  *                #c-1a2b3c4d-L5       single line
  *                #c-1a2b3c4d-L5-L10   line range
+ *
+ * L-numbers are the DISPLAYED line numbers. A block whose numbering continues
+ * from earlier blocks on the page (`@codeblocks line_counter = :continue`)
+ * carries data-ln-start on its .code-lines wrapper; internally everything is
+ * a 1-based child index, converted at the hash boundary.
  */
 (function () {
   "use strict";
@@ -53,7 +58,18 @@
 
   // ---- gutter interactions ---------------------------------------------
 
+  // First displayed line number of the block (data-ln-start, default 1).
+  function lnStart(pre) {
+    const wrap = pre.querySelector(".code-lines");
+    const start = wrap && wrap.dataset.lnStart ? parseInt(wrap.dataset.lnStart, 10) : 1;
+    return isNaN(start) ? 1 : start;
+  }
+
+  // `a`/`b` are 1-based child indices; the hash carries displayed numbers.
   function rangeHash(pre, a, b) {
+    const off = lnStart(pre) - 1;
+    a += off;
+    b += off;
     return a === b ? "#" + pre.id + "-L" + a : "#" + pre.id + "-L" + a + "-L" + b;
   }
 
@@ -146,7 +162,8 @@
   function highlightRange(pre, a, b) {
     clearHighlights();
     const lines = pre.querySelectorAll(".line");
-    for (let n = a; n <= b && n <= lines.length; n++) {
+    // Clamp: a stale hash (e.g. numbering offsets changed) must not throw.
+    for (let n = Math.max(a, 1); n <= b && n <= lines.length; n++) {
       lines[n - 1].classList.add("hl");
     }
   }
@@ -162,8 +179,10 @@
       if (scroll) pre.scrollIntoView({ block: "center" });
       return;
     }
-    const a = Math.min(+m[2], m[3] ? +m[3] : +m[2]);
-    const b = Math.max(+m[2], m[3] ? +m[3] : +m[2]);
+    // Hash numbers are displayed numbers; convert to child indices.
+    const off = lnStart(pre) - 1;
+    const a = Math.min(+m[2], m[3] ? +m[3] : +m[2]) - off;
+    const b = Math.max(+m[2], m[3] ? +m[3] : +m[2]) - off;
     highlightRange(pre, a, b);
     const lines = pre.querySelectorAll(".line");
     if (scroll && lines[a - 1]) lines[a - 1].scrollIntoView({ block: "center" });
