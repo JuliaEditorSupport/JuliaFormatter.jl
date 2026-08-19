@@ -123,10 +123,21 @@ struct Metadata
     is_contractable_function::Bool
 
     has_multiline_argument::Bool
+
+    # True for a StringN node built from a NON-triple-quoted multiline literal, e.g.
+    #
+    #     x = "line one
+    #     line two"
+    #
+    # or the `cmd`/`r"..."`/`raw"..."` equivalents. Unlike `"""..."""` literals, these have
+    # no dedent semantics: every interior line (and the closing-delimiter line) is part of
+    # the string's value, so the printer must emit those lines verbatim at their original
+    # columns and must not re-indent them when the surrounding code shifts. See issue #1251.
+    is_opaque_string::Bool
 end
 
 function Metadata(k::JuliaSyntax.Kind)
-    return Metadata(k, false, false, false, false, true, false)
+    return Metadata(k, false, false, false, false, true, false, false)
 end
 
 """
@@ -970,6 +981,18 @@ function op_kind(fst::FST)::JuliaSyntax.Kind
     return isnothing(fst.metadata) ? K"None" : (fst.metadata::Metadata).op_kind
 end
 
+"""
+    is_opaque_string(fst::FST)::Bool
+
+Whether `fst` is a `StringN` node built from a non-triple-quoted multiline literal, whose
+interior lines must be emitted verbatim (see the `is_opaque_string` field of `Metadata`).
+"""
+function is_opaque_string(fst::FST)::Bool
+    return fst.typ === StringN &&
+           !isnothing(fst.metadata) &&
+           (fst.metadata::Metadata).is_opaque_string
+end
+
 # """
 #     is_standalone_shortcircuit(cst::JuliaSyntax.GreenNode)
 #
@@ -1064,6 +1087,7 @@ function eq_to_in_normalization!(fst::FST, always_for_in::Bool, for_in_replaceme
                 opkind === K"=",
                 metadata.is_contractable_function,
                 metadata.has_multiline_argument,
+                metadata.is_opaque_string,
             )
         end
     elseif fst.typ === Block || fst.typ === Brackets || fst.typ === Filter
@@ -1522,7 +1546,7 @@ function add_node!(
     elseif is_multiline(n) ||
            (!isnothing(t.metadata) && (t.metadata::Metadata).has_multiline_argument)
         if isnothing(t.metadata)
-            t.metadata = Metadata(K"None", false, false, false, false, true, true)
+            t.metadata = Metadata(K"None", false, false, false, false, true, true, false)
         else
             metadata = t.metadata::Metadata
             t.metadata = Metadata(
@@ -1533,6 +1557,7 @@ function add_node!(
                 metadata.is_assignment,
                 metadata.is_contractable_function,
                 true,
+                metadata.is_opaque_string,
             )
         end
         if is_iterable(t) && n_args(t) > 1

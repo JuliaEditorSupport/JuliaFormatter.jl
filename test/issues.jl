@@ -3694,6 +3694,88 @@ end
         test_format("A[a'ᵀ - b]", "A[a'ᵀ-b]", DefaultStyle(); ast=true)
         test_format("A[\"a\" * \"b\"]", "A[\"a\"*\"b\"]", DefaultStyle(); ast=true)
     end
+
+    @testset "1251 re-indentation must not change multiline string contents" begin
+        # For a regular (non-triple-quoted) multiline string literal every leading space
+        # of the continuation lines is part of the string's value. Re-indenting the
+        # surrounding code must therefore leave the interior lines untouched; only the
+        # line with the opening quote moves.
+        #
+        # We use `begin ... end` instead of `function` to avoid Blue/YAS styles
+        # inserting `return` and changing the expected output.
+        s = """
+        begin
+                x = "line one
+                line two"
+        end
+        """
+        expected = """
+        begin
+            x = "line one
+                line two"
+        end
+        """
+        for style in ALL_STYLES
+            test_format(s, expected, style; ast=true)
+            # cmd literals and non-triple string-macro literals have the same no-dedent
+            # semantics and use the same code path
+            test_format(
+                "begin\n        c = `cmd one\n        two`\nend\n",
+                "begin\n    c = `cmd one\n        two`\nend\n",
+                style;
+                ast=true,
+            )
+            test_format(
+                "begin\n        r = r\"aa\n        bb\"x\nend\n",
+                "begin\n    r = r\"aa\n        bb\"x\nend\n",
+                style;
+                ast=true,
+            )
+            test_format(
+                "begin\n        r = raw\"aa\n        bb\"\nend\n",
+                "begin\n    r = raw\"aa\n        bb\"\nend\n",
+                style;
+                ast=true,
+            )
+            # blank interior line
+            test_format(
+                "begin\n        x = \"a\n\n        b\"\nend\n",
+                "begin\n    x = \"a\n\n        b\"\nend\n",
+                style;
+                ast=true,
+            )
+        end
+
+        # a multiline string at top level (indent 0) is left completely unchanged
+        for style in ALL_STYLES
+            test_format("x = \"a\n    b\"\n", "x = \"a\n    b\"\n", style; ast=true)
+        end
+        # interior line starting at column 0, left of the opening quote
+        for style in ALL_STYLES
+            test_format(
+                "begin\n        x = \"a\nb\"\nend\n",
+                "begin\n    x = \"a\nb\"\nend\n",
+                style;
+                ast=true,
+            )
+        end
+
+        # Control: triple-quoted strings have dedent semantics, so their interior lines
+        # DO shift with the surrounding code (issue #501 tracks those separately).
+        for style in ALL_STYLES
+            test_format(
+                "begin\n        x = \"\"\"\n        line\n        \"\"\"\nend\n",
+                "begin\n    x = \"\"\"\n    line\n    \"\"\"\nend\n",
+                style;
+                ast=true,
+            )
+        end
+
+        # interplay with v2_stable_multiline_strings
+        for style in ALL_STYLES
+            test_format(s, expected, style; v2_stable_multiline_strings=true, ast=true)
+        end
+    end
 end
 
 end
