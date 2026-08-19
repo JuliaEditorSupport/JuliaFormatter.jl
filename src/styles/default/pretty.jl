@@ -935,8 +935,7 @@ function p_stringh(
     #
     # When the docstring path has rewritten `val` (format_docstrings = true), the result
     # is deliberately re-indented Markdown, so the existing shifting behavior is kept.
-    is_triple =
-        haschildren(cst) && kind(children(cst)[1]) in KSet"\"\"\" ```"
+    is_triple = haschildren(cst) && kind(children(cst)[1]) in KSet"\"\"\" ```"
     opaque = !is_triple && !(ctx.from_docstring && s.opts.format_docstrings)
     if opaque
         t.metadata = Metadata(K"None", false, false, false, false, true, false, true)
@@ -974,7 +973,19 @@ function p_stringh(
         # according to the (possibly shifted) indent.
         l = (i == 1 || opaque) ? l : l[sidx:end]
         line_indent = (i == 1 || !opaque) ? sidx - 1 : 0
-        n = FST(LITERAL, ln, ln, line_indent, textwidth(l), l, (), AllowNest, 0, -1, nothing)
+        n = FST(
+            LITERAL,
+            ln,
+            ln,
+            line_indent,
+            textwidth(l),
+            l,
+            (),
+            AllowNest,
+            0,
+            -1,
+            nothing,
+        )
         # override_join_lines_based_on_source ensures that the lines are always printed on
         # separate lines rather than being joined, even if join_lines_based_on_source has
         # been enabled by the user
