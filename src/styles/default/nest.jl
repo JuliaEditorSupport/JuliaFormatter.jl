@@ -969,7 +969,7 @@ function n_binaryopcall!(
             if indent >= 0
                 fst.indent = indent
             else
-                fst.indent = s.line_offset
+                fst.indent = chain_continuation_indent(fst, s)
             end
         end
 
@@ -1257,7 +1257,7 @@ function n_comparison!(
     s::State,
     lineage::Vector{Tuple{FNode,Union{Nothing,Metadata}}},
 )
-    n_block!(ds, fst, s, lineage; indent = s.line_offset)
+    n_block!(ds, fst, s, lineage; indent = chain_continuation_indent(fst, s))
 end
 
 function n_chainopcall!(
@@ -1266,5 +1266,5 @@ function n_chainopcall!(
     s::State,
     lineage::Vector{Tuple{FNode,Union{Nothing,Metadata}}},
 )
-    n_block!(ds, fst, s, lineage; indent = s.line_offset)
+    n_block!(ds, fst, s, lineage; indent = chain_continuation_indent(fst, s))
 end

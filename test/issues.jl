@@ -1388,72 +1388,6 @@ end
         test_format(s1, s2; indent=4, margin=1)
     end
 
-    @testset "592 indent instead of alignment" begin
-        # MinimalStyle indents continuation lines of operator chains, comparisons, and
-        # binary operator calls by one indent level instead of aligning them to the
-        # column of the first operand.
-        test_format("aaa |>\nbbb\n", "aaa |>\n    bbb\n", MinimalStyle(); ast=true)
-        test_format(
-            "aaa |>\nbbb |>\nccc\n",
-            "aaa |>\n    bbb |>\n    ccc\n",
-            MinimalStyle();
-            ast=true,
-        )
-        # aligned input converges to the indented form
-        test_format(
-            "f() = aaa |>\n      bbb |>\n      ccc\n",
-            "f() = aaa |>\n    bbb |>\n    ccc\n",
-            MinimalStyle();
-            ast=true,
-        )
-        test_format(
-            "x = (aaa |>\n     bbb)\n",
-            "x = (aaa |>\n    bbb)\n",
-            MinimalStyle();
-            ast=true,
-        )
-        # inside a function body the extra indent is relative to the statement
-        test_format(
-            "function g()\n    return aaa |>\n           bbb\nend\n",
-            "function g()\n    return aaa |>\n        bbb\nend\n",
-            MinimalStyle();
-            ast=true,
-        )
-        # comparisons in an if condition
-        test_format(
-            "if aaa ==\n   bbb\n    x\nend\n",
-            "if aaa ==\n    bbb\n    x\nend\n",
-            MinimalStyle();
-            ast=true,
-        )
-        # nested chains each get one extra level
-        test_format(
-            "x = aaa(bbb |>\nccc) |>\nddd\n",
-            "x = aaa(bbb |>\n    ccc) |>\n    ddd\n",
-            MinimalStyle();
-            ast=true,
-        )
-        # standalone short-circuit chains already receive the extra indent in n_block!
-        # and must not be doubled
-        test_format("aa &&\nbb\n", "aa &&\n    bb\n", MinimalStyle(); ast=true)
-        test_format("f(aa &&\nbb)\n", "f(aa &&\n    bb)\n", MinimalStyle(); ast=true)
-
-        # DefaultStyle and YASStyle keep their aligned behavior
-        test_format(
-            "x = aaaaaaaa == bbbbbbbbb == cccccccc\n",
-            "x =\n    aaaaaaaa ==\n    bbbbbbbbb ==\n    cccccccc\n";
-            margin=20,
-            ast=true,
-        )
-        test_format(
-            "x = aaaaaaaa == bbbbbbbbb == cccccccc\n",
-            "x = aaaaaaaa ==\n    bbbbbbbbb ==\n    cccccccc\n",
-            YASStyle();
-            margin=20,
-            ast=true,
-        )
-    end
-
     @testset "604" begin
         str = raw"""
         begin @foo a end
@@ -2823,8 +2757,8 @@ end
             test_format(s_, syas, style)
         end
 
-        # MinimalStyle indents chain continuations by one level instead of aligning
-        # them to the column of the first operand (#592).
+        # MinimalStyle enables `indent_chains`, so chain continuations get one indent
+        # level instead of being aligned to the column of the first operand (#592).
         sminimal = """
         if curs_row >= 0 && cur_row + 1 >= rows &&             # when too many lines,
             cur_row - curs_row + 1 >= rows ÷ 2 # center the cursor

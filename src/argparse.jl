@@ -449,6 +449,14 @@ const PARSER = ArgParser(
         group = FormattingGroup,
     ),
     option(
+        "--indent-chains";
+        dest = :indent_chains,
+        type = Bool,
+        help = "Indent the continuation lines of operator chains, comparisons and binary " *
+               "operator calls instead of aligning them to the first operand.",
+        group = FormattingGroup,
+    ),
+    option(
         "--indent-submodule";
         dest = :indent_submodule,
         type = Bool,

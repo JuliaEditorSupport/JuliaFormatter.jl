@@ -511,3 +511,32 @@ function find_optimal_nest_placeholders(
     end
     return optimal_placeholders
 end
+
+"""
+    chain_continuation_indent(fst::FST, s::State)
+
+Indentation used for the continuation lines of operator chains, comparisons and binary
+operator calls.
+
+By default these are aligned to the column at which the expression starts:
+
+    x = (aaa |>
+         bbb |>
+         ccc)
+
+When the `indent_chains` option is enabled they instead receive one indent level relative
+to the indentation of the expression itself (see issue #592):
+
+    x = (aaa |>
+        bbb |>
+        ccc)
+"""
+function chain_continuation_indent(fst::FST, s::State)
+    s.opts.indent_chains || return s.line_offset
+    md = fst.metadata
+    # Standalone short-circuit chains (e.g. a top-level `a && b` used only for its side
+    # effect) already receive an extra `s.opts.indent` inside `n_block!`; adding it again
+    # here would double it.
+    extra = (md isa Metadata && md.is_standalone_shortcircuit) ? 0 : s.opts.indent
+    return fst.indent + extra
+end

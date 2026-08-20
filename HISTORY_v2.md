@@ -1,6 +1,16 @@
-# v2.12.7
+# v2.13.0
 
-`MinimalStyle` now indents continuation lines of binary operator calls, operator chains (e.g. `|>` pipelines), and comparisons by one indent level, instead of aligning them to the column of the first operand. For example `aaa |>\nbbb` is now formatted as `aaa |>\n    bbb`. (#592, #1256)
+New `indent_chains` option. When enabled, the continuation lines of operator chains (e.g. `|>` pipelines), comparisons, and binary operator calls are indented by one level relative to the expression instead of being aligned to the column of the first operand:
+
+```julia
+x = (aaa |>     # indent_chains = false
+     bbb)
+
+x = (aaa |>     # indent_chains = true
+    bbb)
+```
+
+It defaults to `false` for all styles except `MinimalStyle` (the VS Code default), where it is `true`. (#592, #1256)
 
 # v2.12.6
 
