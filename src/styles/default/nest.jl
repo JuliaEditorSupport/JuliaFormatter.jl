@@ -197,7 +197,11 @@ function n_string!(
     style = getstyle(ds)
     # difference in positioning of the string
     # from the source document to the formatted document
-    diff = s.line_offset - fst.indent
+    #
+    # For opaque strings (non-triple-quoted multiline literals, see issue #1251) the
+    # interior lines are never shifted: they are stored verbatim with indent 0 and printed
+    # at column 0, so the line offset bookkeeping must not apply the shift either.
+    diff = is_opaque_string(fst) ? 0 : s.line_offset - fst.indent
 
     nested = false
     for (i, n) in enumerate(fst.nodes::Vector)

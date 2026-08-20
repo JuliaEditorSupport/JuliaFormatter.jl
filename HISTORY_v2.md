@@ -1,6 +1,17 @@
-# v2.12.5
+# v2.12.7
 
 `MinimalStyle` now indents continuation lines of binary operator calls, operator chains (e.g. `|>` pipelines), and comparisons by one indent level, instead of aligning them to the column of the first operand. For example `aaa |>\nbbb` is now formatted as `aaa |>\n    bbb`. (#592, #1256)
+
+# v2.12.6
+
+Fixed a bug where re-indenting code containing an ordinary (single-quoted) multiline string, cmd, or string-macro literal would also shift the subsequent lines of the literal, silently changing its value.
+Continuation lines of such literals are now kept exactly as written; only the line containing the opening delimiter moves with the surrounding code.
+Triple-quoted literals are unaffected. (#1251, #1253)
+
+# v2.12.5
+
+Fixed a bug where removing the whitespace around a binary operator could change how the code tokenizes, producing invalid or ambiguous output.
+For example `A[1. .. 1.]` was formatted to `A[1...1.]` under `MinimalStyle` and `A[1 - -2]` was formatted to `A[1--2]` under `DefaultStyle`, neither of which parses. (#1250, #1252)
 
 # v2.12.4
 
