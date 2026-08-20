@@ -11,6 +11,7 @@
   --ln-hl-bg: rgba(255, 208, 42, 0.18);  /* highlighted line background */
   --ln-hl-gutter-bg: #ece2b8;            /* opaque blend of hl over --ln-bg */
   --ln-hl-fg: #6a5c1e;
+  --ln-copied: #22863a;                  /* permalink copied-confirmation check */
 }
 html.theme--documenter-dark {
   --ln-bg: #282f2f;
@@ -20,6 +21,7 @@ html.theme--documenter-dark {
   --ln-hl-bg: rgba(255, 208, 42, 0.10);
   --ln-hl-gutter-bg: #46442e;
   --ln-hl-fg: #d8c56a;
+  --ln-copied: #3fb950;
 }
 /* Catppuccin themes: --ln-bg matches each theme's pre background (mantle),
  * --ln-border its pre border (surface2), accents from the catppuccin palette. */
@@ -31,6 +33,7 @@ html.theme--catppuccin-latte {
   --ln-hl-bg: rgba(223, 142, 29, 0.15);
   --ln-hl-gutter-bg: #e5d8c9;
   --ln-hl-fg: #7a5c0e;
+  --ln-copied: #40a02b;
 }
 html.theme--catppuccin-frappe {
   --ln-bg: #292c3c;
@@ -40,6 +43,7 @@ html.theme--catppuccin-frappe {
   --ln-hl-bg: rgba(229, 200, 144, 0.10);
   --ln-hl-gutter-bg: #454349;
   --ln-hl-fg: #e5c890;
+  --ln-copied: #a6d189;
 }
 html.theme--catppuccin-macchiato {
   --ln-bg: #1e2030;
@@ -49,6 +53,7 @@ html.theme--catppuccin-macchiato {
   --ln-hl-bg: rgba(238, 212, 159, 0.10);
   --ln-hl-gutter-bg: #3d3b40;
   --ln-hl-fg: #eed49f;
+  --ln-copied: #a6da95;
 }
 html.theme--catppuccin-mocha {
   --ln-bg: #181825;
@@ -58,6 +63,7 @@ html.theme--catppuccin-mocha {
   --ln-hl-bg: rgba(249, 226, 175, 0.10);
   --ln-hl-gutter-bg: #3a3639;
   --ln-hl-fg: #f9e2af;
+  --ln-copied: #a6e3a1;
 }
 
 /* ---- structure ----
@@ -140,7 +146,8 @@ code.line-numbers .line.hl .line-num {
   color: var(--ln-hl-fg);
 }
 
-/* ---- whole-block permalink button (sits left of the copy button) ---- */
+/* ---- permalink button (sits left of the copy button): a real <a> that
+   copies the block/selection URL on click ---- */
 pre .block-link {
   opacity: 0.2;
   transition: opacity 0.2s;
@@ -155,6 +162,7 @@ pre .block-link {
   color: var(--ln-fg);
   cursor: pointer;
   text-align: center;
+  text-decoration: none;
 }
 pre:hover .block-link,
 pre .block-link:focus {
@@ -163,6 +171,12 @@ pre .block-link:focus {
 pre .block-link:hover {
   color: var(--ln-fg-hover);
   background: rgba(128, 128, 128, 0.1);
+}
+/* post-copy confirmation: checkmark icon, held visible even off-hover */
+pre .block-link.copied,
+pre .block-link.copied:hover {
+  color: var(--ln-copied);
+  opacity: 1;
 }
 pre .block-link svg {
   width: 1.1em;
