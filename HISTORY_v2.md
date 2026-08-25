@@ -1,3 +1,22 @@
+# v2.13.0
+
+Added a new `indent_binary_continuations` option.
+When enabled, the continuation lines of binary operations are indented by one level with respect to the first line of the operation:
+
+```julia
+# With `indent_binary_continuations = false` (the default for most styles):
+aaaaaaa
++ bbbbbbb
++ ccccccc
+
+# With `indent_binary_continuations = true`
+aaaaaaa
+    + bbbbbbb
+    + ccccccc
+```
+
+It defaults to `false` for all styles except `MinimalStyle` (the VSCode default), where it is `true`. (#592, #1256)
+
 # v2.12.6
 
 Fixed a bug where re-indenting code containing an ordinary (single-quoted) multiline string, cmd, or string-macro literal would also shift the subsequent lines of the literal, silently changing its value.

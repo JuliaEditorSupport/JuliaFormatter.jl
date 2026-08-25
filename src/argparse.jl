@@ -449,6 +449,14 @@ const PARSER = ArgParser(
         group = FormattingGroup,
     ),
     option(
+        "--indent-binary-continuations";
+        dest = :indent_binary_continuations,
+        type = Bool,
+        help = "Indent the continuation lines of binary operations instead of aligning" *
+               "them to the first operand.",
+        group = FormattingGroup,
+    ),
+    option(
         "--indent-submodule";
         dest = :indent_submodule,
         type = Bool,

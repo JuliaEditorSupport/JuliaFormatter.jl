@@ -29,6 +29,9 @@ jobs:
           - name: default
             version: '1.12'
             opts: '--style=default'
+          - name: default-indentbin
+            version: '1.12'
+            opts: '--style=default --indent-binary-continuations=true'
           - name: default-jlbos
             version: '1.12'
             opts: '--style=default --join-lines-based-on-source=true'
