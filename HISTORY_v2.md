@@ -1,6 +1,39 @@
+# v2.14.0
+
+Added a new formatting option, `preserve_single_line_blocks` (default `false`; `true` for `MinimalStyle`).
+When enabled, block constructs written entirely on a single source line — e.g. `try isfile(x); catch; false end` or `let x = 1; x end` — are kept on one line, with their statements separated by semicolons, instead of being expanded onto multiple lines.
+This applies to `function`/`macro` definitions, `for`/`while` loops, `if`, `let`, `try`, `do`, `struct`/`mutable struct`, `module`/`baremodule`, `begin`, and `quote`. (#593, #1254)
+
 # v2.13.0
 
-Added a new formatting option, `preserve_single_line_blocks` (default `false`; `true` for `MinimalStyle`). When enabled, block constructs written entirely on a single source line — e.g. `try isfile(x); catch; false end` or `let x = 1; x end` — are kept on one line, with their statements separated by semicolons, instead of being expanded onto multiple lines. This applies to `function`/`macro` definitions, `for`/`while` loops, `if`, `let`, `try`, `do`, `struct`/`mutable struct`, `module`/`baremodule`, `begin`, and `quote`. (#593, #1254)
+Added a new `indent_binary_continuations` option.
+When enabled, the continuation lines of binary operations are indented by one level with respect to the first line of the operation:
+
+```julia
+# With `indent_binary_continuations = false` (the default for most styles):
+aaaaaaa
++ bbbbbbb
++ ccccccc
+
+# With `indent_binary_continuations = true`
+aaaaaaa
+    + bbbbbbb
+    + ccccccc
+```
+
+It defaults to `false` for all styles except `MinimalStyle` (the VSCode default), where it is `true`. (#592, #1256)
+
+# v2.12.6
+
+Fixed a bug where re-indenting code containing an ordinary (single-quoted) multiline string, cmd, or string-macro literal would also shift the subsequent lines of the literal, silently changing its value.
+Continuation lines of such literals are now kept exactly as written; only the line containing the opening delimiter moves with the surrounding code.
+Triple-quoted literals are unaffected. (#1251, #1253)
+
+# v2.12.5
+
+Fixed a bug where removing the whitespace around a binary operator could change how the code tokenizes, producing invalid or ambiguous output.
+For example `A[1. .. 1.]` was formatted to `A[1...1.]` under `MinimalStyle` and `A[1 - -2]` was formatted to `A[1--2]` under `DefaultStyle`, neither of which parses. (#1250, #1252)
+>>>>>>> main
 
 # v2.12.4
 

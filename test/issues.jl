@@ -2824,9 +2824,18 @@ end
            cur_row - curs_row + 1 >= rows ÷ 2 # center the cursor
             lastline = true
         end"""
-        for style in (YASStyle(), SciMLStyle(), MinimalStyle())
+        for style in (YASStyle(), SciMLStyle())
             test_format(s_, syas, style)
         end
+
+        # MinimalStyle enables `indent_binary_continuations`, so chain continuations get one
+        # indent level instead of being aligned to the column of the first operand (#592).
+        sminimal = """
+        if curs_row >= 0 && cur_row + 1 >= rows &&             # when too many lines,
+            cur_row - curs_row + 1 >= rows ÷ 2 # center the cursor
+            lastline = true
+        end"""
+        test_format(s_, sminimal, MinimalStyle())
     end
 
     @testset "1078 <: and >: as function calls" begin
@@ -3728,6 +3737,124 @@ end
             ]
         end"""
         test_format(s_, s; join_lines_based_on_source=true)
+    end
+
+    @testset "1250 no gluing operators when it changes tokenization" begin
+        # MinimalStyle has `trailing_zero = false`, so the trailing-dot floats survive
+        # as-is and gluing the operators to them would produce `A[1...1., :]` (invalid)
+        # and `SA[1.+2*cos(1.), 1.]` (ambiguous `.` syntax). The space must be kept.
+        test_format("x = A[1. .. 1., :]", "x = A[1. .. 1., :]", MinimalStyle(); ast=true)
+        test_format(
+            "y = SA[1. + 2*cos(1.), 1.]",
+            "y = SA[1. + 2*cos(1.), 1.]",
+            MinimalStyle();
+            ast=true,
+        )
+
+        # DefaultStyle normalizes `1.` to `1.0`, after which gluing is unambiguous.
+        test_format("x = A[1. .. 1., :]", "x = A[1.0..1.0, :]", DefaultStyle(); ast=true)
+
+        # A binary operator must not be glued against a unary operator: `A[1--2]` does
+        # not parse. This previously errored for DefaultStyle and MinimalStyle too
+        # (YAS/Blue/SciML keep the spaces via `whitespace_ops_in_indices = true`).
+        for style in ALL_STYLES
+            test_format("A[1 - -2]", nothing, style; ast=true)
+        end
+
+        # Non-regression: gluing still happens whenever it is safe.
+        test_format("A[1 + 2]", "A[1+2]", MinimalStyle(); ast=true)
+        test_format("A[1 + 2]", "A[1+2]", DefaultStyle(); ast=true)
+        # `1.:2` tokenizes the same as `1. : 2`, so a trailing-dot float does not
+        # blanket-disable gluing.
+        test_format("A[1. : 2]", "A[1.:2]", MinimalStyle(); ast=true)
+        # The adjoint `'` (including suffixed forms) and string delimiters next to an
+        # operator are fine to glue.
+        test_format("A[a' - b]", "A[a'-b]", MinimalStyle(); ast=true)
+        test_format("A[a'ᵀ - b]", "A[a'ᵀ-b]", MinimalStyle(); ast=true)
+        test_format("A[a'ᵀ - b]", "A[a'ᵀ-b]", DefaultStyle(); ast=true)
+        test_format("A[\"a\" * \"b\"]", "A[\"a\"*\"b\"]", DefaultStyle(); ast=true)
+    end
+
+    @testset "1251 re-indentation must not change multiline string contents" begin
+        # For a regular (non-triple-quoted) multiline string literal every leading space
+        # of the continuation lines is part of the string's value. Re-indenting the
+        # surrounding code must therefore leave the interior lines untouched; only the
+        # line with the opening quote moves.
+        #
+        # We use `begin ... end` instead of `function` to avoid Blue/YAS styles
+        # inserting `return` and changing the expected output.
+        s = """
+        begin
+                x = "line one
+                line two"
+        end
+        """
+        expected = """
+        begin
+            x = "line one
+                line two"
+        end
+        """
+        for style in ALL_STYLES
+            test_format(s, expected, style; ast=true)
+            # cmd literals and non-triple string-macro literals have the same no-dedent
+            # semantics and use the same code path
+            test_format(
+                "begin\n        c = `cmd one\n        two`\nend\n",
+                "begin\n    c = `cmd one\n        two`\nend\n",
+                style;
+                ast=true,
+            )
+            test_format(
+                "begin\n        r = r\"aa\n        bb\"x\nend\n",
+                "begin\n    r = r\"aa\n        bb\"x\nend\n",
+                style;
+                ast=true,
+            )
+            test_format(
+                "begin\n        r = raw\"aa\n        bb\"\nend\n",
+                "begin\n    r = raw\"aa\n        bb\"\nend\n",
+                style;
+                ast=true,
+            )
+            # blank interior line
+            test_format(
+                "begin\n        x = \"a\n\n        b\"\nend\n",
+                "begin\n    x = \"a\n\n        b\"\nend\n",
+                style;
+                ast=true,
+            )
+        end
+
+        # a multiline string at top level (indent 0) is left completely unchanged
+        for style in ALL_STYLES
+            test_format("x = \"a\n    b\"\n", "x = \"a\n    b\"\n", style; ast=true)
+        end
+        # interior line starting at column 0, left of the opening quote
+        for style in ALL_STYLES
+            test_format(
+                "begin\n        x = \"a\nb\"\nend\n",
+                "begin\n    x = \"a\nb\"\nend\n",
+                style;
+                ast=true,
+            )
+        end
+
+        # Control: triple-quoted strings have dedent semantics, so their interior lines
+        # DO shift with the surrounding code (issue #501 tracks those separately).
+        for style in ALL_STYLES
+            test_format(
+                "begin\n        x = \"\"\"\n        line\n        \"\"\"\nend\n",
+                "begin\n    x = \"\"\"\n    line\n    \"\"\"\nend\n",
+                style;
+                ast=true,
+            )
+        end
+
+        # interplay with v2_stable_multiline_strings
+        for style in ALL_STYLES
+            test_format(s, expected, style; v2_stable_multiline_strings=true, ast=true)
+        end
     end
 end
 

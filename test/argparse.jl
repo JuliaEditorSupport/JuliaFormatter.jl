@@ -276,6 +276,8 @@ using JuliaFormatter: DefaultStyle, YASStyle, BlueStyle, SciMLStyle, MinimalStyl
             @test parse_args(["--format-docstrings=false"]).config.options.format_docstrings == false
             @test parse_args(["--import-to-using=true"]).config.options.import_to_using == true
             @test parse_args(["--import-to-using=false"]).config.options.import_to_using == false
+            @test parse_args(["--indent-binary-continuations=true"]).config.options.indent_binary_continuations == true
+            @test parse_args(["--indent-binary-continuations=false"]).config.options.indent_binary_continuations == false
             @test parse_args(["--indent-submodule=true"]).config.options.indent_submodule == true
             @test parse_args(["--indent-submodule=false"]).config.options.indent_submodule == false
             @test parse_args(["--join-lines-based-on-source=true"]).config.options.join_lines_based_on_source == true

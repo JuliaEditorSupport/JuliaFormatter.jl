@@ -70,6 +70,7 @@ If you absolutely must enable them, you may need to run the formatter multiple t
 | [`format_docstrings`](@ref options-format-docstrings)                               | ⚠️    | `false`   | `false`     | `false`     | `false`      | `false`       |
 | [`import_to_using`](@ref options-import-to-using)                                   | ⚠️    | `false`   | **`true`**  | **`true`**  | `false`      | `false`       |
 | [`indent`](@ref options-indent)                                                     | 📐    | `4`       | `4`         | `4`         | `4`          | `4`           |
+| [`indent_binary_continuations`](@ref options-indent-binary-continuations)           | 📐    | `false`   | `false`     | `false`     | `false`      | **`true`**    |
 | [`indent_submodule`](@ref options-indent-submodule)                                 | 📐    | `false`   | `false`     | **`true`**  | `false`      | `false`       |
 | [`join_lines_based_on_source`](@ref options-join-lines-based-on-source)             | 📐    | `false`   | **`true`**  | `false`     | **`true`**   | **`true`**    |
 | [`long_to_short_function_def`](@ref options-long-to-short-function-def)             | ⚠️    | `false`   | `false`     | `false`     | `false`      | `false`       |
@@ -419,6 +420,29 @@ Default: `4`
 The number of spaces used for one level of indentation.
 
 There is at present no option to use tabs for indentation: please open an issue if you want this feature.
+
+## [`indent_binary_continuations`](@id options-indent-binary-continuations)
+
+Default: `false`
+
+Controls how the continuation lines of binary operations are laid out when the expression has to be split over several lines.
+
+When set to `false`, the continuation lines are aligned with the opening line or operand:
+
+```@example indent-binary-continuations
+using JuliaFormatter: format_text
+
+s = "x = a + b + c\nf(a + b + c)"
+format_text(s; margin=2) |> println
+```
+
+When set to `true` they instead receive one indent level relative to the opening line:
+
+```@example indent-binary-continuations
+format_text(s; margin=2, indent_binary_continuations=true) |> println
+```
+
+Note that assignments, short-form function definitions, and the `=>` and `->` operators always use indentation-based nesting and are therefore unaffected by this option.
 
 ## [`indent_submodule`](@id options-indent-submodule)
 

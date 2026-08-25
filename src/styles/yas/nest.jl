@@ -433,7 +433,13 @@ function n_chainopcall!(
     lineage::Vector{Tuple{FNode,Union{Nothing,Metadata}}},
 )
     style = getstyle(ys)
-    n_block!(DefaultStyle(style), fst, s, lineage; indent = s.line_offset)
+    n_block!(
+        DefaultStyle(style),
+        fst,
+        s,
+        lineage;
+        indent = chain_continuation_indent(fst, s),
+    )
 end
 
 function n_comparison!(
@@ -443,7 +449,13 @@ function n_comparison!(
     lineage::Vector{Tuple{FNode,Union{Nothing,Metadata}}},
 )
     style = getstyle(ys)
-    n_block!(DefaultStyle(style), fst, s, lineage; indent = s.line_offset)
+    n_block!(
+        DefaultStyle(style),
+        fst,
+        s,
+        lineage;
+        indent = chain_continuation_indent(fst, s),
+    )
 end
 
 function n_binaryopcall!(
