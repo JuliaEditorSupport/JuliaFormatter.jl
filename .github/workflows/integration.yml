@@ -32,7 +32,7 @@ jobs:
           - name: default-indentbin
             version: '1.12'
             opts: '--style=default --indent-binary-continuations=true'
-          - name: default-jlbos
+          - name: "(expected fail) default-jlbos"
             version: '1.12'
             opts: '--style=default --join-lines-based-on-source=true'
           - name: default-pre
@@ -41,7 +41,7 @@ jobs:
           - name: blue
             version: '1.12'
             opts: '--style=blue'
-          - name: yas
+          - name: "(expected fail) yas"
             version: '1.12'
             opts: '--style=yas'
           - name: minimal
