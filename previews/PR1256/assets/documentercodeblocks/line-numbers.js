@@ -10,7 +10,8 @@
  * Line numbers render from CSS counters with zero JS. This script only adds the
  * client-side interactions: the permalink button (a real anchor that copies the
  * block/selection URL to the clipboard), gutter click/shift-click/drag
- * selection, and hash restore.
+ * selection, hash restore, and a hook that makes Documenter's own copy-code
+ * button copy just the selected lines when the block has a line selection.
  *
  * Hash formats:  #c-1a2b3c4d          whole block
  *                #c-1a2b3c4d-L5       single line
@@ -61,41 +62,41 @@
         e.preventDefault();
         // An active line selection in this block is what the user means to
         // share — keep it; otherwise (re)target the whole block.
-        const m = HASH_RE.exec(location.hash);
-        if (!(m && m[1] === pre.id && m[2])) setHash("#" + pre.id);
+        if (!selectedRange(pre)) setHash("#" + pre.id);
         copyText(location.href, link);
       });
       pre.appendChild(link);
     });
   }
 
-  // Copy `text` to the clipboard and flash `link`'s icon to a checkmark.
-  // navigator.clipboard requires a secure context (https or localhost); on
-  // plain-http or file:// views fall back to a transient textarea +
-  // execCommand. If both fail the click has still set the hash, which is the
-  // pre-copy behavior.
-  function copyText(text, link) {
-    let copied;
+  // Write `text` to the clipboard; resolves on success. navigator.clipboard
+  // requires a secure context (https or localhost); on plain-http or file://
+  // views fall back to a transient textarea + execCommand.
+  function writeClipboard(text) {
     if (navigator.clipboard && window.isSecureContext) {
-      copied = navigator.clipboard.writeText(text);
-    } else {
-      copied = new Promise(function (resolve, reject) {
-        const ta = document.createElement("textarea");
-        ta.value = text;
-        ta.style.position = "fixed";
-        ta.style.opacity = "0";
-        document.body.appendChild(ta);
-        ta.select();
-        try {
-          document.execCommand("copy") ? resolve() : reject(new Error("execCommand"));
-        } catch (err) {
-          reject(err);
-        } finally {
-          ta.remove();
-        }
-      });
+      return navigator.clipboard.writeText(text);
     }
-    copied.then(function () {
+    return new Promise(function (resolve, reject) {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        document.execCommand("copy") ? resolve() : reject(new Error("execCommand"));
+      } catch (err) {
+        reject(err);
+      } finally {
+        ta.remove();
+      }
+    });
+  }
+
+  // Copy `text` and flash `link`'s icon to a checkmark. If the copy fails the
+  // click has still set the hash, which is the pre-copy behavior.
+  function copyText(text, link) {
+    writeClipboard(text).then(function () {
       link.innerHTML = CHECK_SVG;
       link.classList.add("copied");
       clearTimeout(link._copiedTimer);
@@ -104,6 +105,45 @@
         link.classList.remove("copied");
       }, 1500);
     }).catch(function () {});
+  }
+
+  // ---- Documenter's copy-code button: copy only the selected lines (#26) --
+  //
+  // Documenter's copy.js appends `<button class="copy-button fa-solid fa-copy">`
+  // to every <pre> and attaches a click listener copying `pre.innerText`. We do
+  // not touch that asset: a capture-phase listener on `document` runs before
+  // any listener on the button itself regardless of script load order. When
+  // the block has a line selection we take over the click — copy just those
+  // lines and replay copy.js's feedback (success/fa-check, error/fa-xmark,
+  // restored after 5 s). Without a selection we step aside and Documenter's
+  // handler copies the whole block exactly as before.
+  function onCopyClick(e) {
+    const btn = e.target.closest(".copy-button");
+    if (!btn) return;
+    const pre = btn.closest('article pre[id^="c-"]');
+    const r = pre && selectedRange(pre);
+    if (!r) return;
+    e.stopImmediatePropagation();
+    e.preventDefault();
+    const lines = Array.prototype.slice.call(pre.querySelectorAll(".line"), r.a - 1, r.b);
+    // Same shape as pre.innerText (what copy.js copies): "\n"-joined lines,
+    // no trailing newline.
+    const text = lines.map(function (l) { return l.textContent; }).join("\n");
+    writeClipboard(text).then(
+      function () {
+        btn.classList.add("success", "fa-check");
+        btn.classList.remove("fa-copy");
+      },
+      function () {
+        btn.classList.add("error", "fa-xmark");
+        btn.classList.remove("fa-copy");
+      }
+    );
+    clearTimeout(btn._copiedTimer);
+    btn._copiedTimer = setTimeout(function () {
+      btn.classList.add("fa-copy");
+      btn.classList.remove("success", "fa-check", "error", "fa-xmark");
+    }, 5000);
   }
 
   function armGutters() {
@@ -127,6 +167,19 @@
     a += off;
     b += off;
     return a === b ? "#" + pre.id + "-L" + a : "#" + pre.id + "-L" + a + "-L" + b;
+  }
+
+  // The block's active line selection from the URL hash as 1-based child
+  // indices `{a, b}` (a <= b, clamped to the block), or null when the hash does
+  // not target lines of this block.
+  function selectedRange(pre) {
+    const m = HASH_RE.exec(location.hash);
+    if (!(m && m[1] === pre.id && m[2])) return null;
+    const off = lnStart(pre) - 1;
+    const n = pre.querySelectorAll(".line").length;
+    const a = Math.max(Math.min(+m[2], m[3] ? +m[3] : +m[2]) - off, 1);
+    const b = Math.min(Math.max(+m[2], m[3] ? +m[3] : +m[2]) - off, n);
+    return a <= b ? { a: a, b: b } : null;
   }
 
   function onGutterMouseDown(e) {
@@ -252,6 +305,7 @@
     document.addEventListener("mousemove", onDragMove);
     document.addEventListener("mouseup", onDragEnd);
     document.addEventListener("click", onDocumentClick);
+    document.addEventListener("click", onCopyClick, true); // capture: beats copy.js
     applyHash(location.hash, true); // restore + scroll on load
     window.addEventListener("hashchange", function () {
       applyHash(location.hash, true);

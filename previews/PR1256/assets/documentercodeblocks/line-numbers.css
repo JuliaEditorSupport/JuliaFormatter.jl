@@ -11,7 +11,10 @@
   --ln-hl-bg: rgba(255, 208, 42, 0.18);  /* highlighted line background */
   --ln-hl-gutter-bg: #ece2b8;            /* opaque blend of hl over --ln-bg */
   --ln-hl-fg: #6a5c1e;
-  --ln-copied: #22863a;                  /* permalink copied-confirmation check */
+  --ln-btn: #222;                    /* = copy-button rest color */
+  --ln-btn-hover: #2e63b8;           /* = copy-button hover color */
+  --ln-btn-hover-bg: rgba(34, 34, 34, 0.1);
+  --ln-copied: #259a12;                  /* = copy-button.success color */
 }
 html.theme--documenter-dark {
   --ln-bg: #282f2f;
@@ -21,7 +24,10 @@ html.theme--documenter-dark {
   --ln-hl-bg: rgba(255, 208, 42, 0.10);
   --ln-hl-gutter-bg: #46442e;
   --ln-hl-fg: #d8c56a;
-  --ln-copied: #3fb950;
+  --ln-btn: #fff;                    /* = copy-button rest color */
+  --ln-btn-hover: #1abc9c;           /* = copy-button hover color */
+  --ln-btn-hover-bg: rgba(255, 255, 255, 0.1);
+  --ln-copied: #259a12;
 }
 /* Catppuccin themes: --ln-bg matches each theme's pre background (mantle),
  * --ln-border its pre border (surface2), accents from the catppuccin palette. */
@@ -33,6 +39,9 @@ html.theme--catppuccin-latte {
   --ln-hl-bg: rgba(223, 142, 29, 0.15);
   --ln-hl-gutter-bg: #e5d8c9;
   --ln-hl-fg: #7a5c0e;
+  --ln-btn: #4c4f69;                 /* = copy-button rest color */
+  --ln-btn-hover: #1e66f5;           /* = copy-button hover color */
+  --ln-btn-hover-bg: rgba(76, 79, 105, 0.1);
   --ln-copied: #40a02b;
 }
 html.theme--catppuccin-frappe {
@@ -43,6 +52,9 @@ html.theme--catppuccin-frappe {
   --ln-hl-bg: rgba(229, 200, 144, 0.10);
   --ln-hl-gutter-bg: #454349;
   --ln-hl-fg: #e5c890;
+  --ln-btn: #c6d0f5;                 /* = copy-button rest color */
+  --ln-btn-hover: #8caaee;           /* = copy-button hover color */
+  --ln-btn-hover-bg: rgba(198, 208, 245, 0.1);
   --ln-copied: #a6d189;
 }
 html.theme--catppuccin-macchiato {
@@ -53,6 +65,9 @@ html.theme--catppuccin-macchiato {
   --ln-hl-bg: rgba(238, 212, 159, 0.10);
   --ln-hl-gutter-bg: #3d3b40;
   --ln-hl-fg: #eed49f;
+  --ln-btn: #cad3f5;                 /* = copy-button rest color */
+  --ln-btn-hover: #8aadf4;           /* = copy-button hover color */
+  --ln-btn-hover-bg: rgba(202, 211, 245, 0.1);
   --ln-copied: #a6da95;
 }
 html.theme--catppuccin-mocha {
@@ -63,6 +78,9 @@ html.theme--catppuccin-mocha {
   --ln-hl-bg: rgba(249, 226, 175, 0.10);
   --ln-hl-gutter-bg: #3a3639;
   --ln-hl-fg: #f9e2af;
+  --ln-btn: #cdd6f4;                 /* = copy-button rest color */
+  --ln-btn-hover: #89b4fa;           /* = copy-button hover color */
+  --ln-btn-hover-bg: rgba(205, 214, 244, 0.1);
   --ln-copied: #a6e3a1;
 }
 
@@ -146,9 +164,31 @@ code.line-numbers .line.hl .line-num {
   color: var(--ln-hl-fg);
 }
 
+/* Modern browsers (Chrome 131+, Firefox 138+, Safari 18.4+) wrap the
+ * contents of <details> (docstrings) in a ::details-content
+ * pseudo-element. The theme's box-sizing reset
+ * (`*, ::before, ::after { box-sizing: inherit }` from html's border-box)
+ * matches elements and the classic pseudos but not ::details-content, which
+ * stays at the UA default content-box — so every element inside a docstring
+ * inherits content-box instead. The 2.5em copy/permalink buttons then grow
+ * to 3.5em outer boxes and their icons drift apart (#23). Re-joining the
+ * pseudo to the inherit chain restores border-box for the whole subtree.
+ * Must be a standalone rule: engines without ::details-content drop the
+ * rule (and don't have the problem). */
+::details-content {
+  box-sizing: inherit;
+}
+
 /* ---- permalink button (sits left of the copy button): a real <a> that
-   copies the block/selection URL on click ---- */
-pre .block-link {
+   copies the block/selection URL on click ----
+ * Colors mirror the theme's copy-button rules (rest = text color at 0.2
+ * opacity, hover/focus = accent + translucent background) via the --ln-btn
+ * tokens. The doubled class bumps specificity to (0,2,1)/(0,3,1): the dark
+ * themes scope their generic anchor colors as `html.theme--X a` = (0,1,2)
+ * and `html.theme--X a:hover` = (0,2,2), which would otherwise paint the
+ * permalink (a real <a>) in link colors while the copy <button> next to it
+ * uses the button colors. */
+pre .block-link.block-link {
   opacity: 0.2;
   transition: opacity 0.2s;
   position: absolute;
@@ -159,22 +199,25 @@ pre .block-link {
   padding: 0.5em;
   background: transparent;
   border: none;
-  color: var(--ln-fg);
+  color: var(--ln-btn);
   cursor: pointer;
   text-align: center;
   text-decoration: none;
 }
-pre:hover .block-link,
-pre .block-link:focus {
+pre:hover .block-link {
   opacity: 1;
 }
-pre .block-link:hover {
-  color: var(--ln-fg-hover);
-  background: rgba(128, 128, 128, 0.1);
+/* :focus styled like :hover, exactly as the theme does for the copy button */
+pre .block-link.block-link:focus,
+pre .block-link.block-link:hover {
+  opacity: 1;
+  color: var(--ln-btn-hover);
+  background: var(--ln-btn-hover-bg);
 }
-/* post-copy confirmation: checkmark icon, held visible even off-hover */
-pre .block-link.copied,
-pre .block-link.copied:hover {
+/* post-copy confirmation: checkmark icon, held visible even off-hover.
+ * Same (0,3,1) specificity as the hover rule; later in the cascade wins. */
+pre .block-link.block-link.copied,
+pre .block-link.block-link.copied:hover {
   color: var(--ln-copied);
   opacity: 1;
 }
