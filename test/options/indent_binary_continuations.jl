@@ -4,7 +4,7 @@ using JuliaFormatter: BlueStyle, MinimalStyle, YASStyle
 using JuliaFormatter.Internal: test_format
 using Test
 
-@testset "indent_chains" begin
+@testset "indent_binary_continuations" begin
     # `join_lines_based_on_source` keeps the line breaks of the input, so the chains below
     # stay nested and we can observe how the continuation lines are indented.
     @testset "disabled (default)" begin
@@ -48,14 +48,14 @@ using Test
         test_format(
             "aaa |>\nbbb\n",
             "aaa |>\n    bbb\n";
-            indent_chains=true,
+            indent_binary_continuations=true,
             join_lines_based_on_source=true,
             ast=true,
         )
         test_format(
             "aaa |>\nbbb |>\nccc\n",
             "aaa |>\n    bbb |>\n    ccc\n";
-            indent_chains=true,
+            indent_binary_continuations=true,
             join_lines_based_on_source=true,
             ast=true,
         )
@@ -63,14 +63,14 @@ using Test
         test_format(
             "f() = aaa |>\n      bbb |>\n      ccc\n",
             "f() = aaa |>\n    bbb |>\n    ccc\n";
-            indent_chains=true,
+            indent_binary_continuations=true,
             join_lines_based_on_source=true,
             ast=true,
         )
         test_format(
             "x = (aaa |>\n     bbb)\n",
             "x = (aaa |>\n    bbb)\n";
-            indent_chains=true,
+            indent_binary_continuations=true,
             join_lines_based_on_source=true,
             ast=true,
         )
@@ -78,7 +78,7 @@ using Test
         test_format(
             "function g()\n    return aaa |>\n           bbb\nend\n",
             "function g()\n    return aaa |>\n        bbb\nend\n";
-            indent_chains=true,
+            indent_binary_continuations=true,
             join_lines_based_on_source=true,
             ast=true,
         )
@@ -86,7 +86,7 @@ using Test
         test_format(
             "if aaa ==\n   bbb\n    x\nend\n",
             "if aaa ==\n    bbb\n    x\nend\n";
-            indent_chains=true,
+            indent_binary_continuations=true,
             join_lines_based_on_source=true,
             ast=true,
         )
@@ -94,7 +94,7 @@ using Test
         test_format(
             "x = aaa(bbb |>\nccc) |>\nddd\n",
             "x = aaa(bbb |>\n    ccc) |>\n    ddd\n";
-            indent_chains=true,
+            indent_binary_continuations=true,
             join_lines_based_on_source=true,
             ast=true,
         )
@@ -104,7 +104,7 @@ using Test
         test_format(
             "x = aaaaaaaa == bbbbbbbbb == cccccccc\n",
             "x =\n    aaaaaaaa ==\n        bbbbbbbbb ==\n        cccccccc\n";
-            indent_chains=true,
+            indent_binary_continuations=true,
             margin=20,
             ast=true,
         )
@@ -112,25 +112,25 @@ using Test
 
     @testset "standalone short-circuit chains" begin
         # `n_block!` already indents these by one level; the option must not double it
-        for indent_chains in (false, true)
+        for indent_binary_continuations in (false, true)
             test_format(
                 "aa &&\nbb\n",
                 "aa &&\n    bb\n";
-                indent_chains,
+                indent_binary_continuations,
                 join_lines_based_on_source=true,
                 ast=true,
             )
             test_format(
                 "aa &&\nbb &&\ncc\n",
                 "aa &&\n    bb &&\n    cc\n";
-                indent_chains,
+                indent_binary_continuations,
                 join_lines_based_on_source=true,
                 ast=true,
             )
             test_format(
                 "f(aa &&\nbb)\n",
                 "f(aa &&\n    bb)\n";
-                indent_chains,
+                indent_binary_continuations,
                 join_lines_based_on_source=true,
                 ast=true,
             )
@@ -156,7 +156,7 @@ using Test
             "x = (aaa |>\n     bbb)\n",
             "x = (aaa |>\n     bbb)\n",
             MinimalStyle();
-            indent_chains=false,
+            indent_binary_continuations=false,
             ast=true,
         )
     end
@@ -173,7 +173,7 @@ using Test
             "x = (aaa +\n     bbb +\n     ccc)\n",
             "x = (aaa +\n    bbb +\n    ccc)\n",
             BlueStyle();
-            indent_chains=true,
+            indent_binary_continuations=true,
             join_lines_based_on_source=true,
             ast=true,
         )

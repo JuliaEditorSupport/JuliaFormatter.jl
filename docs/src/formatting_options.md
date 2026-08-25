@@ -70,7 +70,7 @@ If you absolutely must enable them, you may need to run the formatter multiple t
 | [`format_docstrings`](@ref options-format-docstrings)                               | ⚠️    | `false`   | `false`     | `false`     | `false`      | `false`       |
 | [`import_to_using`](@ref options-import-to-using)                                   | ⚠️    | `false`   | **`true`**  | **`true`**  | `false`      | `false`       |
 | [`indent`](@ref options-indent)                                                     | 📐    | `4`       | `4`         | `4`         | `4`          | `4`           |
-| [`indent_chains`](@ref options-indent-chains)                                       | 📐    | `false`   | `false`     | `false`     | `false`      | **`true`**    |
+| [`indent_binary_continuations`](@ref options-indent-binary-continuations)           | 📐    | `false`   | `false`     | `false`     | `false`      | **`true`**    |
 | [`indent_submodule`](@ref options-indent-submodule)                                 | 📐    | `false`   | `false`     | **`true`**  | `false`      | `false`       |
 | [`join_lines_based_on_source`](@ref options-join-lines-based-on-source)             | 📐    | `false`   | **`true`**  | `false`     | **`true`**   | **`true`**    |
 | [`long_to_short_function_def`](@ref options-long-to-short-function-def)             | ⚠️    | `false`   | `false`     | `false`     | `false`      | `false`       |
@@ -420,49 +420,28 @@ The number of spaces used for one level of indentation.
 
 There is at present no option to use tabs for indentation: please open an issue if you want this feature.
 
-## [`indent_chains`](@id options-indent-chains)
+## [`indent_binary_continuations`](@id options-indent-binary-continuations)
 
 Default: `false`
 
-Controls how the continuation lines of operator chains (e.g. `|>` pipelines), comparisons,
-and binary operator calls are laid out when the expression has to be split over several
-lines.
+Controls how the continuation lines of binary operations are laid out when the expression has to be split over several lines.
 
-When set to `false` the continuation lines are aligned to the column at which the expression
-starts:
+When set to `false`, the continuation lines are aligned with the opening line or operand:
 
-```julia
-x = (aaa |>
-     bbb |>
-     ccc)
+```@example indent-binary-continuations
+using JuliaFormatter: format_text
+
+s = "x = a + b + c\nf(a + b + c)"
+format_text(s; margin=2) |> println
 ```
 
-When set to `true` they instead receive one indent level relative to the indentation of the
-expression itself:
+When set to `true` they instead receive one indent level relative to the opening line:
 
-```julia
-x = (aaa |>
-    bbb |>
-    ccc)
+```@example indent-binary-continuations
+format_text(s; margin=2, indent_binary_continuations=true) |> println
 ```
 
-This also affects chains that are not surrounded by brackets, which otherwise receive no
-indentation at all. With the option enabled,
-
-```julia
-aaa |>
-bbb
-```
-
-is formatted to
-
-```julia
-aaa |>
-    bbb
-```
-
-Note that assignments, short-form function definitions, `=>`, and `->` always use
-indentation-based nesting and are therefore unaffected by this option.
+Note that assignments, short-form function definitions, and the `=>` and `->` operators always use indentation-based nesting and are therefore unaffected by this option.
 
 ## [`indent_submodule`](@id options-indent-submodule)
 

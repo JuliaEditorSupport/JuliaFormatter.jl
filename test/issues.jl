@@ -2757,8 +2757,8 @@ end
             test_format(s_, syas, style)
         end
 
-        # MinimalStyle enables `indent_chains`, so chain continuations get one indent
-        # level instead of being aligned to the column of the first operand (#592).
+        # MinimalStyle enables `indent_binary_continuations`, so chain continuations get one
+        # indent level instead of being aligned to the column of the first operand (#592).
         sminimal = """
         if curs_row >= 0 && cur_row + 1 >= rows &&             # when too many lines,
             cur_row - curs_row + 1 >= rows ÷ 2 # center the cursor

@@ -1,16 +1,21 @@
 # v2.13.0
 
-New `indent_chains` option. When enabled, the continuation lines of operator chains (e.g. `|>` pipelines), comparisons, and binary operator calls are indented by one level relative to the expression instead of being aligned to the column of the first operand:
+Added a new `indent_binary_continuations` option.
+When enabled, the continuation lines of binary operations are indented by one level with respect to the first line of the operation:
 
 ```julia
-x = (aaa |>     # indent_chains = false
-     bbb)
+# With `indent_binary_continuations = false` (the default for most styles):
+aaaaaaa
++ bbbbbbb
++ ccccccc
 
-x = (aaa |>     # indent_chains = true
-    bbb)
+# With `indent_binary_continuations = true`
+aaaaaaa
+    + bbbbbbb
+    + ccccccc
 ```
 
-It defaults to `false` for all styles except `MinimalStyle` (the VS Code default), where it is `true`. (#592, #1256)
+It defaults to `false` for all styles except `MinimalStyle` (the VSCode default), where it is `true`. (#592, #1256)
 
 # v2.12.6
 

@@ -524,15 +524,15 @@ By default these are aligned to the column at which the expression starts:
          bbb |>
          ccc)
 
-When the `indent_chains` option is enabled they instead receive one indent level relative
-to the indentation of the expression itself (see issue #592):
+When the `indent_binary_continuations` option is enabled they instead receive one indent
+level relative to the indentation of the expression itself (see #592):
 
     x = (aaa |>
         bbb |>
         ccc)
 """
 function chain_continuation_indent(fst::FST, s::State)
-    s.opts.indent_chains || return s.line_offset
+    s.opts.indent_binary_continuations || return s.line_offset
     md = fst.metadata
     # Standalone short-circuit chains (e.g. a top-level `a && b` used only for its side
     # effect) already receive an extra `s.opts.indent` inside `n_block!`; adding it again
