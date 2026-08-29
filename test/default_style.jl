@@ -5035,20 +5035,19 @@ some_function(
     @testset "comments after empty block body" begin
         # MinimalStyle enables preserve_single_line_blocks, so constructs written on a
         # single source line keep their comments on that line instead of being expanded.
-        # The `;` before an empty body is still dropped for function/macro definitions,
-        # and for a multi-line `if` only the single-line `elseif` part stays joined.
+        # The `;` before an empty body is still dropped for function/macro definitions.
+        # Constructs spanning multiple lines (the `if ... elseif` case) are expanded as
+        # for every other style.
         function minimal_preserved(loop_start, comments)
             if endswith(loop_start, ")")
                 "$(loop_start) $(comments) end"
-            elseif occursin("\n", loop_start)
-                "$(loop_start); $(comments)\nend"
             else
                 "$(loop_start); $(comments) end"
             end
         end
         for style in ALL_STYLES
-            preserve = style isa MinimalStyle
             for loop_start in ("for x in y", "while x", "if x", "if x\n    f\nelseif x", "let x = y", "function f()", "macro m()")
+                preserve = style isa MinimalStyle && !occursin("\n", loop_start)
                 s_ = "$(loop_start); #= comment =# end"
                 s = if preserve
                     minimal_preserved(loop_start, "#= comment =#")

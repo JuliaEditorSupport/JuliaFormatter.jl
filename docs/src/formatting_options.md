@@ -627,24 +627,18 @@ Default: `false` (`true` for `MinimalStyle`)
 
 If true, block constructs (`function`/`macro` definitions, `for`/`while` loops, `if`, `let`, `try`, `do`, `struct`, `module`, `begin`, ...) that are written entirely on a single source line are kept on a single line, with their statements separated by semicolons, instead of being expanded onto multiple lines.
 
-For example, with this option enabled
-
-```julia
-safe_isfile(x) = try isfile(x); catch; false end
-```
-
-is left unchanged, whereas by default it is rewritten to
-
-```julia
-safe_isfile(x) =
-    try
-        isfile(x)
-    catch
-        false
-    end
-```
-
 Constructs that span multiple source lines are expanded as usual.
+
+```@example preserve-single-line-blocks
+s = """
+for i in 1:10; f(i) end
+try isfile(x); catch; false end
+"""
+
+using JuliaFormatter: format_text
+format_text(s; preserve_single_line_blocks=true) |> println
+format_text(s; preserve_single_line_blocks=false) |> println
+```
 
 ## [`remove_extra_newlines`](@id options-remove-extra-newlines)
 

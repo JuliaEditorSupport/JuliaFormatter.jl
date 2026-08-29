@@ -33,6 +33,11 @@ options(::DefaultStyle) = Options()
     from_module::Bool = false
     from_docstring::Bool = false
 
+    # Set by p_if/p_try when recursing into an `elseif`/`else`/`catch`/`finally` sub-node:
+    # whether the enclosing `if`/`try` is being kept on a single line
+    # (`preserve_single_line_blocks`). See `keep_single_line`.
+    parent_keep_single_line::Bool = false
+
     # Indicates a context in which we are allowed to rewrite f(x, y=z) to f(x; y=z).
     # This is disabled in macros as well as in function definitions.
     can_separate_kwargs::Bool = true
@@ -1259,31 +1264,73 @@ end
 
 # Block
 # length Block is the length of the longest expr
+# The node kinds that `keep_single_line` may be called on, i.e. the block constructs that
+# `preserve_single_line_blocks` applies to.
+const SINGLE_LINE_BLOCK_KINDS =
+    KSet"function macro struct module baremodule block quote let for while do try catch finally else if elseif"
+
 """
-    keep_single_line(cst::JuliaSyntax.GreenNode, s::State)::Bool
+    keep_single_line(cst::JuliaSyntax.GreenNode, s::State, ctx::PrettyContext; offset = s.offset)::Bool
 
-Whether a block construct that is written entirely on a single source line should be kept
-on a single line (see the `preserve_single_line_blocks` option). For example, with the
-option enabled,
+Whether the block construct `cst`, which starts at byte `offset` of the source, is written
+entirely on a single source line and should therefore be kept on a single line (see the
+`preserve_single_line_blocks` option).
 
-    safe_isfile(x) = try isfile(x); catch; false end
+A construct containing a docstring (`"doc" x`) is never kept on one line, since the
+docstring is always emitted on its own line. The `elseif`/`else`/`catch`/`finally`
+sub-nodes of an `if`/`try` don't decide for themselves but follow the enclosing construct
+(via `ctx.parent_keep_single_line`), since their own span covers neither the start of the
+construct nor its `end`.
 
-keeps the `try` on one line instead of being expanded to
+IMPORTANT: unless `offset` is given explicitly, this must be called when `s.offset` is
+still positioned at the start of `cst` (i.e. before any of its children have been
+prettified), since it compares the source line of the first and last byte of `cst`.
+"""
+function keep_single_line(
+    cst::JuliaSyntax.GreenNode,
+    s::State,
+    ctx::PrettyContext;
+    offset::Int = s.offset,
+)::Bool
+    kind(cst) in SINGLE_LINE_BLOCK_KINDS ||
+        error("unreachable: keep_single_line called on non-block node $(kind(cst))")
+    s.opts.preserve_single_line_blocks || return false
+    if kind(cst) in KSet"elseif else catch finally"
+        return ctx.parent_keep_single_line
+    end
+    on_same_line(s, offset, offset + span(cst) - 1) || return false
+    return !any_descendant(n -> kind(n) === K"doc", cst)
+end
 
-    safe_isfile(x) =
-        try
-            isfile(x)
-        catch
-            false
+"""
+    block_arg_forces_nest(arg::JuliaSyntax.GreenNode, offset::Int, s::State, style, ctx)::Bool
+
+Whether `arg` -- the sole argument of a bracketed construct such as `(BLOCK)` or
+`[BLOCK for x in y]`, starting at byte `offset` of the source -- is a block that will be
+expanded onto multiple lines, in which case the brackets must always nest. With
+`preserve_single_line_blocks`, a block that is kept on a single line does not force
+nesting.
+"""
+function block_arg_forces_nest(
+    arg::JuliaSyntax.GreenNode,
+    offset::Int,
+    s::State,
+    style::AbstractStyle,
+    ctx::PrettyContext,
+)::Bool
+    if kind(arg) === K"generator" && haschildren(arg)
+        # e.g. `(BLOCK for x in y)`: decided by the generator's body.
+        for c in children(arg)
+            if !JuliaSyntax.is_whitespace(c)
+                return block_arg_forces_nest(c, offset, s, style, ctx)
+            end
+            offset += span(c)
         end
-
-IMPORTANT: this must be called when `s.offset` is still positioned at the start of `cst`
-(i.e. at the start of the construct, before any of its children have been prettified),
-since it compares the source line of the first and last byte of `cst`.
-"""
-function keep_single_line(cst::JuliaSyntax.GreenNode, s::State)::Bool
-    return s.opts.preserve_single_line_blocks &&
-           on_same_line(s, s.offset, s.offset + span(cst) - 1)
+        return false
+    end
+    is_block(arg, style) || return false
+    kind(arg) in SINGLE_LINE_BLOCK_KINDS || return true
+    return !keep_single_line(arg, s, ctx; offset = offset)
 end
 
 """
@@ -1336,17 +1383,8 @@ function p_block(
         return p_tupleblock(style, cst, s, ctx, lineage)
     end
 
-    # Block-owning constructs (function/for/if/let/try/do/...) pass
-    # `ignore_single_line = true` so that their bodies are always expanded onto separate
-    # lines. When `preserve_single_line_blocks` is enabled, a body written on a single
-    # source line keeps its single-line, semicolon-separated form instead. Blocks without
-    # any statements (e.g. the `;` in `baremodule Q; end`) keep the existing behavior of
-    # dropping the superfluous semicolons.
     single_line =
-        (
-            !ignore_single_line ||
-            (s.opts.preserve_single_line_blocks && block_has_statements(cst))
-        ) && on_same_line(s, s.offset, s.offset + span(cst) - 1)
+        ignore_single_line ? false : on_same_line(s, s.offset, s.offset + span(cst) - 1)
 
     before_first_arg = true
 
@@ -1571,7 +1609,7 @@ function p_functiondef(
     seen_body = false
     extra_block_node = nothing
     # Keep e.g. `function f(); 1 end` on a single line (preserve_single_line_blocks).
-    keep_single = keep_single_line(cst, s)
+    keep_single = keep_single_line(cst, s, ctx)
 
     for (i, c) in enumerate(childs)
         if i == function_or_macro_keyword_idx
@@ -1690,7 +1728,7 @@ function p_struct(
     block_has_contents = false
     childs = children(cst)
     # Keep e.g. `struct A; x::Int end` on a single line (preserve_single_line_blocks).
-    keep_single = keep_single_line(cst, s)
+    keep_single = keep_single_line(cst, s, ctx)
     for (i, c) in enumerate(childs)
         if i == 1
             n = pretty(style, c, s, ctx, lineage)
@@ -1760,7 +1798,7 @@ function p_mutable(
     block_has_contents = false
     childs = children(cst)
     # Keep e.g. `mutable struct B; x end` on a single line (preserve_single_line_blocks).
-    keep_single = keep_single_line(cst, s)
+    keep_single = keep_single_line(cst, s, ctx)
     for c in childs
         if kind(c) in KSet"struct mutable"
             n = pretty(style, c, s, ctx, lineage)
@@ -1832,7 +1870,7 @@ function p_module(
     childs = children(cst)
     indent_module = s.opts.indent_submodule && from_module
     # Keep e.g. `module M; f() = 1 end` on a single line (preserve_single_line_blocks).
-    keep_single = keep_single_line(cst, s)
+    keep_single = keep_single_line(cst, s, ctx)
 
     for c in childs
         if kind(c) in KSet"module baremodule" && !haschildren(c)
@@ -2025,7 +2063,7 @@ function p_begin(
 
     # Keep e.g. `begin x = 1; y = 2 end` on a single line (preserve_single_line_blocks).
     # This must be computed before the `begin` keyword below is prettified.
-    keep_single = keep_single_line(cst, s)
+    keep_single = keep_single_line(cst, s, ctx)
 
     childs = children(cst)
     add_node!(t, pretty(style, childs[1], s, ctx, lineage), s)
@@ -2033,7 +2071,10 @@ function p_begin(
     # == 2 because the two children are `begin` and `end`
     empty_body = count(n -> !Shims.is_really_whitespace(n) && kind(n) !== K";", childs) == 2
 
-    if empty_body && !s.opts.join_lines_based_on_source
+    # An empty body is collapsed to `begin end` unless `join_lines_based_on_source` wants to
+    # follow the source; a single-line `begin end` is kept as-is when the construct is kept
+    # on one line (preserve_single_line_blocks).
+    if empty_body && (!s.opts.join_lines_based_on_source || keep_single)
         for c in childs[2:(end-1)]
             pretty(style, c, s, ctx, lineage)
         end
@@ -2049,7 +2090,11 @@ function p_begin(
         # preserve_single_line_blocks: join the statements (and their `;` separators)
         # onto the `begin ... end` line.
         for c in childs[2:(end-1)]
-            if JuliaSyntax.is_whitespace(c)
+            if kind(c) === K"Comment"
+                # `#= =#` comments; handled as in p_block.
+                add_hasheq_comment!(t, pretty(style, c, s, ctx, lineage), s)
+                continue
+            elseif JuliaSyntax.is_whitespace(c)
                 s.offset += span(c)
                 continue
             end
@@ -2161,7 +2206,7 @@ function p_let(
 
     has_let_args = false
     # Keep e.g. `let x = 1; x end` on a single line (preserve_single_line_blocks).
-    keep_single = keep_single_line(cst, s)
+    keep_single = keep_single_line(cst, s, ctx)
 
     childs = children(cst)
     for (i, c) in enumerate(childs)
@@ -2272,7 +2317,7 @@ function p_for(
     seen_body = false
     extra_block_node = nothing
     # Keep e.g. `for i in 1:10; f(i) end` on a single line (preserve_single_line_blocks).
-    keep_single = keep_single_line(cst, s)
+    keep_single = keep_single_line(cst, s, ctx)
 
     for c in children(cst)
         if kind(c) in KSet"for while" && !haschildren(c)
@@ -2440,7 +2485,7 @@ function append_do_nodes!(
     end
 
     # Keep e.g. `foo() do x; x + 1 end` on a single line (preserve_single_line_blocks).
-    keep_single = keep_single_line(cst, s)
+    keep_single = keep_single_line(cst, s, ctx)
 
     childs = children(cst)
     for (i, c) in enumerate(childs)
@@ -2551,9 +2596,9 @@ function p_try(
 
     # Keep e.g. `try isfile(x); catch; false end` on a single line
     # (preserve_single_line_blocks). Note that p_try is called recursively for the
-    # `catch`/`finally`/`else` sub-nodes; each recursion recomputes this for its own node,
-    # which lies on the same source line, so the whole construct is joined consistently.
-    keep_single = keep_single_line(cst, s)
+    # `catch`/`finally`/`else` sub-nodes; those inherit this decision from the enclosing
+    # `try` via `ctx.parent_keep_single_line` (see `keep_single_line`).
+    keep_single = keep_single_line(cst, s, ctx)
 
     childs = children(cst)
     for c in childs
@@ -2577,7 +2622,13 @@ function p_try(
             else
                 # A `catch`/`finally`/`else` sub-node with children.
                 len = length(t)
-                n = pretty(style, c, s, ctx, lineage)
+                n = pretty(
+                    style,
+                    c,
+                    s,
+                    newctx(ctx; parent_keep_single_line = keep_single),
+                    lineage,
+                )
                 if keep_single
                     # Join e.g. `catch; false` onto the line after `try isfile(x);`.
                     add_node!(t, Whitespace(1), s)
@@ -2645,9 +2696,9 @@ function p_if(
     seen_body = false
     extra_block_node = nothing
     # Keep e.g. `if x; y end` on a single line (preserve_single_line_blocks). As in
-    # p_try, the `elseif`/`else` sub-nodes are handled recursively and recompute this
-    # for their own (same-line) span.
-    keep_single = keep_single_line(cst, s)
+    # p_try, the `elseif` sub-nodes are handled recursively and inherit this decision
+    # from the enclosing `if` via `ctx.parent_keep_single_line`.
+    keep_single = keep_single_line(cst, s, ctx)
 
     for c in children(cst)
         if kind(c) in KSet"if elseif else"
@@ -2672,7 +2723,13 @@ function p_if(
                     seen_body = false
                 end
                 len = length(t)
-                n = pretty(style, c, s, ctx, lineage)
+                n = pretty(
+                    style,
+                    c,
+                    s,
+                    newctx(ctx; parent_keep_single_line = keep_single),
+                    lineage,
+                )
                 if keep_single
                     # Join e.g. `else z` onto the line after `if x; y;`.
                     add_node!(t, Whitespace(1), s)
@@ -3860,10 +3917,14 @@ function p_parens(
     args = get_args(cst)
     nest = if length(args) > 0
         arg = args[1]
-        if is_block(arg, style) || (
-            # this branch covers something like (BLOCK for x in y)
-            kind(arg) === K"generator" && first_nontrivial_child_is_block(arg, style)
-        )
+        # Source offset of `arg` (`get_args` returns the child nodes themselves).
+        arg_offset = s.offset
+        for c in children(cst)
+            c === arg && break
+            arg_offset += span(c)
+        end
+        # Covers both `(BLOCK)` and `(BLOCK for x in y)`.
+        if block_arg_forces_nest(arg, arg_offset, s, style, ctx)
             t.nest_behavior = AlwaysNest
         end
         if !ctx.nonest && !s.opts.disallow_single_arg_nesting
@@ -4185,11 +4246,10 @@ function p_comprehension(
     opening_brace_idx = findfirst(n -> kind(n) === K"[", childs)
     body_idx = findnext(n -> !JuliaSyntax.is_whitespace(n), childs, opening_brace_idx + 1)
     body_arg = childs[body_idx]
+    body_offset = s.offset + sum(span, childs[1:(body_idx-1)]; init = 0)
 
-    if is_block(body_arg, style) || (
-        # this branch covers something like [BLOCK for x in y]
-        kind(body_arg) === K"generator" && first_nontrivial_child_is_block(body_arg, style)
-    )
+    # Covers both `[BLOCK]` and `[BLOCK for x in y]`.
+    if block_arg_forces_nest(body_arg, body_offset, s, style, ctx)
         t.nest_behavior = AlwaysNest
     end
 
