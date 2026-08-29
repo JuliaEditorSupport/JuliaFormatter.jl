@@ -14,6 +14,7 @@ function options(::MinimalStyle)
         remove_extra_newlines = false,
         import_to_using = false,
         pipe_to_function_call = false,
+        preserve_single_line_blocks = true,
         short_to_long_function_def = false,
         long_to_short_function_def = false,
         always_use_return = false,

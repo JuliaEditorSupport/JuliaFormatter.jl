@@ -78,6 +78,7 @@ If you absolutely must enable them, you may need to run the formatter multiple t
 | [`max_iterations`](@ref options-max-iterations)                                     |       | `1`       | `1`         | `1`         | `1`          | `1`           |
 | [`normalize_line_endings`](@ref options-normalize-line-endings)                     | 📐    | `"auto"`  | `"auto"`    | `"auto"`    | **`"unix"`** | `"auto"`      |
 | [`pipe_to_function_call`](@ref options-pipe-to-function-call)                       | 🪃 🔥 | `false`   | **`true`**  | **`true`**  | `false`      | `false`       |
+| [`preserve_single_line_blocks`](@ref options-preserve-single-line-blocks)          | 📐    | `false`   | `false`     | `false`     | `false`      | **`true`**    |
 | [`remove_extra_newlines`](@ref options-remove-extra-newlines)                       | 📐    | `false`   | **`true`**  | **`true`**  | **`true`**   | `false`       |
 | [`sciml_margin_overrun`](@ref options-sciml-margin-overrun)                         | 📐    | unused    | unused      | unused      | **`20`**     | unused        |
 | [`separate_kwargs_with_semicolon`](@ref options-separate-kwargs-with-semicolon)     | ⚠️    | `false`   | **`true`**  | **`true`**  | `false`      | `false`       |
@@ -619,6 +620,25 @@ If true, `x |> f` is rewritten to `f(x)`, and `x .|> f` to `f.(x)`.
     *In principle*, this can be fixed, since we can determine ahead of time when the pipe will be transformed into the function call.
     However, my current judgment is that this is not really worth it since it would make the codebase more complex and brittle.
     On top of that, it's probably not a good idea to enable `pipe_to_function_call` anyway.
+
+## [`preserve_single_line_blocks`](@id options-preserve-single-line-blocks)
+
+Default: `false` (`true` for `MinimalStyle`)
+
+If true, block constructs (`function`/`macro` definitions, `for`/`while` loops, `if`, `let`, `try`, `do`, `struct`, `module`, `begin`, ...) that are written entirely on a single source line are kept on a single line, with their statements separated by semicolons, instead of being expanded onto multiple lines.
+
+Constructs that span multiple source lines are expanded as usual.
+
+```@example preserve-single-line-blocks
+s = """
+for i in 1:10; f(i) end
+try isfile(x); catch; false end
+"""
+
+using JuliaFormatter: format_text
+format_text(s; preserve_single_line_blocks=true) |> println
+format_text(s; preserve_single_line_blocks=false) |> println
+```
 
 ## [`remove_extra_newlines`](@id options-remove-extra-newlines)
 
