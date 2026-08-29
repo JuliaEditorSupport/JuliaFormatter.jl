@@ -33,7 +33,6 @@ Triple-quoted literals are unaffected. (#1251, #1253)
 
 Fixed a bug where removing the whitespace around a binary operator could change how the code tokenizes, producing invalid or ambiguous output.
 For example `A[1. .. 1.]` was formatted to `A[1...1.]` under `MinimalStyle` and `A[1 - -2]` was formatted to `A[1--2]` under `DefaultStyle`, neither of which parses. (#1250, #1252)
->>>>>>> main
 
 # v2.12.4
 
