@@ -29,9 +29,9 @@ jobs:
           - name: default
             version: '1.12'
             opts: '--style=default'
-          - name: default-indentbin
+          - name: default-pslb
             version: '1.12'
-            opts: '--style=default --indent-binary-continuations=true'
+            opts: '--style=default --preserve-single-line-blocks=true'
           - name: "(expected fail) default-jlbos"
             version: '1.12'
             opts: '--style=default --join-lines-based-on-source=true'

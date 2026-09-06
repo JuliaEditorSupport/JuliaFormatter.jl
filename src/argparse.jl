@@ -500,6 +500,13 @@ const PARSER = ArgParser(
         group = FormattingGroup,
     ),
     option(
+        "--preserve-single-line-blocks";
+        dest = :preserve_single_line_blocks,
+        type = Bool,
+        help = "Keep single-line block constructs on one line.",
+        group = FormattingGroup,
+    ),
+    option(
         "--remove-extra-newlines";
         dest = :remove_extra_newlines,
         type = Bool,

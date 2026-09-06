@@ -286,6 +286,8 @@ using JuliaFormatter: DefaultStyle, YASStyle, BlueStyle, SciMLStyle, MinimalStyl
             @test parse_args(["--long-to-short-function-def=false"]).config.options.long_to_short_function_def == false
             @test parse_args(["--pipe-to-function-call=true"]).config.options.pipe_to_function_call == true
             @test parse_args(["--pipe-to-function-call=false"]).config.options.pipe_to_function_call == false
+            @test parse_args(["--preserve-single-line-blocks=true"]).config.options.preserve_single_line_blocks == true
+            @test parse_args(["--preserve-single-line-blocks=false"]).config.options.preserve_single_line_blocks == false
             @test parse_args(["--remove-extra-newlines=true"]).config.options.remove_extra_newlines == true
             @test parse_args(["--remove-extra-newlines=false"]).config.options.remove_extra_newlines == false
             @test parse_args(["--separate-kwargs-with-semicolon=true"]).config.options.separate_kwargs_with_semicolon == true

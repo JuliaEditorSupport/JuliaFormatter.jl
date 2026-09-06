@@ -298,6 +298,14 @@ function any_descendant(f, fst::FST)
     end
     return false
 end
+function any_descendant(f, cst::JuliaSyntax.GreenNode)
+    haschildren(cst) || return false
+    for n in children(cst)
+        f(n) && return true
+        any_descendant(f, n) && return true
+    end
+    return false
+end
 can_nest(fst::FST) = fst.nest_behavior in (AllowNest, AllowNestButDontRemove)
 can_remove(fst::FST) = fst.nest_behavior !== AllowNestButDontRemove
 
