@@ -7,25 +7,26 @@ using Test
 @testset "preserve_single_line_blocks" begin
     @testset "single-line constructs are preserved" begin
         unchanged = [
-            "try isfile(x); catch; false end",
-            "try; isfile(x); catch; false end",
-            "try isfile(x) catch end",
-            "try isfile(x) catch e; e else g() finally h() end",
-            "let x = 1; x end",
-            "let; x end",
-            "if x; y end",
-            "if x; end",
-            "if x; y else z end",
-            "if x; y elseif w; z else q end",
-            "for i = 1:10; f(i) end",
-            "while x; f() end",
-            "function f(); 1 end",
+            "try isfile(x12345); catch; false end",
+            "try; isfile(x12345); catch; false end",
+            "try isfile(x12345) catch end",
+            "try isfile(x12345) catch e; e else g() finally h() end",
+            "let x12345 = 1; x12345 end",
+            "let; x12345 end",
+            "if x12345 f(x12345) end",
+            "if x12345; y12345 end",
+            "if x12345; end",
+            "if x12345; y12345 else z12345 end",
+            "if x12345; y12345 elseif w12345; z12345 else q12345 end",
+            "for i12345 = 1:10; f(i12345) end",
+            "while x; f(12345) end",
+            "function f(); 12345 end",
             "macro m(); 1 end",
             "foo() do x; x + 1 end",
             "struct A; x::Int end",
             "mutable struct B; x::Int end",
-            "module M; f() = 1 end",
-            "baremodule Q; f() = 1 end",
+            "module M; f(abcdefghijk) = 1 end",
+            "baremodule Q; f(abcdefghijk) = 1 end",
             "begin x = 1; y = 2 end",
             "begin end",
             "quote x = 1; y end",
@@ -33,11 +34,19 @@ using Test
             # nested single-line constructs
             "let x = 1; if x; 1 end end",
             "quote begin end end",
-            "x = :(let a; b end)",
-            "y = [begin x end for i = 1:3]",
         ]
         for c in unchanged
             test_format(c, c; preserve_single_line_blocks=true, ast=true)
+            test_format(c, c; margin=4, preserve_single_line_blocks=true, ast=true)
+        end
+
+        # Can't test these with `margin=4` because the block that doesn't break is part
+        # of a larger construct that can (and will be) broken.
+        for s in (
+            "y = [begin x end for i = 1:3]",
+            "x = :(let a; b end)"
+        )
+            test_format(s, s; preserve_single_line_blocks=true, ast=true)
         end
     end
 
