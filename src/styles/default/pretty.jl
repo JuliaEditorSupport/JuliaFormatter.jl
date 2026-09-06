@@ -1303,7 +1303,7 @@ function keep_single_line(
 end
 
 """
-    block_arg_forces_nest(arg::JuliaSyntax.GreenNode, offset::Int, s::State, style, ctx)::Bool
+    block_arg_forces_nest(arg::JuliaSyntax.GreenNode, offset::Integer, s::State, style, ctx)::Bool
 
 Whether `arg` -- the sole argument of a bracketed construct such as `(BLOCK)` or
 `[BLOCK for x in y]`, starting at byte `offset` of the source -- is a block that will be
@@ -1313,7 +1313,7 @@ nesting.
 """
 function block_arg_forces_nest(
     arg::JuliaSyntax.GreenNode,
-    offset::Int,
+    offset::Integer,
     s::State,
     style::AbstractStyle,
     ctx::PrettyContext,
