@@ -1696,6 +1696,7 @@ function p_functiondef(
         false,
         false,
     )
+    keep_single && (t.nest_behavior = NeverNest)
     t
 end
 
@@ -1778,6 +1779,7 @@ function p_struct(
             add_node!(t, pretty(style, c, s, ctx, lineage), s; join_lines = true)
         end
     end
+    keep_single && (t.nest_behavior = NeverNest)
     t
 end
 
@@ -1848,6 +1850,7 @@ function p_mutable(
             add_node!(t, pretty(style, c, s, ctx, lineage), s; join_lines = true)
         end
     end
+    keep_single && (t.nest_behavior = NeverNest)
     t
 end
 
@@ -1933,6 +1936,7 @@ function p_module(
             )
         end
     end
+    keep_single && (t.nest_behavior = NeverNest)
     t
 end
 
@@ -2121,6 +2125,7 @@ function p_begin(
         pop!(lineage)
         add_node!(t, pretty(style, cst[end], s), s)
     end
+    keep_single && (t.nest_behavior = NeverNest)
     t
 end
 
@@ -2295,6 +2300,7 @@ function p_let(
             )
         end
     end
+    keep_single && (t.nest_behavior = NeverNest)
     t
 end
 
@@ -2422,6 +2428,7 @@ function p_for(
         end
     end
 
+    keep_single && (t.nest_behavior = NeverNest)
     t
 end
 
@@ -2525,6 +2532,7 @@ function append_do_nodes!(
             add_node!(t, pretty(style, c, s, ctx, lineage), s; join_lines = true)
         end
     end
+    keep_single && (t.nest_behavior = NeverNest)
     t
 end
 
@@ -2673,6 +2681,7 @@ function p_try(
             add_node!(t, pretty(style, c, s, ctx, lineage), s)
         end
     end
+    keep_single && (t.nest_behavior = NeverNest)
     t
 end
 
@@ -2825,6 +2834,7 @@ function p_if(
         seen_body = false
     end
 
+    keep_single && (t.nest_behavior = NeverNest)
     return t
 end
 
