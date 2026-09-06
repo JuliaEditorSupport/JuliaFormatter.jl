@@ -2,7 +2,7 @@
 
 Added a new formatting option, `preserve_single_line_blocks` (default `false`; `true` for `MinimalStyle`).
 When enabled, block constructs written entirely on a single source line — e.g. `try isfile(x); catch; false end` or `let x = 1; x end` — are kept on one line, with their statements separated by semicolons, instead of being expanded onto multiple lines.
-This applies to `function`/`macro` definitions, `for`/`while` loops, `if`, `let`, `try`, `do`, `struct`/`mutable struct`, `module`/`baremodule`, `begin`, and `quote`. (#593, #1254)
+This applies to `function`/`macro` definitions, `for`/`while` loops, `if`, `let`, `try`, `do`, `struct`/`mutable struct`, `module`/`baremodule`, `begin`, and `quote`. (#593, #1254, #1261)
 
 # v2.13.0
 
