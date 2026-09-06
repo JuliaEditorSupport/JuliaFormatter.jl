@@ -119,7 +119,7 @@ end
 """
     first_nonws_leaf_and_offset(
         node::JuliaSyntax.GreenNode,
-    )::Union{Nothing,Tuple{JuliaSyntax.GreenNode,Int}
+    )::Union{Nothing,Tuple{JuliaSyntax.GreenNode,Integer}
 
 Return the first non-whitespace leaf node in `node` plus its offset from the beginning of
 `node`, or `nothing` if there are no non-whitespace leaves.
@@ -128,7 +128,7 @@ function first_nonws_leaf_and_offset(
     node::JuliaSyntax.GreenNode,
     # Callers should not set _acc, this is only used in this function to recurse
     _acc::Integer = 0,
-)::Union{Nothing,Tuple{JuliaSyntax.GreenNode,Int}}
+)::Union{Nothing,Tuple{JuliaSyntax.GreenNode,Integer}}
     if JuliaSyntax.is_leaf(node)
         return JuliaSyntax.is_whitespace(node) ? nothing : (node, _acc)
     end
@@ -146,7 +146,7 @@ end
 """
     last_nonws_leaf_and_offset(
         node::JuliaSyntax.GreenNode,
-    )::Union{Nothing,Tuple{JuliaSyntax.GreenNode,Int}
+    )::Union{Nothing,Tuple{JuliaSyntax.GreenNode,Integer}
 
 Return the last non-whitespace leaf node in `node` plus its offset from the beginning of
 `node`, or `nothing` if there are no non-whitespace leaves. This is the mirror image of
@@ -156,7 +156,7 @@ function last_nonws_leaf_and_offset(
     node::JuliaSyntax.GreenNode,
     # Callers should not set _acc, this is only used in this function to recurse
     _acc::Integer = 0,
-)::Union{Nothing,Tuple{JuliaSyntax.GreenNode,Int}}
+)::Union{Nothing,Tuple{JuliaSyntax.GreenNode,Integer}}
     if JuliaSyntax.is_leaf(node)
         return JuliaSyntax.is_whitespace(node) ? nothing : (node, _acc)
     end
@@ -1045,7 +1045,7 @@ function p_macrocall(
     s::State,
     ctx::PrettyContext,
     lineage::Vector{Tuple{JuliaSyntax.Kind,Bool,Bool}};
-    do_block_idx::Union{Int,Nothing} = nothing,
+    do_block_idx::Union{Integer,Nothing} = nothing,
 )
     style = getstyle(ds)
     t = FST(MacroCall, nspaces(s))
@@ -1290,7 +1290,7 @@ function keep_single_line(
     cst::JuliaSyntax.GreenNode,
     s::State,
     ctx::PrettyContext;
-    offset::Int = s.offset,
+    offset::Integer = s.offset,
 )::Bool
     kind(cst) in SINGLE_LINE_BLOCK_KINDS ||
         error("unreachable: keep_single_line called on non-block node $(kind(cst))")
@@ -2547,7 +2547,7 @@ function p_do_call(
     s::State,
     ctx::PrettyContext,
     lineage::Vector{Tuple{JuliaSyntax.Kind,Bool,Bool}},
-    do_block_idx::Int,
+    do_block_idx::Integer,
 )
     t = FST(Do, nspaces(s))
     childs = children(cst)
@@ -3168,7 +3168,7 @@ function gluing_changes_tokenization(
 end
 
 """
-    boundary_token_text(s::State, child::JuliaSyntax.GreenNode, child_offset::Int, rightmost::Bool)
+    boundary_token_text(s::State, child::JuliaSyntax.GreenNode, child_offset::Integer, rightmost::Bool)
 
 Return the text that will be emitted for the token of `child` that sits directly next to a
 binary operator: the last non-whitespace leaf of the left operand (`rightmost = true`) or
@@ -3179,7 +3179,7 @@ be removed.
 function boundary_token_text(
     s::State,
     child::JuliaSyntax.GreenNode,
-    child_offset::Int,
+    child_offset::Integer,
     rightmost::Bool,
 )::Union{Nothing,String}
     result = if rightmost
@@ -3810,7 +3810,7 @@ function p_call(
     s::State,
     ctx::PrettyContext,
     lineage::Vector{Tuple{JuliaSyntax.Kind,Bool,Bool}};
-    do_block_idx::Union{Int,Nothing} = nothing,
+    do_block_idx::Union{Integer,Nothing} = nothing,
 )
     style = getstyle(ds)
     t = FST(Call, nspaces(s))
@@ -4518,8 +4518,8 @@ function p_vcat(
     args = get_args(cst)
     nest = should_allow_nesting_call_args(args, s.opts.disallow_single_arg_nesting)
     childs = children(cst)
-    opening_idx = findfirst(n -> kind(n) === K"[", childs)::Int
-    closing_idx = findlast(n -> kind(n) === K"]", childs)::Int
+    opening_idx = findfirst(n -> kind(n) === K"[", childs)::Integer
+    closing_idx = findlast(n -> kind(n) === K"]", childs)::Integer
     first_arg_idx = findnext(n -> !JuliaSyntax.is_whitespace(n), childs, opening_idx + 1)
     last_arg_idx = findprev(n -> !JuliaSyntax.is_whitespace(n), childs, closing_idx - 1)
 
@@ -4592,7 +4592,7 @@ function p_typedvcat(
 end
 
 """
-    is_newline_after_2semicolons(cst::JuliaSyntax.GreenNode, i::Int)
+    is_newline_after_2semicolons(cst::JuliaSyntax.GreenNode, i::Integer)
 
 Detect if child node `i` of `cst` is a newline that follows two semicolons. For example,
 this will detect the newline in constructs such as
@@ -4600,7 +4600,7 @@ this will detect the newline in constructs such as
     [a b;;
      c d]
 """
-function is_newline_after_2semicolons(cst::JuliaSyntax.GreenNode, i::Int)
+function is_newline_after_2semicolons(cst::JuliaSyntax.GreenNode, i::Integer)
     return i >= 3 &&
            kind(cst[i]) === K"NewlineWs" &&
            kind(cst[i-1]) === K";" &&
@@ -4634,7 +4634,7 @@ function p_hcat(
     childs = children(cst)
 
     # Identify the first argument inside the square brackets
-    idx = findfirst(n -> kind(n) === K"[", childs)::Int
+    idx = findfirst(n -> kind(n) === K"[", childs)::Integer
     first_arg_idx = findnext(n -> !JuliaSyntax.is_whitespace(n), childs, idx + 1)
 
     # Handling newlines in hcat nodes
@@ -4859,7 +4859,7 @@ See comment in `p_row` for details.
 """
 function is_semantically_important_newline(
     row_cst::JuliaSyntax.GreenNode,
-    i::Int,
+    i::Integer,
     is_last_arg_of_parent::Bool,
 )
     kind(row_cst[i]) === K"NewlineWs" || return false
