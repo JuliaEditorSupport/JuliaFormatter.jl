@@ -134,12 +134,11 @@ function p_macrocall(
     first_arg_idx =
         idx === nothing ? -1 : findnext(a -> !JuliaSyntax.is_whitespace(a), childs, idx + 1)
 
-    # https://github.com/SciML/SciMLStyle?tab=readme-ov-file#macros
+    # https://github.com/SciML/SciMLStyle/tree/3f6fa61c6cc6fcf1c23177fab187d0c85197acfc#macros
     n_kw_args = count(a -> kind(a) === K"=" && haschildren(a), childs)
-    nospace = n_kw_args > 1
 
     for (i, a) in enumerate(childs)
-        n = pretty(style, a, s, newctx(ctx; nospace = nospace), lineage)::FST
+        n = pretty(style, a, s, newctx(ctx; force_no_binop_whitespace = n_kw_args > 1), lineage)::FST
 
         override = (i == first_arg_idx) || kind(a) === K")"
 

@@ -1,3 +1,11 @@
+# v2.14.1
+
+Tweaked the handling of whitespace around binary operators.
+
+- Blue style ...
+- Inside an indexing expression, whitespace around `∈` is now suppressed by default (i.e., `s[x ∈ y]` will be formatted as `s[x∈y]`).
+  This used to be special cased but was inconsistent with the behaviour of all other binary operators.
+
 # v2.14.0
 
 Added a new formatting option, `preserve_single_line_blocks` (default `false`; `true` for `MinimalStyle`).
