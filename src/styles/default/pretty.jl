@@ -5,7 +5,7 @@ options(::DefaultStyle) = Options()
     # In general, this can be inferred from the source. However, this is
     # overridden specifically for macro keyword arguments in SciML style.
     # See https://github.com/SciML/SciMLStyle/tree/3f6fa61c6cc6fcf1c23177fab187d0c85197acfc#macros
-    nospace::Bool = false
+    force_no_binop_whitespace::Bool = false
 
     nonest::Bool = false
     standalone_binary_circuit::Bool = true
@@ -3218,6 +3218,16 @@ function boundary_token_text(
     end
 end
 
+"""
+    p_binaryopcall
+
+Note that this function contains a substantial amount of logic for formatting binary
+operators. Consequently, if you want to introduce custom behaviour for a specific style, you
+should **not** create an overload of this function for that style as you will have to
+reproduce a lot of this logic, and it's **very** easy to make a mistake! Instead you should
+define smaller helper functions which dispatch on the style and call those functions from
+inside this one.
+"""
 function p_binaryopcall(
     ds::AbstractStyle,
     cst::JuliaSyntax.GreenNode,
@@ -3326,68 +3336,84 @@ function p_binaryopcall(
         false,
     )
 
-    has_ws_around_op = false
+    ### Decide whether the binary operator should be printed with whitespace around it.
 
+    # Has the user put whitespace around the operator?
+    user_wrote_whitespace = false
+    # Because JuliaSyntax isn't very consistent in its handling of whitespace, this can
+    # happen in one of several ways:
+    #
+    # 1. the whitespace is itself a sibling node of the operator
     for (i, c) in enumerate(childs)
         if i > 1 && Shims.is_really_whitespace(c)
-            has_ws_around_op = true
+            user_wrote_whitespace = true
             break
         end
     end
-    # Check if LHS ends, or RHS begins with whitespace
+    # 2. the LHS node ends with whitespace
     if lhs_idx !== nothing
         lhs_cst = childs[lhs_idx]
         if has_trailing(lhs_cst, KSet"Whitespace NewlineWs")
-            has_ws_around_op = true
+            user_wrote_whitespace = true
         end
     end
+    # 3. or the RHS node begins with whitespace
     if rhs_idx !== nothing
         rhs_cst = childs[rhs_idx]
         if has_leading(rhs_cst, KSet"Whitespace NewlineWs")
-            has_ws_around_op = true
+            user_wrote_whitespace = true
         end
     end
 
-    from_colon = ctx.from_colon
-    from_typedef = ctx.from_typedef
+    # JuliaFormatter generally respects the user's choice of whitespace, except in some
+    # cases. We use these flags to decide whether to override it in either direction.
+    #
+    # `ctx.force_no_binop_whitespace` is almost always false; it's only overridden
+    # specifically for keyword arguments to macros in SciMLStyle (grep the codebase to see
+    # this).
+    force_whitespace = false
+    force_no_whitespace = ctx.force_no_binop_whitespace
 
-    remove_space_around_op = ctx.nospace
-    if opkind === K":"
-        remove_space_around_op = true
-        from_colon = true
-    elseif opkind === K"::"
-        remove_space_around_op = true
+    if opkind in KSet": ::"
+        force_no_whitespace = true
     elseif is_short_func && opkind === K"="
-        remove_space_around_op = false
-        has_ws_around_op = true
+        force_whitespace = true
     elseif kind(cst) === K"comparison"
-        remove_space_around_op = false
-    elseif opkind in KSet"in ∈ isa ."
-        remove_space_around_op = false
-    elseif from_typedef && opkind in KSet"<: >:"
+        force_no_whitespace = false
+    elseif ctx.from_typedef && opkind in KSet"<: >:"
         if s.opts.whitespace_typedefs
-            remove_space_around_op = false
-            has_ws_around_op = true
+            force_whitespace = true
         else
-            remove_space_around_op = true
-            has_ws_around_op = false
+            force_no_whitespace = true
         end
-    elseif ctx.from_ref || from_colon
+    elseif ctx.from_ref || ctx.from_colon
         if s.opts.whitespace_ops_in_indices
-            remove_space_around_op = false
-            has_ws_around_op = true
+            force_whitespace = true
         else
-            remove_space_around_op = true
-            has_ws_around_op = false
+            force_no_whitespace = true
         end
-    elseif from_colon
-        remove_space_around_op = true
+    elseif ctx.from_colon
+        force_no_whitespace = true
     end
-    nws = !remove_space_around_op && has_ws_around_op ? 1 : 0
+
+    # `force_whitespace` takes precedence over `force_no_whitespace` if both are true.
+    nws = if force_whitespace
+        true
+    elseif opkind in KSet"in isa"
+        # Avoid `x in y` -> `xiny`, even in contexts where `force_no_whitespace` is true
+        # (e.g. `s[x in y]`)
+        true
+    elseif force_no_whitespace
+        false
+    else
+        user_wrote_whitespace
+    end
+    # = end whitespace deciding code
+
+    from_colon = ctx.from_colon || opkind === K":"
 
     has_dot = false
     if kind(cst) === K"dotcall"
-        remove_space_around_op = false
         nws = 1
         has_dot = true
     end
@@ -3441,7 +3467,6 @@ function p_binaryopcall(
         end
     end
 
-    nlws_count = 0
     after_op = false
     skip_until = 0
     for (i, c) in enumerate(childs)
@@ -3600,10 +3625,6 @@ function p_binaryopcall(
                     add_node!(t, n, s; join_lines = true)
                 end
             end
-        end
-
-        if kind(c) === K"NewlineWs"
-            nlws_count += 1
         end
     end
 
