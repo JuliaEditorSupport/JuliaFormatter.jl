@@ -1,3 +1,7 @@
+# v2.14.2
+
+Fixed a bug where removal of spaces around a binary operator could cause the meaning of code to be changed in a very unfortunate case (namely, `s[2e - 1]` would be formatted to `s[2e-1]`, which is a float literal). (#1264, #1267)
+
 # v2.14.1
 
 Tweaked the handling of whitespace around binary operators.
