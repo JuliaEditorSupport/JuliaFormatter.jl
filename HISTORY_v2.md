@@ -2,7 +2,7 @@
 
 Tweaked the handling of whitespace around binary operators.
 Inside an indexing expression, whitespace around `∈` is now suppressed by default (i.e., `s[x ∈ y]` will be formatted as `s[x∈y]`).
-This brings it in line with the behaviour of all other binary operators.
+This brings it in line with the behaviour of all other binary operators. (#1263)
 
 # v2.14.0
 
