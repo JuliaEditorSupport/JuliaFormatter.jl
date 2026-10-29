@@ -29,6 +29,9 @@ jobs:
           - name: default
             version: '1'
             opts: '--style=default'
+          - name: default-pre
+            version: 'pre'
+            opts: '--style=default'
           - name: default-pslb
             version: '1'
             opts: '--style=default --preserve-single-line-blocks=true'
