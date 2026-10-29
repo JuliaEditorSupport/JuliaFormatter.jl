@@ -3785,6 +3785,18 @@ end
             test_format(s, expected, style; v2_stable_multiline_strings=true, ast=true)
         end
     end
+
+    @testset "1264 juxtapose in binop" begin
+        ops = ("+", "-", "*", "/")
+        identifiers = ("e", "E", "f", "F", "g", "G")
+        contexts = (s -> s, s -> "x[$s]", s -> "x[$s:$s]")
+        for op in ops, id in identifiers, context in contexts, style in ALL_STYLES
+            s = context("2$(id) $(op) 1")
+            test_format(s, nothing, style; ast=true)
+            s = context("2$(id)$(op)1")
+            test_format(s, nothing, style; ast=true)
+        end
+    end
 end
 
 end

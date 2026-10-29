@@ -173,6 +173,33 @@ function last_nonws_leaf_and_offset(
 end
 
 """
+    find_trailing_juxtapose(node::JuliaSyntax.GreenNode)
+
+If `node` is suffixed by a juxtapose node, return that juxtapose node and its offset from
+the beginning of `node`. Otherwise, return `nothing`.
+"""
+function find_trailing_juxtapose(
+    node::JuliaSyntax.GreenNode,
+    _acc::Integer = 0,
+)::Union{Nothing,Tuple{JuliaSyntax.GreenNode,Integer}}
+    return if kind(node) === K"juxtapose"
+        (node, _acc) # found it!
+    elseif JuliaSyntax.is_leaf(node)
+        nothing # recursed fully and didn't find a juxtapose node
+    else
+        result = nothing
+        for c in children(node)
+            r = find_trailing_juxtapose(c, _acc)
+            if r !== nothing
+                result = r
+            end
+            _acc += span(c)
+        end
+        return result
+    end
+end
+
+"""
    source_begins_with_op_needing_parens(s, cst, offset) 
 
 Check whether the first token of `cst` is an operator. Used in `p_kw`: if the value on the
@@ -3193,7 +3220,24 @@ function boundary_token_text(
     rightmost::Bool,
 )::Union{Nothing,String}
     result = if rightmost
-        last_nonws_leaf_and_offset(child)
+        leaf, leaf_offset = last_nonws_leaf_and_offset(child)
+        if kind(leaf) === K"Identifier"
+            # Juxtaposes on the LHS can, in very unfortunate cases, change tokenisation when
+            # merged with the operator. See #1264. In such a case, the last non-whitespace
+            # leaf will always be an identifier ('e' or 'E' or 'f').
+            #
+            # We therefore need to check whether any right-most suffix of `child` is a
+            # juxtapose node, and if so, use the text of that in the tokenisation test
+            # below. Note that if `kind(leaf) === K"Identifier"`, the juxtapose case _is_
+            # indeed the only case where the tokenisation can change, so we don't need to
+            # worry about accidentally suppressing any behaviour that depends on `leaf`
+            # above.
+            res = find_trailing_juxtapose(child)
+            if res !== nothing
+                leaf, leaf_offset = res
+            end
+        end
+        leaf, leaf_offset
     else
         first_nonws_leaf_and_offset(child)
     end
@@ -3210,7 +3254,7 @@ function boundary_token_text(
         # Postfix adjoint operator -- we need to give it an operand so that it can be
         # parsed.
         "x" * txt
-    elseif JuliaSyntax.is_operator(k) || k === K"."
+    elseif JuliaSyntax.is_operator(k) || k === K"." || k === K"juxtapose"
         txt
     else
         # Other tokens can't merge with operators, so we return `nothing` to indicate this.
@@ -3336,6 +3380,8 @@ function p_binaryopcall(
         false,
     )
 
+    has_dot = kind(cst) === K"dotcall"
+
     ### Decide whether the binary operator should be printed with whitespace around it.
 
     # Has the user put whitespace around the operator?
@@ -3397,7 +3443,9 @@ function p_binaryopcall(
     end
 
     # `force_whitespace` takes precedence over `force_no_whitespace` if both are true.
-    nws = if force_whitespace
+    emit_whitespace_around_binop = if force_whitespace
+        true
+    elseif has_dot
         true
     elseif opkind in KSet"in isa"
         # Avoid `x in y` -> `xiny`, even in contexts where `force_no_whitespace` is true
@@ -3408,22 +3456,13 @@ function p_binaryopcall(
     else
         user_wrote_whitespace
     end
-    # = end whitespace deciding code
 
-    from_colon = ctx.from_colon || opkind === K":"
-
-    has_dot = false
-    if kind(cst) === K"dotcall"
-        nws = 1
-        has_dot = true
-    end
-
-    # If the whitespace around an operator is about to be removed (`nws == 0`), make sure
-    # that gluing the operator to its neighboring tokens does not change how the code
-    # tokenizes. For example, when `trailing_zero` is false, we want to avoid changing
+    # If the whitespace around an operator is about to be removed, make sure that gluing the
+    # operator to its neighboring tokens does not change how the code tokenizes. For
+    # example, when `trailing_zero` is false, we want to avoid changing
     #
     #     A[1. .. 1.]  -> A[1...1.]
-    if nws == 0 && !isempty(op_indices)
+    if !emit_whitespace_around_binop && !isempty(op_indices)
         # Offsets of each child relative to the start of the source document. At this
         # point `s.offset` is positioned at the start of the first child.
         child_offsets = Vector{Int}(undef, length(childs))
@@ -3461,11 +3500,14 @@ function p_binaryopcall(
             # neither side can, gluing is trivially safe and no tokenization is needed.
             (left === nothing && right === nothing) && continue
             if gluing_changes_tokenization(left, op_text, right)
-                nws = 1
+                emit_whitespace_around_binop = true
                 break
             end
         end
     end
+    # = end whitespace deciding code
+
+    from_colon = ctx.from_colon || opkind === K":"
 
     after_op = false
     skip_until = 0
@@ -3491,15 +3533,15 @@ function p_binaryopcall(
             s.offset += op_span
             n = FST(OPERATOR, loc[2], loc[1], loc[1], val)
             n.metadata = Metadata(K"op=")
-            if nws > 0 && i > 1
-                add_node!(t, Whitespace(nws), s)
+            if emit_whitespace_around_binop && i > 1
+                add_node!(t, Whitespace(1), s)
             end
             add_node!(t, n, s; join_lines = true)
-            if nws > 0
+            if emit_whitespace_around_binop
                 if nest
-                    add_node!(t, Placeholder(nws), s)
+                    add_node!(t, Placeholder(1), s)
                 else
-                    add_node!(t, Whitespace(nws), s)
+                    add_node!(t, Whitespace(1), s)
                 end
             end
             after_op = true
@@ -3534,19 +3576,19 @@ function p_binaryopcall(
             # [.]
             #   .
             #   <=
-            ns = is_dot ? 1 : nws
+            ns = is_dot || emit_whitespace_around_binop
 
             # Add whitespace before the operator, unless it's a dot in a dotted operator
-            if ns > 0
-                add_node!(t, Whitespace(ns), s)
+            if ns
+                add_node!(t, Whitespace(1), s)
             end
             add_node!(t, n, s; join_lines = true)
             # Add whitespace after the operator
-            if ns > 0
+            if ns
                 if nest
-                    add_node!(t, Placeholder(ns), s)
+                    add_node!(t, Placeholder(1), s)
                 else
-                    add_node!(t, Whitespace(ns), s)
+                    add_node!(t, Whitespace(1), s)
                 end
             end
             after_op = true
@@ -3555,25 +3597,25 @@ function p_binaryopcall(
             # the arguments are operators as well.
             #
             # a .* %
-            ns = is_dot ? 1 : nws
+            ns = is_dot || emit_whitespace_around_binop
 
             # Add whitespace before the operator, unless it's a dot in a dotted operator
-            if ns > 0 && i > 1
+            if ns && i > 1
                 if kind(childs[i-1]) !== K"."  # Don't add space if previous was a dot
-                    add_node!(t, Whitespace(ns), s)
+                    add_node!(t, Whitespace(1), s)
                 elseif kind(childs[i-1]) === K"." && haschildren(childs[i-1])  # Don't add space if previous was a dot
-                    add_node!(t, Whitespace(ns), s)
+                    add_node!(t, Whitespace(1), s)
                 end
             end
 
             add_node!(t, n, s; join_lines = true)
 
             # Add whitespace after the operator
-            if !is_dot && ns > 0
+            if !is_dot && ns
                 if nest
-                    add_node!(t, Placeholder(ns), s)
+                    add_node!(t, Placeholder(1), s)
                 else
-                    add_node!(t, Whitespace(ns), s)
+                    add_node!(t, Whitespace(1), s)
                 end
             end
 
