@@ -27,22 +27,22 @@ jobs:
       matrix:
         include:
           - name: default
-            version: '1.12'
+            version: '1'
             opts: '--style=default'
-          - name: default-pslb
-            version: '1.12'
-            opts: '--style=default --preserve-single-line-blocks=true'
-          - name: "(expected fail) default-jlbos"
-            version: '1.12'
-            opts: '--style=default --join-lines-based-on-source=true'
           - name: default-pre
             version: 'pre'
             opts: '--style=default'
+          - name: default-pslb
+            version: '1'
+            opts: '--style=default --preserve-single-line-blocks=true'
+          - name: "(expected fail) default-jlbos"
+            version: '1'
+            opts: '--style=default --join-lines-based-on-source=true'
           - name: blue
-            version: '1.12'
+            version: '1'
             opts: '--style=blue'
           - name: "(expected fail) yas"
-            version: '1.12'
+            version: '1'
             opts: '--style=yas'
           - name: minimal
             version: '1.12'
