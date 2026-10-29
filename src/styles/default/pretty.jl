@@ -177,25 +177,32 @@ end
 
 If `node` is suffixed by a juxtapose node, return that juxtapose node and its offset from
 the beginning of `node`. Otherwise, return `nothing`.
+
+Only juxtapose nodes at the very end of `node` count. For example, in `2e*y` the juxtapose
+`2e` is not at the end (`y` is), so this returns `nothing`; in `y*2e` it returns `2e`.
 """
 function find_trailing_juxtapose(
     node::JuliaSyntax.GreenNode,
+    # Callers should not set _acc, this is only used in this function to recurse
     _acc::Integer = 0,
 )::Union{Nothing,Tuple{JuliaSyntax.GreenNode,Integer}}
     return if kind(node) === K"juxtapose"
         (node, _acc) # found it!
     elseif JuliaSyntax.is_leaf(node)
-        nothing # recursed fully and didn't find a juxtapose node
+        nothing # reached the last leaf and didn't find a juxtapose node
     else
-        result = nothing
-        for c in children(node)
-            r = find_trailing_juxtapose(c, _acc)
-            if r !== nothing
-                result = r
+        # Only the last non-whitespace child can form the end of `node`, so we only need to
+        # recurse into that one.
+        cs = children(node)
+        idx = findlast(c -> !JuliaSyntax.is_whitespace(c), cs)
+        if idx === nothing
+            nothing
+        else
+            for c in cs[1:(idx-1)]
+                _acc += span(c)
             end
-            _acc += span(c)
+            find_trailing_juxtapose(cs[idx], _acc)
         end
-        return result
     end
 end
 
@@ -3220,24 +3227,24 @@ function boundary_token_text(
     rightmost::Bool,
 )::Union{Nothing,String}
     result = if rightmost
-        leaf, leaf_offset = last_nonws_leaf_and_offset(child)
-        if kind(leaf) === K"Identifier"
+        res = last_nonws_leaf_and_offset(child)
+        if res !== nothing && kind(first(res)) === K"Identifier"
             # Juxtaposes on the LHS can, in very unfortunate cases, change tokenisation when
             # merged with the operator. See #1264. In such a case, the last non-whitespace
             # leaf will always be an identifier ('e' or 'E' or 'f').
             #
             # We therefore need to check whether any right-most suffix of `child` is a
             # juxtapose node, and if so, use the text of that in the tokenisation test
-            # below. Note that if `kind(leaf) === K"Identifier"`, the juxtapose case _is_
+            # below. Note that if the last leaf is an identifier, the juxtapose case _is_
             # indeed the only case where the tokenisation can change, so we don't need to
-            # worry about accidentally suppressing any behaviour that depends on `leaf`
+            # worry about accidentally suppressing any behaviour that depends on `res`
             # above.
-            res = find_trailing_juxtapose(child)
-            if res !== nothing
-                leaf, leaf_offset = res
+            juxt = find_trailing_juxtapose(child)
+            if juxt !== nothing
+                res = juxt
             end
         end
-        leaf, leaf_offset
+        res
     else
         first_nonws_leaf_and_offset(child)
     end

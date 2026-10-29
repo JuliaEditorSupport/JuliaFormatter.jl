@@ -3796,6 +3796,11 @@ end
             s = context("2$(id)$(op)1")
             test_format(s, nothing, style; ast=true)
         end
+        # A juxtapose that isn't at the end of the LHS can't merge with the operator, so it
+        # shouldn't stop whitespace from being removed.
+        test_format("x[2e*y-1]", "x[2e*y-1]")
+        test_format("x[2e * y - 1]", "x[2e*y-1]")
+        test_format("x[y*2e - 1]", "x[y*2e - 1]")
     end
 end
 
