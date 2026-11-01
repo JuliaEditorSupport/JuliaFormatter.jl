@@ -1221,22 +1221,75 @@ function next_node_is(f::Function, nn::JuliaSyntax.GreenNode)
     f(nn) || (haschildren(nn) && next_node_is(f, nn[1]))
 end
 
-function ends_with_macro_or_global(fst::FST)
-    # Detects constructs such as
-    #    @macro foo
-    #    arg = @macro foo
-    #    arg => @macro foo
-    #    () -> global x = true
-    # which cause parse errors if a comma is inserted after them.
-    return if fst.typ === MacroCall || fst.typ === MacroBlock || fst.typ === Global
+"""
+    absorbs_trailing_comma(fst::FST)
+
+Whether `fst` ends with a construct that would read a comma placed straight after it as
+part of itself, instead of as a separator in the surrounding list. Detects constructs such
+as
+
+```julia
+@macro foo
+arg = @macro foo
+arg => @macro foo
+() -> global x = true
+return x
+x -> return y
+c ? a : local b
+```
+
+`return`, `local`, `global`, `const`, and macro calls without brackets all read a
+comma-separated list after them, so a comma after `return x` makes Julia expect another
+item. For example,
+
+```julia
+g(
+    return x,
+)
+```
+
+fails to parse, because the closing bracket arrives where Julia expects the next value
+being returned. These cause parse errors if a comma is inserted after them.
+
+Anything that ends with a closing bracket or `end` (e.g. `(return x)` or
+`begin return x end`) is fine, because the last node is then that closing token, which is
+a leaf, so we stop there.
+"""
+function absorbs_trailing_comma(fst::FST)
+    return if fst.typ in (MacroCall, MacroBlock, Global, Local, Const, Return)
         true
-    elseif is_leaf(fst)
+    elseif is_leaf(fst) || isempty(fst.nodes::Vector{FST})
         false
-    elseif fst.typ === Kw || fst.typ === Binary
-        length(fst.nodes) > 0 && ends_with_macro_or_global(fst[end])
     else
-        false
+        absorbs_trailing_comma(fst[end])
     end
+end
+
+"""
+    materialise_trailing_comma!(fst::FST, i::Int)
+
+Turns the trailing comma node `fst[i]` into an actual `,`, unless the node before it would
+read the comma as part of itself (see `absorbs_trailing_comma`).
+
+This check is done here, when nesting, rather than when the FST is built, because nesting
+can change what the previous node ends with. For example, in BlueStyle,
+
+```julia
+g(c ? a : return b)
+```
+
+has its ternary turned into an `if ... end` block if it's too long. A ternary that ends with
+`return b` can't be followed by a comma, but an `if ... end` block can. Checking at this
+point means we see the `if ... end` block, which is also what the next formatting pass sees.
+"""
+function materialise_trailing_comma!(fst::FST, i::Int)
+    # Things that end with macros, `return`, etc. can't have a trailing comma inserted
+    # after them as that causes Julia to fail to parse.
+    # https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/1017
+    absorbs_trailing_comma(fst[i-1]) && return
+    fst[i].val = ","
+    fst[i].len = 1
+    return
 end
 function skip_trailing_comma(fst::FST)
     prev_node = fst[end]
@@ -1248,11 +1301,9 @@ function skip_trailing_comma(fst::FST)
         prev_node.typ === Filter ||
         prev_node.typ === Flatten ||
         prev_node.typ === SEMICOLON ||
-        prev_node.typ === HASHEQCOMMENT ||
-        # Things that end with macros can't have a trailing comma inserted after them
-        # as that causes Julia to fail to parse.
-        # https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/1017
-        ends_with_macro_or_global(prev_node)
+        prev_node.typ === HASHEQCOMMENT
+        # Note that things that end with macros, `return`, etc. also can't have a trailing
+        # comma after them, but that is checked later, in `materialise_trailing_comma!`.
     )
         true
     else

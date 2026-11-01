@@ -112,8 +112,7 @@ function n_tuple!(
                 if add_trailing_comma ||
                    nodes[i-1].typ === OPERATOR && op_kind(nodes[i-1]) === K":"
                     # if add_trailing_comma  || nodes[i-1].typ === OPERATOR && nodes[i-1].val == ":"
-                    n.val = ","
-                    n.len = 1
+                    materialise_trailing_comma!(fst, i)
                 end
                 nest!(style, n, s, lineage)
             elseif has_closer && (i == 1 || i == length(nodes))
