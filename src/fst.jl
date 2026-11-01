@@ -1225,8 +1225,33 @@ end
     absorbs_trailing_comma(fst::FST)
 
 Whether `fst` ends with a construct that would read a comma placed straight after it as
-part of itself, instead of as a separator in the surrounding list. Detects constructs such
-as
+part of itself, instead of as a separator in the surrounding list.
+
+As an example, in
+
+```julia
+g(
+    global x,
+)
+```
+
+the comma after `x` is read as part of the `global` statement rather than a separator in the
+argument list of `g`. (This actually causes the code above to fail to parse.) So,
+`absorbs_trailing_comma` returns `true` for such nodes, and inside
+`materialise_trailing_comma!` we check for that and don't insert a comma after it.
+
+This function has to recursively check the last node of `fst` because it could be something
+like
+
+```julia
+g(
+    x -> global x,
+)
+```
+
+which has the same problem.
+
+This is applicable to various constructs such as
 
 ```julia
 @macro foo
@@ -1238,25 +1263,14 @@ x -> return y
 c ? a : local b
 ```
 
-`return`, `local`, `global`, `const`, and macro calls without brackets all read a
-comma-separated list after them, so a comma after `return x` makes Julia expect another
-item. For example,
-
-```julia
-g(
-    return x,
-)
-```
-
-fails to parse, because the closing bracket arrives where Julia expects the next value
-being returned. These cause parse errors if a comma is inserted after them.
-
 Anything that ends with a closing bracket or `end` (e.g. `(return x)` or
 `begin return x end`) is fine, because the last node is then that closing token, which is
 a leaf, so we stop there.
 """
 function absorbs_trailing_comma(fst::FST)
     return if fst.typ in (MacroCall, MacroBlock, Global, Local, Const, Return)
+        # TODO(penelopeysm): Technically, if the MacroCall ends in a paren, this doesn't
+        # have to be true. For example, `@m(x)` is OK with a trailing comma
         true
     elseif is_leaf(fst) || isempty(fst.nodes::Vector{FST})
         false
