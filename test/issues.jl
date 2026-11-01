@@ -2236,7 +2236,7 @@ end
         for style in ALL_STYLES
             if style isa BlueStyle
                 # BlueStyle converts the ternary into if/elseif/else so we manually test that
-                blue_out = "push!(attributes, operandsegmentsizes([\n    1,\n    1,\n    1,\n    if (lhs_scale==nothing)\n        0\n    elseif 1(rhs_scale==nothing)\n        0\n    else\n        1\n    end,\n]))"
+                blue_out = "push!(attributes, operandsegmentsizes([\n    1,\n    1,\n    1,\n    if (lhs_scale == nothing)\n        0\n    elseif 1(rhs_scale == nothing)\n        0\n    else\n        1\n    end,\n]))"
                 test_format(text, blue_out, BlueStyle())
             else
                 test_format(text, nothing, style)
@@ -3447,9 +3447,9 @@ end
         mat = [
             if j == 1
                 NoQuote(rownms[i])
-            elseif j-1 == ct.pvalcol
+            elseif j - 1 == ct.pvalcol
                 NoQuote(sprint(show, PValue(cols[j - 1][i])))
-            elseif j-1 in ct.teststatcol
+            elseif j - 1 in ct.teststatcol
                 TestStat(cols[j - 1][i])
             elseif cols[j - 1][i] isa AbstractString
                 NoQuote(cols[j - 1][i])
