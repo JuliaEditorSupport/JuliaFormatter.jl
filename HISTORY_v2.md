@@ -1,6 +1,6 @@
 # v2.14.6
 
-Correctly respect the Blue style guide on adding whitespace around binary operators. (#1262, #1276)
+Correctly respect the Blue style guide on adding whitespace around binary operators. (#1262, #1274)
 
 # v2.14.5
 
