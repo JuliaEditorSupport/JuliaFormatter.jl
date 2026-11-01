@@ -8,7 +8,8 @@ options(::DefaultStyle) = Options()
     force_no_binop_whitespace::Bool = false
 
     nonest::Bool = false
-    standalone_binary_circuit::Bool = true
+    # See `ShortCircuitStandalone`.
+    standalone_binary_circuit::ShortCircuitStandalone = Standalone
     from_typedef::Bool = false
     from_let::Bool = false
     from_ref::Bool = false
@@ -977,7 +978,8 @@ function p_stringh(
     is_triple = haschildren(cst) && kind(children(cst)[1]) in KSet"\"\"\" ```"
     opaque = !is_triple && !(ctx.from_docstring && s.opts.format_docstrings)
     if opaque
-        t.metadata = Metadata(K"None", false, false, false, false, true, false, true)
+        t.metadata =
+            Metadata(K"None", NotStandalone, false, false, false, true, false, true)
     end
 
     lines = split(val, "\n")
@@ -1722,7 +1724,7 @@ function p_functiondef(
     end
     t.metadata = Metadata(
         kind(cst),
-        false,
+        NotStandalone,
         false,
         false,
         false,
@@ -3345,9 +3347,10 @@ function p_binaryopcall(
         nothing
     end
 
-    lazy_op = is_lazy_op(opkind)
-    # Check if expression is a lazy circuit. If it is, this does two things: first it causes
-    # the indentation to be increased for subsequent lines -- for example
+    is_shortcircuit = opkind in KSet"|| &&"
+    # Check if expression is a standalone short-circuit (see `ShortCircuitStandalone`). If
+    # it is, this does two things: first it causes the indentation to be increased for
+    # subsequent lines -- for example
     #
     #    aaaaa ||        rather than      aaaaa ||
     #        bbbbb                        bbbbb
@@ -3356,7 +3359,7 @@ function p_binaryopcall(
     # expanded to if/elseif/else.
     #
     # cf. https://github.com/JuliaEditorSupport/JuliaFormatter.jl/pull/224
-    if lazy_op && standalone_binary_circuit
+    if is_shortcircuit && standalone_binary_circuit !== NotStandalone
         if length(lineage) >= 2
             parent_node, _, is_assign = lineage[end-1]
             # Disable if the binary expression is "used" in a certain context --
@@ -3370,16 +3373,16 @@ function p_binaryopcall(
             # elseif      elseif a && b
             # ternary     a && b ? c : d
             if parent_node in KSet"parens macrocall return while if elseif ?" || is_assign
-                standalone_binary_circuit = false
+                standalone_binary_circuit = NotStandalone
             end
         end
     end
 
-    is_standalone_shortcircuit = lazy_op && standalone_binary_circuit
+    standalone_shortcircuit = is_shortcircuit ? standalone_binary_circuit : NotStandalone
     t.metadata = Metadata(
         opkind,
-        is_standalone_shortcircuit,
-        is_standalone_shortcircuit && can_transform_syntax(s, true),
+        standalone_shortcircuit,
+        standalone_shortcircuit === Standalone && can_transform_syntax(s, true),
         is_expandable_short_func,
         is_assignment(cst) || defines_function(cst),
         false,
@@ -3556,6 +3559,17 @@ function p_binaryopcall(
             continue
         end
 
+        child_standalone = if !(kind(c) in KSet"|| &&" && kind(c) !== opkind)
+            standalone_binary_circuit
+        elseif is_short_func && i == rhs_idx && standalone_binary_circuit === Standalone
+            # When `f() = a && b` is rewritten as a long-form function, `a && b` becomes a
+            # statement in the function body instead of the right-hand side of `=`, so it
+            # would be standalone.
+            StandaloneInLongForm
+        else
+            NotStandalone
+        end
+
         offset = s.offset
         n = pretty(
             style,
@@ -3563,8 +3577,7 @@ function p_binaryopcall(
             s,
             newctx(
                 ctx;
-                standalone_binary_circuit = standalone_binary_circuit &&
-                                            !(is_lazy_op(c) && kind(c) !== opkind),
+                standalone_binary_circuit = child_standalone,
                 can_separate_kwargs = can_separate_kwargs,
                 nonest = nonest,
                 from_colon = from_colon,

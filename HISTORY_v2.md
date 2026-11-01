@@ -1,3 +1,7 @@
+# v2.14.3
+
+Fixed a bug causing lack of idempotence when short-form functions with shortcircuiting logical operators were expanded to long-form functions. (#1268, #1270)
+
 # v2.14.2
 
 Fixed a bug where removal of spaces around a binary operator could cause the meaning of code to be changed in a very unfortunate case (namely, `s[2e - 1]` would be formatted to `s[2e-1]`, which is a float literal). (#1264, #1267)

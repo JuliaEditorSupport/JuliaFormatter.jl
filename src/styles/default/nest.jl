@@ -1167,7 +1167,7 @@ function n_block!(
 
     if fst.typ === Chain &&
        !isnothing(fst.metadata) &&
-       (fst.metadata::Metadata).is_standalone_shortcircuit
+       (fst.metadata::Metadata).standalone_shortcircuit === Standalone
         fst.indent += s.opts.indent
     end
 

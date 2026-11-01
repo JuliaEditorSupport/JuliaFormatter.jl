@@ -3802,6 +3802,90 @@ end
         test_format("x[2e * y - 1]", "x[2e*y-1]")
         test_format("x[y*2e - 1]", "x[y*2e - 1]")
     end
+
+    @testset "1268 short-circuit chain in short function converted to long form" begin
+        # When `f() = a && b` is converted to a long-form function and no `return` is
+        # added, `a && b` becomes a standalone statement, so its continuation lines get
+        # an extra indent (the same as if the long form had been written directly).
+
+        # `return y` inside the do block stops a `return` being added to the chain
+        s = "f() = a && g() do\n    y\nend"
+        expected = """
+        function f()
+            a &&
+                g() do
+                    return y
+                end
+        end"""
+        test_format(s, expected, BlueStyle(); margin=12)
+
+        # same for a `return` in the chain itself
+        s = "f() = aaaa && return bbbb"
+        expected = """
+        function f()
+            aaaa &&
+                return bbbb
+        end"""
+        test_format(s, expected, BlueStyle(); margin=16)
+        s = "f() = aaaa && bbbb && return cccc"
+        expected = """
+        function f()
+            aaaa &&
+                bbbb &&
+                return cccc
+        end"""
+        test_format(s, expected, BlueStyle(); margin=16)
+
+        # no `return` added because always_use_return is false
+        s = "f() = aaaa && gggg(bbbb)"
+        expected = """
+        function f()
+            aaaa &&
+                gggg(
+                    bbbb
+                )
+        end"""
+        test_format(s, expected, BlueStyle(); margin=16, always_use_return=false)
+
+        # the inner chain inherits standaloneness from the outer one, even inside a call
+        s = "f() = aaaa && g(bbbb && cccc)"
+        expected = """
+        function f()
+            aaaa && g(
+                bbbb &&
+                    cccc,
+            )
+        end"""
+        test_format(s, expected, BlueStyle(); margin=16, always_use_return=false)
+
+        # if a `return` is added, the chain is still not standalone
+        s = "f() = aaaa && bbbb"
+        expected = """
+        function f()
+            return aaaa &&
+                   bbbb
+        end"""
+        test_format(s, expected, BlueStyle(); margin=16)
+
+        for style in ALL_STYLES
+            for s in (
+                "f() = a && g() do\n    y\nend",
+                "f() = aaaa && return bbbb",
+                "f() = aaaa && gggg(bbbb)",
+                "f() = aaaa && bbbb && g(cccc && dddd)",
+            )
+                test_format(s, nothing, style; margin=16, short_to_long_function_def=true)
+                test_format(
+                    s,
+                    nothing,
+                    style;
+                    margin=16,
+                    short_to_long_function_def=true,
+                    always_use_return=false,
+                )
+            end
+        end
+    end
 end
 
 end

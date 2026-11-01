@@ -537,6 +537,7 @@ function chain_continuation_indent(fst::FST, s::State)
     # Standalone short-circuit chains (e.g. a top-level `a && b` used only for its side
     # effect) already receive an extra `s.opts.indent` inside `n_block!`; adding it again
     # here would double it.
-    extra = (md isa Metadata && md.is_standalone_shortcircuit) ? 0 : s.opts.indent
+    extra =
+        (md isa Metadata && md.standalone_shortcircuit === Standalone) ? 0 : s.opts.indent
     return fst.indent + extra
 end

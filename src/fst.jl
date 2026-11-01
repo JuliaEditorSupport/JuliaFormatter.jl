@@ -98,20 +98,70 @@
     TupleBlock,
 )
 
-@enum(NestBehavior, AllowNest, AlwaysNest, NeverNest, NeverNestNode, AllowNestButDontRemove)
+@enum NestBehavior begin
+    AllowNest
+    AlwaysNest
+    NeverNest
+    NeverNestNode
+    AllowNestButDontRemove
+end
+
+"""
+    ShortCircuitStandalone
+
+Indicates whether a node is a short-circuiting logical operator (`&&` or `||`) whose value
+is not used in any way, i.e., it exists solely for its side effects.
+
+For example, `a && b` is standalone in
+
+```julia
+function f()
+    a && b
+    c
+end
+```
+
+but not in `x = a && b`, `return a && b`, or `(a && b)`.
+
+Any node that isn't `&&` or `||` is `NotStandalone`.
+
+`StandaloneInLongForm` is for nodes that are not standalone as written, but would be if the
+enclosing short-form function definition were rewritten as a long-form one (without a
+`return` being added). For example, in
+
+```julia
+f() = a && b
+```
+
+`a && b` is used as the value of `f()`, so it is not standalone. But in
+
+```julia
+function f()
+    a && b
+end
+```
+
+it is a statement on its own, so it is standalone. We need to track this information at the
+CST stage so that it can be used later on in the nesting stage, specifically in
+`short_to_long_function_def!`. Outside of that function, `StandaloneInLongForm` is treated
+the same as `NotStandalone`.
+"""
+@enum ShortCircuitStandalone begin
+    NotStandalone
+    Standalone
+    StandaloneInLongForm
+end
 
 struct Metadata
     op_kind::JuliaSyntax.Kind
-
-    # Indicates that the node is a shortcircuiting logical operator (`&&` or `||`) whose
-    # value is not used in any way, i.e., it exists solely for the side effects.
-    is_standalone_shortcircuit::Bool
-    # If the above is true, this field indicates whether it should be expanded into a full
-    # if-else statement if `short_circuit_to_if` is true. This mainly exists to catch the
-    # case where it's inside a macro/expr, which causes the transformation to be disabled.
+    standalone_shortcircuit::ShortCircuitStandalone
+    # If the above is `Standalone`, this field indicates whether it should be expanded into
+    # a full if-else statement if `short_circuit_to_if` is true. This mainly exists to catch
+    # the case where it's inside a macro/expr, which causes the transformation to be
+    # disabled.
     # 
-    # Note that because `is_standalone_shortcircuit` has impacts on alignment as well, we
-    # need to have a separate flag instead of just setting it to false when inside
+    # Note that because `standalone_shortcircuit` has impacts on alignment as well, we
+    # need to have a separate flag instead of just setting it to `NotStandalone` when inside
     # macros/exprs.
     is_expandable_shortcircuit::Bool
 
@@ -137,7 +187,7 @@ struct Metadata
 end
 
 function Metadata(k::JuliaSyntax.Kind)
-    return Metadata(k, false, false, false, false, true, false, false)
+    return Metadata(k, NotStandalone, false, false, false, true, false, false)
 end
 
 """
@@ -570,7 +620,7 @@ function is_indent_nest(fst::FST)
     return (!isnothing(md) && (md::Metadata).is_short_form_function) ||
            is_assignment(fst) ||
            op_kind(fst) in KSet"=> ->" ||
-           (!isnothing(md) && (md::Metadata).is_standalone_shortcircuit)
+           (!isnothing(md) && (md::Metadata).standalone_shortcircuit === Standalone)
 end
 
 """
@@ -1089,7 +1139,7 @@ function eq_to_in_normalization!(fst::FST, always_for_in::Bool, for_in_replaceme
             opkind = JuliaSyntax.Kind(op.val)
             fst.metadata = Metadata(
                 opkind,
-                metadata.is_standalone_shortcircuit,
+                metadata.standalone_shortcircuit,
                 metadata.is_expandable_shortcircuit,
                 metadata.is_short_form_function,
                 opkind === K"=",
@@ -1133,10 +1183,6 @@ end
 
 function is_str_or_cmd(t::JuliaSyntax.GreenNode)
     kind(t) in KSet"doc string cmdstring String CmdString"
-end
-
-function is_lazy_op(t::Union{JuliaSyntax.GreenNode,JuliaSyntax.Kind})
-    kind(t) in KSet"|| &&"
 end
 
 function has_more_args_to_come(::Tuple{}, _, _)
@@ -1554,12 +1600,13 @@ function add_node!(
     elseif is_multiline(n) ||
            (!isnothing(t.metadata) && (t.metadata::Metadata).has_multiline_argument)
         if isnothing(t.metadata)
-            t.metadata = Metadata(K"None", false, false, false, false, true, true, false)
+            t.metadata =
+                Metadata(K"None", NotStandalone, false, false, false, true, true, false)
         else
             metadata = t.metadata::Metadata
             t.metadata = Metadata(
                 metadata.op_kind,
-                metadata.is_standalone_shortcircuit,
+                metadata.standalone_shortcircuit,
                 metadata.is_expandable_shortcircuit,
                 metadata.is_short_form_function,
                 metadata.is_assignment,
