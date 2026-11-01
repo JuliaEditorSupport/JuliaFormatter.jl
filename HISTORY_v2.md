@@ -1,6 +1,6 @@
 # v2.14.7
 
-When `preserve_single_line_blocks` is enabled (as in `MinimalStyle`), a line break is no longer forced after the `=` of a short-form function definition whose right-hand side is a block construct (`try`, `let`, `if`, `for`, `while`, `do`). For example `getallns() = let allns = Base.IdSet{Symbol}(); ...; allns end` is now left unchanged under `MinimalStyle`. (#594, #1255)
+When `preserve_single_line_blocks` is enabled, a line break is no longer forced after the `=` of a short-form function definition whose right-hand side is a block construct (`try`, `let`, `if`, `for`, `while`, `do`). (#594, #1255)
 
 # v2.14.6
 
