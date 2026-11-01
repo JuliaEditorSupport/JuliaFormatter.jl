@@ -2959,27 +2959,7 @@ function p_kw(
                     end
                 end
 
-            node = if parenthesise
-                paren_fst = FST(Brackets, nspaces(s))
-                add_node!(
-                    paren_fst,
-                    FST(PUNCTUATION, -1, n.startline, n.startline, "("),
-                    s;
-                    join_lines = true,
-                )
-                add_node!(paren_fst, Placeholder(0), s)
-                add_node!(paren_fst, n, s; join_lines = true)
-                add_node!(paren_fst, Placeholder(0), s)
-                add_node!(
-                    paren_fst,
-                    FST(PUNCTUATION, -1, n.startline, n.startline, ")"),
-                    s;
-                    join_lines = true,
-                )
-                paren_fst
-            else
-                n
-            end
+            node = parenthesise ? wrap_in_parens(style, n, c, s, ctx) : n
             add_node!(t, node, s; join_lines = true)
         end
     end
@@ -4024,6 +4004,100 @@ function p_call(
     t
 end
 
+"""
+    default_parens_allow_nesting(arg::JuliaSyntax.GreenNode, s::State, ctx::PrettyContext)
+
+Whether DefaultStyle's `p_parens` puts placeholders just inside a pair of parentheses
+containing `arg`, i.e. whether the formatter may put a line break after `(` and before
+`)`. For example, `(a + b)` may be nested as
+
+    (
+        a + b
+    )
+
+but `(f(a, b))` may not, because `f(a, b)` can nest itself. Instead it would become
+
+    (f(
+        a,
+        b,
+    ))
+"""
+function default_parens_allow_nesting(
+    arg::JuliaSyntax.GreenNode,
+    s::State,
+    ctx::PrettyContext,
+)
+    return !ctx.nonest && !s.opts.disallow_single_arg_nesting && !is_iterable(arg)
+end
+
+"""
+    parens_allow_nesting(style, arg::JuliaSyntax.GreenNode, s::State, ctx::PrettyContext)
+
+Like [`default_parens_allow_nesting`](@ref), but for whichever `p_parens` method `style`
+actually uses. This is needed when the formatter adds parentheses that are not in the
+source (see [`wrap_in_parens`](@ref)).
+"""
+parens_allow_nesting(::AbstractStyle, arg, s, ctx) =
+    default_parens_allow_nesting(arg, s, ctx)
+# YASStyle's `p_parens` never adds placeholders.
+parens_allow_nesting(::YASStyle, arg, s, ctx) = false
+# SciMLStyle's `p_parens` uses YASStyle's or DefaultStyle's depending on this option.
+parens_allow_nesting(::SciMLStyle, arg, s, ctx) =
+    s.opts.yas_style_nesting ? false : default_parens_allow_nesting(arg, s, ctx)
+
+"""
+    wrap_in_parens(style, n::FST, arg::JuliaSyntax.GreenNode, s::State, ctx::PrettyContext)
+
+Wrap the FST `n` (formatted from the CST node `arg`) in a pair of parentheses that are
+not in the source. For example, with `whitespace_in_kwargs = false`, `p_kw` turns
+`f(a = \$g(x))` into `f(a=(\$g(x)))`.
+
+The resulting `Brackets` node must be the same as what `p_parens` would produce when
+formatting the output a second time, where the parentheses *are* in the source.
+Otherwise the two passes may nest the code differently and formatting is not
+idempotent. In particular, the placeholders inside the parentheses must only be added
+when `p_parens` would add them.
+
+`open_paren_line` is the source line that the `(` is treated as being on. Usually this
+is the line `n` starts on, but it must be earlier if `n` begins with a comment that
+should go inside the parentheses. For example, BlueStyle turns
+
+    a ? b :
+    # comment
+    c && d ? e : f
+
+into an `if`/`elseif` chain where the comment ends up inside the parentheses:
+
+    elseif (
+        # comment
+        c && d
+    )
+
+If the `(` were placed on the line of `c && d`, the comment would be printed before it.
+"""
+function wrap_in_parens(
+    style::AbstractStyle,
+    n::FST,
+    arg::JuliaSyntax.GreenNode,
+    s::State,
+    ctx::PrettyContext;
+    open_paren_line::Int = n.startline,
+)
+    nest = parens_allow_nesting(style, arg, s, ctx)
+    t = FST(Brackets, nspaces(s))
+    add_node!(
+        t,
+        FST(PUNCTUATION, -1, open_paren_line, open_paren_line, "("),
+        s;
+        join_lines = true,
+    )
+    nest && add_node!(t, Placeholder(0), s)
+    add_node!(t, n, s; join_lines = true)
+    nest && add_node!(t, Placeholder(0), s)
+    add_node!(t, FST(PUNCTUATION, -1, n.startline, n.startline, ")"), s; join_lines = true)
+    return t
+end
+
 function p_parens(
     ds::AbstractStyle,
     cst::JuliaSyntax.GreenNode,
@@ -4050,11 +4124,7 @@ function p_parens(
         if block_arg_forces_nest(arg, arg_offset, s, style, ctx)
             t.nest_behavior = AlwaysNest
         end
-        if !ctx.nonest && !s.opts.disallow_single_arg_nesting
-            !is_iterable(arg)
-        else
-            false
-        end
+        default_parens_allow_nesting(arg, s, ctx)
     else
         false
     end

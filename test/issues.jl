@@ -3906,6 +3906,20 @@ end
             end
         end
     end
+
+    @testset "1277 added kwarg parentheses not idempotent" begin
+        s = raw"f(a = $g(h(xxxxxxxxxxxx, yyyyyyyyyyyy)))"
+        out = raw"""
+        f(;
+            a=($g(
+                h(
+                    xxxxxxxxxxxx,
+                    yyyyyyyyyyyy,
+                ),
+            )),
+        )"""
+        test_format(s, out, BlueStyle(); margin = 30)
+    end
 end
 
 end

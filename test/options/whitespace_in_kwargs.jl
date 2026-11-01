@@ -89,6 +89,38 @@ using Test
             @test startswith(out, "@macro A")
         end
     end
+
+    @testset "added parentheses nest like parentheses in the source" begin
+        # With `whitespace_in_kwargs = false`, `a = $g(...)` becomes `a=($g(...))`.
+        # The added parentheses must nest the same way as they do when they are
+        # already in the source (i.e. on the second pass), otherwise formatting is
+        # not idempotent.
+        s = raw"f(a = $g(h(xxxxxxxxxxxx, yyyyyyyyyyyy)))"
+        out = raw"""
+        f(
+            a=($g(
+                h(
+                    xxxxxxxxxxxx,
+                    yyyyyyyyyyyy,
+                ),
+            )),
+        )"""
+        test_format(s, out; whitespace_in_kwargs = false, margin = 30)
+
+        # Check idempotence for all styles. `test_format` checks this for us, so we
+        # just use the first pass as the expected output.
+        for style in ALL_STYLES, yas_style_nesting in (true, false), margin in (20, 30, 40)
+            opts = (; whitespace_in_kwargs = false, yas_style_nesting, margin)
+            test_format(s, format_text(s, style; opts...), style; opts...)
+        end
+
+        # The same thing inside a macro call
+        s = raw"@m(a = $g(h(xxxxxxxxxxxx, yyyyyyyyyyyy)))"
+        for style in ALL_STYLES, margin in (20, 30, 40)
+            opts = (; whitespace_in_kwargs = false, margin)
+            test_format(s, format_text(s, style; opts...), style; opts...)
+        end
+    end
 end
 
 end
