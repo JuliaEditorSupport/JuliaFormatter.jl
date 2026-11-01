@@ -3469,6 +3469,7 @@ function p_binaryopcall(
     elseif style isa BlueStyle && !(opkind in KSet"^ //")
         # https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/1262
         true
+    else
         user_wrote_whitespace
     end
 
