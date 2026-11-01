@@ -53,11 +53,7 @@ function Document(text::AbstractString)
 
             startline = JuliaSyntax.source_line(srcfile, first(t.range))
             endline = JuliaSyntax.source_line(srcfile, last(t.range))
-            val = try
-                srcfile.code[first(t.range):last(t.range)]
-            catch
-                srcfile.code[first(t.range):prevind(srcfile.code, last(t.range))]
-            end
+            val = slice_source(srcfile.code, t.range)
 
             if startswith(val, "#=") && endswith(val, "=#")
                 # Block comments (#= ... =#) are handled as HASHEQCOMMENT FST
@@ -153,10 +149,24 @@ numlines(sf::JuliaSyntax.SourceFile) = length(sf.line_starts) - 1
 numlines(d::Document) = numlines(d.srcfile)
 
 function getsrcval(d::Document, r::UnitRange{T}) where {T<:Union{Int,UInt}}
-    code = JuliaSyntax.sourcetext(d.srcfile)
-    try
-        code[r]
-    catch
-        code[first(r):prevind(code, last(r))]
-    end
+    return slice_source(JuliaSyntax.sourcetext(d.srcfile), r)
+end
+
+"""
+    slice_source(code::AbstractString, r::UnitRange)
+
+Return the text of `code` in the byte range `r`.
+
+JuliaSyntax stores and gives us byte ranges, so `last(r)` is the *last byte* of the final
+character. However, this doesn't align with Julia's own string slicing rules, which require
+that the end index be the *first byte* of the last character -- otherwise it throws. So, if
+the last character is multibyte (e.g. `α` or `∈`), `last(r)` is not a valid string index and
+`code[r]` throws.
+
+To avoid this, we first move `last(r)` back to the start of its character using `thisind`
+(here, from `6` to `5`). Note that a string range includes the whole character that starts
+at its last index, so this still returns the entire final character.
+"""
+function slice_source(code::AbstractString, r::UnitRange{<:Integer})
+    return code[first(r):thisind(code, Int(last(r)))]
 end

@@ -34,8 +34,8 @@ for more details.
 
 See also: [`BlueStyle`](@ref), [`YASStyle`](@ref), [`SciMLStyle`](@ref), [`MinimalStyle`](@ref)
 """
-struct DefaultStyle <: AbstractStyle
-    innerstyle::AbstractStyle
+struct DefaultStyle{S<:AbstractStyle} <: AbstractStyle
+    innerstyle::S
 end
 DefaultStyle() = DefaultStyle(NoopStyle())
 
@@ -45,8 +45,8 @@ DefaultStyle() = DefaultStyle(NoopStyle())
 Formatting style based on [YASGuide](https://github.com/jrevels/YASGuide) and
 [JuliaFormatter#198](https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/198).
 """
-struct YASStyle <: AbstractStyle
-    innerstyle::AbstractStyle
+struct YASStyle{S<:AbstractStyle} <: AbstractStyle
+    innerstyle::S
 end
 YASStyle() = YASStyle(NoopStyle())
 
@@ -56,8 +56,8 @@ YASStyle() = YASStyle(NoopStyle())
 Formatting style based on [BlueStyle](https://github.com/invenia/BlueStyle) and
 [JuliaFormatter#283](https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/283).
 """
-struct BlueStyle <: AbstractStyle
-    innerstyle::AbstractStyle
+struct BlueStyle{S<:AbstractStyle} <: AbstractStyle
+    innerstyle::S
 end
 BlueStyle() = BlueStyle(NoopStyle())
 
@@ -66,16 +66,16 @@ BlueStyle() = BlueStyle(NoopStyle())
 
 Formatting style based on [SciMLStyle](https://github.com/SciML/SciMLStyle).
 """
-struct SciMLStyle <: AbstractStyle
-    innerstyle::AbstractStyle
+struct SciMLStyle{S<:AbstractStyle} <: AbstractStyle
+    innerstyle::S
 end
 SciMLStyle() = SciMLStyle(NoopStyle())
 
 """
     MinimalStyle()
 """
-struct MinimalStyle <: AbstractStyle
-    innerstyle::Union{Nothing,AbstractStyle}
+struct MinimalStyle{S<:Union{Nothing,AbstractStyle}} <: AbstractStyle
+    innerstyle::S
 end
 MinimalStyle() = MinimalStyle(NoopStyle())
 
