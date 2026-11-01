@@ -1,3 +1,7 @@
+# v2.14.4
+
+Fixed a bug where the insertion of a trailing comma in argument lists could cause JuliaFormatter to generate invalid code. (#1269, #1271)
+
 # v2.14.3
 
 Fixed a bug causing lack of idempotence when short-form functions with shortcircuiting logical operators were expanded to long-form functions. (#1268, #1270)
