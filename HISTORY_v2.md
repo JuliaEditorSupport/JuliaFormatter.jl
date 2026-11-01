@@ -1,6 +1,6 @@
 # v2.14.7
 
-When `preserve_single_line_blocks` is enabled, a line break is no longer forced after the `=` of a short-form function definition whose right-hand side is a block construct (`try`, `let`, `if`, `for`, `while`, `do`). (#594, #1255)
+Prevent adding line breaks in short-form function definitions when the function body is a block construct and `preserve_single_line_blocks` is enabled. (#594, #1255)
 
 # v2.14.6
 
