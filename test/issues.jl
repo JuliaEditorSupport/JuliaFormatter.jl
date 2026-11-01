@@ -660,6 +660,16 @@ end
             # this is interpolation
             s_interp = raw"@macro x $y"
             test_format(s_interp, s_interp, style)
+
+            # `$` keeps the user's spacing in indices too, even though
+            # `whitespace_ops_in_indices` would normally add or remove the
+            # spaces around binary operators there.
+            for whitespace_ops_in_indices in (true, false)
+                s_index = raw"a[b$c]"
+                test_format(s_index, s_index, style; whitespace_ops_in_indices)
+                s_index_spaced = raw"a[b $ c]"
+                test_format(s_index_spaced, s_index_spaced, style; whitespace_ops_in_indices)
+            end
         end
     end
 
