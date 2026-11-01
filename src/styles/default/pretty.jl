@@ -3347,9 +3347,10 @@ function p_binaryopcall(
         nothing
     end
 
-    lazy_op = is_lazy_op(opkind)
-    # Check if expression is a lazy circuit. If it is, this does two things: first it causes
-    # the indentation to be increased for subsequent lines -- for example
+    is_shortcircuit = opkind in KSet"|| &&"
+    # Check if expression is a standalone short-circuit (see `ShortCircuitStandalone`). If
+    # it is, this does two things: first it causes the indentation to be increased for
+    # subsequent lines -- for example
     #
     #    aaaaa ||        rather than      aaaaa ||
     #        bbbbb                        bbbbb
@@ -3358,7 +3359,7 @@ function p_binaryopcall(
     # expanded to if/elseif/else.
     #
     # cf. https://github.com/JuliaEditorSupport/JuliaFormatter.jl/pull/224
-    if lazy_op && standalone_binary_circuit !== NotStandalone
+    if is_shortcircuit && standalone_binary_circuit !== NotStandalone
         if length(lineage) >= 2
             parent_node, _, is_assign = lineage[end-1]
             # Disable if the binary expression is "used" in a certain context --
@@ -3377,7 +3378,7 @@ function p_binaryopcall(
         end
     end
 
-    standalone_shortcircuit = lazy_op ? standalone_binary_circuit : NotStandalone
+    standalone_shortcircuit = is_shortcircuit ? standalone_binary_circuit : NotStandalone
     t.metadata = Metadata(
         opkind,
         standalone_shortcircuit,
@@ -3558,7 +3559,7 @@ function p_binaryopcall(
             continue
         end
 
-        child_standalone = if !(is_lazy_op(c) && kind(c) !== opkind)
+        child_standalone = if !(kind(c) in KSet"|| &&" && kind(c) !== opkind)
             standalone_binary_circuit
         elseif is_short_func && i == rhs_idx && standalone_binary_circuit === Standalone
             # When `f() = a && b` is rewritten as a long-form function, `a && b` becomes a

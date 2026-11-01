@@ -1173,10 +1173,6 @@ function is_str_or_cmd(t::JuliaSyntax.GreenNode)
     kind(t) in KSet"doc string cmdstring String CmdString"
 end
 
-function is_lazy_op(t::Union{JuliaSyntax.GreenNode,JuliaSyntax.Kind})
-    kind(t) in KSet"|| &&"
-end
-
 function has_more_args_to_come(::Tuple{}, _, _)
     return false
 end
