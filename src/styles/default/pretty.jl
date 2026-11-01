@@ -3460,16 +3460,15 @@ function p_binaryopcall(
         true
     elseif has_dot
         true
-    elseif style isa BlueStyle && !(opkind in KSet"^ //")
-        # https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/1262
-        true
     elseif opkind in KSet"in isa"
         # Avoid `x in y` -> `xiny`, even in contexts where `force_no_whitespace` is true
         # (e.g. `s[x in y]`)
         true
     elseif force_no_whitespace
         false
-    else
+    elseif style isa BlueStyle && !(opkind in KSet"^ //")
+        # https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/1262
+        true
         user_wrote_whitespace
     end
 
