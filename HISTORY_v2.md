@@ -1,3 +1,7 @@
+# v2.14.5
+
+A number of performance improvements. (#1275)
+
 # v2.14.4
 
 Fixed a bug where the insertion of a trailing comma in argument lists could cause JuliaFormatter to generate invalid code. (#1269, #1271)
