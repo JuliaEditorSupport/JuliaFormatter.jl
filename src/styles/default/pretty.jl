@@ -3295,7 +3295,9 @@ function p_binaryopcall(
     childs = children(cst)
     op_indices = source_operator_indices(cst)
     if isempty(op_indices)
-        error("unreachable: binaryopcall node without an operator. Please report this bug at https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues")
+        error(
+            "unreachable: binaryopcall node without an operator. Please report this bug at https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues",
+        )
     end
 
     opkind = source_op_kind(s, cst)
