@@ -1111,31 +1111,40 @@ function p_macrocall(
     end
 
     for (i, a) in enumerate(childs)
-        n = pretty(style, a, s, ctx, lineage)::FST
+        k = kind(a)
         if JuliaSyntax.is_macro_name(a)
+            n = pretty(style, a, s, ctx, lineage)
             add_node!(t, n, s; join_lines = true)
-        elseif kind(a) === K"("
+        elseif k === K"("
+            n = pretty(style, a, s, ctx, lineage)
             add_node!(t, n, s; join_lines = true)
             if nest
                 add_node!(t, Placeholder(0), s)
             else
                 false
             end
-        elseif kind(a) === K")"
+        elseif k === K")"
+            n = pretty(style, a, s, ctx, lineage)
             if nest
                 add_node!(t, Placeholder(0), s)
             else
                 false
             end
             add_node!(t, n, s; join_lines = true)
-        elseif kind(a) === K","
+        elseif k == K"=" && haschildren(a)
+            n = p_kw(style, a, s, ctx, lineage)
+            add_node!(t, n, s; join_lines = true)
+        elseif k === K","
+            n = pretty(style, a, s, ctx, lineage)
             add_node!(t, n, s; join_lines = true)
             if has_more_args_to_come(childs, i + 1, K")")
                 add_node!(t, Placeholder(1), s)
             end
         elseif JuliaSyntax.is_whitespace(a)
+            n = pretty(style, a, s, ctx, lineage)
             add_node!(t, n, s; join_lines = true)
         elseif is_macroblock
+            n = pretty(style, a, s, ctx, lineage)
             if n.typ === MacroBlock && t[end].typ === WHITESPACE
                 t[end] = Placeholder(length(t[end].val))
             end
@@ -1149,6 +1158,7 @@ function p_macrocall(
             end
             add_node!(t, n, s; join_lines, max_padding)
         else
+            n = pretty(style, a, s, ctx, lineage)
             if has_closer
                 add_node!(t, n, s; join_lines = true)
             else

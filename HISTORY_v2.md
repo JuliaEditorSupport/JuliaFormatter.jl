@@ -2,6 +2,8 @@
 
 Correctly respect the Blue style guide on adding whitespace around binary operators. (#1262, #1274)
 
+Fixed some inconsistencies with whitespace around keyword arguments in macro calls, which did not respect the `whitespace_in_kwargs` option. (#1274)
+
 # v2.14.5
 
 A number of performance improvements. (#1275)
