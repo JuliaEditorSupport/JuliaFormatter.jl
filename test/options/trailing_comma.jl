@@ -1,7 +1,7 @@
 module TrailingCommaTests
 
-using JuliaFormatter: DefaultStyle, YASStyle, BlueStyle, SciMLStyle, MinimalStyle, format_text
-using JuliaFormatter.Internal: test_format
+using JuliaFormatter: YASStyle, format_text
+using JuliaFormatter.Internal: ALL_STYLES, test_format
 using Test
 
 @testset "trailing_comma" begin
@@ -63,7 +63,7 @@ using Test
         # followed by a comment, the closing paren will be on the next line, and a trailing
         # comma should be added (or to be precise, the `trailing_comma` option should be
         # respected).
-        s1 = """
+        s1_ = """
         f(aaaaaaa,
           bbbbbbbbb,
           ccccccccc # comment
@@ -73,7 +73,7 @@ using Test
           bbbbbbbbb,
           ccccccccc, # comment
           )"""
-        test_format(s1, s1, YASStyle(); margin=2)
+        test_format(s1_, s1, YASStyle(); margin=2)
 
         s2_ = """
         f(aaaaaaa,
