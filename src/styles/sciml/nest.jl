@@ -189,8 +189,7 @@ function _n_tuple!(
                     end
                 end
             elseif n.typ === TRAILINGCOMMA
-                n.val = ","
-                n.len = 1
+                materialise_trailing_comma!(fst, i)
                 nested |= nest!(style, n, s, lineage)
             elseif has_closer && (i == 1 || i == length(nodes))
                 nested |= nest!(style, n, s, lineage)

@@ -386,8 +386,7 @@ function n_tuple!(
                     s.line_offset = fst.indent
                 end
             elseif n.typ === TRAILINGCOMMA
-                n.val = ","
-                n.len = 1
+                materialise_trailing_comma!(fst, i)
             elseif has_closer && (i == 1 || i == length(nodes))
                 nest!(style, n, s, lineage)
             else
@@ -791,8 +790,8 @@ function n_whereopcall!(
                 fst[i+1] = Newline(; length = length(n))
                 s.line_offset = fst.indent
             elseif n.typ === TRAILINGCOMMA && over
-                n.val = ","
-                n.len = 1
+                # `n` is `fst[i+1]`, since we're looping over `fst[2:end]`
+                materialise_trailing_comma!(fst, i + 1)
                 nest!(style, n, s, lineage)
             elseif has_braces
                 n.extra_margin = 1 + fst.extra_margin
@@ -1227,8 +1226,7 @@ function n_block!(
                     has_nl = true
                 end
             elseif n.typ === TRAILINGCOMMA
-                n.val = ","
-                n.len = 1
+                materialise_trailing_comma!(fst, i)
                 nest!(style, n, s, lineage)
             else
                 diff = fst.indent - fst[i].indent
