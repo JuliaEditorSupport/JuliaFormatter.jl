@@ -3445,6 +3445,15 @@ function p_binaryopcall(
     force_no_whitespace = ctx.force_no_binop_whitespace
     if opkind in KSet": ::"
         force_no_whitespace = true
+    elseif opkind == K"$"
+        # https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/375
+        # Need to respect user's whitespace preference, otherwise there's potential to
+        # change semantics
+        if user_wrote_whitespace
+            force_whitespace = true
+        else
+            force_no_whitespace = true
+        end
     elseif is_short_func && opkind === K"="
         force_whitespace = true
     elseif kind(cst) === K"comparison"
@@ -3478,6 +3487,11 @@ function p_binaryopcall(
         false
     elseif style isa BlueStyle && !(opkind in KSet"^ //")
         # https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/1262
+        #
+        # `$` is left alone because infix `$` is mostly used as a name separator,
+        # e.g. for nested Java classes in `@jimport ilog.cp.IloCP$ConflictStatus`,
+        # where adding spaces would make it harder to read. See
+        # https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/375
         true
     else
         user_wrote_whitespace

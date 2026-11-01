@@ -646,11 +646,21 @@ end
     end
 
     @testset "375" begin
-        s = raw"conflictstatus = @jimport ilog.cp.IloCP$ConflictStatus"
-        test_format(s, s)
+        for style in ALL_STYLES
+            s = raw"conflictstatus = @jimport ilog.cp.IloCP$ConflictStatus"
+            test_format(s, s, style)
 
-        s = raw"conflictstatus = @jimport ilog.cp.IloCP$ConflictStatus"
-        test_format(s, s, BlueStyle())
+            # Add some more general tests for good measure.
+            #
+            # this is a genuine binary operator
+            s_binop = raw"@macro x $ y"
+            test_format(s_binop, s_binop, style)
+            s_also_binop = raw"@macro x$ y"
+            test_format(s_also_binop, s_binop, style; ast=true)
+            # this is interpolation
+            s_interp = raw"@macro x $y"
+            test_format(s_interp, s_interp, style)
+        end
     end
 
     @testset "352" begin
