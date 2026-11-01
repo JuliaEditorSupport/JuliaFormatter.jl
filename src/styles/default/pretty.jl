@@ -3433,7 +3433,6 @@ function p_binaryopcall(
     # this).
     force_whitespace = false
     force_no_whitespace = ctx.force_no_binop_whitespace
-
     if opkind in KSet": ::"
         force_no_whitespace = true
     elseif is_short_func && opkind === K"="
@@ -3454,6 +3453,11 @@ function p_binaryopcall(
         end
     elseif ctx.from_colon
         force_no_whitespace = true
+    end
+
+    if style isa BlueStyle && !(opkind in KSet"^ //")
+        # https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/1262
+        force_whitespace = true
     end
 
     # `force_whitespace` takes precedence over `force_no_whitespace` if both are true.
