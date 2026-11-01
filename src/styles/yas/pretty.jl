@@ -636,7 +636,7 @@ function p_macrocall(
             if has_more_args_to_come(childs, i + 1, K")")
                 add_node!(t, Placeholder(1), s)
             end
-        elseif kind(a) == K"=" && haschildren(a)
+        elseif has_closer && kind(a) == K"=" && haschildren(a)
             n = p_kw(style, a, s, newctx(ctx; can_separate_kwargs = false), lineage)
             add_node!(t, n, s; join_lines = true)
         elseif JuliaSyntax.is_whitespace(a)

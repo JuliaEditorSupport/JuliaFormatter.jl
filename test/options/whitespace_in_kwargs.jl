@@ -79,6 +79,16 @@ using Test
 
     s = "C(; Vt=Ȳ')"
     test_format(s, s;  whitespace_in_kwargs = false)
+
+    @testset "assignment in macro without parentheses" begin
+        # `@macro A, B=C` parses as `@macro ((A, B) = C)`, so the `=` is an
+        # assignment and not a keyword argument. The space after the macro name
+        # must be kept.
+        for style in ALL_STYLES, whitespace_in_kwargs in (true, false)
+            out = format_text("@macro A, B=C", style; whitespace_in_kwargs)
+            @test startswith(out, "@macro A")
+        end
+    end
 end
 
 end

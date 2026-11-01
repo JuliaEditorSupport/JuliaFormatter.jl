@@ -1131,7 +1131,7 @@ function p_macrocall(
                 false
             end
             add_node!(t, n, s; join_lines = true)
-        elseif k == K"=" && haschildren(a)
+        elseif has_closer && k == K"=" && haschildren(a)
             n = p_kw(style, a, s, ctx, lineage)
             add_node!(t, n, s; join_lines = true)
         elseif k === K","
