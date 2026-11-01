@@ -98,20 +98,70 @@
     TupleBlock,
 )
 
-@enum(NestBehavior, AllowNest, AlwaysNest, NeverNest, NeverNestNode, AllowNestButDontRemove)
+@enum NestBehavior begin
+    AllowNest
+    AlwaysNest
+    NeverNest
+    NeverNestNode
+    AllowNestButDontRemove
+end
+
+"""
+    ShortCircuitStandalone
+
+Indicates whether a node is a short-circuiting logical operator (`&&` or `||`) whose value
+is not used in any way, i.e., it exists solely for its side effects.
+
+For example, `a && b` is standalone in
+
+```julia
+function f()
+    a && b
+    c
+end
+```
+
+but not in `x = a && b`, `return a && b`, or `(a && b)`.
+
+Any node that isn't `&&` or `||` is `NotStandalone`.
+
+`StandaloneInLongForm` is for nodes that are not standalone as written, but would be if the
+enclosing short-form function definition were rewritten as a long-form one (without a
+`return` being added). For example, in
+
+```julia
+f() = a && b
+```
+
+`a && b` is used as the value of `f()`, so it is not standalone. But in
+
+```julia
+function f()
+    a && b
+end
+```
+
+it is a statement on its own, so it is standalone. We need to track this information at the
+CST stage so that it can be used later on in the nesting stage, specifically in
+`short_to_long_function_def!`. Outside of that function, `StandaloneInLongForm` is treated
+the same as `NotStandalone`.
+"""
+@enum ShortCircuitStandalone begin
+    NotStandalone
+    Standalone
+    StandaloneInLongForm
+end
 
 struct Metadata
     op_kind::JuliaSyntax.Kind
-
-    # Indicates that the node is a shortcircuiting logical operator (`&&` or `||`) whose
-    # value is not used in any way, i.e., it exists solely for the side effects.
-    is_standalone_shortcircuit::Bool
-    # If the above is true, this field indicates whether it should be expanded into a full
-    # if-else statement if `short_circuit_to_if` is true. This mainly exists to catch the
-    # case where it's inside a macro/expr, which causes the transformation to be disabled.
+    standalone_shortcircuit::ShortCircuitStandalone
+    # If the above is `Standalone`, this field indicates whether it should be expanded into
+    # a full if-else statement if `short_circuit_to_if` is true. This mainly exists to catch
+    # the case where it's inside a macro/expr, which causes the transformation to be
+    # disabled.
     # 
-    # Note that because `is_standalone_shortcircuit` has impacts on alignment as well, we
-    # need to have a separate flag instead of just setting it to false when inside
+    # Note that because `standalone_shortcircuit` has impacts on alignment as well, we
+    # need to have a separate flag instead of just setting it to `NotStandalone` when inside
     # macros/exprs.
     is_expandable_shortcircuit::Bool
 
@@ -123,10 +173,21 @@ struct Metadata
     is_contractable_function::Bool
 
     has_multiline_argument::Bool
+
+    # True for a StringN node built from a NON-triple-quoted multiline literal, e.g.
+    #
+    #     x = "line one
+    #     line two"
+    #
+    # or the `cmd`/`r"..."`/`raw"..."` equivalents. Unlike `"""..."""` literals, these have
+    # no dedent semantics: every interior line (and the closing-delimiter line) is part of
+    # the string's value, so the printer must emit those lines verbatim at their original
+    # columns and must not re-indent them when the surrounding code shifts. See issue #1251.
+    is_opaque_string::Bool
 end
 
 function Metadata(k::JuliaSyntax.Kind)
-    return Metadata(k, false, false, false, false, true, false)
+    return Metadata(k, NotStandalone, false, false, false, true, false, false)
 end
 
 """
@@ -282,6 +343,14 @@ cant_nest(fst::FST) = fst.nest_behavior === NeverNest
 function any_descendant(f, fst::FST)
     is_leaf(fst) && return false
     for n in fst.nodes::Vector{FST}
+        f(n) && return true
+        any_descendant(f, n) && return true
+    end
+    return false
+end
+function any_descendant(f, cst::JuliaSyntax.GreenNode)
+    haschildren(cst) || return false
+    for n in children(cst)
         f(n) && return true
         any_descendant(f, n) && return true
     end
@@ -551,7 +620,7 @@ function is_indent_nest(fst::FST)
     return (!isnothing(md) && (md::Metadata).is_short_form_function) ||
            is_assignment(fst) ||
            op_kind(fst) in KSet"=> ->" ||
-           (!isnothing(md) && (md::Metadata).is_standalone_shortcircuit)
+           (!isnothing(md) && (md::Metadata).standalone_shortcircuit === Standalone)
 end
 
 """
@@ -970,6 +1039,18 @@ function op_kind(fst::FST)::JuliaSyntax.Kind
     return isnothing(fst.metadata) ? K"None" : (fst.metadata::Metadata).op_kind
 end
 
+"""
+    is_opaque_string(fst::FST)::Bool
+
+Whether `fst` is a `StringN` node built from a non-triple-quoted multiline literal, whose
+interior lines must be emitted verbatim (see the `is_opaque_string` field of `Metadata`).
+"""
+function is_opaque_string(fst::FST)::Bool
+    return fst.typ === StringN &&
+           !isnothing(fst.metadata) &&
+           (fst.metadata::Metadata).is_opaque_string
+end
+
 # """
 #     is_standalone_shortcircuit(cst::JuliaSyntax.GreenNode)
 #
@@ -1058,12 +1139,13 @@ function eq_to_in_normalization!(fst::FST, always_for_in::Bool, for_in_replaceme
             opkind = JuliaSyntax.Kind(op.val)
             fst.metadata = Metadata(
                 opkind,
-                metadata.is_standalone_shortcircuit,
+                metadata.standalone_shortcircuit,
                 metadata.is_expandable_shortcircuit,
                 metadata.is_short_form_function,
                 opkind === K"=",
                 metadata.is_contractable_function,
                 metadata.has_multiline_argument,
+                metadata.is_opaque_string,
             )
         end
     elseif fst.typ === Block || fst.typ === Brackets || fst.typ === Filter
@@ -1103,10 +1185,6 @@ function is_str_or_cmd(t::JuliaSyntax.GreenNode)
     kind(t) in KSet"doc string cmdstring String CmdString"
 end
 
-function is_lazy_op(t::Union{JuliaSyntax.GreenNode,JuliaSyntax.Kind})
-    kind(t) in KSet"|| &&"
-end
-
 function has_more_args_to_come(::Tuple{}, _, _)
     return false
 end
@@ -1143,22 +1221,89 @@ function next_node_is(f::Function, nn::JuliaSyntax.GreenNode)
     f(nn) || (haschildren(nn) && next_node_is(f, nn[1]))
 end
 
-function ends_with_macro_or_global(fst::FST)
-    # Detects constructs such as
-    #    @macro foo
-    #    arg = @macro foo
-    #    arg => @macro foo
-    #    () -> global x = true
-    # which cause parse errors if a comma is inserted after them.
-    return if fst.typ === MacroCall || fst.typ === MacroBlock || fst.typ === Global
+"""
+    absorbs_trailing_comma(fst::FST)
+
+Whether `fst` ends with a construct that would read a comma placed straight after it as
+part of itself, instead of as a separator in the surrounding list.
+
+As an example, in
+
+```julia
+g(
+    global x,
+)
+```
+
+the comma after `x` is read as part of the `global` statement rather than a separator in the
+argument list of `g`. (This actually causes the code above to fail to parse.) So,
+`absorbs_trailing_comma` returns `true` for such nodes, and inside
+`materialise_trailing_comma!` we check for that and don't insert a comma after it.
+
+This function has to recursively check the last node of `fst` because it could be something
+like
+
+```julia
+g(
+    x -> global x,
+)
+```
+
+which has the same problem.
+
+This is applicable to various constructs such as
+
+```julia
+@macro foo
+arg = @macro foo
+arg => @macro foo
+() -> global x = true
+return x
+x -> return y
+c ? a : local b
+```
+
+Anything that ends with a closing bracket or `end` (e.g. `(return x)` or
+`begin return x end`) is fine, because the last node is then that closing token, which is
+a leaf, so we stop there.
+"""
+function absorbs_trailing_comma(fst::FST)
+    return if fst.typ in (MacroCall, MacroBlock, Global, Local, Const, Return)
+        # TODO(penelopeysm): Technically, if the MacroCall ends in a paren, this doesn't
+        # have to be true. For example, `@m(x)` is OK with a trailing comma
         true
-    elseif is_leaf(fst)
+    elseif is_leaf(fst) || isempty(fst.nodes::Vector{FST})
         false
-    elseif fst.typ === Kw || fst.typ === Binary
-        length(fst.nodes) > 0 && ends_with_macro_or_global(fst[end])
     else
-        false
+        absorbs_trailing_comma(fst[end])
     end
+end
+
+"""
+    materialise_trailing_comma!(fst::FST, i::Int)
+
+Turns the trailing comma node `fst[i]` into an actual `,`, unless the node before it would
+read the comma as part of itself (see `absorbs_trailing_comma`).
+
+This check is done here, when nesting, rather than when the FST is built, because nesting
+can change what the previous node ends with. For example, in BlueStyle,
+
+```julia
+g(c ? a : return b)
+```
+
+has its ternary turned into an `if ... end` block if it's too long. A ternary that ends with
+`return b` can't be followed by a comma, but an `if ... end` block can. Checking at this
+point means we see the `if ... end` block, which is also what the next formatting pass sees.
+"""
+function materialise_trailing_comma!(fst::FST, i::Int)
+    # Things that end with macros, `return`, etc. can't have a trailing comma inserted
+    # after them as that causes Julia to fail to parse.
+    # https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/1017
+    absorbs_trailing_comma(fst[i-1]) && return
+    fst[i].val = ","
+    fst[i].len = 1
+    return
 end
 function skip_trailing_comma(fst::FST)
     prev_node = fst[end]
@@ -1170,11 +1315,9 @@ function skip_trailing_comma(fst::FST)
         prev_node.typ === Filter ||
         prev_node.typ === Flatten ||
         prev_node.typ === SEMICOLON ||
-        prev_node.typ === HASHEQCOMMENT ||
-        # Things that end with macros can't have a trailing comma inserted after them
-        # as that causes Julia to fail to parse.
-        # https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/1017
-        ends_with_macro_or_global(prev_node)
+        prev_node.typ === HASHEQCOMMENT
+        # Note that things that end with macros, `return`, etc. also can't have a trailing
+        # comma after them, but that is checked later, in `materialise_trailing_comma!`.
     )
         true
     else
@@ -1522,17 +1665,19 @@ function add_node!(
     elseif is_multiline(n) ||
            (!isnothing(t.metadata) && (t.metadata::Metadata).has_multiline_argument)
         if isnothing(t.metadata)
-            t.metadata = Metadata(K"None", false, false, false, false, true, true)
+            t.metadata =
+                Metadata(K"None", NotStandalone, false, false, false, true, true, false)
         else
             metadata = t.metadata::Metadata
             t.metadata = Metadata(
                 metadata.op_kind,
-                metadata.is_standalone_shortcircuit,
+                metadata.standalone_shortcircuit,
                 metadata.is_expandable_shortcircuit,
                 metadata.is_short_form_function,
                 metadata.is_assignment,
                 metadata.is_contractable_function,
                 true,
+                metadata.is_opaque_string,
             )
         end
         if is_iterable(t) && n_args(t) > 1

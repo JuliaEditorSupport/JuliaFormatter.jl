@@ -4,7 +4,9 @@
 
 module Internal
 
-import JuliaSyntax as JS
+# Use relative import for JuliaSyntax to avoid importing external package, see
+# https://github.com/JuliaEditorSupport/JuliaFormatter.jl/pull/1249
+import ..JuliaSyntax as JS
 import ..JuliaFormatter as JF
 using Test
 

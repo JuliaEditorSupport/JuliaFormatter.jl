@@ -1,10 +1,72 @@
-# v2.13.1
+# v2.14.7
 
 When `preserve_single_line_blocks` is enabled (as in `MinimalStyle`), a line break is no longer forced after the `=` of a short-form function definition whose right-hand side is a block construct (`try`, `let`, `if`, `for`, `while`, `do`). For example `getallns() = let allns = Base.IdSet{Symbol}(); ...; allns end` is now left unchanged under `MinimalStyle`. (#594, #1255)
 
+# v2.14.6
+
+Correctly respect the Blue style guide on adding whitespace around binary operators. (#1262, #1274)
+
+Fixed some inconsistencies with whitespace around keyword arguments in macro calls, which did not respect the `whitespace_in_kwargs` option. (#1274)
+
+Fixed an idempotence bug with keyword argument values which began with an operator and were function calls under `whitespace_in_kwargs=false`. (#1277, #1274)
+
+# v2.14.5
+
+A number of performance improvements. (#1275)
+
+# v2.14.4
+
+Fixed a bug where the insertion of a trailing comma in argument lists could cause JuliaFormatter to generate invalid code. (#1269, #1271)
+
+# v2.14.3
+
+Fixed a bug causing lack of idempotence when short-form functions with shortcircuiting logical operators were expanded to long-form functions. (#1268, #1270)
+
+# v2.14.2
+
+Fixed a bug where removal of spaces around a binary operator could cause the meaning of code to be changed in a very unfortunate case (namely, `s[2e - 1]` would be formatted to `s[2e-1]`, which is a float literal). (#1264, #1267)
+
+# v2.14.1
+
+Tweaked the handling of whitespace around binary operators.
+Inside an indexing expression, whitespace around `∈` is now suppressed by default (i.e., `s[x ∈ y]` will be formatted as `s[x∈y]`).
+This brings it in line with the behaviour of all other binary operators. (#1263)
+
+# v2.14.0
+
+Added a new formatting option, `preserve_single_line_blocks` (default `false`; `true` for `MinimalStyle`).
+When enabled, block constructs written entirely on a single source line — e.g. `try isfile(x); catch; false end` or `let x = 1; x end` — are kept on one line, with their statements separated by semicolons, instead of being expanded onto multiple lines.
+This applies to `function`/`macro` definitions, `for`/`while` loops, `if`, `let`, `try`, `do`, `struct`/`mutable struct`, `module`/`baremodule`, `begin`, and `quote`. (#593, #1254, #1261)
+
 # v2.13.0
 
-Added a new formatting option, `preserve_single_line_blocks` (default `false`; `true` for `MinimalStyle`). When enabled, block constructs written entirely on a single source line — e.g. `try isfile(x); catch; false end` or `let x = 1; x end` — are kept on one line, with their statements separated by semicolons, instead of being expanded onto multiple lines. This applies to `function`/`macro` definitions, `for`/`while` loops, `if`, `let`, `try`, `do`, `struct`/`mutable struct`, `module`/`baremodule`, `begin`, and `quote`. (#593, #1254)
+Added a new `indent_binary_continuations` option.
+When enabled, the continuation lines of binary operations are indented by one level with respect to the first line of the operation:
+
+```julia
+# With `indent_binary_continuations = false` (the default for most styles):
+aaaaaaa
++ bbbbbbb
++ ccccccc
+
+# With `indent_binary_continuations = true`
+aaaaaaa
+    + bbbbbbb
+    + ccccccc
+```
+
+It defaults to `false` for all styles except `MinimalStyle` (the VSCode default), where it is `true`. (#592, #1256)
+
+# v2.12.6
+
+Fixed a bug where re-indenting code containing an ordinary (single-quoted) multiline string, cmd, or string-macro literal would also shift the subsequent lines of the literal, silently changing its value.
+Continuation lines of such literals are now kept exactly as written; only the line containing the opening delimiter moves with the surrounding code.
+Triple-quoted literals are unaffected. (#1251, #1253)
+
+# v2.12.5
+
+Fixed a bug where removing the whitespace around a binary operator could change how the code tokenizes, producing invalid or ambiguous output.
+For example `A[1. .. 1.]` was formatted to `A[1...1.]` under `MinimalStyle` and `A[1 - -2]` was formatted to `A[1--2]` under `DefaultStyle`, neither of which parses. (#1250, #1252)
 
 # v2.12.4
 

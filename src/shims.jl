@@ -2,8 +2,10 @@
 
 module Shims
 
-using JuliaSyntax
-using JuliaSyntax: @KSet_str, @K_str, JuliaSyntax as JS
+# Use relative import for JuliaSyntax to avoid importing external package, see
+# https://github.com/JuliaEditorSupport/JuliaFormatter.jl/pull/1249
+using ..JuliaSyntax
+using ..JuliaSyntax: @KSet_str, @K_str, JuliaSyntax as JS
 
 """
 Determine if a CST represents a function call, i.e., `F(X1, X2, ...)` syntactically.
@@ -56,7 +58,8 @@ function is_function_call(cst::JS.GreenNode)
                 length(non_ws_idxs) < 2 &&
                     error("unreachable: prefix call with not enough things")
                 kind(cst[non_ws_idxs[2]]) in KSet"( parens"
-            elseif kind(cst) == K"dotcall"
+            else
+                # K"dotcall"
                 length(non_ws_idxs) < 3 &&
                     error("unreachable: prefix call with not enough things")
                 kind(cst[non_ws_idxs[3]]) in KSet"( parens"
@@ -101,12 +104,25 @@ Check whether the string `s` is a valid operator in Julia, via JuliaSyntax.
 Excludes word operators (i.e., `in`, `isa`, and `where`)..
 """
 function is_valid_nonword_operator(s::AbstractString)
-    try
-        k = JS.Kind(s)
-        return JS.is_operator(k) && !JS.is_word_operator(k)
-    catch
-        return false
-    end
+    k = kind_from_string(s)
+    return k !== nothing && JS.is_operator(k) && !JS.is_word_operator(k)
+end
+
+"""
+    kind_from_string(s::AbstractString) -> Union{Nothing,JuliaSyntax.Kind}
+
+Look up the `Kind` whose name is `s`, e.g. `kind_from_string("+")` gives `K"+"`. Return
+`nothing` if there is no such `Kind`, e.g. for `kind_from_string("foo")`.
+
+This does the same thing as `JuliaSyntax.Kind(s)`, except that `JuliaSyntax.Kind(s)` throws
+an error for unknown names. Throwing and catching an error is very slow (tens of
+microseconds each time), and this lookup happens for many nodes (e.g. for every keyword
+argument name in BlueStyle), so we read JuliaSyntax's internal lookup table directly
+instead.
+"""
+function kind_from_string(s::AbstractString)::Union{Nothing,JS.Kind}
+    i = get(JS._kind_str_to_int, s, nothing)
+    return i === nothing ? nothing : JS.Kind(i)
 end
 
 """
@@ -120,4 +136,4 @@ function is_really_whitespace(cst::JS.GreenNode)
     return kind(cst) in KSet"Whitespace NewlineWs"
 end
 
-end # module
+end # module Shims

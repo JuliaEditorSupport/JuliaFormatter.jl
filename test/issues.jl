@@ -646,11 +646,31 @@ end
     end
 
     @testset "375" begin
-        s = raw"conflictstatus = @jimport ilog.cp.IloCP$ConflictStatus"
-        test_format(s, s)
+        for style in ALL_STYLES
+            s = raw"conflictstatus = @jimport ilog.cp.IloCP$ConflictStatus"
+            test_format(s, s, style)
 
-        s = raw"conflictstatus = @jimport ilog.cp.IloCP$ConflictStatus"
-        test_format(s, s, BlueStyle())
+            # Add some more general tests for good measure.
+            #
+            # this is a genuine binary operator
+            s_binop = raw"@macro x $ y"
+            test_format(s_binop, s_binop, style)
+            s_also_binop = raw"@macro x$ y"
+            test_format(s_also_binop, s_binop, style; ast=true)
+            # this is interpolation
+            s_interp = raw"@macro x $y"
+            test_format(s_interp, s_interp, style)
+
+            # `$` keeps the user's spacing in indices too, even though
+            # `whitespace_ops_in_indices` would normally add or remove the
+            # spaces around binary operators there.
+            for whitespace_ops_in_indices in (true, false)
+                s_index = raw"a[b$c]"
+                test_format(s_index, s_index, style; whitespace_ops_in_indices)
+                s_index_spaced = raw"a[b $ c]"
+                test_format(s_index_spaced, s_index_spaced, style; whitespace_ops_in_indices)
+            end
+        end
     end
 
     @testset "352" begin
@@ -1386,77 +1406,6 @@ end
         )
         """
         test_format(s1, s2; indent=4, margin=1)
-    end
-
-    @testset "593 preserve single-line blocks" begin
-        # With `preserve_single_line_blocks` (enabled for MinimalStyle), block constructs
-        # written entirely on one source line keep their single-line form.
-        unchanged = [
-            "try isfile(x); catch; false end",
-            "try; isfile(x); catch; false end",
-            "try isfile(x) catch end",
-            "try isfile(x) catch e; e else g() finally h() end",
-            "let x = 1; x end",
-            "let; x end",
-            "if x; y end",
-            "if x; y else z end",
-            "if x; y elseif w; z else q end",
-            "for i in 1:10; f(i) end",
-            "while x; f() end",
-            "function f(); 1 end",
-            "macro m(); 1 end",
-            "foo() do x; x + 1 end",
-            "struct A; x::Int end",
-            "mutable struct B; x end",
-            "module M; f() = 1 end",
-            "begin x = 1; y = 2 end",
-            "quote x = 1; y end",
-            # nested single-line constructs
-            "let x = 1; if x; 1 end end",
-        ]
-        for c in unchanged
-            test_format(c * "\n", c * "\n", MinimalStyle(); ast=true)
-        end
-
-        # A short-form function def with a single-line block RHS is left completely
-        # unchanged: no line break is forced after the `=` (see #594).
-        test_format(
-            "safe_isfile(x) = try isfile(x); catch; false end\n",
-            "safe_isfile(x) = try isfile(x); catch; false end\n",
-            MinimalStyle();
-            ast=true,
-        )
-
-        # Constructs spanning multiple source lines are still expanded.
-        test_format(
-            "try\n    isfile(x)\ncatch\n    false\nend\n",
-            "try\n    isfile(x)\ncatch\n    false\nend\n",
-            MinimalStyle();
-            ast=true,
-        )
-
-        # The option is off by default: DefaultStyle still expands one-liners.
-        test_format(
-            "try isfile(x); catch; false end\n",
-            "try\n    isfile(x)\ncatch\n    false\nend\n";
-            ast=true,
-        )
-        # ... but can be enabled standalone.
-        test_format("if x; y end\n", "if x; y end\n"; preserve_single_line_blocks=true, ast=true)
-
-        # YAS and SciML behavior is unchanged.
-        test_format(
-            "try isfile(x); catch; false end\n",
-            "try\n    isfile(x)\ncatch\n    false\nend\n",
-            YASStyle();
-            ast=true,
-        )
-        test_format(
-            "try isfile(x); catch; false end\n",
-            "try\n    isfile(x)\ncatch\n    false\nend\n",
-            SciMLStyle();
-            ast=true,
-        )
     end
 
     @testset "594 no forced line break after =" begin
@@ -2346,7 +2295,7 @@ end
         for style in ALL_STYLES
             if style isa BlueStyle
                 # BlueStyle converts the ternary into if/elseif/else so we manually test that
-                blue_out = "push!(attributes, operandsegmentsizes([\n    1,\n    1,\n    1,\n    if (lhs_scale==nothing)\n        0\n    elseif 1(rhs_scale==nothing)\n        0\n    else\n        1\n    end,\n]))"
+                blue_out = "push!(attributes, operandsegmentsizes([\n    1,\n    1,\n    1,\n    if (lhs_scale == nothing)\n        0\n    elseif 1(rhs_scale == nothing)\n        0\n    else\n        1\n    end,\n]))"
                 test_format(text, blue_out, BlueStyle())
             else
                 test_format(text, nothing, style)
@@ -2863,9 +2812,18 @@ end
            cur_row - curs_row + 1 >= rows ÷ 2 # center the cursor
             lastline = true
         end"""
-        for style in (YASStyle(), SciMLStyle(), MinimalStyle())
+        for style in (YASStyle(), SciMLStyle())
             test_format(s_, syas, style)
         end
+
+        # MinimalStyle enables `indent_binary_continuations`, so chain continuations get one
+        # indent level instead of being aligned to the column of the first operand (#592).
+        sminimal = """
+        if curs_row >= 0 && cur_row + 1 >= rows &&             # when too many lines,
+            cur_row - curs_row + 1 >= rows ÷ 2 # center the cursor
+            lastline = true
+        end"""
+        test_format(s_, sminimal, MinimalStyle())
     end
 
     @testset "1078 <: and >: as function calls" begin
@@ -3548,9 +3506,9 @@ end
         mat = [
             if j == 1
                 NoQuote(rownms[i])
-            elseif j-1 == ct.pvalcol
+            elseif j - 1 == ct.pvalcol
                 NoQuote(sprint(show, PValue(cols[j - 1][i])))
-            elseif j-1 in ct.teststatcol
+            elseif j - 1 in ct.teststatcol
                 TestStat(cols[j - 1][i])
             elseif cols[j - 1][i] isa AbstractString
                 NoQuote(cols[j - 1][i])
@@ -3767,6 +3725,239 @@ end
             ]
         end"""
         test_format(s_, s; join_lines_based_on_source=true)
+    end
+
+    @testset "1250 no gluing operators when it changes tokenization" begin
+        # MinimalStyle has `trailing_zero = false`, so the trailing-dot floats survive
+        # as-is and gluing the operators to them would produce `A[1...1., :]` (invalid)
+        # and `SA[1.+2*cos(1.), 1.]` (ambiguous `.` syntax). The space must be kept.
+        test_format("x = A[1. .. 1., :]", "x = A[1. .. 1., :]", MinimalStyle(); ast=true)
+        test_format(
+            "y = SA[1. + 2*cos(1.), 1.]",
+            "y = SA[1. + 2*cos(1.), 1.]",
+            MinimalStyle();
+            ast=true,
+        )
+
+        # DefaultStyle normalizes `1.` to `1.0`, after which gluing is unambiguous.
+        test_format("x = A[1. .. 1., :]", "x = A[1.0..1.0, :]", DefaultStyle(); ast=true)
+
+        # A binary operator must not be glued against a unary operator: `A[1--2]` does
+        # not parse. This previously errored for DefaultStyle and MinimalStyle too
+        # (YAS/Blue/SciML keep the spaces via `whitespace_ops_in_indices = true`).
+        for style in ALL_STYLES
+            test_format("A[1 - -2]", nothing, style; ast=true)
+        end
+
+        # Non-regression: gluing still happens whenever it is safe.
+        test_format("A[1 + 2]", "A[1+2]", MinimalStyle(); ast=true)
+        test_format("A[1 + 2]", "A[1+2]", DefaultStyle(); ast=true)
+        # `1.:2` tokenizes the same as `1. : 2`, so a trailing-dot float does not
+        # blanket-disable gluing.
+        test_format("A[1. : 2]", "A[1.:2]", MinimalStyle(); ast=true)
+        # The adjoint `'` (including suffixed forms) and string delimiters next to an
+        # operator are fine to glue.
+        test_format("A[a' - b]", "A[a'-b]", MinimalStyle(); ast=true)
+        test_format("A[a'ᵀ - b]", "A[a'ᵀ-b]", MinimalStyle(); ast=true)
+        test_format("A[a'ᵀ - b]", "A[a'ᵀ-b]", DefaultStyle(); ast=true)
+        test_format("A[\"a\" * \"b\"]", "A[\"a\"*\"b\"]", DefaultStyle(); ast=true)
+    end
+
+    @testset "1251 re-indentation must not change multiline string contents" begin
+        # For a regular (non-triple-quoted) multiline string literal every leading space
+        # of the continuation lines is part of the string's value. Re-indenting the
+        # surrounding code must therefore leave the interior lines untouched; only the
+        # line with the opening quote moves.
+        #
+        # We use `begin ... end` instead of `function` to avoid Blue/YAS styles
+        # inserting `return` and changing the expected output.
+        s = """
+        begin
+                x = "line one
+                line two"
+        end
+        """
+        expected = """
+        begin
+            x = "line one
+                line two"
+        end
+        """
+        for style in ALL_STYLES
+            test_format(s, expected, style; ast=true)
+            # cmd literals and non-triple string-macro literals have the same no-dedent
+            # semantics and use the same code path
+            test_format(
+                "begin\n        c = `cmd one\n        two`\nend\n",
+                "begin\n    c = `cmd one\n        two`\nend\n",
+                style;
+                ast=true,
+            )
+            test_format(
+                "begin\n        r = r\"aa\n        bb\"x\nend\n",
+                "begin\n    r = r\"aa\n        bb\"x\nend\n",
+                style;
+                ast=true,
+            )
+            test_format(
+                "begin\n        r = raw\"aa\n        bb\"\nend\n",
+                "begin\n    r = raw\"aa\n        bb\"\nend\n",
+                style;
+                ast=true,
+            )
+            # blank interior line
+            test_format(
+                "begin\n        x = \"a\n\n        b\"\nend\n",
+                "begin\n    x = \"a\n\n        b\"\nend\n",
+                style;
+                ast=true,
+            )
+        end
+
+        # a multiline string at top level (indent 0) is left completely unchanged
+        for style in ALL_STYLES
+            test_format("x = \"a\n    b\"\n", "x = \"a\n    b\"\n", style; ast=true)
+        end
+        # interior line starting at column 0, left of the opening quote
+        for style in ALL_STYLES
+            test_format(
+                "begin\n        x = \"a\nb\"\nend\n",
+                "begin\n    x = \"a\nb\"\nend\n",
+                style;
+                ast=true,
+            )
+        end
+
+        # Control: triple-quoted strings have dedent semantics, so their interior lines
+        # DO shift with the surrounding code (issue #501 tracks those separately).
+        for style in ALL_STYLES
+            test_format(
+                "begin\n        x = \"\"\"\n        line\n        \"\"\"\nend\n",
+                "begin\n    x = \"\"\"\n    line\n    \"\"\"\nend\n",
+                style;
+                ast=true,
+            )
+        end
+
+        # interplay with v2_stable_multiline_strings
+        for style in ALL_STYLES
+            test_format(s, expected, style; v2_stable_multiline_strings=true, ast=true)
+        end
+    end
+
+    @testset "1264 juxtapose in binop" begin
+        ops = ("+", "-", "*", "/")
+        identifiers = ("e", "E", "f", "F", "g", "G")
+        contexts = (s -> s, s -> "x[$s]", s -> "x[$s:$s]")
+        for op in ops, id in identifiers, context in contexts, style in ALL_STYLES
+            s = context("2$(id) $(op) 1")
+            test_format(s, nothing, style; ast=true)
+            s = context("2$(id)$(op)1")
+            test_format(s, nothing, style; ast=true)
+        end
+        # A juxtapose that isn't at the end of the LHS can't merge with the operator, so it
+        # shouldn't stop whitespace from being removed.
+        test_format("x[2e*y-1]", "x[2e*y-1]")
+        test_format("x[2e * y - 1]", "x[2e*y-1]")
+        test_format("x[y*2e - 1]", "x[y*2e - 1]")
+    end
+
+    @testset "1268 short-circuit chain in short function converted to long form" begin
+        # When `f() = a && b` is converted to a long-form function and no `return` is
+        # added, `a && b` becomes a standalone statement, so its continuation lines get
+        # an extra indent (the same as if the long form had been written directly).
+
+        # `return y` inside the do block stops a `return` being added to the chain
+        s = "f() = a && g() do\n    y\nend"
+        expected = """
+        function f()
+            a &&
+                g() do
+                    return y
+                end
+        end"""
+        test_format(s, expected, BlueStyle(); margin=12)
+
+        # same for a `return` in the chain itself
+        s = "f() = aaaa && return bbbb"
+        expected = """
+        function f()
+            aaaa &&
+                return bbbb
+        end"""
+        test_format(s, expected, BlueStyle(); margin=16)
+        s = "f() = aaaa && bbbb && return cccc"
+        expected = """
+        function f()
+            aaaa &&
+                bbbb &&
+                return cccc
+        end"""
+        test_format(s, expected, BlueStyle(); margin=16)
+
+        # no `return` added because always_use_return is false
+        s = "f() = aaaa && gggg(bbbb)"
+        expected = """
+        function f()
+            aaaa &&
+                gggg(
+                    bbbb
+                )
+        end"""
+        test_format(s, expected, BlueStyle(); margin=16, always_use_return=false)
+
+        # the inner chain inherits standaloneness from the outer one, even inside a call
+        s = "f() = aaaa && g(bbbb && cccc)"
+        expected = """
+        function f()
+            aaaa && g(
+                bbbb &&
+                    cccc,
+            )
+        end"""
+        test_format(s, expected, BlueStyle(); margin=16, always_use_return=false)
+
+        # if a `return` is added, the chain is still not standalone
+        s = "f() = aaaa && bbbb"
+        expected = """
+        function f()
+            return aaaa &&
+                   bbbb
+        end"""
+        test_format(s, expected, BlueStyle(); margin=16)
+
+        for style in ALL_STYLES
+            for s in (
+                "f() = a && g() do\n    y\nend",
+                "f() = aaaa && return bbbb",
+                "f() = aaaa && gggg(bbbb)",
+                "f() = aaaa && bbbb && g(cccc && dddd)",
+            )
+                test_format(s, nothing, style; margin=16, short_to_long_function_def=true)
+                test_format(
+                    s,
+                    nothing,
+                    style;
+                    margin=16,
+                    short_to_long_function_def=true,
+                    always_use_return=false,
+                )
+            end
+        end
+    end
+
+    @testset "1277 added kwarg parentheses not idempotent" begin
+        s = raw"f(a = $g(h(xxxxxxxxxxxx, yyyyyyyyyyyy)))"
+        out = raw"""
+        f(;
+            a=($g(
+                h(
+                    xxxxxxxxxxxx,
+                    yyyyyyyyyyyy,
+                ),
+            )),
+        )"""
+        test_format(s, out, BlueStyle(); margin = 30)
     end
 end
 

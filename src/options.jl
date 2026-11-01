@@ -43,6 +43,7 @@ Base.@kwdef struct Options{T<:_Unset}
     format_docstrings::Union{T,Bool} = false
     import_to_using::Union{T,Bool} = false
     indent::Union{T,Int} = 4
+    indent_binary_continuations::Union{T,Bool} = false
     indent_submodule::Union{T,Bool} = false
     join_lines_based_on_source::Union{T,Bool} = false
     long_to_short_function_def::Union{T,Bool} = false

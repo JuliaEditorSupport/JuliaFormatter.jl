@@ -197,7 +197,11 @@ function n_string!(
     style = getstyle(ds)
     # difference in positioning of the string
     # from the source document to the formatted document
-    diff = s.line_offset - fst.indent
+    #
+    # For opaque strings (non-triple-quoted multiline literals, see issue #1251) the
+    # interior lines are never shifted: they are stored verbatim with indent 0 and printed
+    # at column 0, so the line offset bookkeeping must not apply the shift either.
+    diff = is_opaque_string(fst) ? 0 : s.line_offset - fst.indent
 
     nested = false
     for (i, n) in enumerate(fst.nodes::Vector)
@@ -382,8 +386,7 @@ function n_tuple!(
                     s.line_offset = fst.indent
                 end
             elseif n.typ === TRAILINGCOMMA
-                n.val = ","
-                n.len = 1
+                materialise_trailing_comma!(fst, i)
             elseif has_closer && (i == 1 || i == length(nodes))
                 nest!(style, n, s, lineage)
             else
@@ -787,8 +790,8 @@ function n_whereopcall!(
                 fst[i+1] = Newline(; length = length(n))
                 s.line_offset = fst.indent
             elseif n.typ === TRAILINGCOMMA && over
-                n.val = ","
-                n.len = 1
+                # `n` is `fst[i+1]`, since we're looping over `fst[2:end]`
+                materialise_trailing_comma!(fst, i + 1)
                 nest!(style, n, s, lineage)
             elseif has_braces
                 n.extra_margin = 1 + fst.extra_margin
@@ -965,7 +968,7 @@ function n_binaryopcall!(
             if indent >= 0
                 fst.indent = indent
             else
-                fst.indent = s.line_offset
+                fst.indent = chain_continuation_indent(fst, s)
             end
         end
 
@@ -1163,7 +1166,7 @@ function n_block!(
 
     if fst.typ === Chain &&
        !isnothing(fst.metadata) &&
-       (fst.metadata::Metadata).is_standalone_shortcircuit
+       (fst.metadata::Metadata).standalone_shortcircuit === Standalone
         fst.indent += s.opts.indent
     end
 
@@ -1223,8 +1226,7 @@ function n_block!(
                     has_nl = true
                 end
             elseif n.typ === TRAILINGCOMMA
-                n.val = ","
-                n.len = 1
+                materialise_trailing_comma!(fst, i)
                 nest!(style, n, s, lineage)
             else
                 diff = fst.indent - fst[i].indent
@@ -1253,7 +1255,7 @@ function n_comparison!(
     s::State,
     lineage::Vector{Tuple{FNode,Union{Nothing,Metadata}}},
 )
-    n_block!(ds, fst, s, lineage; indent = s.line_offset)
+    n_block!(ds, fst, s, lineage; indent = chain_continuation_indent(fst, s))
 end
 
 function n_chainopcall!(
@@ -1262,5 +1264,5 @@ function n_chainopcall!(
     s::State,
     lineage::Vector{Tuple{FNode,Union{Nothing,Metadata}}},
 )
-    n_block!(ds, fst, s, lineage; indent = s.line_offset)
+    n_block!(ds, fst, s, lineage; indent = chain_continuation_indent(fst, s))
 end

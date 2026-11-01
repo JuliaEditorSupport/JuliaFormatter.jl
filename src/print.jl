@@ -224,13 +224,22 @@ function print_string(io::IOBuffer, fst::FST, s::State)
     # The indent of StringH is set to the the offset
     # of when the quote is first encountered in the source file.
 
-    # This difference notes the indent change due to formatting.
-    diff = s.line_offset - fst.indent
+    if is_opaque_string(fst)
+        # Interior lines of non-triple-quoted multiline literals (e.g. a regular "..."
+        # string spanning several lines) are stored verbatim, including their original
+        # leading whitespace, and must be printed at column 0 so the string's value is
+        # unchanged. Only the line containing the opening delimiter moves with the
+        # surrounding code. See issue #1251.
+        fst.indent = 0
+    else
+        # This difference notes the indent change due to formatting.
+        diff = s.line_offset - fst.indent
 
-    # The new indent for the string is the index of when a character in
-    # the multiline string is FIRST encountered in the source file plus
-    # the above difference.
-    fst.indent = max(fst[1].indent + diff, 0)
+        # The new indent for the string is the index of when a character in
+        # the multiline string is FIRST encountered in the source file plus
+        # the above difference.
+        fst.indent = max(fst[1].indent + diff, 0)
+    end
     print_tree(io, fst, s)
 end
 

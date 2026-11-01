@@ -112,8 +112,7 @@ function n_tuple!(
                 if add_trailing_comma ||
                    nodes[i-1].typ === OPERATOR && op_kind(nodes[i-1]) === K":"
                     # if add_trailing_comma  || nodes[i-1].typ === OPERATOR && nodes[i-1].val == ":"
-                    n.val = ","
-                    n.len = 1
+                    materialise_trailing_comma!(fst, i)
                 end
                 nest!(style, n, s, lineage)
             elseif has_closer && (i == 1 || i == length(nodes))
@@ -253,7 +252,13 @@ function n_chainopcall!(
     if length(lineage) > 1 && lineage[end-1][1] in (If, MacroCall, MacroBlock)
         n_block!(YASStyle(style), fst, s, lineage; indent = fst.indent + s.opts.indent)
     else
-        n_block!(DefaultStyle(style), fst, s, lineage; indent = s.line_offset)
+        n_block!(
+            DefaultStyle(style),
+            fst,
+            s,
+            lineage;
+            indent = chain_continuation_indent(fst, s),
+        )
     end
 end
 

@@ -5,10 +5,11 @@ options(::DefaultStyle) = Options()
     # In general, this can be inferred from the source. However, this is
     # overridden specifically for macro keyword arguments in SciML style.
     # See https://github.com/SciML/SciMLStyle/tree/3f6fa61c6cc6fcf1c23177fab187d0c85197acfc#macros
-    nospace::Bool = false
+    force_no_binop_whitespace::Bool = false
 
     nonest::Bool = false
-    standalone_binary_circuit::Bool = true
+    # See `ShortCircuitStandalone`.
+    standalone_binary_circuit::ShortCircuitStandalone = Standalone
     from_typedef::Bool = false
     from_let::Bool = false
     from_ref::Bool = false
@@ -32,6 +33,11 @@ options(::DefaultStyle) = Options()
     join_body::Bool = false
     from_module::Bool = false
     from_docstring::Bool = false
+
+    # Set by p_if/p_try when recursing into an `elseif`/`else`/`catch`/`finally` sub-node:
+    # whether the enclosing `if`/`try` is being kept on a single line
+    # (`preserve_single_line_blocks`). See `keep_single_line`.
+    parent_keep_single_line::Bool = false
 
     # Indicates a context in which we are allowed to rewrite f(x, y=z) to f(x; y=z).
     # This is disabled in macros as well as in function definitions.
@@ -75,35 +81,33 @@ function source_op_kind_from_offset(s::State, cst::JuliaSyntax.GreenNode, offset
         # Attempt to recover the original kind from the source.
         span(cst) == 0 && return nothing
         source_text = getsrcval(s.doc, offset:(offset+span(cst)-1))
-        try
-            # Parse the source text and check whether it's a valid operator.
-            k = JuliaSyntax.Kind(source_text)
-            return if JuliaSyntax.is_operator(k)
-                # This is the happy path. It's hit for things like e.g. "+x".
-                k
-            else
-                # There are a lot of Identifiers which can be parsed as kinds, but aren't
-                # operators. For example, the `string` in `string(x)` will be converted to
-                # K"string" here, which is totally not what we want. Hence we return
-                # nothing.
-                nothing
-            end
-        catch
+        # Parse the source text and check whether it's a valid operator.
+        k = Shims.kind_from_string(source_text)
+        return if k === nothing
             # There are some operators for which JuliaSyntax does not actually have a
             # dedicated kind. For example, `a'ᵀ` is a postfix operator `'ᵀ`, and
             # JuliaSyntax.is_postfix_op_call will correctly return true. Specifically, the '
             # postfix operator can be followed by any Unicode modifier:
             # https://github.com/JuliaLang/julia/pull/37247
             #
-            # However, the operator is stored as Identifier and calling Kind("'ᵀ") throws an
-            # error. We catch such instances here. Thankfully, Base gives us a function
-            # (albeit unexported) to detect these. If this function returns K"Identifier",
-            # then we know that it's one of these odd postfix operators.
-            return if kind(cst) === K"Identifier" && Base.ispostfixoperator(source_text)
+            # However, the operator is stored as Identifier and there is no Kind for "'ᵀ".
+            # We handle such instances here. Thankfully, Base gives us a function (albeit
+            # unexported) to detect these. If this function returns K"Identifier", then we
+            # know that it's one of these odd postfix operators.
+            if kind(cst) === K"Identifier" && Base.ispostfixoperator(source_text)
                 K"Identifier"
             else
                 nothing
             end
+        elseif JuliaSyntax.is_operator(k)
+            # This is the happy path. It's hit for things like e.g. "+x".
+            k
+        else
+            # There are a lot of Identifiers which can be parsed as kinds, but aren't
+            # operators. For example, the `string` in `string(x)` will be converted to
+            # K"string" here, which is totally not what we want. Hence we return
+            # nothing.
+            nothing
         end
     else
         # Can't be an operator at all
@@ -114,7 +118,7 @@ end
 """
     first_nonws_leaf_and_offset(
         node::JuliaSyntax.GreenNode,
-    )::Union{Nothing,Tuple{JuliaSyntax.GreenNode,Int}
+    )::Union{Nothing,Tuple{JuliaSyntax.GreenNode,Integer}
 
 Return the first non-whitespace leaf node in `node` plus its offset from the beginning of
 `node`, or `nothing` if there are no non-whitespace leaves.
@@ -123,7 +127,7 @@ function first_nonws_leaf_and_offset(
     node::JuliaSyntax.GreenNode,
     # Callers should not set _acc, this is only used in this function to recurse
     _acc::Integer = 0,
-)::Union{Nothing,Tuple{JuliaSyntax.GreenNode,Int}}
+)::Union{Nothing,Tuple{JuliaSyntax.GreenNode,Integer}}
     if JuliaSyntax.is_leaf(node)
         return JuliaSyntax.is_whitespace(node) ? nothing : (node, _acc)
     end
@@ -136,6 +140,69 @@ function first_nonws_leaf_and_offset(
         _acc += span(c)
     end
     return nothing
+end
+
+"""
+    last_nonws_leaf_and_offset(
+        node::JuliaSyntax.GreenNode,
+    )::Union{Nothing,Tuple{JuliaSyntax.GreenNode,Integer}
+
+Return the last non-whitespace leaf node in `node` plus its offset from the beginning of
+`node`, or `nothing` if there are no non-whitespace leaves. This is the mirror image of
+`first_nonws_leaf_and_offset`.
+"""
+function last_nonws_leaf_and_offset(
+    node::JuliaSyntax.GreenNode,
+    # Callers should not set _acc, this is only used in this function to recurse
+    _acc::Integer = 0,
+)::Union{Nothing,Tuple{JuliaSyntax.GreenNode,Integer}}
+    if JuliaSyntax.is_leaf(node)
+        return JuliaSyntax.is_whitespace(node) ? nothing : (node, _acc)
+    end
+    # Recursively search children, keeping the last hit.
+    result = nothing
+    for c in children(node)
+        r = last_nonws_leaf_and_offset(c, _acc)
+        if r !== nothing
+            result = r
+        end
+        _acc += span(c)
+    end
+    return result
+end
+
+"""
+    find_trailing_juxtapose(node::JuliaSyntax.GreenNode)
+
+If `node` is suffixed by a juxtapose node, return that juxtapose node and its offset from
+the beginning of `node`. Otherwise, return `nothing`.
+
+Only juxtapose nodes at the very end of `node` count. For example, in `2e*y` the juxtapose
+`2e` is not at the end (`y` is), so this returns `nothing`; in `y*2e` it returns `2e`.
+"""
+function find_trailing_juxtapose(
+    node::JuliaSyntax.GreenNode,
+    # Callers should not set _acc, this is only used in this function to recurse
+    _acc::Integer = 0,
+)::Union{Nothing,Tuple{JuliaSyntax.GreenNode,Integer}}
+    return if kind(node) === K"juxtapose"
+        (node, _acc) # found it!
+    elseif JuliaSyntax.is_leaf(node)
+        nothing # reached the last leaf and didn't find a juxtapose node
+    else
+        # Only the last non-whitespace child can form the end of `node`, so we only need to
+        # recurse into that one.
+        cs = children(node)
+        idx = findlast(c -> !JuliaSyntax.is_whitespace(c), cs)
+        if idx === nothing
+            nothing
+        else
+            for c in cs[1:(idx-1)]
+                _acc += span(c)
+            end
+            find_trailing_juxtapose(cs[idx], _acc)
+        end
+    end
 end
 
 """
@@ -770,21 +837,48 @@ function p_macrostr(
     return t
 end
 
-# what mean
-#
-# julia> t = parseall(JuliaSyntax.GreenNode, """r"hello"x""")
-#      1:9      │[toplevel]
-#      1:9      │  [macrocall]
-#      1:1      │    StringMacroName      ✔
-#      2:8      │    [string]
-#      2:2      │      "
-#      3:7      │      String             ✔
-#      8:8      │      "
-#      9:9      │    String               ✔
-#
-# if cst.head === :FLOAT && !startswith(val, "0x")
-#     if (fidx = findlast(==('f'), val)) === nothing
-#         float_suffix = ""
+"""
+    normalize_number_literal(k::JuliaSyntax.Kind, val::AbstractString, trailing_zero::Bool)
+
+Add leading zeroes, and trailing zeros if `trailing_zero` is true, to float literals.
+
+                  trailing_zero = true     trailing_zero = false
+    `1.`     -->   `1.0`                    `1.`
+    `.5`     -->   `0.5`                    `0.5`
+
+Other literals are unchanged.
+"""
+function normalize_number_literal(
+    k::JuliaSyntax.Kind,
+    val::AbstractString,
+    trailing_zero::Bool,
+)::AbstractString
+    if k in KSet"Float Float32" && !startswith(val, r"[+-]?0x")
+        fidx = findlast(==('f'), val)
+        float_suffix = if fidx === nothing
+            ""
+        else
+            fs = val[fidx:end]
+            val = val[1:(fidx-1)]
+            fs
+        end
+        if findfirst(c -> c == 'e' || c == 'E', val) === nothing
+            dotidx = findlast(==('.'), val)
+            if dotidx === nothing
+                val *= trailing_zero ? ".0" : ""  # append a trailing zero prior to the suffix
+            elseif dotidx == length(val)
+                val *= trailing_zero ? "0" : ""  # if a float literal ends in `.`, add trailing zero.
+            elseif dotidx == 1
+                val = '0' * val  # leading zero
+            elseif dotidx == 2 && (val[1] == '-' || val[1] == '+')
+                val = val[1] * '0' * val[2:end]  # leading zero on signed numbers
+            end
+        end
+        val *= float_suffix
+    end
+    return val
+end
+
 function p_literal(
     ::AbstractStyle,
     cst::JuliaSyntax.GreenNode,
@@ -796,27 +890,7 @@ function p_literal(
     val = getsrcval(s.doc, (s.offset):(s.offset+span(cst)-1))
 
     if !is_str_or_cmd(cst)
-        if kind(cst) in KSet"Float Float32" && !startswith(val, r"[+-]?0x")
-            float_suffix = if (fidx = findlast(==('f'), val)) === nothing
-                ""
-            else
-                fs = val[fidx:end]
-                val = val[1:(fidx-1)]
-                fs
-            end
-            if findfirst(c -> c == 'e' || c == 'E', val) === nothing
-                if (dotidx = findlast(==('.'), val)) === nothing
-                    val *= s.opts.trailing_zero ? ".0" : ""  # append a trailing zero prior to the suffix
-                elseif dotidx == length(val)
-                    val *= s.opts.trailing_zero ? "0" : ""  # if a float literal ends in `.`, add trailing zero.
-                elseif dotidx == 1
-                    val = '0' * val  # leading zero
-                elseif dotidx == 2 && (val[1] == '-' || val[1] == '+')
-                    val = val[1] * '0' * val[2:end]  # leading zero on signed numbers
-                end
-            end
-            val *= float_suffix
-        end
+        val = normalize_number_literal(kind(cst), val, s.opts.trailing_zero)
     end
 
     s.offset += span(cst)
@@ -876,6 +950,36 @@ function p_stringh(
     t = FST(StringN, loc[2] - 1)
     t.line_offset = loc[2]
 
+    # Triple-quoted literals ("""...""" and ```...```) have dedent semantics: the common
+    # leading whitespace of their interior lines is stripped by the parser, so uniformly
+    # shifting those lines with the surrounding code preserves the resulting value.
+    # Ordinary multiline literals have no such semantics -- in
+    #
+    #     x = "line one
+    #             line two"
+    #
+    # every leading space on the second line is part of the string's value, so shifting it
+    # would silently change program behavior (issue #1251). The same applies to `...`
+    # cmd literals and to non-triple string-macro literals such as r"..." or raw"...".
+    # Such "opaque" literals get their interior lines stored verbatim below and are
+    # marked via Metadata so that `n_string!` and `print_string` do not re-indent them.
+    #
+    # The first child of a string/cmdstring node is its opening delimiter token, e.g.
+    #
+    #     julia> parseall(GreenNode, "x = \"\"\"\n    a\n    \"\"\"")[2][5]
+    #          1:13     │[string]
+    #          1:3      │  """
+    #          ...
+    #
+    # When the docstring path has rewritten `val` (format_docstrings = true), the result
+    # is deliberately re-indented Markdown, so the existing shifting behavior is kept.
+    is_triple = haschildren(cst) && kind(children(cst)[1]) in KSet"\"\"\" ```"
+    opaque = !is_triple && !(ctx.from_docstring && s.opts.format_docstrings)
+    if opaque
+        t.metadata =
+            Metadata(K"None", NotStandalone, false, false, false, true, false, true)
+    end
+
     lines = split(val, "\n")
     # Calculate the display column of the first non-whitespace character in the string
     # literal.
@@ -901,8 +1005,26 @@ function p_stringh(
         # add_node! from checking source lines outside the docstring for comments. See
         # https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/1223
         ln = min(startline + i - 1, endline)
-        l = i == 1 ? l : l[sidx:end]
-        n = FST(LITERAL, ln, ln, sidx - 1, textwidth(l), l, (), AllowNest, 0, -1, nothing)
+        # For opaque literals interior lines keep their full original text (including
+        # leading whitespace) and get indent 0, so they are reproduced byte-for-byte no
+        # matter how the opening line moves. For triple-quoted literals the common leading
+        # whitespace (`sidx - 1` columns) is stripped here and re-added at print time
+        # according to the (possibly shifted) indent.
+        l = (i == 1 || opaque) ? l : l[sidx:end]
+        line_indent = (i == 1 || !opaque) ? sidx - 1 : 0
+        n = FST(
+            LITERAL,
+            ln,
+            ln,
+            line_indent,
+            textwidth(l),
+            l,
+            (),
+            AllowNest,
+            0,
+            -1,
+            nothing,
+        )
         # override_join_lines_based_on_source ensures that the lines are always printed on
         # separate lines rather than being joined, even if join_lines_based_on_source has
         # been enabled by the user
@@ -957,7 +1079,7 @@ function p_macrocall(
     s::State,
     ctx::PrettyContext,
     lineage::Vector{Tuple{JuliaSyntax.Kind,Bool,Bool}};
-    do_block_idx::Union{Int,Nothing} = nothing,
+    do_block_idx::Union{Integer,Nothing} = nothing,
 )
     style = getstyle(ds)
     t = FST(MacroCall, nspaces(s))
@@ -989,31 +1111,40 @@ function p_macrocall(
     end
 
     for (i, a) in enumerate(childs)
-        n = pretty(style, a, s, ctx, lineage)::FST
+        k = kind(a)
         if JuliaSyntax.is_macro_name(a)
+            n = pretty(style, a, s, ctx, lineage)
             add_node!(t, n, s; join_lines = true)
-        elseif kind(a) === K"("
+        elseif k === K"("
+            n = pretty(style, a, s, ctx, lineage)
             add_node!(t, n, s; join_lines = true)
             if nest
                 add_node!(t, Placeholder(0), s)
             else
                 false
             end
-        elseif kind(a) === K")"
+        elseif k === K")"
+            n = pretty(style, a, s, ctx, lineage)
             if nest
                 add_node!(t, Placeholder(0), s)
             else
                 false
             end
             add_node!(t, n, s; join_lines = true)
-        elseif kind(a) === K","
+        elseif has_closer && k == K"=" && haschildren(a)
+            n = p_kw(style, a, s, ctx, lineage)
+            add_node!(t, n, s; join_lines = true)
+        elseif k === K","
+            n = pretty(style, a, s, ctx, lineage)
             add_node!(t, n, s; join_lines = true)
             if has_more_args_to_come(childs, i + 1, K")")
                 add_node!(t, Placeholder(1), s)
             end
         elseif JuliaSyntax.is_whitespace(a)
+            n = pretty(style, a, s, ctx, lineage)
             add_node!(t, n, s; join_lines = true)
         elseif is_macroblock
+            n = pretty(style, a, s, ctx, lineage)
             if n.typ === MacroBlock && t[end].typ === WHITESPACE
                 t[end] = Placeholder(length(t[end].val))
             end
@@ -1027,6 +1158,7 @@ function p_macrocall(
             end
             add_node!(t, n, s; join_lines, max_padding)
         else
+            n = pretty(style, a, s, ctx, lineage)
             if has_closer
                 add_node!(t, n, s; join_lines = true)
             else
@@ -1176,31 +1308,73 @@ end
 
 # Block
 # length Block is the length of the longest expr
+# The node kinds that `keep_single_line` may be called on, i.e. the block constructs that
+# `preserve_single_line_blocks` applies to.
+const SINGLE_LINE_BLOCK_KINDS =
+    KSet"function macro struct module baremodule block quote let for while do try catch finally else if elseif"
+
 """
-    keep_single_line(cst::JuliaSyntax.GreenNode, s::State)::Bool
+    keep_single_line(cst::JuliaSyntax.GreenNode, s::State, ctx::PrettyContext; offset = s.offset)::Bool
 
-Whether a block construct that is written entirely on a single source line should be kept
-on a single line (see the `preserve_single_line_blocks` option). For example, with the
-option enabled,
+Whether the block construct `cst`, which starts at byte `offset` of the source, is written
+entirely on a single source line and should therefore be kept on a single line (see the
+`preserve_single_line_blocks` option).
 
-    safe_isfile(x) = try isfile(x); catch; false end
+A construct containing a docstring (`"doc" x`) is never kept on one line, since the
+docstring is always emitted on its own line. The `elseif`/`else`/`catch`/`finally`
+sub-nodes of an `if`/`try` don't decide for themselves but follow the enclosing construct
+(via `ctx.parent_keep_single_line`), since their own span covers neither the start of the
+construct nor its `end`.
 
-keeps the `try` on one line instead of being expanded to
+IMPORTANT: unless `offset` is given explicitly, this must be called when `s.offset` is
+still positioned at the start of `cst` (i.e. before any of its children have been
+prettified), since it compares the source line of the first and last byte of `cst`.
+"""
+function keep_single_line(
+    cst::JuliaSyntax.GreenNode,
+    s::State,
+    ctx::PrettyContext;
+    offset::Integer = s.offset,
+)::Bool
+    kind(cst) in SINGLE_LINE_BLOCK_KINDS ||
+        error("unreachable: keep_single_line called on non-block node $(kind(cst))")
+    s.opts.preserve_single_line_blocks || return false
+    if kind(cst) in KSet"elseif else catch finally"
+        return ctx.parent_keep_single_line
+    end
+    on_same_line(s, offset, offset + span(cst) - 1) || return false
+    return !any_descendant(n -> kind(n) === K"doc", cst)
+end
 
-    safe_isfile(x) =
-        try
-            isfile(x)
-        catch
-            false
+"""
+    block_arg_forces_nest(arg::JuliaSyntax.GreenNode, offset::Integer, s::State, style, ctx)::Bool
+
+Whether `arg` -- the sole argument of a bracketed construct such as `(BLOCK)` or
+`[BLOCK for x in y]`, starting at byte `offset` of the source -- is a block that will be
+expanded onto multiple lines, in which case the brackets must always nest. With
+`preserve_single_line_blocks`, a block that is kept on a single line does not force
+nesting.
+"""
+function block_arg_forces_nest(
+    arg::JuliaSyntax.GreenNode,
+    offset::Integer,
+    s::State,
+    style::AbstractStyle,
+    ctx::PrettyContext,
+)::Bool
+    if kind(arg) === K"generator" && haschildren(arg)
+        # e.g. `(BLOCK for x in y)`: decided by the generator's body.
+        for c in children(arg)
+            if !JuliaSyntax.is_whitespace(c)
+                return block_arg_forces_nest(c, offset, s, style, ctx)
+            end
+            offset += span(c)
         end
-
-IMPORTANT: this must be called when `s.offset` is still positioned at the start of `cst`
-(i.e. at the start of the construct, before any of its children have been prettified),
-since it compares the source line of the first and last byte of `cst`.
-"""
-function keep_single_line(cst::JuliaSyntax.GreenNode, s::State)::Bool
-    return s.opts.preserve_single_line_blocks &&
-           on_same_line(s, s.offset, s.offset + span(cst) - 1)
+        return false
+    end
+    is_block(arg, style) || return false
+    kind(arg) in SINGLE_LINE_BLOCK_KINDS || return true
+    return !keep_single_line(arg, s, ctx; offset = offset)
 end
 
 """
@@ -1253,17 +1427,8 @@ function p_block(
         return p_tupleblock(style, cst, s, ctx, lineage)
     end
 
-    # Block-owning constructs (function/for/if/let/try/do/...) pass
-    # `ignore_single_line = true` so that their bodies are always expanded onto separate
-    # lines. When `preserve_single_line_blocks` is enabled, a body written on a single
-    # source line keeps its single-line, semicolon-separated form instead. Blocks without
-    # any statements (e.g. the `;` in `baremodule Q; end`) keep the existing behavior of
-    # dropping the superfluous semicolons.
     single_line =
-        (
-            !ignore_single_line ||
-            (s.opts.preserve_single_line_blocks && block_has_statements(cst))
-        ) && on_same_line(s, s.offset, s.offset + span(cst) - 1)
+        ignore_single_line ? false : on_same_line(s, s.offset, s.offset + span(cst) - 1)
 
     before_first_arg = true
 
@@ -1488,7 +1653,7 @@ function p_functiondef(
     seen_body = false
     extra_block_node = nothing
     # Keep e.g. `function f(); 1 end` on a single line (preserve_single_line_blocks).
-    keep_single = keep_single_line(cst, s)
+    keep_single = keep_single_line(cst, s, ctx)
 
     for (i, c) in enumerate(childs)
         if i == function_or_macro_keyword_idx
@@ -1567,13 +1732,15 @@ function p_functiondef(
     end
     t.metadata = Metadata(
         kind(cst),
-        false,
+        NotStandalone,
         false,
         false,
         false,
         can_transform_syntax(s, true),
         false,
+        false,
     )
+    keep_single && (t.nest_behavior = NeverNest)
     t
 end
 
@@ -1606,7 +1773,7 @@ function p_struct(
     block_has_contents = false
     childs = children(cst)
     # Keep e.g. `struct A; x::Int end` on a single line (preserve_single_line_blocks).
-    keep_single = keep_single_line(cst, s)
+    keep_single = keep_single_line(cst, s, ctx)
     for (i, c) in enumerate(childs)
         if i == 1
             n = pretty(style, c, s, ctx, lineage)
@@ -1656,6 +1823,7 @@ function p_struct(
             add_node!(t, pretty(style, c, s, ctx, lineage), s; join_lines = true)
         end
     end
+    keep_single && (t.nest_behavior = NeverNest)
     t
 end
 
@@ -1676,7 +1844,7 @@ function p_mutable(
     block_has_contents = false
     childs = children(cst)
     # Keep e.g. `mutable struct B; x end` on a single line (preserve_single_line_blocks).
-    keep_single = keep_single_line(cst, s)
+    keep_single = keep_single_line(cst, s, ctx)
     for c in childs
         if kind(c) in KSet"struct mutable"
             n = pretty(style, c, s, ctx, lineage)
@@ -1726,6 +1894,7 @@ function p_mutable(
             add_node!(t, pretty(style, c, s, ctx, lineage), s; join_lines = true)
         end
     end
+    keep_single && (t.nest_behavior = NeverNest)
     t
 end
 
@@ -1748,7 +1917,7 @@ function p_module(
     childs = children(cst)
     indent_module = s.opts.indent_submodule && from_module
     # Keep e.g. `module M; f() = 1 end` on a single line (preserve_single_line_blocks).
-    keep_single = keep_single_line(cst, s)
+    keep_single = keep_single_line(cst, s, ctx)
 
     for c in childs
         if kind(c) in KSet"module baremodule" && !haschildren(c)
@@ -1811,6 +1980,7 @@ function p_module(
             )
         end
     end
+    keep_single && (t.nest_behavior = NeverNest)
     t
 end
 
@@ -1941,7 +2111,7 @@ function p_begin(
 
     # Keep e.g. `begin x = 1; y = 2 end` on a single line (preserve_single_line_blocks).
     # This must be computed before the `begin` keyword below is prettified.
-    keep_single = keep_single_line(cst, s)
+    keep_single = keep_single_line(cst, s, ctx)
 
     childs = children(cst)
     add_node!(t, pretty(style, childs[1], s, ctx, lineage), s)
@@ -1949,7 +2119,10 @@ function p_begin(
     # == 2 because the two children are `begin` and `end`
     empty_body = count(n -> !Shims.is_really_whitespace(n) && kind(n) !== K";", childs) == 2
 
-    if empty_body && !s.opts.join_lines_based_on_source
+    # An empty body is collapsed to `begin end` unless `join_lines_based_on_source` wants to
+    # follow the source; a single-line `begin end` is kept as-is when the construct is kept
+    # on one line (preserve_single_line_blocks).
+    if empty_body && (!s.opts.join_lines_based_on_source || keep_single)
         for c in childs[2:(end-1)]
             pretty(style, c, s, ctx, lineage)
         end
@@ -1965,7 +2138,11 @@ function p_begin(
         # preserve_single_line_blocks: join the statements (and their `;` separators)
         # onto the `begin ... end` line.
         for c in childs[2:(end-1)]
-            if JuliaSyntax.is_whitespace(c)
+            if kind(c) === K"Comment"
+                # `#= =#` comments; handled as in p_block.
+                add_hasheq_comment!(t, pretty(style, c, s, ctx, lineage), s)
+                continue
+            elseif JuliaSyntax.is_whitespace(c)
                 s.offset += span(c)
                 continue
             end
@@ -1992,6 +2169,7 @@ function p_begin(
         pop!(lineage)
         add_node!(t, pretty(style, cst[end], s), s)
     end
+    keep_single && (t.nest_behavior = NeverNest)
     t
 end
 
@@ -2077,7 +2255,7 @@ function p_let(
 
     has_let_args = false
     # Keep e.g. `let x = 1; x end` on a single line (preserve_single_line_blocks).
-    keep_single = keep_single_line(cst, s)
+    keep_single = keep_single_line(cst, s, ctx)
 
     childs = children(cst)
     for (i, c) in enumerate(childs)
@@ -2166,6 +2344,7 @@ function p_let(
             )
         end
     end
+    keep_single && (t.nest_behavior = NeverNest)
     t
 end
 
@@ -2188,7 +2367,7 @@ function p_for(
     seen_body = false
     extra_block_node = nothing
     # Keep e.g. `for i in 1:10; f(i) end` on a single line (preserve_single_line_blocks).
-    keep_single = keep_single_line(cst, s)
+    keep_single = keep_single_line(cst, s, ctx)
 
     for c in children(cst)
         if kind(c) in KSet"for while" && !haschildren(c)
@@ -2293,6 +2472,7 @@ function p_for(
         end
     end
 
+    keep_single && (t.nest_behavior = NeverNest)
     t
 end
 
@@ -2356,7 +2536,7 @@ function append_do_nodes!(
     end
 
     # Keep e.g. `foo() do x; x + 1 end` on a single line (preserve_single_line_blocks).
-    keep_single = keep_single_line(cst, s)
+    keep_single = keep_single_line(cst, s, ctx)
 
     childs = children(cst)
     for (i, c) in enumerate(childs)
@@ -2396,6 +2576,7 @@ function append_do_nodes!(
             add_node!(t, pretty(style, c, s, ctx, lineage), s; join_lines = true)
         end
     end
+    keep_single && (t.nest_behavior = NeverNest)
     t
 end
 
@@ -2418,7 +2599,7 @@ function p_do_call(
     s::State,
     ctx::PrettyContext,
     lineage::Vector{Tuple{JuliaSyntax.Kind,Bool,Bool}},
-    do_block_idx::Int,
+    do_block_idx::Integer,
 )
     t = FST(Do, nspaces(s))
     childs = children(cst)
@@ -2467,9 +2648,9 @@ function p_try(
 
     # Keep e.g. `try isfile(x); catch; false end` on a single line
     # (preserve_single_line_blocks). Note that p_try is called recursively for the
-    # `catch`/`finally`/`else` sub-nodes; each recursion recomputes this for its own node,
-    # which lies on the same source line, so the whole construct is joined consistently.
-    keep_single = keep_single_line(cst, s)
+    # `catch`/`finally`/`else` sub-nodes; those inherit this decision from the enclosing
+    # `try` via `ctx.parent_keep_single_line` (see `keep_single_line`).
+    keep_single = keep_single_line(cst, s, ctx)
 
     childs = children(cst)
     for c in childs
@@ -2493,7 +2674,13 @@ function p_try(
             else
                 # A `catch`/`finally`/`else` sub-node with children.
                 len = length(t)
-                n = pretty(style, c, s, ctx, lineage)
+                n = pretty(
+                    style,
+                    c,
+                    s,
+                    newctx(ctx; parent_keep_single_line = keep_single),
+                    lineage,
+                )
                 if keep_single
                     # Join e.g. `catch; false` onto the line after `try isfile(x);`.
                     add_node!(t, Whitespace(1), s)
@@ -2538,6 +2725,7 @@ function p_try(
             add_node!(t, pretty(style, c, s, ctx, lineage), s)
         end
     end
+    keep_single && (t.nest_behavior = NeverNest)
     t
 end
 
@@ -2561,9 +2749,9 @@ function p_if(
     seen_body = false
     extra_block_node = nothing
     # Keep e.g. `if x; y end` on a single line (preserve_single_line_blocks). As in
-    # p_try, the `elseif`/`else` sub-nodes are handled recursively and recompute this
-    # for their own (same-line) span.
-    keep_single = keep_single_line(cst, s)
+    # p_try, the `elseif` sub-nodes are handled recursively and inherit this decision
+    # from the enclosing `if` via `ctx.parent_keep_single_line`.
+    keep_single = keep_single_line(cst, s, ctx)
 
     for c in children(cst)
         if kind(c) in KSet"if elseif else"
@@ -2588,7 +2776,13 @@ function p_if(
                     seen_body = false
                 end
                 len = length(t)
-                n = pretty(style, c, s, ctx, lineage)
+                n = pretty(
+                    style,
+                    c,
+                    s,
+                    newctx(ctx; parent_keep_single_line = keep_single),
+                    lineage,
+                )
                 if keep_single
                     # Join e.g. `else z` onto the line after `if x; y;`.
                     add_node!(t, Whitespace(1), s)
@@ -2684,6 +2878,7 @@ function p_if(
         seen_body = false
     end
 
+    keep_single && (t.nest_behavior = NeverNest)
     return t
 end
 
@@ -2764,27 +2959,7 @@ function p_kw(
                     end
                 end
 
-            node = if parenthesise
-                paren_fst = FST(Brackets, nspaces(s))
-                add_node!(
-                    paren_fst,
-                    FST(PUNCTUATION, -1, n.startline, n.startline, "("),
-                    s;
-                    join_lines = true,
-                )
-                add_node!(paren_fst, Placeholder(0), s)
-                add_node!(paren_fst, n, s; join_lines = true)
-                add_node!(paren_fst, Placeholder(0), s)
-                add_node!(
-                    paren_fst,
-                    FST(PUNCTUATION, -1, n.startline, n.startline, ")"),
-                    s;
-                    join_lines = true,
-                )
-                paren_fst
-            else
-                n
-            end
+            node = parenthesise ? wrap_in_parens(style, n, c, s, ctx) : n
             add_node!(t, node, s; join_lines = true)
         end
     end
@@ -2993,6 +3168,107 @@ function p_pipe_to_call(
     return call_node
 end
 
+"""
+    gluing_changes_tokenization(left, op, right)::Bool
+
+For a binary operator `op`, check whether emitting `left`, `op`, and `right` with no spaces
+in between produces a different token stream than emitting them separated by spaces.
+
+`left` and `right` are the text of the tokens immediately adjacent to the operator. Note
+that this is not necessarily equal to the text of the full left and right operands (we only
+take the extreme tokens).
+
+`left` and/or `right` may be `nothing`, meaning that the token on that side cannot lexically
+merge with an operator (see `boundary_token_text`). Such a side is stood in for by the
+neutral identifier `x`. Using the actual text of such tokens would produce false positives.
+For example, if the binary expression was `"a" * "b"`, then naively passing the extreme
+tokens would lead to `"*"`.
+"""
+function gluing_changes_tokenization(
+    left::Union{AbstractString,Nothing},
+    op::AbstractString,
+    right::Union{AbstractString,Nothing},
+)::Bool
+    left = something(left, "x")
+    right = something(right, "x")
+    function tokstream(str::String)
+        return [
+            (kind(t), JuliaSyntax.untokenize(t, str)) for
+            t in JuliaSyntax.tokenize(str) if kind(t) !== K"Whitespace"
+        ]
+    end
+    return tokstream(string(left, op, right)) !=
+           tokstream(string(left, ' ', op, ' ', right))
+end
+
+"""
+    boundary_token_text(s::State, child::JuliaSyntax.GreenNode, child_offset::Integer, rightmost::Bool)
+
+Return the text that will be emitted for the token of `child` that sits directly next to a
+binary operator: the last non-whitespace leaf of the left operand (`rightmost = true`) or
+the first non-whitespace leaf of the right operand (`rightmost = false`). This text is fed
+to `gluing_changes_tokenization` to decide whether the whitespace around the operator can
+be removed.
+"""
+function boundary_token_text(
+    s::State,
+    child::JuliaSyntax.GreenNode,
+    child_offset::Integer,
+    rightmost::Bool,
+)::Union{Nothing,String}
+    result = if rightmost
+        res = last_nonws_leaf_and_offset(child)
+        if res !== nothing && kind(first(res)) === K"Identifier"
+            # Juxtaposes on the LHS can, in very unfortunate cases, change tokenisation when
+            # merged with the operator. See #1264. In such a case, the last non-whitespace
+            # leaf will always be an identifier ('e' or 'E' or 'f').
+            #
+            # We therefore need to check whether any right-most suffix of `child` is a
+            # juxtapose node, and if so, use the text of that in the tokenisation test
+            # below. Note that if the last leaf is an identifier, the juxtapose case _is_
+            # indeed the only case where the tokenisation can change, so we don't need to
+            # worry about accidentally suppressing any behaviour that depends on `res`
+            # above.
+            juxt = find_trailing_juxtapose(child)
+            if juxt !== nothing
+                res = juxt
+            end
+        end
+        res
+    else
+        first_nonws_leaf_and_offset(child)
+    end
+    result === nothing && error("binop child has no non-whitespace node")
+    leaf, leaf_offset = result
+    k = kind(leaf)
+    offset = child_offset + leaf_offset
+    txt = getsrcval(s.doc, offset:(offset+span(leaf)-1))
+    return if k in KSet"Integer BinInt HexInt OctInt Float Float32"
+        # Normalise the number before passing it on so that we can make decisions based on
+        # the text that will actually be emitted.
+        normalize_number_literal(k, txt, s.opts.trailing_zero)
+    elseif k === K"'"
+        # Postfix adjoint operator -- we need to give it an operand so that it can be
+        # parsed.
+        "x" * txt
+    elseif JuliaSyntax.is_operator(k) || k === K"." || k === K"juxtapose"
+        txt
+    else
+        # Other tokens can't merge with operators, so we return `nothing` to indicate this.
+        nothing
+    end
+end
+
+"""
+    p_binaryopcall
+
+Note that this function contains a substantial amount of logic for formatting binary
+operators. Consequently, if you want to introduce custom behaviour for a specific style, you
+should **not** create an overload of this function for that style as you will have to
+reproduce a lot of this logic, and it's **very** easy to make a mistake! Instead you should
+define smaller helper functions which dispatch on the style and call those functions from
+inside this one.
+"""
 function p_binaryopcall(
     ds::AbstractStyle,
     cst::JuliaSyntax.GreenNode,
@@ -3008,6 +3284,12 @@ function p_binaryopcall(
 
     childs = children(cst)
     op_indices = source_operator_indices(cst)
+    if isempty(op_indices)
+        error(
+            "unreachable: binaryopcall node without an operator. Please report this bug at https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues",
+        )
+    end
+
     opkind = source_op_kind(s, cst)
     lhs_idx = findfirst(n -> !JuliaSyntax.is_whitespace(n), childs)
     rhs_idx = findlast(n -> !JuliaSyntax.is_whitespace(n), childs)
@@ -3072,9 +3354,10 @@ function p_binaryopcall(
         nothing
     end
 
-    lazy_op = is_lazy_op(opkind)
-    # Check if expression is a lazy circuit. If it is, this does two things: first it causes
-    # the indentation to be increased for subsequent lines -- for example
+    is_shortcircuit = opkind in KSet"|| &&"
+    # Check if expression is a standalone short-circuit (see `ShortCircuitStandalone`). If
+    # it is, this does two things: first it causes the indentation to be increased for
+    # subsequent lines -- for example
     #
     #    aaaaa ||        rather than      aaaaa ||
     #        bbbbb                        bbbbb
@@ -3083,7 +3366,7 @@ function p_binaryopcall(
     # expanded to if/elseif/else.
     #
     # cf. https://github.com/JuliaEditorSupport/JuliaFormatter.jl/pull/224
-    if lazy_op && standalone_binary_circuit
+    if is_shortcircuit && standalone_binary_circuit !== NotStandalone
         if length(lineage) >= 2
             parent_node, _, is_assign = lineage[end-1]
             # Disable if the binary expression is "used" in a certain context --
@@ -3097,89 +3380,168 @@ function p_binaryopcall(
             # elseif      elseif a && b
             # ternary     a && b ? c : d
             if parent_node in KSet"parens macrocall return while if elseif ?" || is_assign
-                standalone_binary_circuit = false
+                standalone_binary_circuit = NotStandalone
             end
         end
     end
 
-    is_standalone_shortcircuit = lazy_op && standalone_binary_circuit
+    standalone_shortcircuit = is_shortcircuit ? standalone_binary_circuit : NotStandalone
     t.metadata = Metadata(
         opkind,
-        is_standalone_shortcircuit,
-        is_standalone_shortcircuit && can_transform_syntax(s, true),
+        standalone_shortcircuit,
+        standalone_shortcircuit === Standalone && can_transform_syntax(s, true),
         is_expandable_short_func,
         is_assignment(cst) || defines_function(cst),
         false,
         false,
+        false,
     )
 
-    has_ws_around_op = false
+    has_dot = kind(cst) === K"dotcall"
 
+    ### Decide whether the binary operator should be printed with whitespace around it.
+
+    # Has the user put whitespace around the operator?
+    user_wrote_whitespace = false
+    # Because JuliaSyntax isn't very consistent in its handling of whitespace, this can
+    # happen in one of several ways:
+    #
+    # 1. the whitespace is itself a sibling node of the operator
     for (i, c) in enumerate(childs)
         if i > 1 && Shims.is_really_whitespace(c)
-            has_ws_around_op = true
+            user_wrote_whitespace = true
             break
         end
     end
-    # Check if LHS ends, or RHS begins with whitespace
+    # 2. the LHS node ends with whitespace
     if lhs_idx !== nothing
         lhs_cst = childs[lhs_idx]
         if has_trailing(lhs_cst, KSet"Whitespace NewlineWs")
-            has_ws_around_op = true
+            user_wrote_whitespace = true
         end
     end
+    # 3. or the RHS node begins with whitespace
     if rhs_idx !== nothing
         rhs_cst = childs[rhs_idx]
         if has_leading(rhs_cst, KSet"Whitespace NewlineWs")
-            has_ws_around_op = true
+            user_wrote_whitespace = true
         end
     end
 
-    from_colon = ctx.from_colon
-    from_typedef = ctx.from_typedef
-
-    remove_space_around_op = ctx.nospace
-    if opkind === K":"
-        remove_space_around_op = true
-        from_colon = true
-    elseif opkind === K"::"
-        remove_space_around_op = true
+    # JuliaFormatter generally respects the user's choice of whitespace, except in some
+    # cases. We use these flags to decide whether to override it in either direction.
+    #
+    # `ctx.force_no_binop_whitespace` is almost always false; it's only overridden
+    # specifically for keyword arguments to macros in SciMLStyle (grep the codebase to see
+    # this).
+    force_whitespace = false
+    force_no_whitespace = ctx.force_no_binop_whitespace
+    if opkind in KSet": ::"
+        force_no_whitespace = true
+    elseif opkind == K"$"
+        # https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/375
+        # Need to respect user's whitespace preference, otherwise there's potential to
+        # change semantics
+        if user_wrote_whitespace
+            force_whitespace = true
+        else
+            force_no_whitespace = true
+        end
     elseif is_short_func && opkind === K"="
-        remove_space_around_op = false
-        has_ws_around_op = true
+        force_whitespace = true
     elseif kind(cst) === K"comparison"
-        remove_space_around_op = false
-    elseif opkind in KSet"in ∈ isa ."
-        remove_space_around_op = false
-    elseif from_typedef && opkind in KSet"<: >:"
+        force_no_whitespace = false
+    elseif ctx.from_typedef && opkind in KSet"<: >:"
         if s.opts.whitespace_typedefs
-            remove_space_around_op = false
-            has_ws_around_op = true
+            force_whitespace = true
         else
-            remove_space_around_op = true
-            has_ws_around_op = false
+            force_no_whitespace = true
         end
-    elseif ctx.from_ref || from_colon
+    elseif ctx.from_ref || ctx.from_colon
         if s.opts.whitespace_ops_in_indices
-            remove_space_around_op = false
-            has_ws_around_op = true
+            force_whitespace = true
         else
-            remove_space_around_op = true
-            has_ws_around_op = false
+            force_no_whitespace = true
         end
-    elseif from_colon
-        remove_space_around_op = true
-    end
-    nws = !remove_space_around_op && has_ws_around_op ? 1 : 0
-
-    has_dot = false
-    if kind(cst) === K"dotcall"
-        remove_space_around_op = false
-        nws = 1
-        has_dot = true
+    elseif ctx.from_colon
+        force_no_whitespace = true
     end
 
-    nlws_count = 0
+    # `force_whitespace` takes precedence over `force_no_whitespace` if both are true.
+    emit_whitespace_around_binop = if force_whitespace
+        true
+    elseif has_dot
+        true
+    elseif opkind in KSet"in isa"
+        # Avoid `x in y` -> `xiny`, even in contexts where `force_no_whitespace` is true
+        # (e.g. `s[x in y]`)
+        true
+    elseif force_no_whitespace
+        false
+    elseif style isa BlueStyle && !(opkind in KSet"^ //")
+        # https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/1262
+        #
+        # `$` is left alone because infix `$` is mostly used as a name separator,
+        # e.g. for nested Java classes in `@jimport ilog.cp.IloCP$ConflictStatus`,
+        # where adding spaces would make it harder to read. See
+        # https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/375
+        true
+    else
+        user_wrote_whitespace
+    end
+
+    # If the whitespace around an operator is about to be removed, make sure that gluing the
+    # operator to its neighboring tokens does not change how the code tokenizes. For
+    # example, when `trailing_zero` is false, we want to avoid changing
+    #
+    #     A[1. .. 1.]  -> A[1...1.]
+    if user_wrote_whitespace && !emit_whitespace_around_binop
+        # Offsets of each child relative to the start of the source document. At this
+        # point `s.offset` is positioned at the start of the first child.
+        child_offsets = Vector{Int}(undef, length(childs))
+        let off = s.offset
+            for (i, c) in enumerate(childs)
+                child_offsets[i] = off
+                off += span(c)
+            end
+        end
+        # For `op=` the operator is split over several tokens (e.g. `+` and `=`), which are
+        # emitted as a single unit; treat them as one token. Everywhere else each entry in
+        # `op_indices` is a separate operator (e.g. the two `+` in the chain `a + b + c`).
+        op_ranges = if kind(cst) === K"op="
+            [first(op_indices):last(op_indices)]
+        else
+            [i:i for i in op_indices]
+        end
+        for op_range in op_ranges
+            prev_idx =
+                findprev(c -> !JuliaSyntax.is_whitespace(c), childs, first(op_range) - 1)
+            next_idx =
+                findnext(c -> !JuliaSyntax.is_whitespace(c), childs, last(op_range) + 1)
+            (prev_idx === nothing || next_idx === nothing) &&
+                error("binop operator has no non-whitespace neighbour")
+            op_last = last(op_range)
+            op_text = getsrcval(
+                s.doc,
+                (child_offsets[first(op_range)]):(child_offsets[op_last]+span(
+                    childs[op_last],
+                )-1),
+            )
+            left = boundary_token_text(s, childs[prev_idx], child_offsets[prev_idx], true)
+            right = boundary_token_text(s, childs[next_idx], child_offsets[next_idx], false)
+            # `nothing` on a side means that token cannot merge with the operator; if
+            # neither side can, gluing is trivially safe and no tokenization is needed.
+            (left === nothing && right === nothing) && continue
+            if gluing_changes_tokenization(left, op_text, right)
+                emit_whitespace_around_binop = true
+                break
+            end
+        end
+    end
+    # = end whitespace deciding code
+
+    from_colon = ctx.from_colon || opkind === K":"
+
     after_op = false
     skip_until = 0
     for (i, c) in enumerate(childs)
@@ -3197,27 +3559,38 @@ function p_binaryopcall(
             true
         end
 
-        if kind(cst) === K"op=" && !isempty(op_indices) && i == first(op_indices)
+        if kind(cst) === K"op=" && i == first(op_indices)
             loc = cursor_loc(s)
             op_span = sum(span, childs[first(op_indices):last(op_indices)]; init = 0)
             val = getsrcval(s.doc, (s.offset):(s.offset+op_span-1))
             s.offset += op_span
             n = FST(OPERATOR, loc[2], loc[1], loc[1], val)
             n.metadata = Metadata(K"op=")
-            if nws > 0 && i > 1
-                add_node!(t, Whitespace(nws), s)
+            if emit_whitespace_around_binop && i > 1
+                add_node!(t, Whitespace(1), s)
             end
             add_node!(t, n, s; join_lines = true)
-            if nws > 0
+            if emit_whitespace_around_binop
                 if nest
-                    add_node!(t, Placeholder(nws), s)
+                    add_node!(t, Placeholder(1), s)
                 else
-                    add_node!(t, Whitespace(nws), s)
+                    add_node!(t, Whitespace(1), s)
                 end
             end
             after_op = true
             skip_until = last(op_indices)
             continue
+        end
+
+        child_standalone = if !(kind(c) in KSet"|| &&" && kind(c) !== opkind)
+            standalone_binary_circuit
+        elseif is_short_func && i == rhs_idx && standalone_binary_circuit === Standalone
+            # When `f() = a && b` is rewritten as a long-form function, `a && b` becomes a
+            # statement in the function body instead of the right-hand side of `=`, so it
+            # would be standalone.
+            StandaloneInLongForm
+        else
+            NotStandalone
         end
 
         offset = s.offset
@@ -3227,8 +3600,7 @@ function p_binaryopcall(
             s,
             newctx(
                 ctx;
-                standalone_binary_circuit = standalone_binary_circuit &&
-                                            !(is_lazy_op(c) && kind(c) !== opkind),
+                standalone_binary_circuit = child_standalone,
                 can_separate_kwargs = can_separate_kwargs,
                 nonest = nonest,
                 from_colon = from_colon,
@@ -3247,19 +3619,19 @@ function p_binaryopcall(
             # [.]
             #   .
             #   <=
-            ns = is_dot ? 1 : nws
+            ns = is_dot || emit_whitespace_around_binop
 
             # Add whitespace before the operator, unless it's a dot in a dotted operator
-            if ns > 0
-                add_node!(t, Whitespace(ns), s)
+            if ns
+                add_node!(t, Whitespace(1), s)
             end
             add_node!(t, n, s; join_lines = true)
             # Add whitespace after the operator
-            if ns > 0
+            if ns
                 if nest
-                    add_node!(t, Placeholder(ns), s)
+                    add_node!(t, Placeholder(1), s)
                 else
-                    add_node!(t, Whitespace(ns), s)
+                    add_node!(t, Whitespace(1), s)
                 end
             end
             after_op = true
@@ -3268,25 +3640,25 @@ function p_binaryopcall(
             # the arguments are operators as well.
             #
             # a .* %
-            ns = is_dot ? 1 : nws
+            ns = is_dot || emit_whitespace_around_binop
 
             # Add whitespace before the operator, unless it's a dot in a dotted operator
-            if ns > 0 && i > 1
+            if ns && i > 1
                 if kind(childs[i-1]) !== K"."  # Don't add space if previous was a dot
-                    add_node!(t, Whitespace(ns), s)
+                    add_node!(t, Whitespace(1), s)
                 elseif kind(childs[i-1]) === K"." && haschildren(childs[i-1])  # Don't add space if previous was a dot
-                    add_node!(t, Whitespace(ns), s)
+                    add_node!(t, Whitespace(1), s)
                 end
             end
 
             add_node!(t, n, s; join_lines = true)
 
             # Add whitespace after the operator
-            if !is_dot && ns > 0
+            if !is_dot && ns
                 if nest
-                    add_node!(t, Placeholder(ns), s)
+                    add_node!(t, Placeholder(1), s)
                 else
-                    add_node!(t, Whitespace(ns), s)
+                    add_node!(t, Whitespace(1), s)
                 end
             end
 
@@ -3338,10 +3710,6 @@ function p_binaryopcall(
                     add_node!(t, n, s; join_lines = true)
                 end
             end
-        end
-
-        if kind(c) === K"NewlineWs"
-            nlws_count += 1
         end
     end
 
@@ -3558,7 +3926,7 @@ function p_call(
     s::State,
     ctx::PrettyContext,
     lineage::Vector{Tuple{JuliaSyntax.Kind,Bool,Bool}};
-    do_block_idx::Union{Int,Nothing} = nothing,
+    do_block_idx::Union{Integer,Nothing} = nothing,
 )
     style = getstyle(ds)
     t = FST(Call, nspaces(s))
@@ -3649,6 +4017,102 @@ function p_call(
     t
 end
 
+"""
+    default_parens_allow_nesting(arg::JuliaSyntax.GreenNode, s::State, ctx::PrettyContext)
+
+Whether DefaultStyle's `p_parens` puts placeholders just inside a pair of parentheses
+containing `arg`, i.e. whether the formatter may put a line break after `(` and before
+`)`. For example, `(a + b)` may be nested as
+
+    (
+        a + b
+    )
+
+but `(f(a, b))` may not, because `f(a, b)` can nest itself. Instead it would become
+
+    (f(
+        a,
+        b,
+    ))
+"""
+function default_parens_allow_nesting(
+    arg::JuliaSyntax.GreenNode,
+    s::State,
+    ctx::PrettyContext,
+)
+    return !ctx.nonest && !s.opts.disallow_single_arg_nesting && !is_iterable(arg)
+end
+
+"""
+    parens_allow_nesting(style, arg::JuliaSyntax.GreenNode, s::State, ctx::PrettyContext)
+
+Like [`default_parens_allow_nesting`](@ref), but for whichever `p_parens` method `style`
+actually uses. This is needed when the formatter adds parentheses that are not in the
+source (see [`wrap_in_parens`](@ref)).
+"""
+function parens_allow_nesting(::AbstractStyle, arg, s, ctx)
+    default_parens_allow_nesting(arg, s, ctx)
+end
+# YASStyle's `p_parens` never adds placeholders.
+parens_allow_nesting(::YASStyle, arg, s, ctx) = false
+# SciMLStyle's `p_parens` uses YASStyle's or DefaultStyle's depending on this option.
+function parens_allow_nesting(::SciMLStyle, arg, s, ctx)
+    s.opts.yas_style_nesting ? false : default_parens_allow_nesting(arg, s, ctx)
+end
+
+"""
+    wrap_in_parens(style, n::FST, arg::JuliaSyntax.GreenNode, s::State, ctx::PrettyContext)
+
+Wrap the FST `n` (formatted from the CST node `arg`) in a pair of parentheses that are
+not in the source. For example, with `whitespace_in_kwargs = false`, `p_kw` turns
+`f(a = \$g(x))` into `f(a=(\$g(x)))`.
+
+The resulting `Brackets` node must be the same as what `p_parens` would produce when
+formatting the output a second time, where the parentheses *are* in the source.
+Otherwise the two passes may nest the code differently and formatting is not
+idempotent. In particular, the placeholders inside the parentheses must only be added
+when `p_parens` would add them.
+
+`open_paren_line` is the source line that the `(` is treated as being on. Usually this
+is the line `n` starts on, but it must be earlier if `n` begins with a comment that
+should go inside the parentheses. For example, BlueStyle turns
+
+    a ? b :
+    # comment
+    c && d ? e : f
+
+into an `if`/`elseif` chain where the comment ends up inside the parentheses:
+
+    elseif (
+        # comment
+        c && d
+    )
+
+If the `(` were placed on the line of `c && d`, the comment would be printed before it.
+"""
+function wrap_in_parens(
+    style::AbstractStyle,
+    n::FST,
+    arg::JuliaSyntax.GreenNode,
+    s::State,
+    ctx::PrettyContext;
+    open_paren_line::Int = n.startline,
+)
+    nest = parens_allow_nesting(style, arg, s, ctx)
+    t = FST(Brackets, nspaces(s))
+    add_node!(
+        t,
+        FST(PUNCTUATION, -1, open_paren_line, open_paren_line, "("),
+        s;
+        join_lines = true,
+    )
+    nest && add_node!(t, Placeholder(0), s)
+    add_node!(t, n, s; join_lines = true)
+    nest && add_node!(t, Placeholder(0), s)
+    add_node!(t, FST(PUNCTUATION, -1, n.startline, n.startline, ")"), s; join_lines = true)
+    return t
+end
+
 function p_parens(
     ds::AbstractStyle,
     cst::JuliaSyntax.GreenNode,
@@ -3665,17 +4129,17 @@ function p_parens(
     args = get_args(cst)
     nest = if length(args) > 0
         arg = args[1]
-        if is_block(arg, style) || (
-            # this branch covers something like (BLOCK for x in y)
-            kind(arg) === K"generator" && first_nontrivial_child_is_block(arg, style)
-        )
+        # Source offset of `arg` (`get_args` returns the child nodes themselves).
+        arg_offset = s.offset
+        for c in children(cst)
+            c === arg && break
+            arg_offset += span(c)
+        end
+        # Covers both `(BLOCK)` and `(BLOCK for x in y)`.
+        if block_arg_forces_nest(arg, arg_offset, s, style, ctx)
             t.nest_behavior = AlwaysNest
         end
-        if !ctx.nonest && !s.opts.disallow_single_arg_nesting
-            !is_iterable(arg)
-        else
-            false
-        end
+        default_parens_allow_nesting(arg, s, ctx)
     else
         false
     end
@@ -3990,11 +4454,10 @@ function p_comprehension(
     opening_brace_idx = findfirst(n -> kind(n) === K"[", childs)
     body_idx = findnext(n -> !JuliaSyntax.is_whitespace(n), childs, opening_brace_idx + 1)
     body_arg = childs[body_idx]
+    body_offset = s.offset + sum(span, childs[1:(body_idx-1)]; init = 0)
 
-    if is_block(body_arg, style) || (
-        # this branch covers something like [BLOCK for x in y]
-        kind(body_arg) === K"generator" && first_nontrivial_child_is_block(body_arg, style)
-    )
+    # Covers both `[BLOCK]` and `[BLOCK for x in y]`.
+    if block_arg_forces_nest(body_arg, body_offset, s, style, ctx)
         t.nest_behavior = AlwaysNest
     end
 
@@ -4263,8 +4726,8 @@ function p_vcat(
     args = get_args(cst)
     nest = should_allow_nesting_call_args(args, s.opts.disallow_single_arg_nesting)
     childs = children(cst)
-    opening_idx = findfirst(n -> kind(n) === K"[", childs)::Int
-    closing_idx = findlast(n -> kind(n) === K"]", childs)::Int
+    opening_idx = findfirst(n -> kind(n) === K"[", childs)::Integer
+    closing_idx = findlast(n -> kind(n) === K"]", childs)::Integer
     first_arg_idx = findnext(n -> !JuliaSyntax.is_whitespace(n), childs, opening_idx + 1)
     last_arg_idx = findprev(n -> !JuliaSyntax.is_whitespace(n), childs, closing_idx - 1)
 
@@ -4337,7 +4800,7 @@ function p_typedvcat(
 end
 
 """
-    is_newline_after_2semicolons(cst::JuliaSyntax.GreenNode, i::Int)
+    is_newline_after_2semicolons(cst::JuliaSyntax.GreenNode, i::Integer)
 
 Detect if child node `i` of `cst` is a newline that follows two semicolons. For example,
 this will detect the newline in constructs such as
@@ -4345,7 +4808,7 @@ this will detect the newline in constructs such as
     [a b;;
      c d]
 """
-function is_newline_after_2semicolons(cst::JuliaSyntax.GreenNode, i::Int)
+function is_newline_after_2semicolons(cst::JuliaSyntax.GreenNode, i::Integer)
     return i >= 3 &&
            kind(cst[i]) === K"NewlineWs" &&
            kind(cst[i-1]) === K";" &&
@@ -4379,7 +4842,7 @@ function p_hcat(
     childs = children(cst)
 
     # Identify the first argument inside the square brackets
-    idx = findfirst(n -> kind(n) === K"[", childs)::Int
+    idx = findfirst(n -> kind(n) === K"[", childs)::Integer
     first_arg_idx = findnext(n -> !JuliaSyntax.is_whitespace(n), childs, idx + 1)
 
     # Handling newlines in hcat nodes
@@ -4604,7 +5067,7 @@ See comment in `p_row` for details.
 """
 function is_semantically_important_newline(
     row_cst::JuliaSyntax.GreenNode,
-    i::Int,
+    i::Integer,
     is_last_arg_of_parent::Bool,
 )
     kind(row_cst[i]) === K"NewlineWs" || return false

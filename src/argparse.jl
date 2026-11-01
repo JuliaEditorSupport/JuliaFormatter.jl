@@ -449,6 +449,14 @@ const PARSER = ArgParser(
         group = FormattingGroup,
     ),
     option(
+        "--indent-binary-continuations";
+        dest = :indent_binary_continuations,
+        type = Bool,
+        help = "Indent the continuation lines of binary operations instead of aligning" *
+               "them to the first operand.",
+        group = FormattingGroup,
+    ),
+    option(
         "--indent-submodule";
         dest = :indent_submodule,
         type = Bool,
@@ -495,7 +503,7 @@ const PARSER = ArgParser(
         "--preserve-single-line-blocks";
         dest = :preserve_single_line_blocks,
         type = Bool,
-        help = "Keep single-line block constructs (e.g. `try x; catch; y end`) on one line.",
+        help = "Keep single-line block constructs on one line.",
         group = FormattingGroup,
     ),
     option(

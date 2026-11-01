@@ -221,7 +221,7 @@ function short_to_long_function_def!(
 
     # body
 
-    s.opts.always_use_return && prepend_return_fst!(fst[end], s)
+    return_added = s.opts.always_use_return && prepend_return_fst!(fst[end], s)
     if fst[end].typ === Block
         add_node!(funcdef, fst[end], s; max_padding = s.opts.indent)
         add_indent!(funcdef[end], s, s.opts.indent)
@@ -259,7 +259,32 @@ function short_to_long_function_def!(
     end
 
     if s.opts.always_use_return
-        prepend_return_fst!(funcdef[end], s)
+        return_added |= prepend_return_fst!(funcdef[end], s)
+    end
+
+    # Short-circuit chains in the body were marked as standalone or not at the CST stage,
+    # based on their position in the short form. For example, in
+    #
+    #     f() = a && b
+    #
+    # `a && b` is used as the value of `f()`, so it is not standalone. If we added a
+    # `return` above, that's still true (`return a && b`). But if we didn't (e.g. because
+    # `always_use_return` is false, or because the body already contains a `return`, as in
+    # `f() = a && return b`), then `a && b` is now a statement on its own:
+    #
+    #     function f()
+    #         a && b
+    #     end
+    #
+    # Reading this long form afresh would mark `a && b` as standalone, which gives the
+    # continuation lines an extra indent. To make sure that this pass produces the same
+    # output as the next, we switch every `StandaloneInLongForm` node in the body over to
+    # `Standalone`. (If we did add a `return`, they are left as they are, and are treated
+    # the same as `NotStandalone`.)
+    if !return_added
+        lo = s.line_offset # walk() can mutate line offset.
+        walk(use_long_form_standalone_shortcircuit!, funcdef[end], s)
+        s.line_offset = lo
     end
 
     # end
@@ -271,6 +296,32 @@ function short_to_long_function_def!(
     fst.len = funcdef.len
 
     return true
+end
+
+"""
+    use_long_form_standalone_shortcircuit!(fst::FST, ::State)
+
+If `fst` is marked as `StandaloneInLongForm`, marks it as `Standalone` instead. This is
+called when the enclosing short-form function definition is rewritten as a long-form one.
+See `short_to_long_function_def!` for more details.
+"""
+function use_long_form_standalone_shortcircuit!(fst::FST, ::State)
+    md = fst.metadata
+    if !isnothing(md) && md.standalone_shortcircuit === StandaloneInLongForm
+        fst.metadata = Metadata(
+            md.op_kind,
+            Standalone,
+            # `short_circuit_to_if` has already run before nesting, so this is no longer
+            # read and doesn't need to be updated.
+            md.is_expandable_shortcircuit,
+            md.is_short_form_function,
+            md.is_assignment,
+            md.is_contractable_function,
+            md.has_multiline_argument,
+            md.is_opaque_string,
+        )
+    end
+    return nothing
 end
 
 """
@@ -329,7 +380,8 @@ function long_to_short_function_def!(fst::FST, s::State)
     end
 
     funcdef = FST(Binary, fst.indent)
-    funcdef.metadata = Metadata(K"=", false, false, true, false, false, false)
+    funcdef.metadata =
+        Metadata(K"=", NotStandalone, false, true, false, false, false, false)
     kw = (join_lines = true, override_join_lines_based_on_source = true)
 
     add_node!(funcdef, lhs, s; kw...)
@@ -427,7 +479,8 @@ end
 """
     prepend_return_fst!(fst::FST, s::State)
 
-Prepends `return` to the last expression of a block if applicable.
+Prepends `return` to the last expression of a block if applicable. Returns `true` if a
+`return` was added, and `false` otherwise.
 
 *Note*: This function is only called when a short-form function definition is converted to a
 long-form one, AND `always_use_return` is true. For ordinary, pre-existing long-form
@@ -453,7 +506,7 @@ end
 """
 function prepend_return_fst!(fst::FST, s::State)
     if fst.typ !== Block || length(fst.nodes::Vector{FST}) == 0
-        return
+        return false
     end
 
     # Skip trailing inline block comments (`#= … =#`) and whitespace to find the
@@ -465,15 +518,15 @@ function prepend_return_fst!(fst::FST, s::State)
         nodes,
     )
     if last_idx === nothing
-        return
+        return false
     end
 
     ln = fst[last_idx]
     if is_block(ln) || ln.typ in (Return, MacroCall, MacroBlock, MacroStr)
-        return
+        return false
     end
     if last_idx > 2 && (fst[last_idx-2].typ === MacroStr || is_macrodoc(fst[last_idx-2]))
-        return
+        return false
     end
     # check to see if the last node already has a return
     found_return = false
@@ -487,7 +540,7 @@ function prepend_return_fst!(fst::FST, s::State)
     walk(f, ln, s)
     s.line_offset = lo
     if found_return
-        return
+        return false
     end
 
     ret = FST(Return, fst.indent)
@@ -496,7 +549,7 @@ function prepend_return_fst!(fst::FST, s::State)
     add_node!(ret, Whitespace(1), s)
     add_node!(ret, ln, s; join_lines = true)
     fst[last_idx] = ret
-    return
+    return true
 end
 
 """

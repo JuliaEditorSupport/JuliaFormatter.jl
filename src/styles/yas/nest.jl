@@ -81,8 +81,7 @@ function n_call!(
             if nodes[idx].typ === NEWLINE
                 # The closing paren will be on a new line, so we need to materialise the
                 # trailing comma.
-                nodes[trailing_comma_idx].val = ","
-                nodes[trailing_comma_idx].len = 1
+                materialise_trailing_comma!(fst, trailing_comma_idx)
                 break
             elseif is_closer(nodes[idx])
                 # The closing paren is right after the trailing comma, so no need to
@@ -433,7 +432,13 @@ function n_chainopcall!(
     lineage::Vector{Tuple{FNode,Union{Nothing,Metadata}}},
 )
     style = getstyle(ys)
-    n_block!(DefaultStyle(style), fst, s, lineage; indent = s.line_offset)
+    n_block!(
+        DefaultStyle(style),
+        fst,
+        s,
+        lineage;
+        indent = chain_continuation_indent(fst, s),
+    )
 end
 
 function n_comparison!(
@@ -443,7 +448,13 @@ function n_comparison!(
     lineage::Vector{Tuple{FNode,Union{Nothing,Metadata}}},
 )
     style = getstyle(ys)
-    n_block!(DefaultStyle(style), fst, s, lineage; indent = s.line_offset)
+    n_block!(
+        DefaultStyle(style),
+        fst,
+        s,
+        lineage;
+        indent = chain_continuation_indent(fst, s),
+    )
 end
 
 function n_binaryopcall!(
