@@ -98,12 +98,21 @@
     TupleBlock,
 )
 
-@enum(NestBehavior, AllowNest, AlwaysNest, NeverNest, NeverNestNode, AllowNestButDontRemove)
+@enum NestBehavior begin
+    AllowNest
+    AlwaysNest
+    NeverNest
+    NeverNestNode
+    AllowNestButDontRemove
+end
 
 """
-Whether a node is a short-circuiting logical operator (`&&` or `||`) whose value is not
-used in any way, i.e., it exists solely for its side effects. For example, `a && b` is
-standalone in
+    ShortCircuitStandalone
+
+Indicates whether a node is a short-circuiting logical operator (`&&` or `||`) whose value
+is not used in any way, i.e., it exists solely for its side effects.
+
+For example, `a && b` is standalone in
 
 ```julia
 function f()
@@ -112,8 +121,9 @@ function f()
 end
 ```
 
-but not in `x = a && b`, `return a && b`, or `(a && b)`. Any node that isn't `&&` or `||` is
-`NotStandalone`.
+but not in `x = a && b`, `return a && b`, or `(a && b)`.
+
+Any node that isn't `&&` or `||` is `NotStandalone`.
 
 `StandaloneInLongForm` is for nodes that are not standalone as written, but would be if the
 enclosing short-form function definition were rewritten as a long-form one (without a
@@ -131,17 +141,19 @@ function f()
 end
 ```
 
-it is a statement on its own, so it is standalone. `short_to_long_function_def!` runs at the
-nest stage, so it can't re-run the CST-stage logic that decides this; instead it switches
-`StandaloneInLongForm` nodes in the body over to `Standalone`. Everywhere else,
-`StandaloneInLongForm` is treated the same as `NotStandalone`.
+it is a statement on its own, so it is standalone. We need to track this information at the
+CST stage so that it can be used later on in the nesting stage, specifically in
+`short_to_long_function_def!`. Outside of that function, `StandaloneInLongForm` is treated
+the same as `NotStandalone`.
 """
-@enum(ShortCircuitStandalone, NotStandalone, Standalone, StandaloneInLongForm)
+@enum ShortCircuitStandalone begin
+    NotStandalone
+    Standalone
+    StandaloneInLongForm
+end
 
 struct Metadata
     op_kind::JuliaSyntax.Kind
-
-    # See `ShortCircuitStandalone`.
     standalone_shortcircuit::ShortCircuitStandalone
     # If the above is `Standalone`, this field indicates whether it should be expanded into
     # a full if-else statement if `short_circuit_to_if` is true. This mainly exists to catch

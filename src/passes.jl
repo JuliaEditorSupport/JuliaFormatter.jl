@@ -282,7 +282,7 @@ function short_to_long_function_def!(
     # `Standalone`. (If we did add a `return`, they are left as they are, and are treated
     # the same as `NotStandalone`.)
     if !return_added
-        lo = s.line_offset
+        lo = s.line_offset # walk() can mutate line offset.
         walk(use_long_form_standalone_shortcircuit!, funcdef[end], s)
         s.line_offset = lo
     end
