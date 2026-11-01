@@ -114,6 +114,24 @@ struct Metadata
     # need to have a separate flag instead of just setting it to false when inside
     # macros/exprs.
     is_expandable_shortcircuit::Bool
+    # What `is_standalone_shortcircuit` would be if the enclosing short-form function
+    # definition were rewritten as a long-form one (without a `return` being added). For
+    # example, in
+    #
+    #     f() = a && b
+    #
+    # `a && b` is used as the value of `f()`, so it is not standalone. But in
+    #
+    #     function f()
+    #         a && b
+    #     end
+    #
+    # it is a statement on its own, so it is standalone. `short_to_long_function_def!`
+    # runs at the nest stage, so it can't re-run the CST-stage logic that decides this;
+    # instead it switches each node in the body over to this value. For nodes that are not
+    # inside the right-hand side of a short-form function, this is always the same as
+    # `is_standalone_shortcircuit`.
+    is_standalone_shortcircuit_in_long_form::Bool
 
     is_short_form_function::Bool
     is_assignment::Bool
@@ -137,7 +155,7 @@ struct Metadata
 end
 
 function Metadata(k::JuliaSyntax.Kind)
-    return Metadata(k, false, false, false, false, true, false, false)
+    return Metadata(k, false, false, false, false, false, true, false, false)
 end
 
 """
@@ -1091,6 +1109,7 @@ function eq_to_in_normalization!(fst::FST, always_for_in::Bool, for_in_replaceme
                 opkind,
                 metadata.is_standalone_shortcircuit,
                 metadata.is_expandable_shortcircuit,
+                metadata.is_standalone_shortcircuit_in_long_form,
                 metadata.is_short_form_function,
                 opkind === K"=",
                 metadata.is_contractable_function,
@@ -1554,13 +1573,15 @@ function add_node!(
     elseif is_multiline(n) ||
            (!isnothing(t.metadata) && (t.metadata::Metadata).has_multiline_argument)
         if isnothing(t.metadata)
-            t.metadata = Metadata(K"None", false, false, false, false, true, true, false)
+            t.metadata =
+                Metadata(K"None", false, false, false, false, false, true, true, false)
         else
             metadata = t.metadata::Metadata
             t.metadata = Metadata(
                 metadata.op_kind,
                 metadata.is_standalone_shortcircuit,
                 metadata.is_expandable_shortcircuit,
+                metadata.is_standalone_shortcircuit_in_long_form,
                 metadata.is_short_form_function,
                 metadata.is_assignment,
                 metadata.is_contractable_function,
