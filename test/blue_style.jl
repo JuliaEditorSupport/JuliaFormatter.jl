@@ -383,6 +383,30 @@ using JuliaFormatter: BlueStyle
         """
         test_format(str, str, BlueStyle())
     end
+
+    @testset "whitespace around binary operators" begin
+        # https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/1262
+        # BlueStyle adds spaces around binary operators, except `^` and `//`, where
+        # it keeps whatever the user wrote.
+        for (str_, str) in (
+            "i=j+1" => "i = j + 1",
+            "submitted +=1" => "submitted += 1",
+            "x^2<y" => "x^2 < y",
+            "f//2>y" => "f//2 > y",
+            "x ^ 2<y" => "x ^ 2 < y",
+            "f // 2>y" => "f // 2 > y",
+            # Chains (`a+b+c`) and comparison chains (`a<b<c`) go through different
+            # code paths from a single binary operator, so check them too.
+            "a+b+c" => "a + b + c",
+            "a*b*c" => "a * b * c",
+            "a<=b<c" => "a <= b < c",
+            "a+b*c-d" => "a + b * c - d",
+            "x^2+y^2" => "x^2 + y^2",
+            "a+b//c" => "a + b//c",
+        )
+            test_format(str_, str, BlueStyle(); ast = true)
+        end
+    end
 end
 
 end
