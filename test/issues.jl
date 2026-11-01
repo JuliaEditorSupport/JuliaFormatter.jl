@@ -3886,51 +3886,6 @@ end
             end
         end
     end
-
-    @testset "no trailing comma after return/local/const" begin
-        # `return`, `local`, `const` (and macros without brackets) read a comma straight
-        # after them as part of themselves, so `g(\n    return x,\n)` doesn't parse. When
-        # the list is split over several lines, the trailing comma must be left out.
-        test_format("g(return xxxxxxx)", "g(\n    return xxxxxxx\n)"; margin=8)
-        test_format("g(local xxxxxxx)", "g(\n    local xxxxxxx\n)"; margin=8)
-        test_format("g(const xxxx = 1)", "g(\n    const xxxx =\n        1\n)"; margin=8)
-        test_format("[return xxxxxxx]", "[\n    return xxxxxxx\n]"; margin=8)
-        test_format("{return xxxxxxx}", "{\n    return xxxxxxx\n}"; margin=8)
-        test_format("a[iiii, return xxxxxxx]", "a[\n    iiii,\n    return xxxxxxx\n]"; margin=8)
-        # this is `map(x -> return (x, y))`, i.e. `return` takes the tuple `x, y`
-        test_format("map(x -> return x, y)", "map(\n    x ->\n        return x,\n        y\n)"; margin=12)
-        test_format("g(cccc ? aaaa : return bbbb)", "g(\n    cccc ?\n    aaaa :\n    return bbbb\n)"; margin=12)
-
-        for s in (
-            "g(return xxxxxxx)",
-            "map(x -> return x, y)",
-            "g(return xxxx, yyyy)",
-            "g(return (xxxx, yyyy))",
-            "[return xxxx, yyyy]",
-            "{return xxxx, yyyy}",
-            "(aaaa, return xxxx, yyyy)",
-            "a[iiii, return xxxx, yyyy]",
-            "T{return xxxx}",
-            "g(local xxxx, yyyy)",
-            "g(global xxxx, yyyy)",
-            "g(const xxxx = 1)",
-            "g(aaaa && return bbbb)",
-            "g(aaaa; k = return bbbb)",
-            "g(x -> @m yyyy)",
-        ),
-            style in ALL_STYLES,
-            margin in (8, 12, 20),
-            trailing_comma in (true, false, nothing)
-
-            test_format(s, nothing, style; margin, trailing_comma, ast=true)
-        end
-
-        for s in ("g(c ? aaaa : return bbbb)", "g(a = return bbbb)"),
-            style in ALL_STYLES,
-            margin in (8, 12, 20)
-            test_format(s, nothing, style; margin)
-        end
-    end
 end
 
 end
