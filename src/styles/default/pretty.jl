@@ -3294,6 +3294,10 @@ function p_binaryopcall(
 
     childs = children(cst)
     op_indices = source_operator_indices(cst)
+    if isempty(op_indices)
+        error("unreachable: binaryopcall node without an operator. Please report this bug at https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues")
+    end
+
     opkind = source_op_kind(s, cst)
     lhs_idx = findfirst(n -> !JuliaSyntax.is_whitespace(n), childs)
     rhs_idx = findlast(n -> !JuliaSyntax.is_whitespace(n), childs)
@@ -3470,7 +3474,7 @@ function p_binaryopcall(
     # example, when `trailing_zero` is false, we want to avoid changing
     #
     #     A[1. .. 1.]  -> A[1...1.]
-    if !emit_whitespace_around_binop && !isempty(op_indices)
+    if user_wrote_whitespace && !emit_whitespace_around_binop
         # Offsets of each child relative to the start of the source document. At this
         # point `s.offset` is positioned at the start of the first child.
         child_offsets = Vector{Int}(undef, length(childs))
@@ -3483,7 +3487,7 @@ function p_binaryopcall(
         # For `op=` the operator is split over several tokens (e.g. `+` and `=`), which are
         # emitted as a single unit; treat them as one token. Everywhere else each entry in
         # `op_indices` is a separate operator (e.g. the two `+` in the chain `a + b + c`).
-        op_ranges = if kind(cst) === K"op=" && !isempty(op_indices)
+        op_ranges = if kind(cst) === K"op="
             [first(op_indices):last(op_indices)]
         else
             [i:i for i in op_indices]
@@ -3534,7 +3538,7 @@ function p_binaryopcall(
             true
         end
 
-        if kind(cst) === K"op=" && !isempty(op_indices) && i == first(op_indices)
+        if kind(cst) === K"op=" && i == first(op_indices)
             loc = cursor_loc(s)
             op_span = sum(span, childs[first(op_indices):last(op_indices)]; init = 0)
             val = getsrcval(s.doc, (s.offset):(s.offset+op_span-1))
