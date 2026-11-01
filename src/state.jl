@@ -13,7 +13,7 @@ mutable struct State
     # If true, output is formatted text otherwise
     # it's source text
     on::Bool
-    opts::Options
+    opts::Options{Union{}}
 
     # When true, syntax transformations (e.g. import_to_using) are suppressed.
     # Set inside quote, quotenode, and macro nodes, where transforming the code
@@ -50,7 +50,7 @@ function cursor_loc(s::State, offset::Integer)
     display_col = if offset <= line_start
         1
     else
-        textwidth(code[line_start:prevind(code, offset)]) + 1
+        textwidth(SubString(code, line_start, prevind(code, offset))) + 1
     end
     return (l, display_col)
 end

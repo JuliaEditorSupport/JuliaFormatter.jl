@@ -53,11 +53,7 @@ function Document(text::AbstractString)
 
             startline = JuliaSyntax.source_line(srcfile, first(t.range))
             endline = JuliaSyntax.source_line(srcfile, last(t.range))
-            val = try
-                srcfile.code[first(t.range):last(t.range)]
-            catch
-                srcfile.code[first(t.range):prevind(srcfile.code, last(t.range))]
-            end
+            val = slice_source(srcfile.code, t.range)
 
             if startswith(val, "#=") && endswith(val, "=#")
                 # Block comments (#= ... =#) are handled as HASHEQCOMMENT FST
@@ -153,10 +149,32 @@ numlines(sf::JuliaSyntax.SourceFile) = length(sf.line_starts) - 1
 numlines(d::Document) = numlines(d.srcfile)
 
 function getsrcval(d::Document, r::UnitRange{T}) where {T<:Union{Int,UInt}}
-    code = JuliaSyntax.sourcetext(d.srcfile)
+    return slice_source(JuliaSyntax.sourcetext(d.srcfile), r)
+end
+
+"""
+    slice_source(code::AbstractString, r::UnitRange)
+
+Return the text of `code` in the byte range `r`.
+
+JuliaSyntax gives byte ranges, so `last(r)` is the last *byte* of the final character. If
+that character takes up more than one byte (e.g. `α` or `∈`), `last(r)` is not a valid
+string index and `code[r]` throws. For example, in `code = "x = α"`, the `α` token has byte
+range `5:6`, and `code[5:6]` throws a `StringIndexError` because `6` is in the middle of `α`.
+`code[5:5]` gives `"α"`.
+
+Throwing and catching errors is very slow, and this happens for every such token, so we
+first move `last(r)` back to the start of its character, which avoids the error in the
+common case.
+"""
+function slice_source(code::AbstractString, r::UnitRange{<:Integer})
+    j = Int(last(r))
+    if 1 <= j <= ncodeunits(code)
+        j = thisind(code, j)
+    end
     try
-        code[r]
+        code[first(r):j]
     catch
-        code[first(r):prevind(code, last(r))]
+        code[first(r):prevind(code, j)]
     end
 end

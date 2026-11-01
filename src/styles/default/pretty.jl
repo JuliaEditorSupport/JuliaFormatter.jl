@@ -81,35 +81,33 @@ function source_op_kind_from_offset(s::State, cst::JuliaSyntax.GreenNode, offset
         # Attempt to recover the original kind from the source.
         span(cst) == 0 && return nothing
         source_text = getsrcval(s.doc, offset:(offset+span(cst)-1))
-        try
-            # Parse the source text and check whether it's a valid operator.
-            k = JuliaSyntax.Kind(source_text)
-            return if JuliaSyntax.is_operator(k)
-                # This is the happy path. It's hit for things like e.g. "+x".
-                k
-            else
-                # There are a lot of Identifiers which can be parsed as kinds, but aren't
-                # operators. For example, the `string` in `string(x)` will be converted to
-                # K"string" here, which is totally not what we want. Hence we return
-                # nothing.
-                nothing
-            end
-        catch
+        # Parse the source text and check whether it's a valid operator.
+        k = Shims.kind_from_string(source_text)
+        return if k === nothing
             # There are some operators for which JuliaSyntax does not actually have a
             # dedicated kind. For example, `a'ᵀ` is a postfix operator `'ᵀ`, and
             # JuliaSyntax.is_postfix_op_call will correctly return true. Specifically, the '
             # postfix operator can be followed by any Unicode modifier:
             # https://github.com/JuliaLang/julia/pull/37247
             #
-            # However, the operator is stored as Identifier and calling Kind("'ᵀ") throws an
-            # error. We catch such instances here. Thankfully, Base gives us a function
-            # (albeit unexported) to detect these. If this function returns K"Identifier",
-            # then we know that it's one of these odd postfix operators.
-            return if kind(cst) === K"Identifier" && Base.ispostfixoperator(source_text)
+            # However, the operator is stored as Identifier and there is no Kind for "'ᵀ".
+            # We handle such instances here. Thankfully, Base gives us a function (albeit
+            # unexported) to detect these. If this function returns K"Identifier", then we
+            # know that it's one of these odd postfix operators.
+            if kind(cst) === K"Identifier" && Base.ispostfixoperator(source_text)
                 K"Identifier"
             else
                 nothing
             end
+        elseif JuliaSyntax.is_operator(k)
+            # This is the happy path. It's hit for things like e.g. "+x".
+            k
+        else
+            # There are a lot of Identifiers which can be parsed as kinds, but aren't
+            # operators. For example, the `string` in `string(x)` will be converted to
+            # K"string" here, which is totally not what we want. Hence we return
+            # nothing.
+            nothing
         end
     else
         # Can't be an operator at all
