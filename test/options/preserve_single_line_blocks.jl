@@ -1,6 +1,6 @@
 module PreserveSingleLineBlocksTests
 
-using JuliaFormatter: YASStyle, SciMLStyle
+using JuliaFormatter: MinimalStyle, YASStyle, SciMLStyle
 using JuliaFormatter.Internal: test_format
 using Test
 
@@ -104,12 +104,51 @@ using Test
     end
 
     @testset "short-form function definition" begin
-        # The block on the RHS keeps its single-line form, and no line break is forced
-        # after the `=` (#594).
-        test_format(
+        @testset "exact repro from #594" begin
+            let c = "getallns() = let allns = Base.IdSet{Symbol}(); oneverything((m, s, x, state) -> push!(allns, s)); allns end"
+                test_format(c, c, MinimalStyle(); ast=true)
+            end
+        end
+
+        unchanged = [
+            "f() = let x = 1; x end",
             "safe_isfile(x) = try isfile(x); catch; false end",
-            "safe_isfile(x) = try isfile(x); catch; false end";
+            "f(x) = if x; 1 else 2 end",
+            "f() = for i = 1:10; g(i) end",
+        ]
+        for c in unchanged
+            test_format(c, c; preserve_single_line_blocks=true, ast=true)
+        end
+
+        # line break after `=` is removed unless `join_lines_based_on_source` keeps it
+        test_format(
+            "f() =\n    try isfile(x); catch; false end",
+            "f() = try isfile(x); catch; false end";
             preserve_single_line_blocks=true,
+            ast=true,
+        )
+        test_format(
+            "f() =\n    try isfile(x); catch; false end",
+            "f() =\n    try isfile(x); catch; false end";
+            preserve_single_line_blocks=true,
+            join_lines_based_on_source=true,
+            ast=true,
+        )
+
+        # line break in body is preserved
+        test_format(
+            "f() = let x = 1\n    x\nend",
+            "f() = let x = 1\n    x\nend";
+            preserve_single_line_blocks=true,
+            ast=true,
+        )
+
+        # default behaviour without the option should be to break the line after `=`
+        # if the body is multiline.
+        test_format(
+            "f(x) = if x; 1 else 2 end",
+            "f(x) =\n    if x\n        1\n    else\n        2\n    end";
+            preserve_single_line_blocks=false,
             ast=true,
         )
     end
