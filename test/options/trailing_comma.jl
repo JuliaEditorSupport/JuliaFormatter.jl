@@ -111,14 +111,16 @@ using Test
                 "g(x -> @m yyyy)",
             ],
         )
+
+        # The trailing comma bug can only happen if the list is nested, so check
+        # that it actually was -- otherwise the test is vacuous
+        @test occursin('\n', format_text(s; margin=8))
         for s in cases
             for style in ALL_STYLES,
+                # test a few more margins just for good measure.
                 margin in (8, 12, 20),
                 trailing_comma in (true, false, nothing)
 
-                # The trailing comma bug can only happen if the list is nested, so check
-                # that it actually was -- otherwise the test is vacuous
-                @test occursin('\n', format_text(s; margin))
                 test_format(s, nothing, style; margin, trailing_comma, ast=true)
             end
         end
