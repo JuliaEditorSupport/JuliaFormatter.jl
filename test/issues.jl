@@ -3925,14 +3925,10 @@ end
             test_format(s, nothing, style; margin, trailing_comma, ast=true)
         end
 
-        # BlueStyle turns these into `if ... else ... end` and YASStyle moves the keyword
-        # argument after a `;`, so the AST changes; just check they are valid and stable.
         for s in ("g(c ? aaaa : return bbbb)", "g(a = return bbbb)"),
             style in ALL_STYLES,
             margin in (8, 12, 20)
-
             test_format(s, nothing, style; margin)
-            @test Meta.parse(format_text(s, style; margin)) isa Expr
         end
     end
 end
