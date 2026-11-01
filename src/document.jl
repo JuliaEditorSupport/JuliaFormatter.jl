@@ -157,24 +157,16 @@ end
 
 Return the text of `code` in the byte range `r`.
 
-JuliaSyntax gives byte ranges, so `last(r)` is the last *byte* of the final character. If
-that character takes up more than one byte (e.g. `α` or `∈`), `last(r)` is not a valid
-string index and `code[r]` throws. For example, in `code = "x = α"`, the `α` token has byte
-range `5:6`, and `code[5:6]` throws a `StringIndexError` because `6` is in the middle of `α`.
-`code[5:5]` gives `"α"`.
+JuliaSyntax stores and gives us byte ranges, so `last(r)` is the *last byte* of the final
+character. However, this doesn't align with Julia's own string slicing rules, which require
+that the end index be the *first byte* of the last character -- otherwise it throws. So, if
+the last character is multibyte (e.g. `α` or `∈`), `last(r)` is not a valid string index and
+`code[r]` throws.
 
-Throwing and catching errors is very slow, and this happens for every such token, so we
-first move `last(r)` back to the start of its character, which avoids the error in the
-common case.
+To avoid this, we first move `last(r)` back to the start of its character using `thisind`
+(here, from `6` to `5`). Note that a string range includes the whole character that starts
+at its last index, so this still returns the entire final character.
 """
 function slice_source(code::AbstractString, r::UnitRange{<:Integer})
-    j = Int(last(r))
-    if 1 <= j <= ncodeunits(code)
-        j = thisind(code, j)
-    end
-    try
-        code[first(r):j]
-    catch
-        code[first(r):prevind(code, j)]
-    end
+    return code[first(r):thisind(code, Int(last(r)))]
 end

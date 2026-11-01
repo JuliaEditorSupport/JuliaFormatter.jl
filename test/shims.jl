@@ -57,4 +57,17 @@ end
     @test !S.is_valid_nonword_operator("foo")
 end
 
+@testset "kind_from_string" begin
+    K = JuliaSyntax.Kind
+    @test S.kind_from_string("+") === K("+")
+    @test S.kind_from_string("∈") === K("∈")
+    @test S.kind_from_string("Identifier") === K("Identifier")
+    # Works on SubStrings too, since that's what source text slices often are
+    @test S.kind_from_string(SubString("x + y", 3, 3)) === K("+")
+    # Unknown names give `nothing` rather than throwing
+    @test S.kind_from_string("foo") === nothing
+    @test S.kind_from_string("'ᵀ") === nothing
+    @test S.kind_from_string("") === nothing
+end
+
 end

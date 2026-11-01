@@ -59,9 +59,7 @@ function is_function_call(cst::JS.GreenNode)
                     error("unreachable: prefix call with not enough things")
                 kind(cst[non_ws_idxs[2]]) in KSet"( parens"
             else
-                # Must be K"dotcall" here. This is an `else` rather than an `elseif` so that
-                # the function always returns a `Bool` (rather than `Union{Nothing,Bool}`),
-                # which keeps callers like `is_iterable` type-stable.
+                # K"dotcall"
                 length(non_ws_idxs) < 3 &&
                     error("unreachable: prefix call with not enough things")
                 kind(cst[non_ws_idxs[3]]) in KSet"( parens"
@@ -138,4 +136,4 @@ function is_really_whitespace(cst::JS.GreenNode)
     return kind(cst) in KSet"Whitespace NewlineWs"
 end
 
-end # module
+end # module Shims
