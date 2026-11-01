@@ -146,28 +146,14 @@ function _ternary_to_ifelse!(
                 # compromise. (We can't reliably check for the presence of a newline after
                 # the comment because that isn't unique to line comments.)
                 node = if any(cc -> kind(cc) === K"Comment", children(c)[1:first_nonws_idx])
-                    paren_fst = FST(Brackets, nspaces(s))
-                    add_node!(
-                        paren_fst,
-                        FST(PUNCTUATION, loc[2], loc[1], loc[1], "("),
-                        s;
-                        join_lines = true,
-                    )
-                    add_node!(paren_fst, Placeholder(0), s)
-                    add_node!(
-                        paren_fst,
+                    wrap_in_parens(
+                        style,
                         pretty(style, c, s, ctx, lineage),
-                        s;
-                        join_lines = true,
+                        c,
+                        s,
+                        ctx;
+                        open_paren_line = loc[1],
                     )
-                    add_node!(paren_fst, Placeholder(0), s)
-                    add_node!(
-                        paren_fst,
-                        FST(PUNCTUATION, loc[2], loc[1], loc[1], ")"),
-                        s;
-                        join_lines = true,
-                    )
-                    paren_fst
                 else
                     pretty(style, c, s, ctx, lineage)
                 end

@@ -625,20 +625,25 @@ function p_macrocall(
         isnothing(idx) ? -1 : findnext(n -> !JuliaSyntax.is_whitespace(n), childs, idx + 1)
 
     for (i, a) in enumerate(childs)
-        n = pretty(style, a, s, newctx(ctx; can_separate_kwargs = false), lineage)::FST
-
         override = (i == first_arg_idx) || kind(a) === K")"
 
         if JuliaSyntax.is_macro_name(a) || kind(a) === K"("
+            n = pretty(style, a, s, newctx(ctx; can_separate_kwargs = false), lineage)
             add_node!(t, n, s; join_lines = true)
         elseif kind(a) === K","
+            n = pretty(style, a, s, newctx(ctx; can_separate_kwargs = false), lineage)
             add_node!(t, n, s; join_lines = true)
             if has_more_args_to_come(childs, i + 1, K")")
                 add_node!(t, Placeholder(1), s)
             end
+        elseif has_closer && kind(a) == K"=" && haschildren(a)
+            n = p_kw(style, a, s, newctx(ctx; can_separate_kwargs = false), lineage)
+            add_node!(t, n, s; join_lines = true)
         elseif JuliaSyntax.is_whitespace(a)
+            n = pretty(style, a, s, newctx(ctx; can_separate_kwargs = false), lineage)
             add_node!(t, n, s; join_lines = true)
         elseif is_macroblock
+            n = pretty(style, a, s, newctx(ctx; can_separate_kwargs = false), lineage)
             if n.typ === MacroBlock && t[end].typ === WHITESPACE
                 t[end] = Placeholder(length(t[end].val))
             end
@@ -652,6 +657,7 @@ function p_macrocall(
             end
             add_node!(t, n, s; join_lines, max_padding)
         else
+            n = pretty(style, a, s, newctx(ctx; can_separate_kwargs = false), lineage)
             add_node!(
                 t,
                 n,

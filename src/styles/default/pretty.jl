@@ -1111,31 +1111,40 @@ function p_macrocall(
     end
 
     for (i, a) in enumerate(childs)
-        n = pretty(style, a, s, ctx, lineage)::FST
+        k = kind(a)
         if JuliaSyntax.is_macro_name(a)
+            n = pretty(style, a, s, ctx, lineage)
             add_node!(t, n, s; join_lines = true)
-        elseif kind(a) === K"("
+        elseif k === K"("
+            n = pretty(style, a, s, ctx, lineage)
             add_node!(t, n, s; join_lines = true)
             if nest
                 add_node!(t, Placeholder(0), s)
             else
                 false
             end
-        elseif kind(a) === K")"
+        elseif k === K")"
+            n = pretty(style, a, s, ctx, lineage)
             if nest
                 add_node!(t, Placeholder(0), s)
             else
                 false
             end
             add_node!(t, n, s; join_lines = true)
-        elseif kind(a) === K","
+        elseif has_closer && k == K"=" && haschildren(a)
+            n = p_kw(style, a, s, ctx, lineage)
+            add_node!(t, n, s; join_lines = true)
+        elseif k === K","
+            n = pretty(style, a, s, ctx, lineage)
             add_node!(t, n, s; join_lines = true)
             if has_more_args_to_come(childs, i + 1, K")")
                 add_node!(t, Placeholder(1), s)
             end
         elseif JuliaSyntax.is_whitespace(a)
+            n = pretty(style, a, s, ctx, lineage)
             add_node!(t, n, s; join_lines = true)
         elseif is_macroblock
+            n = pretty(style, a, s, ctx, lineage)
             if n.typ === MacroBlock && t[end].typ === WHITESPACE
                 t[end] = Placeholder(length(t[end].val))
             end
@@ -1149,6 +1158,7 @@ function p_macrocall(
             end
             add_node!(t, n, s; join_lines, max_padding)
         else
+            n = pretty(style, a, s, ctx, lineage)
             if has_closer
                 add_node!(t, n, s; join_lines = true)
             else
@@ -2949,27 +2959,7 @@ function p_kw(
                     end
                 end
 
-            node = if parenthesise
-                paren_fst = FST(Brackets, nspaces(s))
-                add_node!(
-                    paren_fst,
-                    FST(PUNCTUATION, -1, n.startline, n.startline, "("),
-                    s;
-                    join_lines = true,
-                )
-                add_node!(paren_fst, Placeholder(0), s)
-                add_node!(paren_fst, n, s; join_lines = true)
-                add_node!(paren_fst, Placeholder(0), s)
-                add_node!(
-                    paren_fst,
-                    FST(PUNCTUATION, -1, n.startline, n.startline, ")"),
-                    s;
-                    join_lines = true,
-                )
-                paren_fst
-            else
-                n
-            end
+            node = parenthesise ? wrap_in_parens(style, n, c, s, ctx) : n
             add_node!(t, node, s; join_lines = true)
         end
     end
@@ -3294,6 +3284,12 @@ function p_binaryopcall(
 
     childs = children(cst)
     op_indices = source_operator_indices(cst)
+    if isempty(op_indices)
+        error(
+            "unreachable: binaryopcall node without an operator. Please report this bug at https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues",
+        )
+    end
+
     opkind = source_op_kind(s, cst)
     lhs_idx = findfirst(n -> !JuliaSyntax.is_whitespace(n), childs)
     rhs_idx = findlast(n -> !JuliaSyntax.is_whitespace(n), childs)
@@ -3427,9 +3423,17 @@ function p_binaryopcall(
     # this).
     force_whitespace = false
     force_no_whitespace = ctx.force_no_binop_whitespace
-
     if opkind in KSet": ::"
         force_no_whitespace = true
+    elseif opkind == K"$"
+        # https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/375
+        # Need to respect user's whitespace preference, otherwise there's potential to
+        # change semantics
+        if user_wrote_whitespace
+            force_whitespace = true
+        else
+            force_no_whitespace = true
+        end
     elseif is_short_func && opkind === K"="
         force_whitespace = true
     elseif kind(cst) === K"comparison"
@@ -3461,6 +3465,14 @@ function p_binaryopcall(
         true
     elseif force_no_whitespace
         false
+    elseif style isa BlueStyle && !(opkind in KSet"^ //")
+        # https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/1262
+        #
+        # `$` is left alone because infix `$` is mostly used as a name separator,
+        # e.g. for nested Java classes in `@jimport ilog.cp.IloCP$ConflictStatus`,
+        # where adding spaces would make it harder to read. See
+        # https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/375
+        true
     else
         user_wrote_whitespace
     end
@@ -3470,7 +3482,7 @@ function p_binaryopcall(
     # example, when `trailing_zero` is false, we want to avoid changing
     #
     #     A[1. .. 1.]  -> A[1...1.]
-    if !emit_whitespace_around_binop && !isempty(op_indices)
+    if user_wrote_whitespace && !emit_whitespace_around_binop
         # Offsets of each child relative to the start of the source document. At this
         # point `s.offset` is positioned at the start of the first child.
         child_offsets = Vector{Int}(undef, length(childs))
@@ -3483,7 +3495,7 @@ function p_binaryopcall(
         # For `op=` the operator is split over several tokens (e.g. `+` and `=`), which are
         # emitted as a single unit; treat them as one token. Everywhere else each entry in
         # `op_indices` is a separate operator (e.g. the two `+` in the chain `a + b + c`).
-        op_ranges = if kind(cst) === K"op=" && !isempty(op_indices)
+        op_ranges = if kind(cst) === K"op="
             [first(op_indices):last(op_indices)]
         else
             [i:i for i in op_indices]
@@ -3534,7 +3546,7 @@ function p_binaryopcall(
             true
         end
 
-        if kind(cst) === K"op=" && !isempty(op_indices) && i == first(op_indices)
+        if kind(cst) === K"op=" && i == first(op_indices)
             loc = cursor_loc(s)
             op_span = sum(span, childs[first(op_indices):last(op_indices)]; init = 0)
             val = getsrcval(s.doc, (s.offset):(s.offset+op_span-1))
@@ -3992,6 +4004,102 @@ function p_call(
     t
 end
 
+"""
+    default_parens_allow_nesting(arg::JuliaSyntax.GreenNode, s::State, ctx::PrettyContext)
+
+Whether DefaultStyle's `p_parens` puts placeholders just inside a pair of parentheses
+containing `arg`, i.e. whether the formatter may put a line break after `(` and before
+`)`. For example, `(a + b)` may be nested as
+
+    (
+        a + b
+    )
+
+but `(f(a, b))` may not, because `f(a, b)` can nest itself. Instead it would become
+
+    (f(
+        a,
+        b,
+    ))
+"""
+function default_parens_allow_nesting(
+    arg::JuliaSyntax.GreenNode,
+    s::State,
+    ctx::PrettyContext,
+)
+    return !ctx.nonest && !s.opts.disallow_single_arg_nesting && !is_iterable(arg)
+end
+
+"""
+    parens_allow_nesting(style, arg::JuliaSyntax.GreenNode, s::State, ctx::PrettyContext)
+
+Like [`default_parens_allow_nesting`](@ref), but for whichever `p_parens` method `style`
+actually uses. This is needed when the formatter adds parentheses that are not in the
+source (see [`wrap_in_parens`](@ref)).
+"""
+function parens_allow_nesting(::AbstractStyle, arg, s, ctx)
+    default_parens_allow_nesting(arg, s, ctx)
+end
+# YASStyle's `p_parens` never adds placeholders.
+parens_allow_nesting(::YASStyle, arg, s, ctx) = false
+# SciMLStyle's `p_parens` uses YASStyle's or DefaultStyle's depending on this option.
+function parens_allow_nesting(::SciMLStyle, arg, s, ctx)
+    s.opts.yas_style_nesting ? false : default_parens_allow_nesting(arg, s, ctx)
+end
+
+"""
+    wrap_in_parens(style, n::FST, arg::JuliaSyntax.GreenNode, s::State, ctx::PrettyContext)
+
+Wrap the FST `n` (formatted from the CST node `arg`) in a pair of parentheses that are
+not in the source. For example, with `whitespace_in_kwargs = false`, `p_kw` turns
+`f(a = \$g(x))` into `f(a=(\$g(x)))`.
+
+The resulting `Brackets` node must be the same as what `p_parens` would produce when
+formatting the output a second time, where the parentheses *are* in the source.
+Otherwise the two passes may nest the code differently and formatting is not
+idempotent. In particular, the placeholders inside the parentheses must only be added
+when `p_parens` would add them.
+
+`open_paren_line` is the source line that the `(` is treated as being on. Usually this
+is the line `n` starts on, but it must be earlier if `n` begins with a comment that
+should go inside the parentheses. For example, BlueStyle turns
+
+    a ? b :
+    # comment
+    c && d ? e : f
+
+into an `if`/`elseif` chain where the comment ends up inside the parentheses:
+
+    elseif (
+        # comment
+        c && d
+    )
+
+If the `(` were placed on the line of `c && d`, the comment would be printed before it.
+"""
+function wrap_in_parens(
+    style::AbstractStyle,
+    n::FST,
+    arg::JuliaSyntax.GreenNode,
+    s::State,
+    ctx::PrettyContext;
+    open_paren_line::Int = n.startline,
+)
+    nest = parens_allow_nesting(style, arg, s, ctx)
+    t = FST(Brackets, nspaces(s))
+    add_node!(
+        t,
+        FST(PUNCTUATION, -1, open_paren_line, open_paren_line, "("),
+        s;
+        join_lines = true,
+    )
+    nest && add_node!(t, Placeholder(0), s)
+    add_node!(t, n, s; join_lines = true)
+    nest && add_node!(t, Placeholder(0), s)
+    add_node!(t, FST(PUNCTUATION, -1, n.startline, n.startline, ")"), s; join_lines = true)
+    return t
+end
+
 function p_parens(
     ds::AbstractStyle,
     cst::JuliaSyntax.GreenNode,
@@ -4018,11 +4126,7 @@ function p_parens(
         if block_arg_forces_nest(arg, arg_offset, s, style, ctx)
             t.nest_behavior = AlwaysNest
         end
-        if !ctx.nonest && !s.opts.disallow_single_arg_nesting
-            !is_iterable(arg)
-        else
-            false
-        end
+        default_parens_allow_nesting(arg, s, ctx)
     else
         false
     end

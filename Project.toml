@@ -1,7 +1,7 @@
 name = "JuliaFormatter"
 uuid = "98e50ef6-434e-11e9-1051-2b60c6c9e899"
-version = "2.14.5"
-authors = ["Dominique Luna <dluna132@gmail.com> and contributors"]
+version = "2.14.6"
+authors = ["Dominique Luna <dluna132@gmail.com>", "Penelope Yong <penelopeysm@gmail.com>", "contributors"]
 
 [workspace]
 projects = ["docs", "test"]

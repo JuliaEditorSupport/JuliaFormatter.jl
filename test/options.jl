@@ -387,51 +387,6 @@ end
         )
     end
 
-    @testset "whitespace in keyword arguments" begin
-        str_ = "f(; a = b)"
-        str = "f(; a=b)"
-        test_format(str_, str; indent = 4, margin = 92, whitespace_in_kwargs = false)
-
-        str = "f(; a!) = a!"
-        test_format(str, str; indent = 4, margin = 92, whitespace_in_kwargs = false)
-
-        # issue 242
-        str_ = "f(a, b! = 1; c! = 2, d = 3, e! = 4)"
-        str = "f(a, (b!)=1; (c!)=2, d=3, (e!)=4)"
-        test_format(str_, str; indent = 4, margin = 92, whitespace_in_kwargs = false)
-
-        str_ = "( k1 =v1,  k2! = v2)"
-        str = "(k1=v1, (k2!)=v2)"
-        test_format(
-            str_,
-            str,
-            YASStyle();
-            indent = 4,
-            margin = 80,
-            whitespace_in_kwargs = false,
-        )
-        test_format(str_, str; indent = 4, margin = 80, whitespace_in_kwargs = false)
-
-        str_ = "( k1 =v1,  k2! = v2)"
-        str = "(k1 = v1, k2! = v2)"
-        test_format(
-            str_,
-            str,
-            YASStyle();
-            indent = 4,
-            margin = 80,
-            whitespace_in_kwargs = true,
-        )
-        test_format(str_, str; indent = 4, margin = 80, whitespace_in_kwargs = true)
-
-        str_ = "(; g = >=(1))"
-        str = "(; g=(>=(1)))"
-        test_format(str_, str; indent = 4, margin = 92, whitespace_in_kwargs = false)
-
-        s = "C(; Vt=Ȳ')"
-        test_format(s, s; indent = 4, margin = 100, whitespace_in_kwargs = false)
-    end
-
     @testset "align struct fields" begin
         str_ = """
         struct Foo

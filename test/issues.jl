@@ -646,11 +646,31 @@ end
     end
 
     @testset "375" begin
-        s = raw"conflictstatus = @jimport ilog.cp.IloCP$ConflictStatus"
-        test_format(s, s)
+        for style in ALL_STYLES
+            s = raw"conflictstatus = @jimport ilog.cp.IloCP$ConflictStatus"
+            test_format(s, s, style)
 
-        s = raw"conflictstatus = @jimport ilog.cp.IloCP$ConflictStatus"
-        test_format(s, s, BlueStyle())
+            # Add some more general tests for good measure.
+            #
+            # this is a genuine binary operator
+            s_binop = raw"@macro x $ y"
+            test_format(s_binop, s_binop, style)
+            s_also_binop = raw"@macro x$ y"
+            test_format(s_also_binop, s_binop, style; ast=true)
+            # this is interpolation
+            s_interp = raw"@macro x $y"
+            test_format(s_interp, s_interp, style)
+
+            # `$` keeps the user's spacing in indices too, even though
+            # `whitespace_ops_in_indices` would normally add or remove the
+            # spaces around binary operators there.
+            for whitespace_ops_in_indices in (true, false)
+                s_index = raw"a[b$c]"
+                test_format(s_index, s_index, style; whitespace_ops_in_indices)
+                s_index_spaced = raw"a[b $ c]"
+                test_format(s_index_spaced, s_index_spaced, style; whitespace_ops_in_indices)
+            end
+        end
     end
 
     @testset "352" begin
@@ -2236,7 +2256,7 @@ end
         for style in ALL_STYLES
             if style isa BlueStyle
                 # BlueStyle converts the ternary into if/elseif/else so we manually test that
-                blue_out = "push!(attributes, operandsegmentsizes([\n    1,\n    1,\n    1,\n    if (lhs_scale==nothing)\n        0\n    elseif 1(rhs_scale==nothing)\n        0\n    else\n        1\n    end,\n]))"
+                blue_out = "push!(attributes, operandsegmentsizes([\n    1,\n    1,\n    1,\n    if (lhs_scale == nothing)\n        0\n    elseif 1(rhs_scale == nothing)\n        0\n    else\n        1\n    end,\n]))"
                 test_format(text, blue_out, BlueStyle())
             else
                 test_format(text, nothing, style)
@@ -3447,9 +3467,9 @@ end
         mat = [
             if j == 1
                 NoQuote(rownms[i])
-            elseif j-1 == ct.pvalcol
+            elseif j - 1 == ct.pvalcol
                 NoQuote(sprint(show, PValue(cols[j - 1][i])))
-            elseif j-1 in ct.teststatcol
+            elseif j - 1 in ct.teststatcol
                 TestStat(cols[j - 1][i])
             elseif cols[j - 1][i] isa AbstractString
                 NoQuote(cols[j - 1][i])
@@ -3885,6 +3905,20 @@ end
                 )
             end
         end
+    end
+
+    @testset "1277 added kwarg parentheses not idempotent" begin
+        s = raw"f(a = $g(h(xxxxxxxxxxxx, yyyyyyyyyyyy)))"
+        out = raw"""
+        f(;
+            a=($g(
+                h(
+                    xxxxxxxxxxxx,
+                    yyyyyyyyyyyy,
+                ),
+            )),
+        )"""
+        test_format(s, out, BlueStyle(); margin = 30)
     end
 end
 
