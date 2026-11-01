@@ -4037,13 +4037,15 @@ Like [`default_parens_allow_nesting`](@ref), but for whichever `p_parens` method
 actually uses. This is needed when the formatter adds parentheses that are not in the
 source (see [`wrap_in_parens`](@ref)).
 """
-parens_allow_nesting(::AbstractStyle, arg, s, ctx) =
+function parens_allow_nesting(::AbstractStyle, arg, s, ctx)
     default_parens_allow_nesting(arg, s, ctx)
+end
 # YASStyle's `p_parens` never adds placeholders.
 parens_allow_nesting(::YASStyle, arg, s, ctx) = false
 # SciMLStyle's `p_parens` uses YASStyle's or DefaultStyle's depending on this option.
-parens_allow_nesting(::SciMLStyle, arg, s, ctx) =
+function parens_allow_nesting(::SciMLStyle, arg, s, ctx)
     s.opts.yas_style_nesting ? false : default_parens_allow_nesting(arg, s, ctx)
+end
 
 """
     wrap_in_parens(style, n::FST, arg::JuliaSyntax.GreenNode, s::State, ctx::PrettyContext)
