@@ -3315,7 +3315,10 @@ function p_binaryopcall(
 
     nonest = ctx.nonest || opkind === K":"
 
-    nrhs = nest_rhs(cst, style)
+    # When `s.opts.preserve_single_line_blocks` is true, it's still possible that it might
+    # nest if the block has multiple lines - but that's determined at the nesting stage
+    # rather than here.
+    nrhs = nest_rhs(cst, style) && !s.opts.preserve_single_line_blocks
     if nrhs
         t.nest_behavior = AlwaysNest
     end

@@ -1,3 +1,7 @@
+# v2.14.7
+
+Prevent adding line breaks in short-form function definitions when the function body is a block construct and `preserve_single_line_blocks` is enabled. (#594, #1255)
+
 # v2.14.6
 
 Correctly respect the Blue style guide on adding whitespace around binary operators. (#1262, #1274)
