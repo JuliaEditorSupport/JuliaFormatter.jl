@@ -3920,6 +3920,15 @@ end
         )"""
         test_format(s, out, BlueStyle(); margin = 30)
     end
+
+    @testset "1278 sciml macros binop spacing" begin
+        s = "@m a = b c = d begin; x = 1 + 2; end"
+        out = """
+        @m a=b c=d begin
+            x = 1 + 2
+        end"""
+        test_format(s, out, SciMLStyle())
+    end
 end
 
 end
