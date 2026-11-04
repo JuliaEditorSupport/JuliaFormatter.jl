@@ -1,3 +1,7 @@
+# v2.14.8
+
+Prevent spaces around binary operators from being collapsed unnecessarily inside macros under SciMLStyle. (#1278, #1279)
+
 # v2.14.7
 
 Prevent adding line breaks in short-form function definitions when the function body is a block construct and `preserve_single_line_blocks` is enabled. (#594, #1255)

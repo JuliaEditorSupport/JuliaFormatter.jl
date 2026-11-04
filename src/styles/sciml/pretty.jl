@@ -142,7 +142,7 @@ function p_macrocall(
             style,
             a,
             s,
-            newctx(ctx; force_no_binop_whitespace = n_kw_args > 1),
+            newctx(ctx; force_no_binop_whitespace = n_kw_args > 1 && kind(a) == K"="),
             lineage,
         )::FST
 
