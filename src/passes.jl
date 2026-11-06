@@ -529,17 +529,17 @@ function prepend_return_fst!(fst::FST, s::State)
         return false
     end
     # check to see if the last node already has a return
-    found_return = false
+    found_return = Ref(false)
     f = (fst::FST, ::State) -> begin
         if fst.typ === Return
-            found_return = true
+            found_return[] = true
         end
         return
     end
     lo = s.line_offset
     walk(f, ln, s)
     s.line_offset = lo
-    if found_return
+    if found_return[]
         return false
     end
 
@@ -573,17 +573,17 @@ Module.@macro
 ```
 """
 function move_at_sign_to_the_end(fst::FST, s::State)
-    val = ""
+    io = IOBuffer()
     f = (n::FST, _) -> begin
         if n.typ === MACRONAME && n.line_offset == -33
-            val *= gettreeval(n)
+            print(io, gettreeval(n))
             return false
         elseif is_leaf(n)
-            v = gettreeval(n)
-            val *= v
+            print(io, gettreeval(n))
         end
     end
     walk(f, fst, s)
+    val = String(take!(io))
 
     splits = split(val, "@")
     if length(splits) != 2

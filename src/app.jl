@@ -238,19 +238,19 @@ function main(argv::Vector{String})
     exit_code = if use_threading
         # Parallel processing for multiple files
         # Use Threads.Atomic to track errors across threads
-        has_unformatted = Threads.Atomic{Bool}(false)
-        has_error = Threads.Atomic{Bool}(false)
+        any_unformatted = Threads.Atomic{Bool}(false)
+        any_error = Threads.Atomic{Bool}(false)
         Threads.@threads for fileargs in fileargs_to_process
             err = process_file(fileargs)
             if err == UNFORMATTED_EXIT_CODE
-                Threads.atomic_or!(has_unformatted, true)
+                Threads.atomic_or!(any_unformatted, true)
             elseif err == ERROR_EXIT_CODE
-                Threads.atomic_or!(has_error, true)
+                Threads.atomic_or!(any_error, true)
             end
         end
-        if has_error[]
+        if any_error[]
             ERROR_EXIT_CODE
-        elseif has_unformatted[]
+        elseif any_unformatted[]
             UNFORMATTED_EXIT_CODE
         else
             SUCCESS_EXIT_CODE

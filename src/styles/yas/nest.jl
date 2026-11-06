@@ -1,3 +1,16 @@
+function find_next_ph_or_nl(nodes::Vector{FST}, idx::Int)
+    while idx < length(nodes)
+        n = nodes[idx]
+        if n.typ === PLACEHOLDER || n.typ === NEWLINE
+            return idx
+        elseif n.typ === Parameters
+            return find_next_ph_or_nl(n.nodes, 1)
+        end
+        idx += 1
+    end
+    return nothing
+end
+
 function n_call!(
     ys::YASStyle,
     fst::FST,
@@ -26,19 +39,6 @@ function n_call!(
         if has_linebreak_after_parens
             return n_call!(DefaultStyle(ys), fst, s, lineage)
         end
-    end
-
-    function find_next_ph_or_nl(nodes::Vector{FST}, idx::Int)
-        while idx < length(nodes)
-            n = nodes[idx]
-            if n.typ === PLACEHOLDER || n.typ === NEWLINE
-                return idx
-            elseif n.typ === Parameters
-                return find_next_ph_or_nl(n.nodes, 1)
-            end
-            idx += 1
-        end
-        return nothing
     end
 
     nodes = fst.nodes::Vector
