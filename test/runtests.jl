@@ -8,6 +8,7 @@ Pkg.develop(; path = dirname(@__DIR__))
 @testset "JuliaFormatter" begin
     include("dispatch.jl")
     include("internal_utils.jl")
+    include("closure_boxes.jl")
     include("document.jl")
     include("shims.jl")
     include("default_style.jl")
