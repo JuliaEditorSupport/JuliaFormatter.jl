@@ -1,3 +1,7 @@
+# v2.14.9
+
+Reduce type instabilities and method invalidations in JuliaFormatter. (#1280)
+
 # v2.14.8
 
 Prevent spaces around binary operators from being collapsed unnecessarily inside macros under SciMLStyle. (#1278, #1279)
