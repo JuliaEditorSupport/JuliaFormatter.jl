@@ -976,8 +976,7 @@ function p_stringh(
     is_triple = haschildren(cst) && kind(children(cst)[1]) in KSet"\"\"\" ```"
     opaque = !is_triple && !(ctx.from_docstring && s.opts.format_docstrings)
     if opaque
-        t.metadata =
-            Metadata(K"None", NotStandalone, false, false, false, true, false, true, false)
+        t.metadata = Metadata(; is_opaque_string = true)
     end
 
     lines = split(val, "\n")
@@ -1730,16 +1729,9 @@ function p_functiondef(
             add_node!(t, pretty(style, c, s, ctx, lineage), s; join_lines = true)
         end
     end
-    t.metadata = Metadata(
-        kind(cst),
-        NotStandalone,
-        false,
-        false,
-        false,
-        can_transform_syntax(s, true),
-        false,
-        false,
-        false,
+    t.metadata = Metadata(;
+        op_kind = kind(cst),
+        is_contractable_function = can_transform_syntax(s, true),
     )
     keep_single && (t.nest_behavior = NeverNest)
     t
@@ -3377,16 +3369,13 @@ function p_binaryopcall(
     end
 
     standalone_shortcircuit = is_shortcircuit ? standalone_binary_circuit : NotStandalone
-    t.metadata = Metadata(
-        opkind,
+    t.metadata = Metadata(;
+        op_kind = opkind,
         standalone_shortcircuit,
-        standalone_shortcircuit === Standalone && can_transform_syntax(s, true),
-        is_expandable_short_func,
-        is_assignment(cst) || defines_function(cst),
-        false,
-        false,
-        false,
-        false,
+        is_expandable_shortcircuit = standalone_shortcircuit === Standalone &&
+                                     can_transform_syntax(s, true),
+        is_short_form_function = is_expandable_short_func,
+        is_assignment = is_assignment(cst) || defines_function(cst),
     )
 
     has_dot = kind(cst) === K"dotcall"

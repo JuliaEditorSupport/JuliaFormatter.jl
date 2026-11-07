@@ -372,8 +372,7 @@ function long_to_short_function_def!(fst::FST, s::State)
     end
 
     funcdef = FST(Binary, fst.indent)
-    funcdef.metadata =
-        Metadata(K"=", NotStandalone, false, true, false, false, false, false, false)
+    funcdef.metadata = Metadata(; op_kind = K"=", is_short_form_function = true)
     kw = (join_lines = true, override_join_lines_based_on_source = true)
 
     add_node!(funcdef, lhs, s; kw...)

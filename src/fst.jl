@@ -152,9 +152,27 @@ the same as `NotStandalone`.
     StandaloneInLongForm
 end
 
-struct Metadata
-    op_kind::JuliaSyntax.Kind
-    standalone_shortcircuit::ShortCircuitStandalone
+"""
+    Metadata(; op_kind = K"None", standalone_shortcircuit = NotStandalone, ...)
+    Metadata(op_kind::JuliaSyntax.Kind)
+    Metadata(md::Metadata; kwargs...)
+
+Extra information attached to an FST node. All fields have defaults (`K"None"`,
+`NotStandalone`, or `false`), so you only need to pass the fields you care about, e.g.
+
+    Metadata(; op_kind = K"=", is_short_form_function = true)
+
+The single-argument form `Metadata(k)` is short for `Metadata(; op_kind = k)`. The form
+`Metadata(md; kwargs...)` makes a copy of `md` with the given fields changed, e.g.
+
+    Metadata(md; has_multiline_argument = true)
+
+When adding a new field, give it a default value here and only update the call sites that
+need a non-default value.
+"""
+Base.@kwdef struct Metadata
+    op_kind::JuliaSyntax.Kind = K"None"
+    standalone_shortcircuit::ShortCircuitStandalone = NotStandalone
     # If the above is `Standalone`, this field indicates whether it should be expanded into
     # a full if-else statement if `short_circuit_to_if` is true. This mainly exists to catch
     # the case where it's inside a macro/expr, which causes the transformation to be
@@ -163,16 +181,16 @@ struct Metadata
     # Note that because `standalone_shortcircuit` has impacts on alignment as well, we
     # need to have a separate flag instead of just setting it to `NotStandalone` when inside
     # macros/exprs.
-    is_expandable_shortcircuit::Bool
+    is_expandable_shortcircuit::Bool = false
 
-    is_short_form_function::Bool
-    is_assignment::Bool
+    is_short_form_function::Bool = false
+    is_assignment::Bool = false
 
     # Indicates that this is a long-form function def that can be contracted to a short-form
     # one if needed.
-    is_contractable_function::Bool
+    is_contractable_function::Bool = false
 
-    has_multiline_argument::Bool
+    has_multiline_argument::Bool = false
 
     # True for a StringN node built from a NON-triple-quoted multiline literal, e.g.
     #
@@ -183,7 +201,7 @@ struct Metadata
     # no dedent semantics: every interior line (and the closing-delimiter line) is part of
     # the string's value, so the printer must emit those lines verbatim at their original
     # columns and must not re-indent them when the surrounding code shifts. See issue #1251.
-    is_opaque_string::Bool
+    is_opaque_string::Bool = false
 
     # Only relevant for MacroCall nodes. This represents an expression that can have a
     # trailing comma when used as the last argument in a function call.
@@ -208,36 +226,18 @@ struct Metadata
     #
     # TODO(penelopeysm): The analysis here is somewhat conservative because I don't know
     # exactly what constructs permit trailing commas.
-    is_macro_that_permits_trailing_comma::Bool
+    is_macro_that_permits_trailing_comma::Bool = false
 end
 
-function Metadata(k::JuliaSyntax.Kind)
-    return Metadata(k, NotStandalone, false, false, false, true, false, false, false)
-end
+Metadata(op_kind::JuliaSyntax.Kind) = Metadata(; op_kind)
 
-function Metadata(
-    md::Metadata;
-    kind::JuliaSyntax.Kind = md.op_kind,
-    standalone_shortcircuit::ShortCircuitStandalone = md.standalone_shortcircuit,
-    is_expandable_shortcircuit::Bool = md.is_expandable_shortcircuit,
-    is_short_form_function::Bool = md.is_short_form_function,
-    is_assignment::Bool = md.is_assignment,
-    is_contractable_function::Bool = md.is_contractable_function,
-    has_multiline_argument::Bool = md.has_multiline_argument,
-    is_opaque_string::Bool = md.is_opaque_string,
-    is_macro_that_permits_trailing_comma::Bool = md.is_macro_that_permits_trailing_comma,
-)
-    return Metadata(
-        kind,
-        standalone_shortcircuit,
-        is_expandable_shortcircuit,
-        is_short_form_function,
-        is_assignment,
-        is_contractable_function,
-        has_multiline_argument,
-        is_opaque_string,
-        is_macro_that_permits_trailing_comma,
+function Metadata(md::Metadata; kwargs...)
+    # Turn `md` into a NamedTuple of its fields, override the ones in `kwargs`, and
+    # rebuild. This picks up new fields automatically.
+    fields = NamedTuple{fieldnames(Metadata)}(
+        ntuple(i -> getfield(md, i), fieldcount(Metadata)),
     )
+    return Metadata(; merge(fields, values(kwargs))...)
 end
 
 """
@@ -1188,7 +1188,7 @@ function eq_to_in_normalization!(fst::FST, always_for_in::Bool, for_in_replaceme
             metadata = fst.metadata::Metadata
             opkind = JuliaSyntax.Kind(op.val)
             fst.metadata =
-                Metadata(metadata; kind = opkind, is_assignment = opkind === K"=")
+                Metadata(metadata; op_kind = opkind, is_assignment = opkind === K"=")
         end
     elseif fst.typ === Block || fst.typ === Brackets || fst.typ === Filter
         past_if = false
@@ -1707,17 +1707,7 @@ function add_node!(
     elseif is_multiline(n) ||
            (!isnothing(t.metadata) && (t.metadata::Metadata).has_multiline_argument)
         if isnothing(t.metadata)
-            t.metadata = Metadata(
-                K"None",
-                NotStandalone,
-                false,
-                false,
-                false,
-                true,
-                true,
-                false,
-                false,
-            )
+            t.metadata = Metadata(; has_multiline_argument = true)
         else
             metadata = t.metadata::Metadata
             t.metadata = Metadata(metadata; has_multiline_argument = true)
