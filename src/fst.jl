@@ -234,9 +234,8 @@ Metadata(op_kind::JuliaSyntax.Kind) = Metadata(; op_kind)
 function Metadata(md::Metadata; kwargs...)
     # Turn `md` into a NamedTuple of its fields, override the ones in `kwargs`, and
     # rebuild. This picks up new fields automatically.
-    fields = NamedTuple{fieldnames(Metadata)}(
-        ntuple(i -> getfield(md, i), fieldcount(Metadata)),
-    )
+    fields =
+        NamedTuple{fieldnames(Metadata)}(ntuple(i -> getfield(md, i), fieldcount(Metadata)))
     return Metadata(; merge(fields, values(kwargs))...)
 end
 
