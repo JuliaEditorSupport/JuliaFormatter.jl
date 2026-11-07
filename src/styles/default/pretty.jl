@@ -977,7 +977,7 @@ function p_stringh(
     opaque = !is_triple && !(ctx.from_docstring && s.opts.format_docstrings)
     if opaque
         t.metadata =
-            Metadata(K"None", NotStandalone, false, false, false, true, false, true)
+            Metadata(K"None", NotStandalone, false, false, false, true, false, true, false)
     end
 
     lines = split(val, "\n")
@@ -1737,6 +1737,7 @@ function p_functiondef(
         false,
         false,
         can_transform_syntax(s, true),
+        false,
         false,
         false,
     )
@@ -3382,6 +3383,7 @@ function p_binaryopcall(
         standalone_shortcircuit === Standalone && can_transform_syntax(s, true),
         is_expandable_short_func,
         is_assignment(cst) || defines_function(cst),
+        false,
         false,
         false,
         false,

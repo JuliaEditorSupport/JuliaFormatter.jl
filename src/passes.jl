@@ -308,18 +308,10 @@ See `short_to_long_function_def!` for more details.
 function use_long_form_standalone_shortcircuit!(fst::FST, ::State)
     md = fst.metadata
     if !isnothing(md) && md.standalone_shortcircuit === StandaloneInLongForm
-        fst.metadata = Metadata(
-            md.op_kind,
-            Standalone,
-            # `short_circuit_to_if` has already run before nesting, so this is no longer
-            # read and doesn't need to be updated.
-            md.is_expandable_shortcircuit,
-            md.is_short_form_function,
-            md.is_assignment,
-            md.is_contractable_function,
-            md.has_multiline_argument,
-            md.is_opaque_string,
-        )
+        # `short_circuit_to_if` has already run before nesting, so the
+        # `is_expandable_shortcircuit` flag will no longer be read and thus doesn't need to
+        # be updated.
+        fst.metadata = Metadata(md; standalone_shortcircuit = Standalone)
     end
     return nothing
 end
@@ -381,7 +373,7 @@ function long_to_short_function_def!(fst::FST, s::State)
 
     funcdef = FST(Binary, fst.indent)
     funcdef.metadata =
-        Metadata(K"=", NotStandalone, false, true, false, false, false, false)
+        Metadata(K"=", NotStandalone, false, true, false, false, false, false, false)
     kw = (join_lines = true, override_join_lines_based_on_source = true)
 
     add_node!(funcdef, lhs, s; kw...)

@@ -184,10 +184,60 @@ struct Metadata
     # the string's value, so the printer must emit those lines verbatim at their original
     # columns and must not re-indent them when the surrounding code shifts. See issue #1251.
     is_opaque_string::Bool
+
+    # Only relevant for MacroCall nodes. This represents an expression that can have a
+    # trailing comma when used as the last argument in a function call.
+    #
+    # This is necessary because
+    #
+    #    f(
+    #      a,
+    #      @m b,
+    #    )
+    #
+    # fails to parse in Julia, but
+    #
+    #    g(
+    #      a,
+    #      @m(b),
+    #    )
+    #
+    # does. When trailing_comma is set to true, we want to make sure that this option is
+    # respected for `g`, but overridden for `f`. Thus, `@m(b)` is marked with
+    # `is_macro_that_permits_trailing_comma = true`, while `@m b` is marked with false.
+    #
+    # TODO(penelopeysm): The analysis here is somewhat conservative because I don't know
+    # exactly what constructs permit trailing commas.
+    is_macro_that_permits_trailing_comma::Bool
 end
 
 function Metadata(k::JuliaSyntax.Kind)
-    return Metadata(k, NotStandalone, false, false, false, true, false, false)
+    return Metadata(k, NotStandalone, false, false, false, true, false, false, false)
+end
+
+function Metadata(
+    md::Metadata;
+    kind::JuliaSyntax.Kind = md.op_kind,
+    standalone_shortcircuit::ShortCircuitStandalone = md.standalone_shortcircuit,
+    is_expandable_shortcircuit::Bool = md.is_expandable_shortcircuit,
+    is_short_form_function::Bool = md.is_short_form_function,
+    is_assignment::Bool = md.is_assignment,
+    is_contractable_function::Bool = md.is_contractable_function,
+    has_multiline_argument::Bool = md.has_multiline_argument,
+    is_opaque_string::Bool = md.is_opaque_string,
+    is_macro_that_permits_trailing_comma::Bool = md.is_macro_that_permits_trailing_comma,
+)
+    return Metadata(
+        kind,
+        standalone_shortcircuit,
+        is_expandable_shortcircuit,
+        is_short_form_function,
+        is_assignment,
+        is_contractable_function,
+        has_multiline_argument,
+        is_opaque_string,
+        is_macro_that_permits_trailing_comma,
+    )
 end
 
 """
@@ -1137,16 +1187,8 @@ function eq_to_in_normalization!(fst::FST, always_for_in::Bool, for_in_replaceme
         if !isnothing(fst.metadata)
             metadata = fst.metadata::Metadata
             opkind = JuliaSyntax.Kind(op.val)
-            fst.metadata = Metadata(
-                opkind,
-                metadata.standalone_shortcircuit,
-                metadata.is_expandable_shortcircuit,
-                metadata.is_short_form_function,
-                opkind === K"=",
-                metadata.is_contractable_function,
-                metadata.has_multiline_argument,
-                metadata.is_opaque_string,
-            )
+            fst.metadata =
+                Metadata(metadata; kind = opkind, is_assignment = opkind === K"=")
         end
     elseif fst.typ === Block || fst.typ === Brackets || fst.typ === Filter
         past_if = false
@@ -1665,20 +1707,20 @@ function add_node!(
     elseif is_multiline(n) ||
            (!isnothing(t.metadata) && (t.metadata::Metadata).has_multiline_argument)
         if isnothing(t.metadata)
-            t.metadata =
-                Metadata(K"None", NotStandalone, false, false, false, true, true, false)
+            t.metadata = Metadata(
+                K"None",
+                NotStandalone,
+                false,
+                false,
+                false,
+                true,
+                true,
+                false,
+                false,
+            )
         else
             metadata = t.metadata::Metadata
-            t.metadata = Metadata(
-                metadata.op_kind,
-                metadata.standalone_shortcircuit,
-                metadata.is_expandable_shortcircuit,
-                metadata.is_short_form_function,
-                metadata.is_assignment,
-                metadata.is_contractable_function,
-                true,
-                metadata.is_opaque_string,
-            )
+            t.metadata = Metadata(metadata; has_multiline_argument = true)
         end
         if is_iterable(t) && n_args(t) > 1
             t.nest_behavior = AlwaysNest
