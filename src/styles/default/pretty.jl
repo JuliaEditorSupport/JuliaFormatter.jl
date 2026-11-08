@@ -1167,19 +1167,23 @@ function p_macrocall(
         end
     end
 
-    # `@m(...)` with parenthesised args, or bare `@m`, can be followed by a trailing comma.
-    # Other macros like `@m x` can't. This might be overly conservative; I'm not sure.
-    allows_trailing_comma = 
-        has_closer || (length(childs) == 2)
-    t.metadata = Metadata(;
-        op_kind = kind(cst),
-        is_macro_that_permits_trailing_comma = allows_trailing_comma
-    )
+    apply_trailing_comma_flag!(t, cst, childs)
 
     # move placement of @ to the end, e.g.
     #     @Module.macro -> Module.@macro
     t[1] = move_at_sign_to_the_end(t[1], s)
     t
+end
+
+function apply_trailing_comma_flag!(t::FST, cst::JuliaSyntax.GreenNode, childs)
+    # `@m(...)` with parenthesised args, or bare `@m`, can be followed by a trailing comma.
+    # Other macros like `@m x` can't. This might be overly conservative; I'm not sure.
+    allows_trailing_comma = is_closer(childs[end]) || length(childs) == 2
+    t.metadata = Metadata(;
+        op_kind = kind(cst),
+        is_macro_that_permits_trailing_comma = allows_trailing_comma,
+    )
+    return t
 end
 
 # `#= ... =#` comments are reported as whitespace by JuliaSyntax, so block

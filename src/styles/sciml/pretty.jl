@@ -180,6 +180,8 @@ function p_macrocall(
             )
         end
     end
+    apply_trailing_comma_flag!(t, cst, childs)
+
     # move placement of @ to the end
     #
     # @Module.macro -> Module.@macro

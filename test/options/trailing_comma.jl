@@ -149,6 +149,17 @@ using Test
                 s_out = format_text(s, st; margin=10, trailing_comma=true)
                 @test occursin("@m(b),\n", s_out)
             end
+
+            # A trailing comma after `@m b` would be invalid code.
+            # https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/1017
+            for s in (
+                    "foooooooooooo(aaaaaaaaaa, @m b)",
+                    "f(aaaaaaaaaaaaaaaaaaaaa, @m b # c\n)",
+                ),
+                style in ALL_STYLES
+
+                test_format(s, nothing, style; margin=10, trailing_comma=true)
+            end
         end
     end
 end

@@ -1310,11 +1310,9 @@ a leaf, so we stop there.
 """
 function absorbs_trailing_comma(fst::FST)
     return if fst.typ in (Global, Local, Const, Return)
-        # TODO(penelopeysm): Technically, if the MacroCall ends in a paren, this doesn't
-        # have to be true. For example, `@m(x)` is OK with a trailing comma
         true
     elseif fst.typ in (MacroCall, MacroBlock)
-        fst.metadata !== nothing && !fst.metadata.is_macro_that_permits_trailing_comma
+        fst.metadata === nothing || !fst.metadata.is_macro_that_permits_trailing_comma
     elseif is_leaf(fst) || isempty(fst.nodes::Vector{FST})
         false
     else
