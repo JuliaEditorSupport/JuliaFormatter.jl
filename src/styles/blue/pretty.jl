@@ -145,6 +145,9 @@ function _ternary_to_ifelse!(
                 # to figure out whether a comment is inline or not, so this is a reasonable
                 # compromise. (We can't reliably check for the presence of a newline after
                 # the comment because that isn't unique to line comments.)
+                if first_nonws_idx === nothing
+                    error("unreachable: only whitespace children in ternary")
+                end
                 node = if any(cc -> kind(cc) === K"Comment", children(c)[1:first_nonws_idx])
                     wrap_in_parens(
                         style,

@@ -976,8 +976,7 @@ function p_stringh(
     is_triple = haschildren(cst) && kind(children(cst)[1]) in KSet"\"\"\" ```"
     opaque = !is_triple && !(ctx.from_docstring && s.opts.format_docstrings)
     if opaque
-        t.metadata =
-            Metadata(K"None", NotStandalone, false, false, false, true, false, true)
+        t.metadata = Metadata(; is_opaque_string = true)
     end
 
     lines = split(val, "\n")
@@ -1168,11 +1167,33 @@ function p_macrocall(
         end
     end
 
-    # move placement of @ to the end
-    #
-    # @Module.macro -> Module.@macro
+    apply_trailing_comma_flag!(t, cst, childs)
+
+    # move placement of @ to the end, e.g.
+    #     @Module.macro -> Module.@macro
     t[1] = move_at_sign_to_the_end(t[1], s)
     t
+end
+
+function apply_trailing_comma_flag!(t::FST, cst::JuliaSyntax.GreenNode, childs)
+    # `@m(...)`, `@m[...]`, `@m{...}`, or a macro with no args (`@m`, `A.@m`) can be followed
+    # by a trailing comma. Other macros like `@m x`, `@m [x]`, `@m"x"` or `@m:x` can't.
+    i = findlast(!JuliaSyntax.is_whitespace, childs)
+    last_child = childs[i]
+    allows_trailing_comma =
+        i == 1 || # `A.@m` is a single child
+        JuliaSyntax.is_macro_name(last_child) ||
+        is_closer(last_child) ||
+        (
+            kind(last_child) in KSet"vect hcat vcat ncat comprehension braces bracescat" &&
+            !JuliaSyntax.is_whitespace(childs[i-1])
+        )
+    t.metadata = Metadata(
+        something(t.metadata, Metadata());
+        op_kind = kind(cst),
+        is_macro_that_permits_trailing_comma = allows_trailing_comma,
+    )
+    return t
 end
 
 # `#= ... =#` comments are reported as whitespace by JuliaSyntax, so block
@@ -1730,15 +1751,9 @@ function p_functiondef(
             add_node!(t, pretty(style, c, s, ctx, lineage), s; join_lines = true)
         end
     end
-    t.metadata = Metadata(
-        kind(cst),
-        NotStandalone,
-        false,
-        false,
-        false,
-        can_transform_syntax(s, true),
-        false,
-        false,
+    t.metadata = Metadata(;
+        op_kind = kind(cst),
+        is_contractable_function = can_transform_syntax(s, true),
     )
     keep_single && (t.nest_behavior = NeverNest)
     t
@@ -3376,15 +3391,13 @@ function p_binaryopcall(
     end
 
     standalone_shortcircuit = is_shortcircuit ? standalone_binary_circuit : NotStandalone
-    t.metadata = Metadata(
-        opkind,
+    t.metadata = Metadata(;
+        op_kind = opkind,
         standalone_shortcircuit,
-        standalone_shortcircuit === Standalone && can_transform_syntax(s, true),
-        is_expandable_short_func,
-        is_assignment(cst) || defines_function(cst),
-        false,
-        false,
-        false,
+        is_expandable_shortcircuit = standalone_shortcircuit === Standalone &&
+                                     can_transform_syntax(s, true),
+        is_short_form_function = is_expandable_short_func,
+        is_assignment = is_assignment(cst) || defines_function(cst),
     )
 
     has_dot = kind(cst) === K"dotcall"

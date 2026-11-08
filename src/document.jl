@@ -71,7 +71,7 @@ function Document(text::AbstractString)
 
                 line = startline
                 cs = ""
-                for (i, c) in enumerate(val)
+                for c in val
                     cs *= c
                     if c == '\n'
                         fc = findfirst(c -> !isspace(c), cs)

@@ -1,3 +1,7 @@
+# v2.14.10
+
+Improve JuliaFormatter's analysis of where trailing commas must be omitted. (#1281, #1282)
+
 # v2.14.9
 
 Reduce type instabilities and method invalidations in JuliaFormatter. (#1280)

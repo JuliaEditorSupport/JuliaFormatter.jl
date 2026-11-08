@@ -1,6 +1,6 @@
 module TrailingCommaTests
 
-using JuliaFormatter: YASStyle, format_text
+using JuliaFormatter: DefaultStyle, BlueStyle, YASStyle, format_text
 using JuliaFormatter.Internal: ALL_STYLES, test_format
 using Test
 
@@ -132,6 +132,29 @@ using Test
             @test occursin('\n', format_text(s; margin=8))
             for style in ALL_STYLES, margin in (8, 12, 20)
                 test_format(s, nothing, style; margin)
+            end
+        end
+
+        @testset "exceptions" begin
+            # https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/1281
+            styles = (DefaultStyle(), BlueStyle())
+            for m in ("@m", "A.@m", "@m(b)", "A.@m(x)", "@m[b]", "@m{T}")
+                s = "foooooooooooo(aaaaaaaaaa, $m)"
+                for st in styles
+                    s_out = format_text(s, st; margin=12, trailing_comma=true)
+                    @test occursin("$m,\n", s_out)
+                end
+            end
+
+            # A trailing comma after `@m b` would be invalid code.
+            # https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/1017
+            for s in (
+                    "foooooooooooo(aaaaaaaaaa, @m b)",
+                    "f(aaaaaaaaaaaaaaaaaaaaa, @m b # c\n)",
+                ),
+                style in ALL_STYLES
+
+                test_format(s, nothing, style; margin=10, trailing_comma=true)
             end
         end
     end
