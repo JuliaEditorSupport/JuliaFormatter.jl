@@ -1167,9 +1167,17 @@ function p_macrocall(
         end
     end
 
-    # move placement of @ to the end
-    #
-    # @Module.macro -> Module.@macro
+    # `@m(...)` with parenthesised args, or bare `@m`, can be followed by a trailing comma.
+    # Other macros like `@m x` can't. This might be overly conservative; I'm not sure.
+    allows_trailing_comma = 
+        has_closer || (length(childs) == 2)
+    t.metadata = Metadata(;
+        op_kind = kind(cst),
+        is_macro_that_permits_trailing_comma = allows_trailing_comma
+    )
+
+    # move placement of @ to the end, e.g.
+    #     @Module.macro -> Module.@macro
     t[1] = move_at_sign_to_the_end(t[1], s)
     t
 end

@@ -1,6 +1,6 @@
 module TrailingCommaTests
 
-using JuliaFormatter: YASStyle, format_text
+using JuliaFormatter: DefaultStyle, BlueStyle, YASStyle, format_text
 using JuliaFormatter.Internal: ALL_STYLES, test_format
 using Test
 
@@ -132,6 +132,22 @@ using Test
             @test occursin('\n', format_text(s; margin=8))
             for style in ALL_STYLES, margin in (8, 12, 20)
                 test_format(s, nothing, style; margin)
+            end
+        end
+
+        @testset "exceptions" begin
+            # https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/1281
+            styles = (DefaultStyle(), BlueStyle())
+            s = "f(a, @m)"
+            for st in styles
+                s_out = format_text(s, st; margin=2, trailing_comma=true)
+                @test occursin("@m,\n", s_out)
+            end
+
+            s = "foooooooooooo(a, @m(b))"
+            for st in styles
+                s_out = format_text(s, st; margin=10, trailing_comma=true)
+                @test occursin("@m(b),\n", s_out)
             end
         end
     end
