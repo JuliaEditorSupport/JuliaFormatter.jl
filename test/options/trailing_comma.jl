@@ -138,16 +138,12 @@ using Test
         @testset "exceptions" begin
             # https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/1281
             styles = (DefaultStyle(), BlueStyle())
-            s = "f(a, @m)"
-            for st in styles
-                s_out = format_text(s, st; margin=2, trailing_comma=true)
-                @test occursin("@m,\n", s_out)
-            end
-
-            s = "foooooooooooo(a, @m(b))"
-            for st in styles
-                s_out = format_text(s, st; margin=10, trailing_comma=true)
-                @test occursin("@m(b),\n", s_out)
+            for m in ("@m", "A.@m", "@m(b)", "A.@m(x)", "@m[b]", "@m{T}")
+                s = "foooooooooooo(aaaaaaaaaa, $m)"
+                for st in styles
+                    s_out = format_text(s, st; margin=12, trailing_comma=true)
+                    @test occursin("$m,\n", s_out)
+                end
             end
 
             # A trailing comma after `@m b` would be invalid code.

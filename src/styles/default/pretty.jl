@@ -1176,10 +1176,20 @@ function p_macrocall(
 end
 
 function apply_trailing_comma_flag!(t::FST, cst::JuliaSyntax.GreenNode, childs)
-    # `@m(...)` with parenthesised args, or bare `@m`, can be followed by a trailing comma.
-    # Other macros like `@m x` can't. This might be overly conservative; I'm not sure.
-    allows_trailing_comma = is_closer(childs[end]) || length(childs) == 2
-    t.metadata = Metadata(;
+    # `@m(...)`, `@m[...]`, `@m{...}`, or a macro with no args (`@m`, `A.@m`) can be followed
+    # by a trailing comma. Other macros like `@m x`, `@m [x]`, `@m"x"` or `@m:x` can't.
+    i = findlast(!JuliaSyntax.is_whitespace, childs)
+    last_child = childs[i]
+    allows_trailing_comma =
+        i == 1 || # `A.@m` is a single child
+        JuliaSyntax.is_macro_name(last_child) ||
+        is_closer(last_child) ||
+        (
+            kind(last_child) in KSet"vect hcat vcat ncat comprehension braces bracescat" &&
+            !JuliaSyntax.is_whitespace(childs[i-1])
+        )
+    t.metadata = Metadata(
+        something(t.metadata, Metadata());
         op_kind = kind(cst),
         is_macro_that_permits_trailing_comma = allows_trailing_comma,
     )
