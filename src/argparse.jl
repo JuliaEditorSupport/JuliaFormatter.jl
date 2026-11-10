@@ -850,9 +850,12 @@ function parse_args(argv::Vector{String})::ParsedArgs
         verbose = get(raw, :verbose, false),
         config_priority,
         ignore_config,
-        outputfile = get(raw, :outputfile, nothing),
+        # The shell does not expand `~` in `--opt=~/path`, so we do it ourselves.
+        outputfile = let o = get(raw, :outputfile, nothing)
+            o === nothing ? nothing : expanduser(o)
+        end,
         stdin_filename = get(raw, :stdin_filename, "stdin"),
-        config_dir = get(raw, :config_dir, ""),
+        config_dir = expanduser(get(raw, :config_dir, "")),
         line_ranges = get(raw, :lines, Tuple{Int,Int}[]),
         config,
         paths = raw[:paths],
