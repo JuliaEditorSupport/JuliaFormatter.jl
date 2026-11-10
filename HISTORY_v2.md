@@ -1,3 +1,7 @@
+# v2.14.11
+
+`jlfmt --config-dir=path` now expands a leading tilde in `path`. (#1283, #1285)
+
 # v2.14.10
 
 Improve JuliaFormatter's analysis of where trailing commas must be omitted. (#1281, #1282)
