@@ -850,7 +850,6 @@ function parse_args(argv::Vector{String})::ParsedArgs
         verbose = get(raw, :verbose, false),
         config_priority,
         ignore_config,
-        # The shell does not expand `~` in `--opt=~/path`, so we do it ourselves.
         outputfile = let o = get(raw, :outputfile, nothing)
             o === nothing ? nothing : expanduser(o)
         end,
