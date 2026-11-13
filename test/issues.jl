@@ -3908,10 +3908,24 @@ end
     end
 
     @testset "1277 added kwarg parentheses not idempotent" begin
+        # the original issue had `$g(...)`, but on new versions of JuliaFormatter this
+        # no longer gets parenthesised, so we test with `>=(...)` below this.
         s = raw"f(a = $g(h(xxxxxxxxxxxx, yyyyyyyyyyyy)))"
         out = raw"""
         f(;
-            a=($g(
+            a=$g(
+                h(
+                    xxxxxxxxxxxx,
+                    yyyyyyyyyyyy,
+                ),
+            ),
+        )"""
+        test_format(s, out, BlueStyle(); margin = 30)
+
+        s = raw"f(a = >=(h(xxxxxxxxxxxx, yyyyyyyyyyyy)))"
+        out = raw"""
+        f(;
+            a=(>=(
                 h(
                     xxxxxxxxxxxx,
                     yyyyyyyyyyyy,

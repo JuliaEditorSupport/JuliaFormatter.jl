@@ -1,3 +1,7 @@
+# v2.14.12
+
+When whitespace is removed around the `=` sign in keyword arguments (i.e., `whitespace_in_kwargs=false`), JuliaFormatter no longer parenthesises the right-hand side when it is syntactically unnecessary. (#1016, #1286)
+
 # v2.14.11
 
 `jlfmt [--config-dir=path1] [--output=path2]` now expands a leading tilde in both paths. (#1283, #1285)

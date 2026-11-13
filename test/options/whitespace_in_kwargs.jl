@@ -73,9 +73,42 @@ using Test
         test_format(str_, str; whitespace_in_kwargs = true)
     end
 
-    str_ = "(; g = >=(1))"
-    str = "(; g=(>=(1)))"
-    test_format(str_, str;  whitespace_in_kwargs = false)
+    @testset "kwarg values that would merge with `=`" begin
+        # https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/1016
+        for (str_, str) in (
+            "(; g = >=(1))" => "(; g=(>=(1)))",
+            "(; g = >(1))" => "(; g=(>(1)))",
+            "(; g = ==(1))" => "(; g=(==(1)))",
+            "(; g = ===(1))" => "(; g=(===(1)))",
+            "(; g = =>(1))" => "(; g=(=>(1)))",
+            # Already parenthesised
+            "(; g = (>=(1)))" => "(; g=(>=(1)))",
+            # These don't need parentheses.
+            "(; g = +x)" => "(; g=+x)",
+            "(; g = -x)" => "(; g=-x)",
+            "(; g = !x)" => "(; g=!x)",
+            "(; g = +x/2)" => "(; g=+x/2)",
+            "(; g = +(2))" => "(; g=+(2))",
+            "(; g = .+x)" => "(; g=.+x)",
+            "(; g = .>=(1))" => "(; g=.>=(1))",
+            "(; g = ≥(1))" => "(; g=≥(1))",
+            "(; g = <(1))" => "(; g=<(1))",
+            "(; g = ⊆)" => "(; g=⊆)",
+            "(; g = :x)" => "(; g=:x)",
+            raw"(; g = $x)" => raw"(; g=$x)",
+        )
+            test_format(str_, str; whitespace_in_kwargs = false, ast = true)
+        end
+
+        # Pathological case: `pipe_to_function_call` transforms the kwarg value, so we need
+        # to make sure the parentheses are applied to the transformed text
+        test_format(
+            "(; g = x |> >(1))",
+            "(; g=(>(1)(x)))";
+            whitespace_in_kwargs = false,
+            pipe_to_function_call = true,
+        )
+    end
 
     s = "C(; Vt=Ȳ')"
     test_format(s, s;  whitespace_in_kwargs = false)
@@ -91,21 +124,21 @@ using Test
     end
 
     @testset "added parentheses nest like parentheses in the source" begin
-        # With `whitespace_in_kwargs = false`, `a = $g(...)` becomes `a=($g(...))`.
+        # With `whitespace_in_kwargs = false`, `a = >=(...)` becomes `a=(>=(...))`.
         # The added parentheses must nest the same way as they do when they are
         # already in the source (i.e. on the second pass), otherwise formatting is
         # not idempotent.
-        s = raw"f(a = $g(h(xxxxxxxxxxxx, yyyyyyyyyyyy)))"
+        s = raw"f(a = >=(h(xxxxxxxxxxxx, yyyyyyyyyyyy)))"
         out = raw"""
         f(
-            a=($g(
+            a=(>=(
                 h(
                     xxxxxxxxxxxx,
                     yyyyyyyyyyyy,
                 ),
             )),
         )"""
-        test_format(s, out; whitespace_in_kwargs = false, margin = 30)
+        test_format(s, out; whitespace_in_kwargs = false, margin = 30, ast = true)
 
         # Check idempotence for all styles. `test_format` checks this for us, so we
         # just use the first pass as the expected output.
@@ -115,7 +148,7 @@ using Test
         end
 
         # The same thing inside a macro call
-        s = raw"@m(a = $g(h(xxxxxxxxxxxx, yyyyyyyyyyyy)))"
+        s = raw"@m(a = >=(h(xxxxxxxxxxxx, yyyyyyyyyyyy)))"
         for style in ALL_STYLES, margin in (20, 30, 40)
             opts = (; whitespace_in_kwargs = false, margin)
             test_format(s, format_text(s, style; opts...), style; opts...)
