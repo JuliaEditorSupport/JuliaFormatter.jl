@@ -3271,11 +3271,17 @@ function boundary_token_text(
         # Normalise the number before passing it on so that we can make decisions based on
         # the text that will actually be emitted.
         normalize_number_literal(k, txt, s.opts.trailing_zero)
-    elseif k === K"'"
+    elseif k === K"'" || (k === K"Identifier" && startswith(txt, "'"))
         # Postfix adjoint operator -- we need to give it an operand so that it can be
-        # parsed.
+        # parsed. In JuliaSyntax v1, `'` and its suffixed forms such as `'ᵀ` (as in
+        # `a'ᵀ`) are stored as Identifier leaves, so we check for those too.
         "x" * txt
-    elseif JuliaSyntax.is_operator(k) || k === K"." || k === K"juxtapose"
+    elseif JuliaSyntax.is_operator(k) || k in KSet". juxtapose Identifier"
+        # Identifiers can also merge with operators. For example:
+        #  - `a! = 1` must not become `a!=1`, as that would be read as `a != 1`.
+        #  - In JuliaSyntax v1, an operator used as a function name, such as the `>=` in
+        #    `a = >=(1)`, is stored as an Identifier. Gluing that gives `a=>=(1)`, which
+        #    would be read as `a => =(1)`.
         txt
     else
         # Other tokens can't merge with operators, so we return `nothing` to indicate this.

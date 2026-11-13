@@ -215,16 +215,13 @@ end
     @testset "kw_value_needs_parens" begin
         function check(code)
             fst = JF.Internal.format_to_stage(:fst, code)
-            # `format_to_stage(:fst, ...)` gives a FileN node; get the expression inside it.
             return JF.kw_value_needs_parens(fst[1])
         end
-        # These would be merged with a preceding `=` sign.
         @test check(">=(x)")
         @test check(">(x)")
         @test check("==(x)")
         @test check("===(x)")
         @test check("=>(x)")
-        # These would not.
         @test !check("(>=(x))")
         @test !check("+x")
         @test !check("-x")
