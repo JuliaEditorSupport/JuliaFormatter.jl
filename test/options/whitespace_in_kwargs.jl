@@ -75,10 +75,6 @@ using Test
 
     @testset "kwarg values that would merge with `=`" begin
         # https://github.com/JuliaEditorSupport/JuliaFormatter.jl/issues/1016
-        #
-        # Parentheses are only added when the value would otherwise be merged with the
-        # `=` sign into a different token. For example, `a=>=(1)` would be read as
-        # `a => =(1)`, and `a===(1)` as `a === (1)`.
         for (str_, str) in (
             "(; g = >=(1))" => "(; g=(>=(1)))",
             "(; g = >(1))" => "(; g=(>(1)))",
@@ -101,11 +97,11 @@ using Test
             "(; g = :x)" => "(; g=:x)",
             raw"(; g = $x)" => raw"(; g=$x)",
         )
-            test_format(str_, str; whitespace_in_kwargs = false)
+            test_format(str_, str; whitespace_in_kwargs = false, ast = true)
         end
 
-        # With `pipe_to_function_call`, the formatted value can begin with a different
-        # token from the source, so the check has to be done on the formatted value.
+        # Pathological case: `pipe_to_function_call` transforms the kwarg value, so we need
+        # to make sure the parentheses are applied to the transformed text
         test_format(
             "(; g = x |> >(1))",
             "(; g=(>(1)(x)))";
@@ -142,7 +138,7 @@ using Test
                 ),
             )),
         )"""
-        test_format(s, out; whitespace_in_kwargs = false, margin = 30)
+        test_format(s, out; whitespace_in_kwargs = false, margin = 30, ast = true)
 
         # Check idempotence for all styles. `test_format` checks this for us, so we
         # just use the first pass as the expected output.

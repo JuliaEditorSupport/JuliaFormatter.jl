@@ -3908,7 +3908,8 @@ end
     end
 
     @testset "1277 added kwarg parentheses not idempotent" begin
-        # `$g(...)` no longer gets parentheses, because `=$` is not a token.
+        # the original issue had `$g(...)`, but on new versions of JuliaFormatter this
+        # no longer gets parenthesised, so we test with `>=(...)` below this.
         s = raw"f(a = $g(h(xxxxxxxxxxxx, yyyyyyyyyyyy)))"
         out = raw"""
         f(;
@@ -3921,8 +3922,6 @@ end
         )"""
         test_format(s, out, BlueStyle(); margin = 30)
 
-        # `>=(...)` still needs parentheses (as `a=>=(...)` would be read as `a => =(...)`),
-        # so this checks that the added parentheses are idempotent.
         s = raw"f(a = >=(h(xxxxxxxxxxxx, yyyyyyyyyyyy)))"
         out = raw"""
         f(;

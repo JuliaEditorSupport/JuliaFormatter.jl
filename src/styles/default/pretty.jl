@@ -214,15 +214,13 @@ merged with the preceding `=` sign.
 
 For example, `(; a = >=(1))` cannot be formatted as `(; a=>=(1))`, because `=>` would be
 read as a single token (the pair operator). It has to become `(; a=(>=(1)))` instead.
-Likewise, `(; a = ==(1))` would become `(; a====(1))` where `===` is a single token.
+Likewise, `(; a = ==(1))` would become `(; a===(1))` where `===` is a single token.
 
 On the other hand, `(; a = +x)` can safely be formatted as `(; a=+x)` because `=+` is not a
 token, so the lexer will still read `=` followed by `+`. Same for things like `(; o=⊆)`.
 
 To check this, we put `=` in front of the first leaf of `fst` and lex it: if the first token
-is just the `=` sign, then no parentheses are needed. Looking at the first leaf is enough,
-because the only tokens that begin with `=` are `=`, `==`, `===`, and `=>`, so whether `=`
-merges with what follows is decided by the first one or two characters after it.
+is just the `=` sign, then no parentheses are needed.
 
 Note that we check the formatted FST rather than the source code, because the two do not
 always begin with the same token. For example, with `pipe_to_function_call=true`,
@@ -232,7 +230,6 @@ formatted value begins with `>`.
 function kw_value_needs_parens(fst::FST)
     leaf = first_nonempty_leaf(fst)
     leaf === nothing && return false
-    # `tokenize` returns a lazy iterator, so this only lexes the first token.
     first_token = first(JuliaSyntax.Tokenize.tokenize("=" * leaf.val))
     return first_token.endbyte != first_token.startbyte
 end
@@ -2965,13 +2962,16 @@ function p_kw(
             s.opts.whitespace_in_kwargs && add_node!(t, Whitespace(1), s)
         else
             n = pretty(style, c, s, ctx, lineage)
-            # Check if the name of the kwarg ends with an exclamation mark, or if the name
-            # of the kwarg is an op (note that the name has to be a single identifier so
-            # checking that it begins with an op is equivalent to checking that is an op),
-            # or if the value of the kwarg would be merged with the `=` sign into a
-            # different token (e.g. `a=>=(1)`; see `kw_value_needs_parens`).
+            # Check if:
+            #  - the name of the kwarg ends with an exclamation mark; or
+            #  - the name of the kwarg is an op (note that the name has to be a single
+            #    identifier so checking that it begins with an op is equivalent to checking
+            #    that is an op); or
+            #  - the value of the kwarg would be merged with the `=` sign into a different
+            #    token (e.g. `a=>=(1)`; see `kw_value_needs_parens`).
             #
-            # In all of these cases, we need to parenthesise it to avoid ambiguity.
+            # In all of these cases, we need to parenthesise the name or the value
+            # respectively to avoid ambiguity.
             parenthesise =
                 !s.opts.whitespace_in_kwargs && begin
                     if i == immediate_rhs_idx && kind(c) !== K"Comment"
