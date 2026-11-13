@@ -206,40 +206,49 @@ function find_trailing_juxtapose(
 end
 
 """
-   source_begins_with_op_needing_parens(s, cst, offset) 
+    kw_value_needs_parens(fst::FST)
 
-Check whether the first token of `cst` is an operator. Used in `p_kw`: if the value on the
-rhs of `kwarg=value` begins with an operator, then we parenthesise `value` to avoid
-ambiguity.
+Used in `p_kw` when `whitespace_in_kwargs=false`. Check whether `fst`, which is the
+formatted value on the RHS of `kwarg=value`, needs to be parenthesised so that it isn't
+merged with the preceding `=` sign.
 
-Note that the behaviour of this differs from `unary_info(cst)`: for example,
-`unary_info(cst)` does not pick up  expressions such as `>=(1)`, which is interpreted as a
-function call, not an application of a unary operator. However, these are exactly the sort
-of things that we want to parenthesise in `p_kw` -- hence this function.
+For example, `(; a = >=(1))` cannot be formatted as `(; a=>=(1))`, because `=>` would be
+read as a single token (the pair operator). It has to become `(; a=(>=(1)))` instead.
+Likewise, `(; a = ==(1))` would become `(; a====(1))` where `===` is a single token.
+
+On the other hand, `(; a = +x)` can safely be formatted as `(; a=+x)` because `=+` is not a
+token, so the lexer will still read `=` followed by `+`. Same for things like `(; o=⊆)`.
+
+To check this, we put `=` in front of the first leaf of `fst` and lex it: if the first token
+is just the `=` sign, then no parentheses are needed. Looking at the first leaf is enough,
+because the only tokens that begin with `=` are `=`, `==`, `===`, and `=>`, so whether `=`
+merges with what follows is decided by the first one or two characters after it.
+
+Note that we check the formatted FST rather than the source code, because the two do not
+always begin with the same token. For example, with `pipe_to_function_call=true`,
+`(; a = x |> >(1))` is formatted as `(; a=(>(1)(x)))`: the source begins with `x`, but the
+formatted value begins with `>`.
 """
-function source_begins_with_op_needing_parens(
-    s::State,
-    cst::JuliaSyntax.GreenNode,
-    offset::Integer,
-)
-    # Get the first leaf of `cst` that isn't whitespace.
-    result = first_nonws_leaf_and_offset(cst)
-    result === nothing && return false
-    # Check if it's an operator and specifically one that we care about putting
-    # parentheses around.
-    leaf, extra_offset = result
-    opkind = source_op_kind_from_offset(s, leaf, offset + extra_offset)
-    return (
-        opkind !== nothing &&
-        JuliaSyntax.is_operator(opkind)
-        # is_word_operator filters out things like `isa`.
-        &&
-        !JuliaSyntax.is_word_operator(opkind)
-        # Ignore `K":"` as that indicates the beginning of a symbol, which we don't care
-        # about parenthesising.
-        &&
-        opkind !== K":"
-    )
+function kw_value_needs_parens(fst::FST)
+    leaf = first_nonempty_leaf(fst)
+    leaf === nothing && return false
+    # `tokenize` returns a lazy iterator, so this only lexes the first token.
+    first_token = first(JuliaSyntax.Tokenize.tokenize("=" * leaf.val))
+    return first_token.endbyte != first_token.startbyte
+end
+
+"""
+    first_nonempty_leaf(fst::FST)
+
+Return the first leaf of `fst` that has non-empty text, or `nothing` if there is none.
+"""
+function first_nonempty_leaf(fst::FST)::Union{Nothing,FST}
+    is_leaf(fst) && return isempty(fst.val) ? nothing : fst
+    for n in fst.nodes::Vector{FST}
+        leaf = first_nonempty_leaf(n)
+        leaf === nothing || return leaf
+    end
+    return nothing
 end
 
 function is_source_operator(s::State, cst::JuliaSyntax.GreenNode, offset::Integer)
@@ -2955,18 +2964,18 @@ function p_kw(
             add_node!(t, pretty(style, c, s, ctx, lineage), s; join_lines = true)
             s.opts.whitespace_in_kwargs && add_node!(t, Whitespace(1), s)
         else
-            child_offset = s.offset
             n = pretty(style, c, s, ctx, lineage)
             # Check if the name of the kwarg ends with an exclamation mark, or if the name
             # of the kwarg is an op (note that the name has to be a single identifier so
             # checking that it begins with an op is equivalent to checking that is an op),
-            # or if the value of the kwarg begins with an op.
+            # or if the value of the kwarg would be merged with the `=` sign into a
+            # different token (e.g. `a=>=(1)`; see `kw_value_needs_parens`).
             #
             # In all of these cases, we need to parenthesise it to avoid ambiguity.
             parenthesise =
                 !s.opts.whitespace_in_kwargs && begin
                     if i == immediate_rhs_idx && kind(c) !== K"Comment"
-                        source_begins_with_op_needing_parens(s, c, child_offset)
+                        kw_value_needs_parens(n)
                     elseif i === immediate_lhs_idx && kind(c) === K"Identifier"
                         endswith(n.val, "!") || Shims.is_valid_nonword_operator(n.val)
                     else

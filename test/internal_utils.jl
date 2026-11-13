@@ -212,28 +212,30 @@ end
         end
     end
 
-    @testset "source_begins_with_op_needing_parens" begin
+    @testset "kw_value_needs_parens" begin
         function check(code)
-            node = JS.parseall(JS.GreenNode, code; version=JF.SUPPORTED_SYNTAX_VERSION)[1]
-            opts = JF.Options()
-            s = JF.State(JF.Document(code), opts)
-            return JF.source_begins_with_op_needing_parens(s, node, s.offset)
+            fst = JF.Internal.format_to_stage(:fst, code)
+            # `format_to_stage(:fst, ...)` gives a FileN node; get the expression inside it.
+            return JF.kw_value_needs_parens(fst[1])
         end
-        # Operators
-        @test check("+x")
-        @test check("-x")
-        @test check("!x")
+        # These would be merged with a preceding `=` sign.
         @test check(">=(x)")
-        # Non-operators / already parenthesised
-        @test !check("(+x)")
-        @test !check("string(x)")
+        @test check(">(x)")
+        @test check("==(x)")
+        @test check("===(x)")
+        @test check("=>(x)")
+        # These would not.
+        @test !check("(>=(x))")
+        @test !check("+x")
+        @test !check("-x")
+        @test !check("!x")
+        @test !check(".>=(x)")
+        @test !check("≥(x)")
+        @test !check("<(x)")
+        @test !check(":x")
         @test !check("x")
         @test !check("[1, 2]")
         @test !check("x'")
-        @test !check("x'ᵀ")
-        @test !check("a ? b : c")
-        # Manual exclusions (see source_begins_with_op_needing_parens comments)
-        @test !check(":x")
         @test !check("isa(x, T)")
     end
 end

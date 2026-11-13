@@ -3908,10 +3908,25 @@ end
     end
 
     @testset "1277 added kwarg parentheses not idempotent" begin
+        # `$g(...)` no longer gets parentheses, because `=$` is not a token.
         s = raw"f(a = $g(h(xxxxxxxxxxxx, yyyyyyyyyyyy)))"
         out = raw"""
         f(;
-            a=($g(
+            a=$g(
+                h(
+                    xxxxxxxxxxxx,
+                    yyyyyyyyyyyy,
+                ),
+            ),
+        )"""
+        test_format(s, out, BlueStyle(); margin = 30)
+
+        # `>=(...)` still needs parentheses (as `a=>=(...)` would be read as `a => =(...)`),
+        # so this checks that the added parentheses are idempotent.
+        s = raw"f(a = >=(h(xxxxxxxxxxxx, yyyyyyyyyyyy)))"
+        out = raw"""
+        f(;
+            a=(>=(
                 h(
                     xxxxxxxxxxxx,
                     yyyyyyyyyyyy,
