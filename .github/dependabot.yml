@@ -5,6 +5,7 @@ updates:
     directory: "/" # Location of package manifests
     schedule:
       interval: "weekly"
+    # wait before upgrading versions to minimise chances of supply chain attacks
     cooldown:
       default-days: 7
     groups:
