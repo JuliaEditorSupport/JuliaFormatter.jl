@@ -5,3 +5,10 @@ updates:
     directory: "/" # Location of package manifests
     schedule:
       interval: "weekly"
+    cooldown:
+      default-days: 7
+    groups:
+      # Group all GitHub Actions updates into a single PR:
+      all-github-actions:
+        patterns:
+          - "*"
