@@ -23,8 +23,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # 7.0.1
-      - uses: julia-actions/setup-julia@fa02766e078afaaf09b14210362cee14137e6a32 # 3.0.2
-      - uses: julia-actions/cache@a45e8fa8be21c18a06b7177052533149e61e9b38 # 3.1.0
+      - uses: julia-actions/setup-julia@da908477b5db94c10ffce8cfea9f2b3b9d5db687 # 3.0.3
+      - uses: julia-actions/cache@9353db09a0f2bbbdec6f41791918c75d37391b36 # 3.5.0
 
       - name: Install docs dependencies
         shell: julia --color=yes --project=docs {0}

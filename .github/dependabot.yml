@@ -5,3 +5,23 @@ updates:
     directory: "/" # Location of package manifests
     schedule:
       interval: "weekly"
+    # wait before upgrading versions to minimise chances of supply chain attacks
+    cooldown:
+      default-days: 7
+    groups:
+      # Group all GitHub Actions updates into a single PR:
+      all-github-actions:
+        patterns:
+          - "*"
+  - package-ecosystem: "julia"
+    directories: # Location of Julia projects
+      - "/"
+      - "/docs"
+      - "/test"
+    schedule:
+      interval: "daily"
+    groups:
+      # Group all Julia package updates into a single PR:
+      all-julia-packages:
+        patterns:
+          - "*"
